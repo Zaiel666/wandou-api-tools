@@ -2167,7 +2167,7 @@
     }
 
     .resolution-row .choice-options.align-right {
-      grid-template-columns: repeat(3, minmax(58px, 76px));
+      grid-template-columns: repeat(var(--resolution-option-count, 3), minmax(58px, 76px));
       justify-content: end;
     }
 
@@ -3995,7 +3995,7 @@
     const pngResolutionOptions = ["1K", "2K", "4K"];
     const videoModelCapabilities = {
       "veo3.1-fast": {
-        resolutions: ["720P", "1080P", "4K"],
+        resolutions: ["720P", "1080P"],
         ratios: ["9:16 竖屏", "16:9 横屏"],
         defaultDuration: 8,
         maxReferences: 3
@@ -5272,7 +5272,7 @@
       }
       const modelMenuHtml = models.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-node-model="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
-      const durationHtml = `<button class="count-option active model-default" type="button" disabled>模型默认 ${videoDefaultDurationForModel(node.model)}s</button>`;
+      const durationHtml = `<button class="count-option active model-default" type="button" disabled>默认时长</button>`;
       const countHtml = (isVideoNode ? videoCountOptions : [1, 2, 3, 4, 5, 6]).map((count) => (
         `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button">${count}</button>`
       )).join("");
@@ -5331,7 +5331,7 @@
         </div>
         <div class="form-row resolution-row">
           <label>分辨率</label>
-          <div class="choice-options ${(isVideoNode || resolutions.length === 1) ? "align-right" : ""} ${resolutions.length === 1 ? "single-option" : ""}">${resolutionHtml}</div>
+          <div class="choice-options ${(isVideoNode || resolutions.length === 1) ? "align-right" : ""} ${resolutions.length === 1 ? "single-option" : ""}" style="--resolution-option-count:${resolutions.length}">${resolutionHtml}</div>
         </div>
         ${isVideoNode ? `
         <div class="form-row video-duration-row">
