@@ -2,6 +2,7 @@ user-data/
 dist/
 desktop-client/dist/
 desktop-client/node_modules/
+release/
 豌豆AI工具_v*/
 *.lnk
 *.exe
