@@ -2597,6 +2597,32 @@
       padding: 8px 10px;
     }
 
+    .lightbox-image-menu {
+      position: fixed;
+      z-index: 70;
+      display: none;
+      width: 132px;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(16px);
+    }
+
+    .lightbox-image-menu.open {
+      display: block;
+    }
+
+    .lightbox-image-menu button {
+      width: 100%;
+    }
+
+    body.dark-theme .lightbox-image-menu {
+      border-color: rgba(255, 255, 255, 0.16);
+      background: rgba(28, 32, 30, 0.96);
+    }
+
     .lightbox-scale {
       min-width: 58px;
       color: #fff;
@@ -2652,7 +2678,8 @@
       display: none;
     }
 
-    .lightbox.prompt-mode #lightboxDownload {
+    .lightbox.prompt-mode #lightboxDownload,
+    .lightbox.prompt-mode #lightboxCopy {
       display: none;
     }
 
@@ -3673,6 +3700,9 @@
     <button id="lightboxClose" class="ghost lightbox-close" type="button">关闭</button>
     <img id="lightboxImage" class="lightbox-media" alt="效果图预览">
     <video id="lightboxVideo" class="lightbox-media" controls playsinline hidden></video>
+    <div id="lightboxImageMenu" class="lightbox-image-menu">
+      <button id="lightboxContextCopy" class="ghost" type="button">复制图片</button>
+    </div>
     <canvas id="paintCanvas" class="paint-canvas"></canvas>
     <div id="promptPreviewPanel" class="prompt-preview-panel">
       <div class="prompt-preview-columns">
@@ -3705,6 +3735,7 @@
       <button id="lightboxZoomIn" class="ghost" type="button">+</button>
       <button id="lightboxZoomReset" class="ghost" type="button">重置</button>
       <button id="lightboxFavorite" class="ghost lightbox-favorite" type="button">☆ 收藏</button>
+      <button id="lightboxCopy" class="ghost" type="button">复制图片</button>
       <button id="lightboxDownload" class="ghost" type="button">下载</button>
       <div id="paintControls" class="paint-controls">
             <input id="paintColor" type="color" value="#76b900" title="画笔颜色">
@@ -3808,7 +3839,10 @@
     const lightboxZoomReset = document.getElementById("lightboxZoomReset");
     const lightboxScaleText = document.getElementById("lightboxScaleText");
     const lightboxFavorite = document.getElementById("lightboxFavorite");
+    const lightboxCopy = document.getElementById("lightboxCopy");
     const lightboxDownload = document.getElementById("lightboxDownload");
+    const lightboxImageMenu = document.getElementById("lightboxImageMenu");
+    const lightboxContextCopy = document.getElementById("lightboxContextCopy");
     const promptPreviewPanel = document.getElementById("promptPreviewPanel");
     const promptPreviewZh = document.getElementById("promptPreviewZh");
     const promptPreviewEn = document.getElementById("promptPreviewEn");
@@ -9016,6 +9050,53 @@ ${formatInstruction}`;
       return key.includes(":") ? key.replace(":", " / ") : "3 / 4";
     }
 
+    async function imageSourceToClipboardBlob(src) {
+      if (activeLightbox.mode === "paint") {
+        return new Promise((resolve, reject) => {
+          paintCanvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("图片转换失败")), "image/png");
+        });
+      }
+      const sourceBlob = await sourceToBlob(src, "image/png");
+      if (!sourceBlob) throw new Error("图片读取失败");
+      if (sourceBlob.type === "image/png") return sourceBlob;
+      const bitmap = await createImageBitmap(sourceBlob);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        canvas.getContext("2d").drawImage(bitmap, 0, 0);
+        return await new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("图片转换失败")), "image/png");
+        });
+      } finally {
+        bitmap.close();
+      }
+    }
+
+    function closeLightboxImageMenu() {
+      lightboxImageMenu.classList.remove("open");
+    }
+
+    async function copyActiveLightboxImage() {
+      closeLightboxImageMenu();
+      if (!activeLightbox.src || activeLightbox.mode === "video" || activeLightbox.mode === "prompt") return;
+      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+        showToast("当前环境不支持复制图片，请使用下载按钮");
+        return;
+      }
+      try {
+        const src = activeLightbox.mode === "paint"
+          ? paintCanvas.toDataURL("image/png")
+          : activeLightbox.downloadSrc || activeLightbox.src;
+        const blob = await imageSourceToClipboardBlob(src);
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        showToast("图片已复制，可直接粘贴使用");
+      } catch (error) {
+        console.warn("Copy image failed", error);
+        showToast("复制图片失败，请使用下载按钮保存");
+      }
+    }
+
     function openLightbox(src, options = {}) {
       lightboxScale = 1;
       lightboxPan = { x: 0, y: 0 };
@@ -9035,6 +9116,8 @@ ${formatInstruction}`;
       lightboxVideo.hidden = !isVideo;
       lightboxImage.src = isVideo ? "" : src;
       lightboxVideo.src = isVideo ? src : "";
+      lightboxCopy.hidden = isVideo;
+      closeLightboxImageMenu();
       lightbox.classList.add("open");
       updateLightboxFavoriteButton();
       if (activeLightbox.mode === "paint") loadPaintCanvas(src);
@@ -9050,6 +9133,8 @@ ${formatInstruction}`;
       lightboxVideo.removeAttribute("src");
       lightboxVideo.load();
       lightboxVideo.hidden = true;
+      lightboxCopy.hidden = false;
+      closeLightboxImageMenu();
       activeLightbox = { src: "", downloadSrc: "", mode: "image", nodeId: null, refIndex: null };
       activePromptPreview = { zh: "", en: "", negative: "" };
       promptPreviewPanel.hidden = false;
@@ -10441,6 +10526,28 @@ ${formatInstruction}`;
       updateLightboxFavoriteButton();
       if (favoriteOverlay.classList.contains("open")) renderFavorites();
     });
+    lightboxCopy.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await copyActiveLightboxImage();
+    });
+    lightboxContextCopy.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await copyActiveLightboxImage();
+    });
+    lightboxImage.addEventListener("contextmenu", (event) => {
+      if (!activeLightbox.src || activeLightbox.mode === "prompt") return;
+      event.preventDefault();
+      event.stopPropagation();
+      const menuWidth = 132;
+      const menuHeight = 48;
+      lightboxImageMenu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8))}px`;
+      lightboxImageMenu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8))}px`;
+      lightboxImageMenu.classList.add("open");
+    });
+    lightbox.addEventListener("pointerdown", (event) => {
+      if (!event.target.closest("#lightboxImageMenu")) closeLightboxImageMenu();
+    });
+    window.addEventListener("resize", closeLightboxImageMenu);
     lightboxDownload.addEventListener("click", async (event) => {
       event.stopPropagation();
       if (!activeLightbox.src) return;
