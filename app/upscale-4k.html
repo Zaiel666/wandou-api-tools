@@ -1,0 +1,130 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1408">
+  <link rel="stylesheet" href="./styles.css">
+  <title>图片放大4K</title>
+</head>
+<body class="upscale-page">
+  <main class="upscale-app">
+    <header class="upscale-topbar">
+      <div>
+        <p class="eyebrow">AI 图片增强</p>
+        <h1>图片放大4K</h1>
+        <p>上传图片后选择增强方式、输出比例和清晰度，完成后可预览、缩放并下载。</p>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
+        <span data-theme-icon>☾</span>
+        <span data-theme-label>暗色</span>
+      </button>
+    </header>
+
+    <section class="upscale-workspace">
+      <section class="upscale-input-card">
+        <div class="section-heading">
+          <div>
+            <h2>输入图片</h2>
+            <p>建议使用主体清晰、背景干净的图片。</p>
+          </div>
+          <span class="badge">必填</span>
+        </div>
+
+        <label class="upload-zone upscale-upload">
+          <input id="imageInput" type="file" accept="image/*">
+          <span><strong>拖拽图片到此处，或点击上传</strong>支持 JPG / PNG / WEBP，用于放大到高清 4K。</span>
+        </label>
+
+        <label class="prompt-field">
+          <span>补充提示词</span>
+          <textarea placeholder="示例：保留主体结构，提高边缘清晰度，增强材质细节，避免过度锐化。"></textarea>
+        </label>
+      </section>
+
+      <section class="upscale-settings-card">
+        <div class="setting-block">
+          <div class="section-heading compact">
+            <div>
+              <h2>放大模型</h2>
+              <p>按图片类型选择更合适的增强策略。</p>
+            </div>
+          </div>
+          <div class="model-choice-grid">
+            <button class="option active" type="button">高清增强</button>
+            <button class="option" type="button">人像修复</button>
+            <button class="option" type="button">商品图优化</button>
+          </div>
+        </div>
+
+        <div class="setting-block">
+          <div class="section-heading compact">
+            <div>
+              <h2>输出比例</h2>
+              <p>保持原图或切成常用画幅。</p>
+            </div>
+          </div>
+          <div class="ratio-grid product-ratio-grid">
+            <button class="ratio-option active" type="button"><span class="ratio-shape ratio-original"></span><em>原图</em></button>
+            <button class="ratio-option" type="button"><span class="ratio-shape ratio-1-1"></span><em>1:1</em></button>
+            <button class="ratio-option" type="button"><span class="ratio-shape ratio-3-2"></span><em>3:2</em></button>
+            <button class="ratio-option" type="button"><span class="ratio-shape ratio-2-3"></span><em>2:3</em></button>
+            <button class="ratio-option" type="button"><span class="ratio-shape ratio-4-3"></span><em>4:3</em></button>
+            <button class="ratio-option" type="button"><span class="ratio-shape ratio-3-4"></span><em>3:4</em></button>
+            <button class="ratio-option" type="button"><span class="ratio-shape ratio-16-9"></span><em>16:9</em></button>
+            <button class="ratio-option" type="button"><span class="ratio-shape ratio-9-16"></span><em>9:16</em></button>
+          </div>
+        </div>
+
+        <div class="generation-bar">
+          <div>
+            <span class="mini-label">图片质量</span>
+            <div class="quality-switch">
+              <button class="option" type="button">2K</button>
+              <button class="option active" type="button">4K</button>
+            </div>
+          </div>
+          <button class="primary generate-button" type="button">准备放大</button>
+        </div>
+      </section>
+
+      <aside class="upscale-result-card">
+        <div class="result-header">
+          <div>
+            <h2>结果预览</h2>
+            <p>生成后点击图片可放大查看。</p>
+          </div>
+          <span class="status-pill">待生成</span>
+        </div>
+
+        <button class="preview-inner upscale-preview product-preview" id="preview" type="button" data-preview-open>
+          放大完成后在此展示高清预览
+        </button>
+
+        <div class="button-row preview-actions">
+          <button class="secondary" type="button" data-preview-open>预览大图</button>
+          <button class="primary" type="button" data-download-image>下载图片</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="image-modal" data-image-modal hidden>
+    <div class="modal-toolbar">
+      <button class="secondary" type="button" data-zoom-out>缩小</button>
+      <span data-zoom-label>100%</span>
+      <button class="secondary" type="button" data-zoom-in>放大</button>
+      <button class="primary" type="button" data-download-image>下载图片</button>
+      <button class="secondary" type="button" data-modal-close>关闭</button>
+    </div>
+    <div class="modal-stage">
+      <img alt="放大预览图" data-modal-image>
+    </div>
+  </div>
+
+  <script src="./local-cache.js"></script>
+  <script src="./save-directory.js"></script>
+  <script src="./workflow.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,504 @@
+﻿<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4faee">
+  <meta name="description" content="AI 创作工具综合入口，集中打开 AI 节点画布、AI 生图、图片放大、抠图 PNG 工作流和关建词生成/反推。">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./logo.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>首页</title>
+</head>
+<body class="home-page">
+  <main class="shell home-redesign">
+    <header class="home-topbar" aria-label="豌豆AI 首页导航">
+      <a class="home-brand" href="#home-tools" data-home-nav="home" aria-label="返回首页">
+        <img class="home-brand-logo" src="./logo.png" alt="">
+        <span class="home-brand-name">豌豆AI</span>
+      </a>
+
+      <nav class="home-nav" aria-label="页面内容导航">
+        <button class="home-nav-item active" type="button" data-home-nav="home" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>
+          <span>首页</span>
+        </button>
+        <button class="home-nav-item" type="button" data-home-nav="market" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6H4z"/><path d="M14 14h6v6h-6z"/></svg>
+          <span>商品中心</span>
+        </button>
+        <button class="home-nav-item" type="button" data-home-nav="blog" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h10l2 2v14H6z"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+          <span>博客</span>
+        </button>
+        <button class="home-nav-item" type="button" data-home-nav="notice" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Z"/><path d="M18 16H6l1.5-2V10a4.5 4.5 0 0 1 9 0v4z"/></svg>
+          <span>公告</span>
+        </button>
+        <button class="home-nav-item" type="button" data-home-nav="about" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>
+          <span>关于</span>
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <div class="contact-menu">
+          <button class="contact-button" type="button" aria-label="查看联系方式">
+            <svg class="contact-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7.1 4.75 9.9 4l2.05 4.1-1.55 1.15a11.2 11.2 0 0 0 4.35 4.35l1.15-1.55 4.1 2.05-.75 2.8c-.23.88-1.08 1.46-1.98 1.36C11.25 17.58 6.42 12.75 5.74 6.73c-.1-.9.48-1.75 1.36-1.98Z"/>
+            </svg>
+            <span>联系</span>
+          </button>
+          <div class="contact-card">
+            <strong>充值请联系我</strong>
+            <span>微信：peafour1111</span>
+            <span>邮箱：zl779584477@outlook.com</span>
+            <div class="qr-placeholder">
+              <img class="qr-image" src="./assets/wechat-qr.png" alt="微信二维码" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+              <span hidden>二维码待替换</span>
+            </div>
+          </div>
+        </div>
+        <button class="api-settings-button" type="button" aria-label="打开 API 设置" data-api-open>
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/>
+            <path d="M19.25 12a7.58 7.58 0 0 0-.08-1.1l2.03-1.56-1.9-3.28-2.42.98a7.36 7.36 0 0 0-1.92-1.1L14.58 3h-5.16l-.38 2.94a7.36 7.36 0 0 0-1.92 1.1L4.7 6.06 2.8 9.34l2.03 1.56a7.58 7.58 0 0 0 0 2.2L2.8 14.66l1.9 3.28 2.42-.98c.58.46 1.23.83 1.92 1.1l.38 2.94h5.16l.38-2.94a7.36 7.36 0 0 0 1.92-1.1l2.42.98 1.9-3.28-2.03-1.56c.05-.36.08-.73.08-1.1Z"/>
+          </svg>
+        </button>
+        <button class="cache-clear-button" type="button" aria-label="清理缓存" title="清理缓存" data-cache-clear>
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 7h14"/>
+            <path d="M9 7V4h6v3"/>
+            <path d="m7 7 1 13h8l1-13"/>
+            <path d="M10.5 11v5"/>
+            <path d="M13.5 11v5"/>
+          </svg>
+        </button>
+        <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
+          <svg class="toolbar-icon theme-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2"/>
+            <path d="M12 20v2"/>
+            <path d="m4.93 4.93 1.41 1.41"/>
+            <path d="m17.66 17.66 1.41 1.41"/>
+            <path d="M2 12h2"/>
+            <path d="M20 12h2"/>
+            <path d="m4.93 19.07 1.41-1.41"/>
+            <path d="m17.66 6.34 1.41-1.41"/>
+          </svg>
+          <span data-theme-icon hidden>☾</span>
+          <span data-theme-label>暗色</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="home-content-divider" aria-hidden="true"></div>
+
+    <section class="tool-section" id="home-tools" data-home-section aria-label="常用绘图工具">
+      <h2>常用绘图工具</h2>
+      <div class="tool-grid module-grid common-tool-grid">
+      <a class="tool-card module-card module-canvas" href="./project-hub.html" rel="noopener noreferrer" data-tab-title="项目文件夹">
+        <span class="module-copy">
+          <span class="tool-label">节点无线画布<br>工作流</span>
+          <span class="tool-desc">灵感、文本、图片、视频节点统一整理。</span>
+          <span class="module-enter" aria-hidden="true">→</span>
+        </span>
+        <span class="module-art" aria-hidden="true">
+          <span class="glass-card one"></span>
+          <span class="glass-card two"></span>
+          <span class="cursor-shape"></span>
+        </span>
+      </a>
+
+      <a class="tool-card module-card module-image" href="./image-workbench/index.html" rel="noopener noreferrer" data-tab-title="工作台模式AI绘图">
+        <span class="module-copy">
+          <span class="tool-label">工作台模式<br>AI绘图</span>
+          <span class="tool-desc">输入提示词，快速生成高质量创意图片。</span>
+          <span class="module-enter" aria-hidden="true">→</span>
+        </span>
+        <span class="module-art" aria-hidden="true">
+          <span class="image-window"></span>
+          <span class="spark-dot a"></span>
+          <span class="spark-dot b"></span>
+        </span>
+      </a>
+
+      </div>
+    </section>
+
+    <section class="tool-section" id="image-tools" data-home-section>
+      <h2>图片工具箱</h2>
+      <div class="tool-grid module-grid image-tool-grid" aria-label="图片工具箱">
+        <a class="tool-card module-card module-upscale" href="./upscale-4k.html" rel="noopener noreferrer" data-tab-title="图片放大4K">
+          <span class="module-copy">
+            <span class="tool-label">AI图片变清晰<br>4K图片放大</span>
+            <span class="tool-desc">图片增强、比例调整、2K/4K 输出下载。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="resolution-tile">4K</span>
+            <span class="zoom-ring"></span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-cutout" href="./png-workflow.html" rel="noopener noreferrer" data-tab-title="抠图PNG工作流">
+          <span class="module-copy">
+            <span class="tool-label">AI抠图</span>
+            <span class="tool-desc">自动去背景，透明 PNG 预览与下载。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="png-board"></span>
+            <span class="cutout-subject"></span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-watermark" href="./watermark-remove.html" rel="noopener noreferrer" data-tab-title="AI消除水印工作流">
+          <span class="module-copy">
+            <span class="tool-label">AI消除水印</span>
+            <span class="tool-desc">上传图片，标记水印区域，生成干净修复图。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="watermark-photo"></span>
+            <span class="eraser-tool"></span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <section class="tool-section" id="copy-tools" data-home-section>
+      <h2>文案提示词专业术语</h2>
+      <div class="tool-grid module-grid copy-tool-grid" aria-label="文案提示词专业术语">
+        <a class="tool-card module-card module-keyword" href="./keyword-reverse.html" rel="noopener noreferrer" data-tab-title="关键词生成/图片反推文字">
+          <span class="module-copy">
+            <span class="tool-label">关键词生成<br>图片反推文字</span>
+            <span class="tool-desc">图片反推关键词，中英文提示词复制下载。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="prompt-lines"></span>
+            <span class="language-bubble">AI</span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-copywriter" href="./plain-to-pro.html" rel="noopener noreferrer" data-tab-title="白话转专业语言">
+          <span class="module-copy">
+            <span class="tool-label">大白话转换<br>专业语言</span>
+            <span class="tool-desc">把大白话需求转换成文案、品牌、电商专业表达。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="copy-doc"></span>
+            <span class="pro-badge">Pro</span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-video-prompt" href="./video-prompt-pro.html" rel="noopener noreferrer" data-tab-title="视频提示词专业语言">
+          <span class="module-copy">
+            <span class="tool-label">视频提示词转<br>专业语言</span>
+            <span class="tool-desc">把视频想法整理成可用于生成模型的专业提示词。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="video-board"></span>
+            <span class="play-chip"></span>
+          </span>
+        </a>
+
+      </div>
+    </section>
+
+    <section class="tool-section" id="audio-video-tools" data-home-section>
+      <h2>音视频转文字</h2>
+      <div class="tool-grid module-grid media-text-tool-grid" aria-label="音视频转文字">
+        <a class="tool-card module-card module-transcribe" href="https://wandou-video-workbench.netlify.app/" target="_blank" rel="noopener noreferrer" data-tab-title="录音视频转文字">
+          <span class="module-copy">
+            <span class="tool-label">录音转文字<br>视频转文字</span>
+            <span class="tool-desc">会议、博客、自媒体、多人分辨声音整理。<br>上传录音或视频，快速识别并整理为可编辑文字。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art transcribe-art" aria-hidden="true">
+            <span class="transcribe-mic"></span>
+            <span class="transcribe-wave"><i></i><i></i><i></i><i></i><i></i></span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-mind-map" href="./prompt-mind-map.html" rel="noopener noreferrer" data-tab-title="文案生成思维导图">
+          <span class="module-copy">
+            <span class="tool-label">文案生成<br>思维导图</span>
+            <span class="tool-desc">打开文案生成思维导图，按分类快速查看、整理和学习专业表达。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="mind-map-node core"></span>
+            <span class="mind-map-node left"></span>
+            <span class="mind-map-node right"></span>
+            <span class="mind-map-line a"></span>
+            <span class="mind-map-line b"></span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <section class="tool-section home-panel blank-panel" id="market" data-home-panel="market" aria-label="商品中心"></section>
+
+    <section class="tool-section home-panel blank-panel" id="blog" data-home-panel="blog" aria-label="博客"></section>
+
+    <section class="tool-section home-panel info-panel" id="announcement" data-home-panel="notice">
+      <h2>公告</h2>
+      <div class="info-grid">
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">新增工具</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>语音识别转文字工作台已上线</h3>
+            <p>支持上传录音或视频，快速识别语音并整理为可编辑文字，适用于会议、访谈、播客和自媒体内容整理。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>会议记录：将会议录音转成文字，便于整理重点、决策内容、待办事项和后续跟进信息。</p>
+            <p>访谈与多人对话：辅助区分不同发言内容，减少人工反复听写，适合采访、座谈和多人讨论。</p>
+            <p>播客与自媒体：把音频或视频中的口播内容整理成可编辑文稿，方便制作字幕、文章、摘要和发布文案。</p>
+            <p>课程与讲座：将长时间录音整理为连续文字，便于复习、归档、搜索和二次编辑。</p>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">更新说明</span>
+              <time datetime="2026-06">2026 年 6 月</time>
+            </span>
+            <h3>稳定版已加入提示词思维导图</h3>
+            <p>文案提示词专业术语新增思维导图入口，API 设置只保留密钥输入，默认接口地址由工具内部统一保存。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>本次更新把“AI 提示词思维导图”加入首页文案提示词专业术语区域，方便快速打开并查看分类内容。</p>
+            <p>API 配置界面只保留密钥输入，接口地址不再展示给客户，减少误改配置的情况。</p>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">使用建议</span>
+              <time datetime="2026-06">2026 年 6 月</time>
+            </span>
+            <h3>先保存密钥，再打开各功能模块</h3>
+            <p>密钥保存一次后，首页内的绘图、关键词、文案和图片处理功能会共用同一份本地配置。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>建议第一次使用时先进入右上角设置保存 API 密钥，再打开各个功能模块。</p>
+            <p>如果更换密钥或清理浏览器缓存，需要重新保存一次密钥后再继续使用。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="tool-section home-panel info-panel" id="about" data-home-panel="about">
+      <h2>关于</h2>
+      <div class="info-grid">
+        <article class="info-card announcement-intro-card" aria-labelledby="about-intro-title">
+          <span class="info-kicker">使用说明</span>
+          <h3 id="about-intro-title">关于这个软件</h3>
+          <div class="announcement-intro-copy">
+            <p>这个软件程序只是为了方便大家绘图而设计的，它主要是一个中转站，有很多问题处理得不够好，大家敬请见谅。</p>
+
+            <div class="announcement-intro-section">
+              <h4>软件的主要功能和用户群体如下</h4>
+              <ol>
+                <li><strong>主要功能：</strong>对话、生图处理。</li>
+                <li><strong>主要用户群体：</strong>很大一部分群体是用来做智能体或者“养小龙虾”，因为他们主要是消耗 token。</li>
+              </ol>
+            </div>
+
+            <div class="announcement-intro-section">
+              <h4>关于专业内容的处理</h4>
+              <p>这边有很多图片上的内容，请大家自行解决。我们是做设计的，所以很多你们专业的问题我不是太清楚，我也不是做文案的，这些需要你们专业的部分请自行解决。</p>
+            </div>
+
+            <p class="announcement-intro-note">最后，软件还有很多小 bug 的地方，请大家谅解，毕竟它很便宜。</p>
+          </div>
+        </article>
+
+        <article class="info-card">
+          <span class="info-kicker">数据说明</span>
+          <h3>配置保存在本机浏览器</h3>
+          <p>API 密钥和主题配置保存在本地浏览器中；客户可以自行清理缓存，功能页面仍保持独立打开。</p>
+        </article>
+        <article class="info-card guide-card" role="button" tabindex="0" data-guide-open aria-label="打开使用教程">
+          <span class="info-kicker">使用教程</span>
+          <h3>从注册 API 到生成图片</h3>
+          <p>点开查看完整流程：注册 API 平台、填写密钥、打开绘图工具、生成图片并下载保存。</p>
+          <span class="guide-card-action" aria-hidden="true">查看教程</span>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <div class="api-modal" data-api-modal hidden>
+    <form class="api-dialog" data-api-form>
+      <div class="api-dialog-header">
+        <div>
+          <p class="eyebrow">全局配置</p>
+          <h2>API 设置</h2>
+          <p>从 API 平台复制密钥，粘贴到这里后保存。保存一次，所有功能都会自动使用。</p>
+        </div>
+        <button class="icon-button" type="button" aria-label="关闭 API 设置" data-api-close>×</button>
+      </div>
+
+      <label class="api-field">
+        <span>API 密钥</span>
+        <input type="password" data-api-key placeholder="输入你的 API Key">
+      </label>
+
+      <p class="api-note">只需要填写 API 密钥。若是公用电脑，使用后可以点“清除”。</p>
+
+      <div class="api-dialog-actions">
+        <button class="secondary" type="button" data-api-clear>清除</button>
+        <button class="primary" type="submit">保存设置</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="guide-modal" data-guide-modal hidden>
+    <section class="guide-dialog" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <div class="guide-dialog-header">
+        <div>
+          <p class="eyebrow">使用教程</p>
+          <h2 id="guide-title">豌豆AI 使用流程</h2>
+          <p>按顺序完成 API 注册、密钥保存和图片生成。密钥只保存在本机浏览器里。</p>
+        </div>
+        <button class="icon-button" type="button" aria-label="关闭使用教程" data-guide-close>×</button>
+      </div>
+
+      <div class="guide-steps">
+        <article class="guide-step">
+          <span class="guide-step-number">1</span>
+          <div>
+            <h3>注册 API 平台账号</h3>
+            <p>打开你的 API 平台网站，使用手机号、邮箱或微信方式注册并登录。进入控制台后，根据平台提示完成充值或开通模型权限。</p>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-number">2</span>
+          <div>
+            <h3>复制 API 密钥</h3>
+            <p>在 API 平台的“令牌管理 / API Key / 密钥管理”里创建密钥，复制以 sk- 开头的完整密钥。不要把密钥发给无关人员。</p>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-number">3</span>
+          <div>
+            <h3>回到豌豆AI 填写密钥</h3>
+            <p>点击首页右上角齿轮按钮，打开 API 设置，把复制的密钥粘贴进去并保存。保存后，绘图、关键词和文案工具会共用这份配置。</p>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-number">4</span>
+          <div>
+            <h3>生成图片</h3>
+            <p>回到首页，打开“工作台模式 AI 绘图”。输入提示词，也可以上传参考图；选择模型、尺寸、分辨率和数量后点击生成。</p>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-number">5</span>
+          <div>
+            <h3>查看和下载结果</h3>
+            <p>生成完成后，点击图片卡片可以查看详情；点击下载按钮即可保存生成结果。若浏览器要求选择保存位置，按提示选择本地文件夹。</p>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    document.querySelectorAll("[data-home-nav]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        const target = button.dataset.homeNav;
+        if (!target) return;
+        event.preventDefault();
+        document.querySelectorAll("[data-home-nav]").forEach((item) => {
+          const active = item.dataset.homeNav === target;
+          item.classList.toggle("active", active);
+          if (item.tagName === "BUTTON") item.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        const isHome = target === "home";
+        document.querySelectorAll("[data-home-section]").forEach((section) => {
+          section.hidden = !isHome;
+        });
+        document.querySelectorAll("[data-home-panel]").forEach((panel) => {
+          panel.classList.toggle("active", !isHome && panel.dataset.homePanel === target);
+        });
+        const anchorMap = {
+          home: "home-tools",
+          market: "market",
+          blog: "blog",
+          notice: "announcement",
+          about: "about"
+        };
+        const anchor = document.getElementById(anchorMap[target]);
+        if (anchor) anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    const guideModal = document.querySelector("[data-guide-modal]");
+    const openGuide = () => {
+      if (!guideModal) return;
+      guideModal.hidden = false;
+      const closeButton = guideModal.querySelector("[data-guide-close]");
+      if (closeButton) closeButton.focus();
+    };
+    const closeGuide = () => {
+      if (!guideModal) return;
+      guideModal.hidden = true;
+    };
+    document.querySelectorAll("[data-guide-open]").forEach((trigger) => {
+      trigger.addEventListener("click", openGuide);
+      trigger.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openGuide();
+        }
+      });
+    });
+    document.querySelectorAll("[data-guide-close]").forEach((button) => {
+      button.addEventListener("click", closeGuide);
+    });
+    guideModal?.addEventListener("click", (event) => {
+      if (event.target === guideModal) closeGuide();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && guideModal && !guideModal.hidden) closeGuide();
+    });
+
+    const hasDesktopTabs = Boolean(window.wandouDesktopTabs && typeof window.wandouDesktopTabs.open === "function");
+    if (!(window.chrome && window.chrome.webview) && !hasDesktopTabs) {
+      document.querySelectorAll("a[data-tab-title]").forEach((link) => {
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      });
+    }
+    document.addEventListener("click", (event) => {
+      const link = event.target && event.target.closest ? event.target.closest("a[data-tab-title]") : null;
+      if (!link || !link.href) return;
+      const title = link.dataset.tabTitle || document.title || "新标签";
+      if (hasDesktopTabs) {
+        event.preventDefault();
+        window.wandouDesktopTabs.open(link.href, title);
+        return;
+      }
+      if (window.chrome && window.chrome.webview) {
+        event.preventDefault();
+        window.chrome.webview.postMessage(`OPEN_TAB|${encodeURIComponent(title)}|${encodeURIComponent(link.href)}`);
+        return;
+      }
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    }, true);
+  </script>
+  <script src="./local-cache.js"></script>
+  <script src="./workflow.js"></script>
+</body>
+</html>
+

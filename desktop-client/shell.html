@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>豌豆AI工具</title>
+  <link rel="stylesheet" href="./shell.css">
+</head>
+<body>
+  <header class="desktop-bar" aria-label="客户端标签栏">
+    <button id="brandButton" class="brand" type="button" title="返回首页" aria-label="返回首页">
+      <img id="brandLogo" alt="豌豆AI Logo">
+      <span id="brandText">首页</span>
+    </button>
+    <nav id="tabList" class="tab-list" aria-label="已打开页面"></nav>
+    <div class="window-drag-region" aria-hidden="true"></div>
+    <div class="bar-actions">
+      <button id="backButton" class="icon-button" type="button" title="后退" aria-label="后退"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+      <button id="forwardButton" class="icon-button" type="button" title="前进" aria-label="前进"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+      <button id="reloadButton" class="icon-button" type="button" title="刷新" aria-label="刷新"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+      <button id="noticeButton" class="icon-button notice-button" type="button" title="公告与更新" aria-label="公告与更新"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="notice-dot" hidden></span></button>
+      <button id="updateBadge" class="update-badge" type="button" hidden><span class="update-dot"></span><span>发现新版本</span></button>
+      <span id="versionText" class="version-text"></span>
+    </div>
+  </header>
+
+  <main id="views" class="views"></main>
+
+  <div id="dialogOverlay" class="dialog-overlay" hidden>
+    <section class="update-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+      <div class="dialog-icon"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></div>
+      <div class="dialog-copy">
+        <p class="dialog-kicker">豌豆AI工具 · 自动更新</p>
+        <h2 id="dialogTitle">发现新版本</h2>
+        <p id="dialogVersion" class="dialog-version"></p>
+        <div id="dialogNotes" class="dialog-notes"></div>
+      </div>
+      <div class="dialog-actions">
+        <button id="dialogCancel" class="dialog-button secondary" type="button">稍后再说</button>
+        <button id="dialogDownload" class="dialog-button primary" type="button">立即更新</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="closeDialogOverlay" class="dialog-overlay" hidden>
+    <section class="update-dialog close-dialog" role="dialog" aria-modal="true" aria-labelledby="closeDialogTitle">
+      <div class="dialog-icon"><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.2 5.8a8 8 0 1 0 11.6 0"/></svg></div>
+      <div class="dialog-copy">
+        <p class="dialog-kicker">豌豆AI工具</p>
+        <h2 id="closeDialogTitle">确定关闭软件吗？</h2>
+        <p id="closeDialogStatus" class="dialog-version">关闭前会自动保存所有已打开的节点工作流。</p>
+      </div>
+      <div class="dialog-actions">
+        <button id="closeDialogCancel" class="dialog-button secondary" type="button">继续使用</button>
+        <button id="closeDialogConfirm" class="dialog-button primary" type="button">保存并关闭</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="desktopToast" class="desktop-toast" role="status" aria-live="polite" hidden></div>
+  <script src="./shell.js"></script>
+</body>
+</html>

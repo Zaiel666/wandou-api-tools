@@ -1,0 +1,96 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1408">
+  <link rel="stylesheet" href="./styles.css">
+  <title>AI消除水印工作流</title>
+</head>
+<body class="watermark-page">
+  <main class="watermark-app">
+    <header class="keyword-topbar">
+      <div>
+        <p class="eyebrow">图片修复</p>
+        <h1>AI消除水印工作流</h1>
+        <p>上传带水印的图片，填写消除要求，右侧预览修复结果并下载。</p>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
+        <span data-theme-icon>☾</span>
+        <span data-theme-label>暗色</span>
+      </button>
+    </header>
+
+    <section class="watermark-workspace">
+      <section class="watermark-input-card">
+        <div class="section-heading">
+          <div>
+            <h2>上传图片</h2>
+            <p>建议上传原图清晰、需要消除的水印区域明确的图片。</p>
+          </div>
+          <span class="badge">必填</span>
+        </div>
+
+        <label class="upload-zone watermark-upload">
+          <input id="imageInput" type="file" accept="image/*">
+          <span><strong>点击上传带水印的图片</strong>支持 JPG / PNG / WEBP，上传后会在右侧预览。</span>
+        </label>
+
+        <label class="prompt-field">
+          <span>消除要求</span>
+          <textarea>去除图片中的文字水印、Logo水印或半透明水印，保持背景纹理、光影和边缘自然衔接，不改变主体内容，不新增元素，修复区域干净真实。</textarea>
+        </label>
+
+        <div class="watermark-options">
+          <div>
+            <span class="mini-label">修复强度</span>
+            <div class="keyword-option-grid">
+              <button class="option" type="button">轻度</button>
+              <button class="option active" type="button">标准</button>
+              <button class="option" type="button">强力</button>
+            </div>
+          </div>
+          <button class="primary generate-button" type="button">开始消除</button>
+        </div>
+      </section>
+
+      <aside class="watermark-result-card">
+        <div class="result-header">
+          <div>
+            <h2>结果预览</h2>
+            <p>完成后点击图片可放大查看，确认后下载。</p>
+          </div>
+          <span class="status-pill">待处理</span>
+        </div>
+
+        <button class="preview-inner upscale-preview product-preview" id="preview" type="button" data-preview-open>
+          消除水印后的图片会显示在这里
+        </button>
+
+        <div class="button-row preview-actions">
+          <button class="secondary" type="button" data-preview-open>预览大图</button>
+          <button class="primary" type="button" data-download-image>下载图片</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="image-modal" data-image-modal hidden>
+    <div class="modal-toolbar">
+      <button class="secondary" type="button" data-zoom-out>缩小</button>
+      <span data-zoom-label>100%</span>
+      <button class="secondary" type="button" data-zoom-in>放大</button>
+      <button class="primary" type="button" data-download-image>下载图片</button>
+      <button class="secondary" type="button" data-modal-close>关闭</button>
+    </div>
+    <div class="modal-stage">
+      <img alt="消除水印预览图" data-modal-image>
+    </div>
+  </div>
+
+  <script src="./local-cache.js"></script>
+  <script src="./save-directory.js"></script>
+  <script src="./workflow.js"></script>
+</body>
+</html>
+

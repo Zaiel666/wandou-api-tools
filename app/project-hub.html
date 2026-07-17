@@ -1,0 +1,827 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>项目文件夹</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #071006;
+      --bg-soft: #0b150b;
+      --panel: rgba(17, 23, 19, .88);
+      --panel-strong: rgba(20, 28, 23, .96);
+      --line: rgba(214, 233, 212, .20);
+      --line-strong: rgba(118, 185, 0, .78);
+      --text: #f4fff1;
+      --muted: #a8b6a5;
+      --green: #76b900;
+      --green-soft: rgba(118, 185, 0, .18);
+      --red: #ff4d4f;
+      --shadow: 0 22px 58px rgba(0, 0, 0, .34);
+      --focus: 0 0 0 2px rgba(118, 185, 0, .28), 0 18px 46px rgba(118, 185, 0, .12);
+    }
+
+    body.light-theme {
+      color-scheme: light;
+      --bg: #ffffff;
+      --bg-soft: #ffffff;
+      --panel: rgba(255, 255, 255, .90);
+      --panel-strong: rgba(255, 255, 255, .98);
+      --line: rgba(33, 48, 32, .16);
+      --line-strong: rgba(84, 145, 0, .72);
+      --text: #172015;
+      --muted: #60705d;
+      --green-soft: rgba(99, 160, 0, .15);
+      --shadow: 0 18px 52px rgba(22, 34, 20, .12);
+      --focus: 0 0 0 2px rgba(99, 160, 0, .24), 0 18px 46px rgba(99, 160, 0, .10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #000;
+      color: var(--text);
+      font-family: Inter, "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    body.light-theme {
+      background: #fff;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      background: #030706;
+      flex: 0 0 auto;
+    }
+
+    .title-block {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .button, .icon-button, select, .search {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(8, 13, 10, .62);
+      color: var(--text);
+      outline: none;
+    }
+
+    body.light-theme .button,
+    body.light-theme .icon-button,
+    body.light-theme select,
+    body.light-theme .search {
+      background: rgba(255, 255, 255, .86);
+    }
+
+    .button {
+      padding: 0 15px;
+      white-space: nowrap;
+    }
+
+    .button.primary {
+      border-color: var(--green);
+      color: #9cff00;
+      background: rgba(5, 10, 5, .76);
+    }
+
+    body.light-theme .button.primary {
+      color: #386800;
+      background: rgba(118, 185, 0, .12);
+    }
+
+    .button:hover, .icon-button:hover, select:hover {
+      border-color: var(--line-strong);
+    }
+
+    .theme-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+    }
+
+    .theme-button svg, .icon-button svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+
+    .search {
+      width: 100%;
+      padding: 0 12px;
+    }
+
+    select {
+      padding: 0 12px;
+    }
+
+    .folder-filter {
+      min-width: 42px;
+      color: var(--muted);
+    }
+
+    .folder-filter.active {
+      color: #9cff00;
+      border-color: var(--green);
+      background: var(--green-soft);
+    }
+
+    body.light-theme .folder-filter.active {
+      color: #386800;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 42px);
+      gap: 6px;
+    }
+
+    .icon-button {
+      display: inline-grid;
+      place-items: center;
+      min-width: 38px;
+      padding: 0;
+      color: var(--text);
+    }
+
+    .icon-button.active {
+      border-color: var(--green);
+      color: #9cff00;
+      background: var(--green-soft);
+    }
+
+    body.light-theme .icon-button.active {
+      color: #386800;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .grid.small { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); --cover-height: 102px; }
+    .grid.medium { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); --cover-height: 150px; }
+    .grid.large { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); --cover-height: 218px; }
+
+    .card {
+      position: relative;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel-strong);
+      box-shadow: var(--shadow);
+      transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(118, 185, 0, .46);
+    }
+
+    .card.selected {
+      border-color: var(--line-strong);
+      box-shadow: var(--focus);
+      transform: translateY(-1px);
+    }
+
+    .card.favorite {
+      border-color: rgba(118, 185, 0, .58);
+    }
+
+    .cover {
+      height: var(--cover-height);
+      background: #050806;
+      overflow: hidden;
+      border-bottom: 1px solid var(--line);
+      user-select: none;
+    }
+
+    .cover svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .empty-cover {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background:
+        linear-gradient(rgba(118, 185, 0, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(118, 185, 0, .08) 1px, transparent 1px);
+      background-size: 18px 18px;
+      font-size: 13px;
+    }
+
+    .card-body {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .name-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .name-input {
+      min-width: 0;
+      height: 30px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+      outline: none;
+      padding: 0 7px;
+    }
+
+    .name-input[readonly] {
+      cursor: default;
+      user-select: none;
+    }
+
+    .name-input:not([readonly]),
+    .name-input:focus {
+      border-color: var(--green);
+      background: rgba(118, 185, 0, .10);
+      color: #9cff00;
+    }
+
+    body.light-theme .name-input:not([readonly]),
+    body.light-theme .name-input:focus {
+      color: #386800;
+    }
+
+    .mini-icon {
+      min-width: 32px;
+      width: 32px;
+      height: 30px;
+      min-height: 30px;
+      border-radius: 7px;
+    }
+
+    .mini-icon svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .star {
+      color: var(--muted);
+    }
+
+    .star.active {
+      color: #9cff00;
+      border-color: var(--green);
+      background: var(--green-soft);
+    }
+
+    body.light-theme .star.active {
+      color: #386800;
+    }
+
+    .trash {
+      color: var(--red);
+      border-color: rgba(255, 77, 79, .35);
+    }
+
+    .trash:hover {
+      color: #fff;
+      background: rgba(255, 77, 79, .22);
+      border-color: var(--red);
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .meta span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .empty-state {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--panel);
+    }
+
+    @media (max-width: 820px) {
+      .shell { padding: 16px; }
+      .topbar { grid-template-columns: 1fr; }
+      .actions { justify-content: stretch; }
+      .actions .button, .actions .theme-button { flex: 1; justify-content: center; }
+      .toolbar { grid-template-columns: 1fr; }
+      .segmented { grid-template-columns: repeat(3, 1fr); }
+      .grid.small, .grid.medium, .grid.large { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="light-theme">
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <img class="logo" src="logo.png" alt="豌豆AI">
+        <div class="title-block">
+          <h1>项目文件夹</h1>
+          <div class="subtitle">单击选中文件夹，双击打开对应画布；双击名称可修改。</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="newProject" class="button primary" type="button">新建项目文件夹</button>
+        <button id="openCanvas" class="button" type="button">打开当前画布</button>
+        <button id="themeToggle" class="button theme-button" type="button" title="切换白天/夜晚">
+          <svg id="themeIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <span id="themeText">白天</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <input id="searchInput" class="search" type="search" placeholder="搜索文件夹名称">
+      <select id="sortSelect">
+        <option value="updated-desc">按操作时间排序</option>
+        <option value="created-desc">按创建日期排序</option>
+        <option value="name-asc">按名称排序</option>
+      </select>
+      <button id="favoriteFilter" class="icon-button folder-filter" type="button" title="收藏文件夹">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg>
+      </button>
+      <div class="segmented" aria-label="预览大小">
+        <button class="icon-button" data-size="small" type="button" title="小预览">小</button>
+        <button class="icon-button active" data-size="medium" type="button" title="中预览">中</button>
+        <button class="icon-button" data-size="large" type="button" title="大预览">大</button>
+      </div>
+    </section>
+
+    <main id="projectGrid" class="grid medium"></main>
+  </div>
+
+  <script src="./local-cache.js"></script>
+  <script>
+    const canvasStorageKey = "aiCanvasStateV1";
+    const projectListStorageKey = "aiCanvasProjectsV1";
+    const activeProjectStorageKey = "aiCanvasActiveProjectV1";
+    const viewSizeStorageKey = "aiCanvasProjectHubViewSize";
+    const selectedProjectStorageKey = "aiCanvasProjectHubSelected";
+    const themeStorageKey = "ai-tools-theme";
+    const canvasFile = "ai-node-canvas.html";
+    const colors = ["#76b900", "#28c76f", "#00bcd4", "#7c4dff", "#ffb020", "#ff4d4f"];
+
+    const grid = document.getElementById("projectGrid");
+    const searchInput = document.getElementById("searchInput");
+    const sortSelect = document.getElementById("sortSelect");
+    const favoriteFilter = document.getElementById("favoriteFilter");
+    const themeToggle = document.getElementById("themeToggle");
+    const themeText = document.getElementById("themeText");
+    let projects = [];
+    let sizeMode = localStorage.getItem(viewSizeStorageKey) || "medium";
+    let selectedProjectId = localStorage.getItem(selectedProjectStorageKey) || "";
+    let showFavoritesOnly = false;
+
+    function projectCanvasStorageKey(projectId) {
+      return `${canvasStorageKey}:${projectId || "default"}`;
+    }
+
+    function folderName(index) {
+      return `文件夹${String(index + 1).padStart(2, "0")}`;
+    }
+
+    function defaultProject() {
+      const now = Date.now();
+      return { id: `project-${now}`, name: "文件夹01", color: "#76b900", createdAt: now, updatedAt: now, favorite: false };
+    }
+
+    function normalizeProjectName(project, index) {
+      const current = String(project.name || "").trim();
+      if (!current || /^项目\s*\d+$/i.test(current) || current === "默认项目") return folderName(index);
+      return current;
+    }
+
+    function loadProjects() {
+      try {
+        projects = JSON.parse(localStorage.getItem(projectListStorageKey) || "[]");
+      } catch {
+        projects = [];
+      }
+      if (!Array.isArray(projects) || !projects.length) projects = [defaultProject()];
+      const now = Date.now();
+      projects.forEach((project, index) => {
+        if (!project.id) project.id = `project-${now + index}`;
+        project.name = normalizeProjectName(project, index);
+        if (!project.color) project.color = colors[index % colors.length];
+        if (!project.createdAt) project.createdAt = now - (projects.length - index) * 1000;
+        if (!project.updatedAt) project.updatedAt = project.createdAt;
+        if (typeof project.favorite !== "boolean") project.favorite = false;
+      });
+      if (!selectedProjectId || !projects.some((project) => project.id === selectedProjectId)) selectedProjectId = projects[0].id;
+      saveProjects();
+    }
+
+    function saveProjects() {
+      localStorage.setItem(projectListStorageKey, JSON.stringify(projects));
+      localStorage.setItem(selectedProjectStorageKey, selectedProjectId);
+      if (!localStorage.getItem(activeProjectStorageKey) && projects[0]) {
+        localStorage.setItem(activeProjectStorageKey, projects[0].id);
+      }
+    }
+
+    function readState(projectId) {
+      const raw = localStorage.getItem(projectCanvasStorageKey(projectId));
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+
+    function formatTime(value) {
+      if (!value) return "暂无记录";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "暂无记录";
+      const pad = (num) => String(num).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function canvasUrl(projectId) {
+      return `${canvasFile}?project=${encodeURIComponent(projectId)}`;
+    }
+
+    function openNamedTab(url, title) {
+      const absoluteUrl = new URL(url, location.href).href;
+      const tabTitle = title || document.title || "新标签";
+      if (window.wandouDesktopTabs && typeof window.wandouDesktopTabs.open === "function") {
+        window.wandouDesktopTabs.open(absoluteUrl, tabTitle);
+        return;
+      }
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(`OPEN_TAB|${encodeURIComponent(tabTitle)}|${encodeURIComponent(absoluteUrl)}`);
+        return;
+      }
+      window.open(absoluteUrl, "_blank", "noopener");
+    }
+
+    function openProject(projectId) {
+      localStorage.setItem(activeProjectStorageKey, projectId);
+      openNamedTab(canvasUrl(projectId), "豌豆AI节点画布");
+    }
+
+    function editName(projectId) {
+      const input = grid.querySelector(`[data-name="${projectId}"]`);
+      if (!input) return;
+      input.readOnly = false;
+      input.focus();
+      input.select();
+    }
+
+    function selectProject(projectId) {
+      selectedProjectId = projectId;
+      localStorage.setItem(selectedProjectStorageKey, projectId);
+      render();
+    }
+
+    function previewSvg(project, state) {
+      const nodes = Array.isArray(state?.nodes) ? state.nodes : [];
+      const links = Array.isArray(state?.links) ? state.links : [];
+      if (!nodes.length) {
+        return `<div class="empty-cover">空画布</div>`;
+      }
+      const view = state?.view || { x: 0, y: 0, zoom: 1 };
+      const centerX = -Number(view.x || 0) / Math.max(.2, Number(view.zoom || 1)) + 640;
+      const centerY = -Number(view.y || 0) / Math.max(.2, Number(view.zoom || 1)) + 360;
+      const width = 1280;
+      const height = 720;
+      const minX = centerX - width / 2;
+      const minY = centerY - height / 2;
+      const scaleX = 1000 / width;
+      const scaleY = 560 / height;
+      const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+      const lineSvg = links.slice(0, 80).map((link) => {
+        const from = nodeMap.get(link.from);
+        const to = nodeMap.get(link.to);
+        if (!from || !to) return "";
+        const x1 = (Number(from.x || 0) + 250 - minX) * scaleX;
+        const y1 = (Number(from.y || 0) + 120 - minY) * scaleY;
+        const x2 = (Number(to.x || 0) - minX) * scaleX;
+        const y2 = (Number(to.y || 0) + 120 - minY) * scaleY;
+        return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} C${(x1 + 80).toFixed(1)} ${y1.toFixed(1)}, ${(x2 - 80).toFixed(1)} ${y2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}" fill="none" stroke="rgba(220,235,255,.55)" stroke-width="3"/>`;
+      }).join("");
+      const nodeSvg = nodes.slice(0, 120).map((node) => {
+        const x = (Number(node.x || 0) - minX) * scaleX;
+        const y = (Number(node.y || 0) - minY) * scaleY;
+        if (x < -180 || y < -120 || x > 1180 || y > 700) return "";
+        const w = node.type === "result" ? 190 : 230;
+        const h = node.type === "result" ? 150 : 190;
+        const fill = node.type === "result" ? "rgba(118,185,0,.18)" : "rgba(20,26,22,.92)";
+        const stroke = node.type === "result" ? project.color || "#76b900" : "rgba(238,248,238,.34)";
+        const title = escapeHtml(node.title || node.type || "节点");
+        return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+          <rect width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="3"/>
+          <rect x="14" y="16" width="${Math.max(72, Math.min(160, title.length * 12))}" height="16" rx="8" fill="${project.color || "#76b900"}" opacity=".7"/>
+          <rect x="14" y="48" width="${w - 28}" height="12" rx="6" fill="rgba(255,255,255,.16)"/>
+          <rect x="14" y="72" width="${w - 58}" height="12" rx="6" fill="rgba(255,255,255,.10)"/>
+          <rect x="14" y="${h - 34}" width="${w - 28}" height="16" rx="8" fill="rgba(118,185,0,.24)"/>
+        </g>`;
+      }).join("");
+      return `<svg viewBox="0 0 1000 560" role="img" aria-label="画布中心预览">
+        <defs>
+          <pattern id="grid-${project.id}" width="28" height="28" patternUnits="userSpaceOnUse">
+            <path d="M28 0H0V28" fill="none" stroke="rgba(118,185,0,.18)" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="1000" height="560" fill="#050806"/>
+        <rect width="1000" height="560" fill="url(#grid-${project.id})"/>
+        ${lineSvg}
+        ${nodeSvg}
+      </svg>`;
+    }
+
+    function sortedProjects() {
+      const query = searchInput.value.trim().toLowerCase();
+      const list = projects.filter((project) => {
+        if (showFavoritesOnly && !project.favorite) return false;
+        return !query || String(project.name || "").toLowerCase().includes(query);
+      });
+      const sort = sortSelect.value;
+      list.sort((a, b) => {
+        if (sort === "created-desc") return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+        if (sort === "name-asc") return String(a.name || "").localeCompare(String(b.name || ""), "zh-Hans-CN");
+        if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
+        return Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+      });
+      return list;
+    }
+
+    function starIcon() {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg>`;
+    }
+
+    function trashIcon() {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 14h10l1-14"/><path d="M9 7V4h6v3"/></svg>`;
+    }
+
+    function render() {
+      document.querySelectorAll("[data-size]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.size === sizeMode);
+      });
+      favoriteFilter.classList.toggle("active", showFavoritesOnly);
+      favoriteFilter.title = showFavoritesOnly ? "显示全部文件夹" : "收藏文件夹";
+      grid.className = `grid ${sizeMode}`;
+      const list = sortedProjects();
+      if (!list.length) {
+        grid.innerHTML = `<div class="empty-state">没有符合条件的项目文件夹</div>`;
+        return;
+      }
+      grid.innerHTML = list.map((project) => {
+        const state = readState(project.id);
+        const savedAt = state?.savedAt || project.updatedAt;
+        const nodeCount = Array.isArray(state?.nodes) ? state.nodes.length : project.nodeCount || 0;
+        return `<article class="card ${project.id === selectedProjectId ? "selected" : ""} ${project.favorite ? "favorite" : ""}" data-project="${project.id}">
+          <div class="cover" data-cover="${project.id}">${previewSvg(project, state)}</div>
+          <div class="card-body">
+            <div class="name-row">
+              <input class="name-input" data-name="${project.id}" value="${escapeHtml(project.name)}" aria-label="文件夹名称" readonly>
+              <button class="icon-button mini-icon star ${project.favorite ? "active" : ""}" data-star="${project.id}" type="button" title="收藏文件夹">${starIcon()}</button>
+              <button class="icon-button mini-icon trash" data-delete="${project.id}" type="button" title="删除文件夹">${trashIcon()}</button>
+            </div>
+            <div class="meta">
+              <span>创建 ${formatTime(project.createdAt)}</span>
+              <span>操作 ${formatTime(savedAt)}</span>
+              <span>${nodeCount} 个节点</span>
+              <span>${project.favorite ? "已收藏" : "未收藏"}</span>
+            </div>
+          </div>
+        </article>`;
+      }).join("");
+      bindCards();
+    }
+
+    function bindCards() {
+      grid.querySelectorAll("[data-project]").forEach((card) => {
+        card.addEventListener("click", (event) => {
+          if (event.target.closest("button, input")) return;
+          selectProject(card.dataset.project);
+        });
+        card.addEventListener("dblclick", (event) => {
+          if (event.target.closest("button, input")) return;
+          openProject(card.dataset.project);
+        });
+      });
+      grid.querySelectorAll("[data-name]").forEach((input) => {
+        input.addEventListener("dblclick", (event) => {
+          event.stopPropagation();
+          editName(input.dataset.name);
+        });
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") input.blur();
+          if (event.key === "Escape") {
+            const project = projects.find((item) => item.id === input.dataset.name);
+            if (project) input.value = project.name;
+            input.blur();
+          }
+        });
+        input.addEventListener("change", () => {
+          const project = projects.find((item) => item.id === input.dataset.name);
+          if (!project) return;
+          project.name = input.value.trim() || project.name;
+          project.updatedAt = Date.now();
+          saveProjects();
+          render();
+        });
+        input.addEventListener("blur", () => {
+          input.readOnly = true;
+        });
+      });
+      grid.querySelectorAll("[data-star]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const project = projects.find((item) => item.id === button.dataset.star);
+          if (!project) return;
+          selectedProjectId = project.id;
+          project.favorite = !project.favorite;
+          project.updatedAt = Date.now();
+          saveProjects();
+          render();
+        });
+      });
+      grid.querySelectorAll("[data-delete]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          if (projects.length <= 1) {
+            alert("至少保留一个项目文件夹。");
+            return;
+          }
+          const project = projects.find((item) => item.id === button.dataset.delete);
+          if (!project || !confirm(`删除“${project.name}”？这个项目的本地画布记录也会删除。`)) return;
+          projects = projects.filter((item) => item.id !== project.id);
+          localStorage.removeItem(projectCanvasStorageKey(project.id));
+          if (selectedProjectId === project.id) selectedProjectId = projects[0]?.id || "";
+          if (localStorage.getItem(activeProjectStorageKey) === project.id && projects[0]) {
+            localStorage.setItem(activeProjectStorageKey, projects[0].id);
+          }
+          saveProjects();
+          render();
+        });
+      });
+    }
+
+    document.getElementById("newProject").addEventListener("click", () => {
+      const now = Date.now();
+      const project = {
+        id: `project-${now}`,
+        name: folderName(projects.length),
+        color: colors[projects.length % colors.length],
+        createdAt: now,
+        updatedAt: now,
+        favorite: false
+      };
+      projects.push(project);
+      selectedProjectId = project.id;
+      localStorage.setItem(activeProjectStorageKey, project.id);
+      saveProjects();
+      render();
+      requestAnimationFrame(() => editName(project.id));
+    });
+
+    document.getElementById("openCanvas").addEventListener("click", () => {
+      const active = selectedProjectId || localStorage.getItem(activeProjectStorageKey) || projects[0]?.id;
+      if (active) openProject(active);
+    });
+
+    searchInput.addEventListener("input", render);
+    sortSelect.addEventListener("change", render);
+    favoriteFilter.addEventListener("click", () => {
+      showFavoritesOnly = !showFavoritesOnly;
+      render();
+    });
+    document.querySelectorAll("[data-size]").forEach((button) => {
+      button.addEventListener("click", () => {
+        sizeMode = button.dataset.size;
+        localStorage.setItem(viewSizeStorageKey, sizeMode);
+        render();
+      });
+    });
+
+    function updateTheme() {
+      const isLight = document.body.classList.contains("light-theme");
+      themeText.textContent = isLight ? "夜晚" : "白天";
+      themeToggle.title = isLight ? "切换夜晚模式" : "切换白天模式";
+    }
+
+    function applyGlobalTheme(theme) {
+      const nextTheme = theme === "light" ? "light" : "dark";
+      document.body.classList.toggle("light-theme", nextTheme === "light");
+      localStorage.setItem(themeStorageKey, nextTheme);
+      window.WandouLocalCache?.syncTheme(nextTheme);
+      updateTheme();
+    }
+
+    themeToggle.addEventListener("click", () => {
+      const nextLight = !document.body.classList.contains("light-theme");
+      applyGlobalTheme(nextLight ? "light" : "dark");
+    });
+
+    applyGlobalTheme(window.WandouLocalCache?.readTheme(localStorage.getItem(themeStorageKey) || "light") || "light");
+    window.addEventListener("storage", (event) => {
+      if (event.key === themeStorageKey) applyGlobalTheme(event.newValue || "light");
+    });
+    loadProjects();
+    render();
+  </script>
+</body>
+</html>
+

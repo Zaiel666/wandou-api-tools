@@ -1,0 +1,98 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1408">
+  <link rel="stylesheet" href="./styles.css">
+  <title>关建词生成/反推</title>
+</head>
+<body class="keyword-page">
+  <main class="keyword-app">
+    <header class="keyword-topbar">
+      <div>
+        <p class="eyebrow">提示词整理</p>
+        <h1>关建词生成/反推</h1>
+        <p>上传图片或填写分类，选择模型和文本格式，生成中英文提示词。</p>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
+        <span data-theme-icon>☾</span>
+        <span data-theme-label>暗色</span>
+      </button>
+    </header>
+
+    <section class="keyword-workspace">
+      <section class="keyword-input-card">
+        <div class="section-heading">
+          <div>
+            <h2>图片与分类</h2>
+            <p>上传图片用于反推，也可以只输入分类生成通用提示词。</p>
+          </div>
+        </div>
+
+        <label class="upload-zone keyword-upload">
+          <input id="imageInput" type="file" accept="image/*">
+          <span><strong>上传图片用于反推关键词</strong>也可以只填写分类，生成通用提示词。</span>
+        </label>
+
+        <label class="field-row">
+          <span>关建词分类</span>
+          <input type="text" placeholder="例如：人物写真、商品图、游戏角色、室内设计、国风插画">
+        </label>
+
+        <div class="keyword-options-row">
+          <div>
+            <span class="mini-label">模型选择</span>
+            <div class="keyword-option-grid">
+              <button class="option active" type="button">GPT</button>
+              <button class="option" type="button">Claude</button>
+              <button class="option" type="button">Gemini</button>
+            </div>
+          </div>
+          <div>
+            <span class="mini-label">文本提示词</span>
+            <div class="keyword-option-grid">
+              <button class="option active" type="button">段落</button>
+              <button class="option" type="button">整句</button>
+              <button class="option" type="button">关键词组</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="primary generate-button" type="button">生成/反推</button>
+      </section>
+
+      <aside class="keyword-result-card">
+        <div class="result-header">
+          <div>
+            <h2>生成结果</h2>
+            <p>中英文结果会在这里并排展示，方便复制或下载。</p>
+          </div>
+          <span class="status-pill">待生成</span>
+        </div>
+
+        <div class="keyword-result-grid">
+          <div class="result-pane">
+            <h3>中文结果</h3>
+            <div class="result-box compact-result">等待生成中文提示词。</div>
+          </div>
+          <div class="result-pane">
+            <h3>English Result</h3>
+            <div class="result-box compact-result">Waiting for English prompt output.</div>
+          </div>
+        </div>
+
+        <div class="keyword-actions">
+          <button class="secondary" type="button">复制中文</button>
+          <button class="secondary" type="button">复制英文</button>
+          <button class="primary" type="button">下载文本</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="./local-cache.js"></script>
+  <script src="./workflow.js"></script>
+</body>
+</html>
+

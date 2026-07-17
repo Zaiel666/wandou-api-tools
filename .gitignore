@@ -1,0 +1,9 @@
+user-data/
+dist/
+desktop-client/dist/
+desktop-client/node_modules/
+*.lnk
+*.exe
+*.log
+.DS_Store
+Thumbs.db

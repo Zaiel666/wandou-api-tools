@@ -1,0 +1,59 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1408">
+  <link rel="stylesheet" href="./styles.css">
+  <title>抠图PNG工作流</title>
+</head>
+<body class="png-page">
+  <main class="shell png-shell">
+    <header class="hero topbar png-header">
+      <div>
+        <p class="eyebrow">透明底输出</p>
+        <h1>抠图PNG工作流</h1>
+        <p>左侧上传原图并填写关键词，右侧展示抠好的 PNG 结果和下载按钮。</p>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
+        <span data-theme-icon>☾</span>
+        <span data-theme-label>暗色</span>
+      </button>
+    </header>
+
+    <section class="png-grid">
+      <div class="stack png-left">
+        <div class="panel png-panel upload-panel">
+          <h2 class="panel-title">上传图片</h2>
+          <label class="upload-zone compact-upload">
+            <input id="imageInput" type="file" accept="image/*">
+            <span><strong>点击上传需要抠图的图片</strong>建议主体完整、边缘清晰，便于生成透明 PNG。</span>
+          </label>
+        </div>
+
+        <div class="panel png-panel keyword-panel">
+          <div class="title-row">
+            <h2 class="panel-title">关键词</h2>
+            <span class="inline-note">以下关键词是默认提示，可根据个人需求修改后抠图。</span>
+          </div>
+          <textarea>保留图片中的主要主体，精准去除背景并输出透明底 PNG。保持主体原有形状、颜色、纹理和边缘细节，修复边缘毛刺与杂色，避免误删主体、避免新增物体，整体干净自然，适合电商展示、头像素材和后期合成使用。</textarea>
+        </div>
+
+        <button class="primary generate-button" type="button">开始抠图</button>
+      </div>
+
+      <aside class="stack png-right">
+        <div class="preview-card png-preview-card">
+          <div class="preview-inner png-preview" id="preview">抠图完成后在这里展示透明 PNG</div>
+        </div>
+        <button class="primary" type="button" data-download-image>下载PNG</button>
+      </aside>
+    </section>
+  </main>
+
+  <script src="./local-cache.js"></script>
+  <script src="./save-directory.js"></script>
+  <script src="./workflow.js"></script>
+</body>
+</html>
+

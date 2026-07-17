@@ -1,0 +1,30 @@
+{
+  "name": "wandou-ai-desktop",
+  "version": "1.0.3",
+  "description": "豌豆AI Windows 客户端",
+  "main": "main.js",
+  "author": "PeaFour",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack:portable-folder": "electron-builder --win dir --x64"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.peafour.wandouai",
+    "productName": "豌豆AI工具",
+    "copyright": "Copyright © 2026 PeaFour",
+    "asar": true,
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "shell.html", "shell.css", "shell.js", "client-config.json", "package.json"],
+    "extraResources": [
+      { "from": "../app", "to": "app", "filter": ["**/*"] },
+      { "from": "portable-updater.ps1", "to": "portable-updater.ps1" }
+    ],
+    "win": { "icon": "../app/pea-launcher.ico", "target": [{ "target": "dir", "arch": ["x64"] }] }
+  }
+}

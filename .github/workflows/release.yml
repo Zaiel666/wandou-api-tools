@@ -1,0 +1,84 @@
+name: Build portable folder release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example 1.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}".TrimStart("v")
+          } else {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$') {
+            throw "Invalid version: $version"
+          }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install desktop dependencies
+        working-directory: desktop-client
+        run: pnpm install --frozen-lockfile
+
+      - name: Build portable folder
+        shell: pwsh
+        run: |
+          Set-Location desktop-client
+          node -e "const fs=require('fs'); const p=require('./package.json'); p.version=process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p,null,2)+'\n')"
+          pnpm exec electron-builder --win dir --x64 --publish never
+          if ($LASTEXITCODE -ne 0) { throw "Electron build failed" }
+          Set-Location ..
+          $package = Join-Path $PWD "desktop-client\dist\win-unpacked"
+          if (-not (Test-Path -LiteralPath (Join-Path $package '豌豆AI工具.exe'))) {
+            throw "Portable executable was not generated"
+          }
+          @"
+          豌豆AI工具 v$env:VERSION
+
+          使用方法：双击“豌豆AI工具.exe”。
+          本软件无需安装；有新版本时，顶部会显示“发现新版本”，点击即可自动更新。
+          "@ | Set-Content -LiteralPath (Join-Path $package "使用说明.txt") -Encoding UTF8
+          New-Item -ItemType Directory -Path (Join-Path $PWD "dist") -Force | Out-Null
+          $zip = Join-Path $PWD "dist\wandou-ai-tools-windows-x64.zip"
+          Compress-Archive -Path (Join-Path $package '*') -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash *wandou-ai-tools-windows-x64.zip" | Set-Content -LiteralPath "$zip.sha256" -Encoding ASCII
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:TAG `
+            "dist\wandou-ai-tools-windows-x64.zip" `
+            "dist\wandou-ai-tools-windows-x64.zip.sha256" `
+            --title "豌豆AI工具 v$env:VERSION" `
+            --generate-notes

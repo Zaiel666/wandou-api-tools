@@ -1,0 +1,9 @@
+{
+  "name": "豌豆AI绘图工作台",
+  "short_name": "豌豆AI绘图",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#111827",
+  "icons": []
+}

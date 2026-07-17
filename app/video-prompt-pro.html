@@ -1,0 +1,83 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1408">
+  <link rel="stylesheet" href="./styles.css">
+  <title>视频提示词专业语言</title>
+</head>
+<body class="prompt-page">
+  <main class="prompt-app">
+    <header class="keyword-topbar">
+      <div>
+        <p class="eyebrow">文案提示词专业术语</p>
+        <h1>视频提示词专业语言</h1>
+        <p>把视频创意整理成镜头、画面、动作、光线和风格都清晰的专业提示词。</p>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
+        <span data-theme-icon>☾</span>
+        <span data-theme-label>暗色</span>
+      </button>
+    </header>
+
+    <section class="prompt-workspace">
+      <section class="prompt-input-card">
+        <label class="prompt-field video-main-input">
+          <span>视频想法</span>
+          <textarea placeholder="例如：一个咖啡杯放在窗边，早晨阳光照进来，镜头慢慢推进，感觉温暖高级。"></textarea>
+        </label>
+
+        <div>
+          <div class="label-with-note">
+            <span class="mini-label">模型选择</span>
+            <small>推荐 Claude</small>
+          </div>
+          <div class="keyword-option-grid">
+            <button class="option" type="button">GPT</button>
+            <button class="option active" type="button">Claude</button>
+            <button class="option" type="button">Gemini</button>
+          </div>
+        </div>
+
+        <div>
+          <span class="mini-label">提示词类型</span>
+          <div class="keyword-option-grid two-options">
+            <button class="option active" type="button">正常提示词</button>
+            <button class="option" type="button">复杂详细提示词</button>
+          </div>
+        </div>
+
+        <button class="primary generate-button" type="button">生成</button>
+      </section>
+
+      <aside class="prompt-result-card">
+        <div class="result-header">
+          <div>
+            <h2>生成结果</h2>
+            <p>右上角可单独复制每种语言。</p>
+          </div>
+          <span class="status-pill">待生成</span>
+        </div>
+
+        <div class="prompt-result-grid">
+          <div class="result-pane copy-pane">
+            <div class="pane-title"><h3>中文结果</h3><button class="secondary mini-copy" type="button">复制</button></div>
+            <div class="result-box compact-result">等待生成中文视频提示词。</div>
+          </div>
+          <div class="result-pane copy-pane">
+            <div class="pane-title"><h3>English Result</h3><button class="secondary mini-copy" type="button">复制</button></div>
+            <div class="result-box compact-result">Waiting for English video prompt.</div>
+          </div>
+        </div>
+
+        <button class="primary" type="button">下载TXT文档</button>
+      </aside>
+    </section>
+  </main>
+
+  <script src="./local-cache.js"></script>
+  <script src="./workflow.js"></script>
+</body>
+</html>
+
