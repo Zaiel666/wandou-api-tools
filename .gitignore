@@ -2,7 +2,7 @@ user-data/
 dist/
 desktop-client/dist/
 desktop-client/node_modules/
-豌豆AI工具_v*_上传包/
+豌豆AI工具_v*/
 *.lnk
 *.exe
 *.log

@@ -120,19 +120,47 @@ async function startPortableUpdate(updateInfo) {
 
     const sourceUpdater = path.join(process.resourcesPath, "portable-updater.ps1");
     const updaterPath = path.join(workDir, "portable-updater.ps1");
+    const readyPath = path.join(workDir, "updater-ready.txt");
     await fs.promises.copyFile(sourceUpdater, updaterPath);
     sendUpdateStatus("校验完成，软件即将自动重启…", "ready");
 
-    const child = spawn("powershell.exe", [
+    const powershellPath = path.join(process.env.SystemRoot || "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+    const child = spawn(powershellPath, [
       "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", updaterPath,
       "-InstallDirectory", path.dirname(process.execPath),
       "-PackagePath", packagePath,
       "-ProcessId", String(process.pid),
-      "-ExecutableName", path.basename(process.execPath)
+      "-ExecutableName", path.basename(process.execPath),
+      "-TargetVersion", String(updateInfo.latestVersion || ""),
+      "-ReadyPath", readyPath
     ], { detached: true, stdio: "ignore", windowsHide: true });
+
+    await new Promise((resolve, reject) => {
+      const startedAt = Date.now();
+      let settled = false;
+      let timer = null;
+      const finish = (error) => {
+        if (settled) return;
+        settled = true;
+        clearInterval(timer);
+        child.removeAllListeners("error");
+        child.removeAllListeners("exit");
+        if (error) reject(error);
+        else resolve();
+      };
+      child.once("error", (error) => finish(new Error(`无法启动更新程序：${error.message}`)));
+      child.once("exit", (code) => {
+        if (!fs.existsSync(readyPath)) finish(new Error(`更新程序提前退出（代码 ${code ?? "未知"}）`));
+      });
+      timer = setInterval(() => {
+        if (fs.existsSync(readyPath)) return finish();
+        if (Date.now() - startedAt > 8000) finish(new Error("更新程序没有成功接管，软件不会关闭，请重试"));
+      }, 120);
+    });
+
     child.unref();
     allowWindowClose = true;
-    setTimeout(() => app.quit(), 350);
+    setTimeout(() => app.quit(), 900);
     return { started: true };
   } catch (error) {
     updateInProgress = false;
