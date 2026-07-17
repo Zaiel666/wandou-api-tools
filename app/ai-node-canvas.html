@@ -2166,6 +2166,15 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .resolution-row .choice-options.align-right {
+      grid-template-columns: repeat(3, minmax(58px, 76px));
+      justify-content: end;
+    }
+
+    .resolution-row .choice-options.align-right.single-option {
+      grid-template-columns: minmax(76px, 112px);
+    }
+
     .png-resolution-row .choice-options {
       grid-template-columns: repeat(3, minmax(54px, 68px));
       justify-content: end;
@@ -2218,8 +2227,27 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .video-mode-row .mode-choice-row:nth-child(2) {
+    .video-mode-row .mode-choice-row:first-child {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .video-mode-row .choice-option:disabled,
+    .count-option.model-default:disabled {
+      cursor: not-allowed;
+      color: rgba(71, 85, 105, 0.46);
+      background: rgba(226, 232, 240, 0.48);
+      border-color: rgba(148, 163, 184, 0.24);
+      box-shadow: none;
+      -webkit-text-fill-color: currentColor;
+      background-image: none;
+      opacity: 1;
+    }
+
+    body.dark-theme .video-mode-row .choice-option:disabled,
+    body.dark-theme .count-option.model-default:disabled {
+      color: rgba(255, 255, 255, 0.34);
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
     }
 
     .stepper {
@@ -3965,14 +3993,25 @@
     const videoRatioOptions = ["9:16 竖屏", "16:9 横屏"];
     const imageResolutionOptions = ["1K", "2K", "4K"];
     const pngResolutionOptions = ["1K", "2K", "4K"];
-    const videoResolutionOptions = ["720P", "1080P", "4K"];
-    const videoDurationOptions = ["1s", "8s"];
-    const videoDurationLabels = { "1s": "1s测试", "8s": "默认8s" };
+    const videoModelCapabilities = {
+      "veo3.1-fast": {
+        resolutions: ["720P", "1080P", "4K"],
+        ratios: ["9:16 竖屏", "16:9 横屏"],
+        defaultDuration: 8,
+        maxReferences: 3
+      },
+      "omni-flash": {
+        resolutions: ["DEFAULT"],
+        ratios: ["9:16 竖屏", "16:9 横屏"],
+        defaultDuration: 10,
+        maxReferences: 7
+      }
+    };
     const videoCountOptions = [1, 2, 4, 6, 8];
     const videoModeOptions = [
-      { value: "firstLast", label: "首尾帧", row: 1 },
-      { value: "multi", label: "多图参考", row: 1 },
-      { value: "text", label: "文生视频", row: 2 }
+      { value: "text", label: "文生视频", row: 1 },
+      { value: "firstLast", label: "首尾帧参考", row: 2, needsImage: true },
+      { value: "multi", label: "多图参考", row: 2, needsImage: true }
     ];
     const randomAutoKeys = ["9:16", "3:4", "2:3"];
     const pendingHistoryMediaPersistIds = new Set();
@@ -4092,6 +4131,26 @@
 
     function imageResolutionOptionsForModel(model) {
       return model === "Nano Banana2" || model === "Nano BananaPro" ? ["4K"] : imageResolutionOptions;
+    }
+
+    function videoCapabilitiesForModel(model) {
+      return videoModelCapabilities[model] || videoModelCapabilities[videoPrimaryModel];
+    }
+
+    function videoResolutionOptionsForModel(model) {
+      return videoCapabilitiesForModel(model).resolutions;
+    }
+
+    function videoRatioOptionsForModel(model) {
+      return videoCapabilitiesForModel(model).ratios;
+    }
+
+    function videoDefaultDurationForModel(model) {
+      return videoCapabilitiesForModel(model).defaultDuration;
+    }
+
+    function resolutionLabel(value) {
+      return value === "DEFAULT" ? "模型默认" : value;
     }
 
     function defaultApiBaseUrl() {
@@ -4564,8 +4623,8 @@
         ratio: type === "video" ? "9:16 竖屏" : "Auto自适应",
         resolution: type === "video" ? "720P" : type === "upscale" ? "4K" : "1K",
         count: 1,
-        duration: type === "video" ? "1s" : "5s",
-        videoMode: type === "video" ? "firstLast" : "",
+        duration: type === "video" ? "default" : "5s",
+        videoMode: type === "video" ? "text" : "",
         mediaUrl: "",
         references: [],
         mediaType: type === "video" ? "video" : "image",
@@ -5191,39 +5250,39 @@
       const actionText = node.type === "keyword" ? "提取提示词" : node.type === "video" ? "生成视频" : "生成图片";
       const isVideoNode = node.type === "video";
       const models = isVideoNode ? videoModelOptions : imageModelOptions;
-      const ratios = isVideoNode ? videoRatioOptions : imageRatioOptions;
-      const resolutions = isVideoNode ? videoResolutionOptions : imageResolutionOptionsForModel(node.model);
       if (!models.includes(node.model)) node.model = models[0];
+      const ratios = isVideoNode ? videoRatioOptionsForModel(node.model) : imageRatioOptions;
+      const resolutions = isVideoNode ? videoResolutionOptionsForModel(node.model) : imageResolutionOptionsForModel(node.model);
       if (!ratios.includes(node.ratio)) node.ratio = ratioKey(node.ratio) === "Auto" ? "Auto自适应" : ratios[0];
       if (!resolutions.includes(node.resolution)) node.resolution = resolutions[0];
-      if (!node.duration) node.duration = isVideoNode ? "1s" : "5s";
+      if (!node.duration) node.duration = isVideoNode ? "default" : "5s";
+      const videoReferenceCount = isVideoNode
+        ? collectReferenceItems([...getInputMediaList(node.id), node]).filter((item) => isRenderableImageUrl(item?.url)).length
+        : 0;
       if (isVideoNode) {
         if (!videoModelOptions.includes(node.model)) node.model = videoPrimaryModel;
         if (!videoCountOptions.includes(Number(node.count))) node.count = 1;
-        if (!videoDurationOptions.includes(node.duration)) node.duration = "1s";
-        if (!videoModeOptions.some((item) => item.value === node.videoMode)) node.videoMode = "firstLast";
+        node.duration = "default";
+        if (!videoModeOptions.some((item) => item.value === node.videoMode)) node.videoMode = "text";
+        if (!videoReferenceCount && node.videoMode !== "text") node.videoMode = "text";
         if (node.videoMode === "firstLast" && Array.isArray(node.references) && node.references.length > 2) {
           node.references = node.references.slice(0, 2);
           node.mediaUrl = node.references[0]?.url || "";
         }
       }
-      const modelHtml = models.map((model) => `<option ${node.model === model ? "selected" : ""}>${model}</option>`).join("");
-      const ratioHtml = ratios.map((ratio) => `<option ${node.ratio === ratio ? "selected" : ""}>${ratio}</option>`).join("");
       const modelMenuHtml = models.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-node-model="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
-      const durationHtml = videoDurationOptions.map((duration) => (
-        `<button class="count-option ${node.duration === duration ? "active" : ""}" data-duration="${duration}" type="button">${videoDurationLabels[duration] || duration}</button>`
-      )).join("");
+      const durationHtml = `<button class="count-option active model-default" type="button" disabled>模型默认 ${videoDefaultDurationForModel(node.model)}s</button>`;
       const countHtml = (isVideoNode ? videoCountOptions : [1, 2, 3, 4, 5, 6]).map((count) => (
         `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button">${count}</button>`
       )).join("");
       const resolutionHtml = resolutions.map((resolution) => (
-        `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-resolution="${resolution}" type="button">${resolution}</button>`
+        `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-resolution="${resolution}" type="button" ${resolution === "DEFAULT" ? "disabled" : ""}>${resolutionLabel(resolution)}</button>`
       )).join("");
       const modeHtml = [1, 2].map((row) => (
         `<div class="choice-options mode-choice-row">
           ${videoModeOptions.filter((mode) => mode.row === row).map((mode) => (
-            `<button class="choice-option ${node.videoMode === mode.value ? "active" : ""}" data-video-mode="${mode.value}" type="button">${mode.label}</button>`
+            `<button class="choice-option ${node.videoMode === mode.value ? "active" : ""}" data-video-mode="${mode.value}" type="button" ${mode.needsImage && !videoReferenceCount ? 'disabled title="添加图片后可用"' : ""}>${mode.label}</button>`
           )).join("")}
         </div>`
       )).join("");
@@ -5261,18 +5320,18 @@
         </div>` : ""}
         <div class="form-row">
           <label>模型</label>
-          ${isVideoNode ? `<select data-field="model">${modelHtml}</select>` : `<div class="node-select" data-node-select><button class="node-select-trigger" data-node-select-toggle type="button"><span>${escapeHtml(node.model)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu">${modelMenuHtml}</div></div>`}
+          <div class="node-select" data-node-select><button class="node-select-trigger" data-node-select-toggle type="button" aria-haspopup="listbox" aria-expanded="false"><span>${escapeHtml(node.model)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu" role="listbox">${modelMenuHtml}</div></div>
         </div>
         <div class="form-row">
           <label>比例尺寸</label>
           <div>
-            ${isVideoNode ? `<select data-field="ratio">${ratioHtml}</select>` : `<div class="node-select" data-node-select><button class="node-select-trigger" data-node-select-toggle type="button"><span>${escapeHtml(node.ratio)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu ratio-menu">${ratioMenuHtml}</div></div>`}
+            <div class="node-select" data-node-select><button class="node-select-trigger" data-node-select-toggle type="button" aria-haspopup="listbox" aria-expanded="false"><span>${escapeHtml(node.ratio)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu ratio-menu" role="listbox">${ratioMenuHtml}</div></div>
             <div class="ratio-readout" data-ratio-readout>当前画面比例：${node.ratio}</div>
           </div>
         </div>
         <div class="form-row resolution-row">
           <label>分辨率</label>
-          <div class="choice-options">${resolutionHtml}</div>
+          <div class="choice-options ${(isVideoNode || resolutions.length === 1) ? "align-right" : ""} ${resolutions.length === 1 ? "single-option" : ""}">${resolutionHtml}</div>
         </div>
         ${isVideoNode ? `
         <div class="form-row video-duration-row">
@@ -5359,10 +5418,17 @@
           event.stopPropagation();
           const select = toggle.closest("[data-node-select]");
           const shouldOpen = !select.classList.contains("open");
-          wrap.querySelectorAll("[data-node-select].open").forEach((item) => item.classList.remove("open"));
+          wrap.querySelectorAll("[data-node-select].open").forEach((item) => {
+            item.classList.remove("open");
+            item.querySelector("[data-node-select-toggle]")?.setAttribute("aria-expanded", "false");
+          });
           if (shouldOpen) {
             select.classList.add("open");
-            document.addEventListener("click", () => select.classList.remove("open"), { once: true });
+            toggle.setAttribute("aria-expanded", "true");
+            document.addEventListener("click", () => {
+              select.classList.remove("open");
+              toggle.setAttribute("aria-expanded", "false");
+            }, { once: true });
           }
         });
       });
@@ -5376,7 +5442,15 @@
         button.addEventListener("click", () => {
           pushHistory();
           node.model = button.dataset.nodeModel;
-          node.resolution = imageResolutionOptionsForModel(node.model)[0];
+          if (isVideoNode) {
+            const capabilities = videoCapabilitiesForModel(node.model);
+            node.resolution = capabilities.resolutions[0];
+            if (!capabilities.ratios.includes(node.ratio)) node.ratio = capabilities.ratios[0];
+            node.duration = "default";
+            node.status = `${node.model}：时长由模型默认生成（${capabilities.defaultDuration} 秒）。`;
+          } else {
+            node.resolution = imageResolutionOptionsForModel(node.model)[0];
+          }
           render();
         });
       });
@@ -5387,15 +5461,6 @@
           render();
         });
       });
-      const modelSelect = wrap.querySelector('select[data-field="model"]');
-      if (modelSelect && isVideoNode) {
-        modelSelect.addEventListener("change", () => {
-          node.model = videoModelOptions.includes(modelSelect.value) ? modelSelect.value : videoPrimaryModel;
-          if (!videoModeOptions.some((item) => item.value === node.videoMode)) node.videoMode = "firstLast";
-          node.status = `${node.model}：可使用首尾帧、多图参考或文生视频。`;
-          render();
-        });
-      }
       wrap.querySelectorAll("[data-count]").forEach((button) => {
         button.addEventListener("click", () => {
           pushHistory();
@@ -5424,8 +5489,6 @@
           node.videoMode = button.dataset.videoMode;
           if (!videoModelOptions.includes(node.model)) node.model = videoPrimaryModel;
           if (node.videoMode === "text") {
-            node.references = [];
-            node.mediaUrl = "";
             node.status = "文生视频模式：只使用提示词生成视频。";
           } else if (node.videoMode === "firstLast") {
             node.references = normalizeReferences(node).slice(0, 2);
@@ -6007,7 +6070,10 @@
       const cleanUrls = Array.from(new Set(urls || [])).filter((url) => /^data:image\//i.test(url) || /^https?:\/\//i.test(url));
       if (!cleanUrls.length) return 0;
       const existing = normalizeReferences(node);
-      const room = node.type === "video" && node.videoMode === "firstLast" ? Math.max(0, 2 - existing.length) : cleanUrls.length;
+      const videoReferenceLimit = node.type === "video"
+        ? (node.videoMode === "firstLast" ? 2 : videoCapabilitiesForModel(node.model).maxReferences)
+        : Number.POSITIVE_INFINITY;
+      const room = Math.max(0, Math.min(cleanUrls.length, videoReferenceLimit - existing.length));
       const limitedUrls = cleanUrls.slice(0, room);
       if (!limitedUrls.length) return 0;
       const added = [];
@@ -6030,10 +6096,15 @@
         return 0;
       }
       const existing = normalizeReferences(node);
-      const room = node.type === "video" && node.videoMode === "firstLast" ? Math.max(0, 2 - existing.length) : list.length;
+      const videoReferenceLimit = node.type === "video"
+        ? (node.videoMode === "firstLast" ? 2 : videoCapabilitiesForModel(node.model).maxReferences)
+        : Number.POSITIVE_INFINITY;
+      const room = Math.max(0, Math.min(list.length, videoReferenceLimit - existing.length));
       const limitedList = list.slice(0, room);
       if (!limitedList.length) {
-        node.status = "首位帧模式最多只能上传 2 张参考图。";
+        node.status = node.type === "video"
+          ? `${node.model} 当前最多支持 ${videoReferenceLimit} 张参考图。`
+          : "没有可添加的图片。";
         return 0;
       }
       const added = [];
@@ -7875,10 +7946,11 @@ ${formatInstruction}`;
       }
 
       if (node.type === "video") {
-        const videoMode = node.videoMode || "firstLast";
+        const videoMode = node.videoMode || "text";
         const fixedAspectRatio = fixedVideoAspectRatio(node.model);
         const payloadAspectRatio = fixedAspectRatio || ratioKey(node.ratio);
-        const videoDuration = Math.max(1, Number.parseInt(node.duration, 10) || 1);
+        const videoDuration = videoDefaultDurationForModel(node.model);
+        const useModelDefaultResolution = node.resolution === "DEFAULT";
         const videoReferences = videoMode === "text" ? [] : references;
         const imageUrls = videoReferences
           .map((item) => item.url)
@@ -7891,8 +7963,8 @@ ${formatInstruction}`;
         }
         const videoPrompt = [
           node.prompt || "",
-          `时长：${videoDuration} 秒。`,
-          `分辨率：${String(node.resolution || "720P").toUpperCase()}。`,
+          `时长：使用模型默认值（${videoDuration} 秒）。`,
+          useModelDefaultResolution ? "分辨率：使用模型默认值。" : `分辨率：${String(node.resolution || "720P").toUpperCase()}。`,
           `比例：${payloadAspectRatio === "Auto" ? targetSize : payloadAspectRatio}。`,
           videoMode === "text"
             ? "模式：文生视频，只根据文字提示词生成视频。"
@@ -7904,11 +7976,10 @@ ${formatInstruction}`;
           model: modelToApiModel(node.model),
           prompt: node.prompt,
           messages: [{ role: "user", content: messageContentFor({ ...node, prompt: videoPrompt }, videoReferences, targetSize) }],
-          duration: videoDuration,
-          resolution: String(node.resolution || "720P").toLowerCase(),
           size: payloadAspectRatio === "Auto" ? "auto" : payloadAspectRatio,
           stream: /veo/i.test(String(node.model || "")) ? true : false
         };
+        if (!useModelDefaultResolution) payload.resolution = String(node.resolution || "720P").toLowerCase();
         const aspectRatio = payloadAspectRatio;
         if (aspectRatio !== "Auto") payload.aspect_ratio = aspectRatio;
         if (videoMode === "text") {
@@ -8244,7 +8315,7 @@ ${formatInstruction}`;
     let lastRandomAutoKey = "";
 
     function resolutionLongSide(resolution) {
-      const map = { "1K": 1024, "2K": 2048, "4K": 4096, "720P": 1280, "1080P": 1920 };
+      const map = { "1K": 1024, "2K": 2048, "4K": 4096, "DEFAULT": 1280, "720P": 1280, "1080P": 1920 };
       return map[resolution] || 1024;
     }
 
@@ -8385,6 +8456,7 @@ ${formatInstruction}`;
 
     function sizeFromRatio(ratio, resolution, references = [], options = {}) {
       const videoLongMap = {
+        "DEFAULT": 1280,
         "480P": 854,
         "720P": 1280,
         "1080P": 1920,
