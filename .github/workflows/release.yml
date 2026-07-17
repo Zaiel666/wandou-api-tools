@@ -60,6 +60,7 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $package '豌豆AI工具.exe'))) {
             throw "Portable executable was not generated"
           }
+          Remove-Item -LiteralPath (Join-Path $package 'wandou-ai-update.log') -Force -ErrorAction SilentlyContinue
           @"
           豌豆AI工具 v$env:VERSION
 

@@ -122,11 +122,11 @@ async function startPortableUpdate(updateInfo) {
     const updaterPath = path.join(workDir, "portable-updater.ps1");
     const readyPath = path.join(workDir, "updater-ready.txt");
     await fs.promises.copyFile(sourceUpdater, updaterPath);
-    sendUpdateStatus("校验完成，软件即将自动重启…", "ready");
+    sendUpdateStatus("下载完成，正在启动安装程序…", "ready");
 
     const powershellPath = path.join(process.env.SystemRoot || "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
     const child = spawn(powershellPath, [
-      "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", updaterPath,
+      "-NoProfile", "-Sta", "-ExecutionPolicy", "Bypass", "-File", updaterPath,
       "-InstallDirectory", path.dirname(process.execPath),
       "-PackagePath", packagePath,
       "-ProcessId", String(process.pid),

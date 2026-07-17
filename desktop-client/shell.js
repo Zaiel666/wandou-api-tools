@@ -323,7 +323,7 @@ window.wandouShell?.onDownloadResult((payload) => {
 });
 window.wandouShell?.onUpdateStatus((payload) => {
   dialogNotes.textContent = payload?.message || "正在更新…";
-  if (payload?.state === "ready") dialogDownload.textContent = "正在重启…";
+  if (payload?.state === "ready") dialogDownload.textContent = "准备安装…";
   if (payload?.state === "error") {
     dialogCancel.disabled = false;
     dialogDownload.disabled = false;
