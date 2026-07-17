@@ -3,7 +3,7 @@
 豌豆AI工具是一套 Windows 便携式 AI 创作工作台，包含节点画布、图片工作台、提示词工具和图片处理功能。
 
 ## 使用方法
-
+下载地址：https://github.com/Zaiel666/wandou-api-tools/releases
 1. 从 GitHub Releases 下载 `wandou-ai-tools-windows-x64.zip`。
 2. 解压到任意可写文件夹。
 3. 打开文件夹，双击带豌豆图标的 `豌豆AI工具.exe`。
