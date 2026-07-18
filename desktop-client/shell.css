@@ -259,13 +259,15 @@ button { font: inherit; }
 .dialog-overlay {
   position: fixed;
   z-index: 100;
-  inset: 48px 0 0;
+  inset: 0;
   display: grid;
   place-items: center;
   padding: 20px;
   background: var(--overlay);
   backdrop-filter: blur(8px);
 }
+.update-in-progress .dialog-overlay { cursor: wait; }
+.update-in-progress .update-dialog { pointer-events: none; }
 .update-dialog {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
