@@ -131,6 +131,7 @@ async function startPortableUpdate(updateInfo) {
       "-PackagePath", packagePath,
       "-ProcessId", String(process.pid),
       "-ExecutableName", path.basename(process.execPath),
+      "-ExpectedAppVersion", String(updateInfo.latestVersion || ""),
       "-TargetVersion", String(updateInfo.latestVersion || ""),
       "-ReadyPath", readyPath
     ], { detached: true, stdio: "ignore", windowsHide: true });
@@ -274,6 +275,10 @@ function createWindow() {
   mainWindow.on("close", (event) => {
     if (allowWindowClose) return;
     event.preventDefault();
+    if (updateInProgress) {
+      mainWindow.focus();
+      return;
+    }
     if (!closePromptPending) {
       closePromptPending = true;
       mainWindow.webContents.send("desktop:request-close");
