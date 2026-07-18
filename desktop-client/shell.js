@@ -37,6 +37,7 @@ let updateInfo = null;
 let clientConfig = {};
 let toastTimer = 0;
 let closeInProgress = false;
+let updateStarted = false;
 
 function normalizedUrl(url) {
   try { return new URL(url, homeUrl).href; } catch (_error) { return url; }
@@ -235,7 +236,7 @@ async function openAnnouncement() {
 }
 
 function showUpdateDialog() {
-  if (!updateInfo?.available) return;
+  if (!updateInfo?.available || updateStarted) return;
   dialogVersion.textContent = `当前 ${updateInfo.currentVersion} · 最新 ${updateInfo.latestVersion}`;
   dialogNotes.textContent = updateInfo.notes || "新版本已经准备好。";
   dialogOverlay.hidden = false;
@@ -292,13 +293,17 @@ noticeButton.addEventListener("click", openAnnouncement);
 updateBadge.addEventListener("click", showUpdateDialog);
 dialogCancel.addEventListener("click", () => { dialogOverlay.hidden = true; });
 dialogDownload.addEventListener("click", async () => {
-  if (!updateInfo?.available) return;
+  if (!updateInfo?.available || updateStarted) return;
+  updateStarted = true;
+  document.body.classList.add("update-in-progress");
   dialogCancel.disabled = true;
   dialogDownload.disabled = true;
   dialogDownload.textContent = "正在下载…";
   dialogNotes.textContent = "正在从 GitHub 安全下载新版本，请不要关闭软件。";
   const result = await window.wandouShell?.startUpdate(updateInfo);
   if (!result?.started) {
+    updateStarted = false;
+    document.body.classList.remove("update-in-progress");
     dialogCancel.disabled = false;
     dialogDownload.disabled = false;
     dialogDownload.textContent = "重新更新";
@@ -306,7 +311,7 @@ dialogDownload.addEventListener("click", async () => {
   }
 });
 dialogOverlay.addEventListener("click", (event) => {
-  if (event.target === dialogOverlay) dialogOverlay.hidden = true;
+  if (!updateStarted && event.target === dialogOverlay) dialogOverlay.hidden = true;
 });
 closeDialogCancel.addEventListener("click", () => {
   if (closeInProgress) return;
@@ -325,6 +330,8 @@ window.wandouShell?.onUpdateStatus((payload) => {
   dialogNotes.textContent = payload?.message || "正在更新…";
   if (payload?.state === "ready") dialogDownload.textContent = "准备安装…";
   if (payload?.state === "error") {
+    updateStarted = false;
+    document.body.classList.remove("update-in-progress");
     dialogCancel.disabled = false;
     dialogDownload.disabled = false;
     dialogDownload.textContent = "重新更新";
