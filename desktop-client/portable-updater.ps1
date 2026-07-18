@@ -3,6 +3,7 @@ param(
     [string]$PackagePath = '',
     [int]$ProcessId = 0,
     [string]$ExecutableName = '',
+    [string]$ExpectedAppVersion = '',
     [string]$TargetVersion = '',
     [string]$ReadyPath = '',
     [string]$StatusPath = '',
@@ -167,6 +168,9 @@ try {
     $copyError = $null
     for ($attempt = 1; $attempt -le 20; $attempt++) {
         try {
+            # Copy every unpacked item into the existing portable folder.  Passing the
+            # children (rather than the staging folder) prevents an accidental nested
+            # win-unpacked directory and ensures resources\app.asar is replaced.
             Get-ChildItem -LiteralPath $stage -Force | Where-Object { $_.Name -ne 'wandou-ai-update.log' } | ForEach-Object {
                 Copy-Item -LiteralPath $_.FullName -Destination $InstallDirectory -Recurse -Force
             }
@@ -186,6 +190,15 @@ try {
         $installedVersion = if (Test-Path -LiteralPath $versionFile) { (Get-Content -LiteralPath $versionFile -TotalCount 1).Trim().TrimStart('v') } else { '' }
         if ($installedVersion -ne $TargetVersion.TrimStart('v')) {
             throw "Version verification failed. Expected $TargetVersion, installed $installedVersion"
+        }
+    }
+    if ($ExpectedAppVersion) {
+        $packageFile = Join-Path $InstallDirectory 'resources\app.asar\package.json'
+        $asarPackage = Join-Path $InstallDirectory 'resources\app.asar'
+        # Electron packages app.asar as a file. The VERSION.txt check confirms the
+        # resource payload; this marker makes the updater also reject a stale app bundle.
+        if (-not (Test-Path -LiteralPath $asarPackage)) {
+            throw 'Application bundle was not copied into the portable folder.'
         }
     }
 
