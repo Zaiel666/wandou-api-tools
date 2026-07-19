@@ -857,6 +857,20 @@
       cursor: grabbing;
     }
 
+    /* Keep interaction responsive while the whole canvas is being composited. */
+    .canvas-wrap.is-panning .node,
+    .canvas-wrap.is-zooming .node {
+      backdrop-filter: none;
+      transition: none;
+    }
+
+    .canvas-wrap.is-panning .preview img,
+    .canvas-wrap.is-panning .preview video,
+    .canvas-wrap.is-zooming .preview img,
+    .canvas-wrap.is-zooming .preview video {
+      visibility: hidden;
+    }
+
     .topbar {
       position: absolute;
       top: 14px;
@@ -3932,9 +3946,10 @@
     let projectDeleteArmed = false;
     let projectHubPinned = false;
     let favoriteMode = "image";
-    let saveTimer = null;
-    let canvasTransformFrame = null;
-    let linkDrawFrame = null;
+      let saveTimer = null;
+      let canvasTransformFrame = null;
+      let linkDrawFrame = null;
+      let zoomInteractionTimer = null;
     const linkElements = new Map();
     let temporaryLinkElement = null;
     let isRestoring = false;
@@ -4750,13 +4765,21 @@
       });
     }
 
-    function scheduleDrawLinks() {
-      if (linkDrawFrame) return;
-      linkDrawFrame = requestAnimationFrame(() => {
-        linkDrawFrame = null;
-        scheduleDrawLinks();
-      });
-    }
+      function scheduleDrawLinks() {
+        if (linkDrawFrame) return;
+        linkDrawFrame = requestAnimationFrame(() => {
+          linkDrawFrame = null;
+          drawLinks();
+        });
+      }
+
+      function markZoomInteraction() {
+        canvasWrap.classList.add("is-zooming");
+        clearTimeout(zoomInteractionTimer);
+        zoomInteractionTimer = setTimeout(() => {
+          canvasWrap.classList.remove("is-zooming");
+        }, 140);
+      }
 
     function screenToWorld(clientX, clientY) {
       const rect = canvasWrap.getBoundingClientRect();
@@ -7119,6 +7142,7 @@
 
     canvasWrap.addEventListener("wheel", (event) => {
       event.preventDefault();
+      markZoomInteraction();
       const before = screenToWorld(event.clientX, event.clientY);
       const factor = event.deltaY < 0 ? 1.08 : 0.92;
       view.zoom = Math.max(0.25, Math.min(2.5, view.zoom * factor));
