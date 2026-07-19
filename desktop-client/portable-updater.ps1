@@ -159,6 +159,20 @@ try {
     if ($ProcessId -gt 0) {
         Wait-Process -Id $ProcessId -Timeout 30 -ErrorAction SilentlyContinue
     }
+    $processName = [System.IO.Path]::GetFileNameWithoutExtension($ExecutableName)
+    if ($processName) {
+        $deadline = [DateTime]::UtcNow.AddSeconds(12)
+        do {
+            $remaining = @(Get-Process -Name $processName -ErrorAction SilentlyContinue)
+            if (-not $remaining.Count) { break }
+            Start-Sleep -Milliseconds 300
+        } while ([DateTime]::UtcNow -lt $deadline)
+        if ($remaining.Count) {
+            Write-UpdateLog "Stopping $($remaining.Count) remaining $processName process(es) before copy."
+            $remaining | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 700
+        }
+    }
     Start-Sleep -Milliseconds 650
 
     Set-UpdateStage 'extracting'
