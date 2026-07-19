@@ -73,6 +73,8 @@ async function checkForUpdates() {
       latestVersion,
       downloadUrl,
       checksumUrl,
+      packageApiUrl: String(packageAsset?.url || "").trim(),
+      checksumApiUrl: String(checksumAsset?.url || "").trim(),
       assetName,
       notes: String(release.body || "新版本已经准备好，建议更新后继续使用。")
     };
@@ -89,6 +91,37 @@ async function downloadFile(url, destination) {
   if (!response.ok) throw new Error(`下载失败：HTTP ${response.status}`);
   const buffer = Buffer.from(await response.arrayBuffer());
   await fs.promises.writeFile(destination, buffer);
+}
+
+async function downloadFileWithFallback(url, destination, fallbackUrl = "") {
+  const sources = [...new Set([url, fallbackUrl].filter(isSafeHttpsUrl))];
+  let lastError = new Error("Update download failed");
+  for (const source of sources) {
+    try {
+      const response = await net.fetch(source, {
+        cache: "no-store",
+        redirect: "follow",
+        headers: {
+          Accept: "application/octet-stream, application/vnd.github+json;q=0.9, */*;q=0.8",
+          "User-Agent": "WandouAI-Desktop-Updater"
+        }
+      });
+      if (!response.ok) {
+        lastError = new Error(`Update download failed: HTTP ${response.status}`);
+        continue;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (!buffer.length) {
+        lastError = new Error("Update download failed: empty file");
+        continue;
+      }
+      await fs.promises.writeFile(destination, buffer);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 function sendUpdateStatus(message, state = "working") {
@@ -109,9 +142,9 @@ async function startPortableUpdate(updateInfo) {
     const packagePath = path.join(workDir, updateInfo.assetName || "wandou-ai-tools-windows-x64.zip");
     const checksumPath = `${packagePath}.sha256`;
     sendUpdateStatus("正在下载新版本…");
-    await downloadFile(updateInfo.downloadUrl, packagePath);
+    await downloadFileWithFallback(updateInfo.downloadUrl, packagePath, updateInfo.packageApiUrl);
     sendUpdateStatus("正在校验更新文件…");
-    await downloadFile(updateInfo.checksumUrl, checksumPath);
+    await downloadFileWithFallback(updateInfo.checksumUrl, checksumPath, updateInfo.checksumApiUrl);
 
     const checksumText = await fs.promises.readFile(checksumPath, "utf8");
     const expected = checksumText.match(/[a-fA-F0-9]{64}/)?.[0]?.toLowerCase();
@@ -134,7 +167,7 @@ async function startPortableUpdate(updateInfo) {
       "-ExpectedAppVersion", String(updateInfo.latestVersion || ""),
       "-TargetVersion", String(updateInfo.latestVersion || ""),
       "-ReadyPath", readyPath
-    ], { detached: true, stdio: "ignore", windowsHide: true });
+    ], { detached: false, stdio: "ignore", windowsHide: true });
 
     await new Promise((resolve, reject) => {
       const startedAt = Date.now();
