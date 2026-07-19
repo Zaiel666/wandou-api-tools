@@ -224,10 +224,10 @@
           </span>
         </a>
 
-        <a class="tool-card module-card module-mind-map" href="./prompt-mind-map.html" rel="noopener noreferrer" data-tab-title="文案生成思维导图">
+        <a class="tool-card module-card module-mind-map" href="./prompt-mind-map.html" rel="noopener noreferrer" data-tab-title="文案转 XMind 思维导图">
           <span class="module-copy">
-            <span class="tool-label">文案生成<br>思维导图</span>
-            <span class="tool-desc">打开文案生成思维导图，按分类快速查看、整理和学习专业表达。</span>
+            <span class="tool-label">文案转 XMind<br>思维导图</span>
+            <span class="tool-desc">粘贴文案，自动整理为可编辑的 XMind 式思维导图，并支持导出图片。</span>
             <span class="module-enter" aria-hidden="true">→</span>
           </span>
           <span class="module-art" aria-hidden="true">
@@ -249,6 +249,26 @@
       <h2>公告</h2>
       <div class="info-grid">
         <details class="info-card notice-card notice-card-latest">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.15 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>公告历史浏览与 GitHub 链接修复</h3>
+            <p>更新弹窗支持向下查看全部历史记录，修复 GitHub 发布页与 Windows ZIP 链接，并恢复首页功能文案。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>打开任意公告卡片后，可在同一个弹窗中向下滚动查看所有历史版本。</p>
+            <p>点击某张历史卡片时，弹窗会自动定位到对应版本。</p>
+            <p>GitHub 发布页和 Windows ZIP 下载链接统一使用绿色交互，并由桌面客户端直接交给系统浏览器打开。</p>
+            <p>首页明确恢复“录音转文字 / 视频转文字”和“文案转 XMind 思维导图”入口。</p>
+            <nav class="notice-links" aria-label="v1.0.15 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.15" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.15/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
           <summary>
             <span class="info-meta">
               <span class="info-kicker">v1.0.14 更新</span>
@@ -340,16 +360,38 @@
           <summary><span class="info-meta"><span class="info-kicker">v1.0.3 更新</span><time datetime="2026-07-17">2026 年 7 月 17 日</time></span><h3>早期稳定版本</h3><p>保留 v1.0.3 的 GitHub 发布记录与安装包下载入口。</p></summary>
           <div class="notice-detail"><p>这是当前 GitHub Release 中保留的最早版本，可从下方查看提交记录或下载原始安装包。</p><nav class="notice-links" aria-label="v1.0.3 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.3" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.3/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
         </details>
+        <details class="info-card notice-card notice-card-archive">
+          <summary>
+            <span class="info-meta"><span class="info-kicker">历史公告</span><time datetime="2026-06">2026 年 6 月</time></span>
+            <h3>稳定版已加入提示词思维导图</h3>
+            <p>文案提示词专业术语新增思维导图入口，API 设置只保留密钥输入，默认接口地址由工具内部统一保存。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>本次更新把“AI 提示词思维导图”加入首页文案提示词专业术语区域，方便快速打开并查看分类内容。</p>
+            <p>API 配置界面只保留密钥输入，接口地址不再展示给客户，减少误改配置的情况。</p>
+          </div>
+        </details>
+        <details class="info-card notice-card notice-card-archive">
+          <summary>
+            <span class="info-meta"><span class="info-kicker">历史公告</span><time datetime="2026-06">2026 年 6 月</time></span>
+            <h3>先保存密钥，再打开各功能模块</h3>
+            <p>密钥保存一次后，首页内的绘图、关键词、文案和图片处理功能会共用同一份本地配置。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>建议第一次使用时先进入右上角设置保存 API 密钥，再打开各个功能模块。</p>
+            <p>如果更换密钥或清理浏览器缓存，需要重新保存一次密钥后再继续使用。</p>
+          </div>
+        </details>
       </div>
     </section>
 
     <dialog class="notice-dialog" data-notice-dialog aria-labelledby="notice-dialog-title">
       <article class="notice-dialog-card">
         <button class="notice-dialog-close" type="button" data-notice-close aria-label="关闭公告">×</button>
-        <p class="info-kicker" data-notice-kicker></p>
-        <h2 id="notice-dialog-title" data-notice-title></h2>
-        <time data-notice-time></time>
-        <div class="notice-dialog-content" data-notice-content></div>
+        <p class="info-kicker">更新公告</p>
+        <h2 id="notice-dialog-title">全部更新记录</h2>
+        <p class="notice-dialog-intro">最新内容在最上方，向下滚动可查看全部历史版本和原有公告。</p>
+        <div class="notice-dialog-history" data-notice-history></div>
       </article>
     </dialog>
 
@@ -531,17 +573,67 @@
     });
 
     const noticeDialog = document.querySelector("[data-notice-dialog]");
+    const noticeDialogCard = noticeDialog?.querySelector(".notice-dialog-card");
+    const noticeHistory = noticeDialog?.querySelector("[data-notice-history]");
+    const noticeCards = [...document.querySelectorAll(".notice-card")];
     const closeNoticeDialog = () => noticeDialog?.close();
-    document.querySelectorAll(".notice-card").forEach((card) => {
+
+    const renderNoticeHistory = (selectedCard) => {
+      if (!noticeHistory) return null;
+      noticeHistory.replaceChildren();
+      let selectedEntry = null;
+      noticeCards.forEach((card, index) => {
+        const entry = document.createElement("section");
+        entry.className = "notice-history-entry";
+        if (index === 0) entry.classList.add("is-latest");
+        if (card === selectedCard) {
+          entry.classList.add("is-selected");
+          selectedEntry = entry;
+        }
+
+        const meta = card.querySelector(".info-meta")?.cloneNode(true);
+        const title = card.querySelector("h3")?.cloneNode(true);
+        const detail = card.querySelector(".notice-detail")?.cloneNode(true);
+        if (meta) entry.append(meta);
+        if (title) entry.append(title);
+        if (detail) entry.append(detail);
+        noticeHistory.append(entry);
+      });
+      return selectedEntry;
+    };
+
+    const openNoticeDialog = (card) => {
+      if (!noticeDialog || !noticeDialogCard) return;
+      const selectedEntry = renderNoticeHistory(card);
+      noticeDialog.showModal();
+      requestAnimationFrame(() => {
+        noticeDialogCard.scrollTop = card === noticeCards[0] || !selectedEntry
+          ? 0
+          : Math.max(0, selectedEntry.offsetTop - 30);
+      });
+    };
+
+    noticeCards.forEach((card) => {
       card.querySelector("summary")?.addEventListener("click", (event) => {
         event.preventDefault();
-        if (!noticeDialog) return;
-        noticeDialog.querySelector("[data-notice-kicker]").textContent = card.querySelector(".info-kicker")?.textContent || "更新说明";
-        noticeDialog.querySelector("[data-notice-title]").textContent = card.querySelector("h3")?.textContent || "公告";
-        noticeDialog.querySelector("[data-notice-time]").textContent = card.querySelector("time")?.textContent || "";
-        noticeDialog.querySelector("[data-notice-content]").innerHTML = card.querySelector(".notice-detail")?.innerHTML || "";
-        noticeDialog.showModal();
+        openNoticeDialog(card);
       });
+    });
+
+    document.addEventListener("click", async (event) => {
+      const link = event.target?.closest?.(".notice-links a");
+      if (!link) return;
+      event.preventDefault();
+      event.stopPropagation();
+      document.querySelectorAll(".notice-links a.is-selected").forEach((item) => item.classList.remove("is-selected"));
+      link.classList.add("is-selected");
+      const url = link.href;
+      try {
+        if (window.wandouShell?.openExternal && await window.wandouShell.openExternal(url)) return;
+      } catch (_error) {
+        // Fall back to the browser's normal external-window handling.
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
     });
     document.querySelector("[data-notice-close]")?.addEventListener("click", closeNoticeDialog);
     noticeDialog?.addEventListener("click", (event) => {
