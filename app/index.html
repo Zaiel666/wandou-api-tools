@@ -248,20 +248,20 @@
     <section class="tool-section home-panel info-panel" id="announcement" data-home-panel="notice">
       <h2>公告</h2>
       <div class="info-grid">
-        <details class="info-card notice-card">
+        <details class="info-card notice-card notice-card-latest">
           <summary>
             <span class="info-meta">
-              <span class="info-kicker">新增工具</span>
+              <span class="info-kicker">v1.0.9 更新</span>
               <time datetime="2026-07">2026 年 7 月</time>
             </span>
-            <h3>语音识别转文字工作台已上线</h3>
-            <p>支持上传录音或视频，快速识别语音并整理为可编辑文字，适用于会议、访谈、播客和自媒体内容整理。</p>
+            <h3>节点画布连线性能与桌面图标修复</h3>
+            <p>节点拖动时不再反复删除和重建全部连线；Windows 可执行文件使用豌豆 Logo，不再显示 Electron 默认图标。</p>
           </summary>
           <div class="notice-detail">
-            <p>会议记录：将会议录音转成文字，便于整理重点、决策内容、待办事项和后续跟进信息。</p>
-            <p>访谈与多人对话：辅助区分不同发言内容，减少人工反复听写，适合采访、座谈和多人讨论。</p>
-            <p>播客与自媒体：把音频或视频中的口播内容整理成可编辑文稿，方便制作字幕、文章、摘要和发布文案。</p>
-            <p>课程与讲座：将长时间录音整理为连续文字，便于复习、归档、搜索和二次编辑。</p>
+            <p>连线元素会被持续复用，只更新坐标，不再在每次鼠标移动时清空 SVG、重建路径和重复绑定事件。</p>
+            <p>同一帧中节点尺寸只读取一次，降低多节点画布拖动时的浏览器布局计算。</p>
+            <p>正式 Windows 打包过程会把 app/logo.ico 写入豌豆AI工具.exe，资源管理器与桌面快捷方式均显示正确 Logo。</p>
+            <p>图片与媒体缓存仍保存在本机 IndexedDB；下载文件保存到用户选择的本地目录。</p>
           </div>
         </details>
         <details class="info-card notice-card">
@@ -294,6 +294,16 @@
         </details>
       </div>
     </section>
+
+    <dialog class="notice-dialog" data-notice-dialog aria-labelledby="notice-dialog-title">
+      <article class="notice-dialog-card">
+        <button class="notice-dialog-close" type="button" data-notice-close aria-label="关闭公告">×</button>
+        <p class="info-kicker" data-notice-kicker></p>
+        <h2 id="notice-dialog-title" data-notice-title></h2>
+        <time data-notice-time></time>
+        <div class="notice-dialog-content" data-notice-content></div>
+      </article>
+    </dialog>
 
     <section class="tool-section home-panel info-panel" id="about" data-home-panel="about">
       <h2>关于</h2>
@@ -472,6 +482,24 @@
       if (event.key === "Escape" && guideModal && !guideModal.hidden) closeGuide();
     });
 
+    const noticeDialog = document.querySelector("[data-notice-dialog]");
+    const closeNoticeDialog = () => noticeDialog?.close();
+    document.querySelectorAll(".notice-card").forEach((card) => {
+      card.querySelector("summary")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (!noticeDialog) return;
+        noticeDialog.querySelector("[data-notice-kicker]").textContent = card.querySelector(".info-kicker")?.textContent || "更新说明";
+        noticeDialog.querySelector("[data-notice-title]").textContent = card.querySelector("h3")?.textContent || "公告";
+        noticeDialog.querySelector("[data-notice-time]").textContent = card.querySelector("time")?.textContent || "";
+        noticeDialog.querySelector("[data-notice-content]").innerHTML = card.querySelector(".notice-detail")?.innerHTML || "";
+        noticeDialog.showModal();
+      });
+    });
+    document.querySelector("[data-notice-close]")?.addEventListener("click", closeNoticeDialog);
+    noticeDialog?.addEventListener("click", (event) => {
+      if (event.target === noticeDialog) closeNoticeDialog();
+    });
+
     const hasDesktopTabs = Boolean(window.wandouDesktopTabs && typeof window.wandouDesktopTabs.open === "function");
     if (!(window.chrome && window.chrome.webview) && !hasDesktopTabs) {
       document.querySelectorAll("a[data-tab-title]").forEach((link) => {
@@ -501,4 +529,3 @@
   <script src="./workflow.js"></script>
 </body>
 </html>
-
