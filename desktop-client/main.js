@@ -16,7 +16,7 @@ let downloadListenerReady = false;
 let updateInProgress = false;
 
 // 与旧安装版共用数据目录，改成便携文件夹后用户原有的本地数据仍然可用。
-app.setPath("userData", path.join(app.getPath("appData"), "豌豆AI"));
+app.setPath("userData", process.env.WANDOU_TEST_USER_DATA_DIR || path.join(app.getPath("appData"), "豌豆AI"));
 
 function readClientConfig() {
   try {
