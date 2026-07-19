@@ -254,14 +254,16 @@
               <span class="info-kicker">v1.0.15 更新</span>
               <time datetime="2026-07">2026 年 7 月</time>
             </span>
-            <h3>公告历史浏览与 GitHub 链接修复</h3>
-            <p>更新弹窗支持向下查看全部历史记录，修复 GitHub 发布页与 Windows ZIP 链接，并恢复首页功能文案。</p>
+            <h3>节点画布性能与本地记录稳定版</h3>
+            <p>大幅优化节点画布缩放、移动和框选性能，生成记录改为永久本地保存，并支持鼠标右键拖动框选。</p>
           </summary>
           <div class="notice-detail">
             <p>打开任意公告卡片后，可在同一个弹窗中向下滚动查看所有历史版本。</p>
             <p>点击某张历史卡片时，弹窗会自动定位到对应版本。</p>
             <p>GitHub 发布页和 Windows ZIP 下载链接统一使用绿色交互，并由桌面客户端直接交给系统浏览器打开。</p>
             <p>首页明确恢复“录音转文字 / 视频转文字”和“文案转 XMind 思维导图”入口。</p>
+            <p>移除画布状态的 7 天过期限制，并增加 IndexedDB 本地备份；即使主存储异常，重新打开后也会自动恢复生成记录。</p>
+            <p>画布使用 GPU 合成移动，停止逐帧重绘点阵背景并移除节点毛玻璃开销；右键拖动框选不再反复测量所有节点。</p>
             <nav class="notice-links" aria-label="v1.0.15 下载链接">
               <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.15" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
               <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.15/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
