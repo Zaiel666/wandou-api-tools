@@ -1302,7 +1302,7 @@
     }
 
     .context-menu {
-      position: fixed;
+      position: absolute;
       width: 180px;
       padding: 6px;
       border: 1px solid var(--line);
@@ -1320,7 +1320,7 @@
     }
 
     .selection-box {
-      position: fixed;
+      position: absolute;
       z-index: 18;
       display: none;
       border: 1px solid rgba(118, 185, 0, 0.9);
@@ -4783,6 +4783,20 @@
       };
     }
 
+    function clientToCanvas(clientX, clientY) {
+      const rect = canvasWrap.getBoundingClientRect();
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    function positionCanvasOverlay(element, clientX, clientY) {
+      const point = clientToCanvas(clientX, clientY);
+      element.style.left = `${point.x}px`;
+      element.style.top = `${point.y}px`;
+    }
+
     function addNodeInView(type) {
       const rect = canvasWrap.getBoundingClientRect();
       const world = screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
@@ -6856,8 +6870,7 @@
         from,
         world: screenToWorld(event.clientX, event.clientY)
       };
-      linkCreateMenu.style.left = `${event.clientX}px`;
-      linkCreateMenu.style.top = `${event.clientY}px`;
+      positionCanvasOverlay(linkCreateMenu, event.clientX, event.clientY);
       linkCreateMenu.classList.add("open");
       contextMenu.classList.remove("open");
       suppressMenuCloseOnce = true;
@@ -6921,8 +6934,9 @@
       if (!boxSelectState) return;
       boxSelectState.currentX = clientX;
       boxSelectState.currentY = clientY;
-      const left = Math.min(boxSelectState.startX, clientX);
-      const top = Math.min(boxSelectState.startY, clientY);
+      const wrapRect = canvasWrap.getBoundingClientRect();
+      const left = Math.min(boxSelectState.startX, clientX) - wrapRect.left;
+      const top = Math.min(boxSelectState.startY, clientY) - wrapRect.top;
       selectionBox.style.left = `${left}px`;
       selectionBox.style.top = `${top}px`;
       selectionBox.style.width = `${Math.abs(clientX - boxSelectState.startX)}px`;
@@ -6976,8 +6990,7 @@
         return;
       }
       boxSelectedIds.forEach((id) => canvas.querySelector(`[data-id="${id}"]`)?.classList.add("box-selected"));
-      selectionMenu.style.left = `${event.clientX}px`;
-      selectionMenu.style.top = `${event.clientY}px`;
+      positionCanvasOverlay(selectionMenu, event.clientX, event.clientY);
       selectionMenu.classList.add("open");
       suppressMenuCloseOnce = true;
       setTimeout(() => {
@@ -7179,8 +7192,7 @@
       if (event.target.closest(".node") || event.target.closest(".topbar") || event.target.closest(".project-hub")) return;
       event.preventDefault();
       contextMenuWorld = screenToWorld(event.clientX, event.clientY);
-      contextMenu.style.left = `${event.clientX}px`;
-      contextMenu.style.top = `${event.clientY}px`;
+      positionCanvasOverlay(contextMenu, event.clientX, event.clientY);
       contextMenu.classList.add("open");
     });
 
