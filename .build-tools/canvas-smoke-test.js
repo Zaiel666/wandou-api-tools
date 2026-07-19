@@ -4,10 +4,11 @@ const { pathToFileURL } = require("url");
 const { spawn } = require("child_process");
 
 const root = path.resolve(__dirname, "..");
-const executablePath = path.join(root, "build-output", "win-unpacked", "豌豆AI工具.exe");
+const browserPath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const userDataDir = path.join(root, "build-output", `canvas-smoke-${Date.now()}`);
 const logFile = path.join(root, "build-output", "canvas-smoke-test.log");
 const port = 9315 + Math.floor(Math.random() * 200);
+const canvasUrl = `${pathToFileURL(path.join(root, "build-output", "win-unpacked", "resources", "app", "ai-node-canvas.html")).href}?project=canvas-smoke`;
 fs.mkdirSync(userDataDir, { recursive: true });
 fs.writeFileSync(logFile, "phase: launch\n");
 const log = (message) => fs.appendFileSync(logFile, `${message}\n`);
@@ -28,6 +29,10 @@ class CdpClient {
       this.pending.delete(message.id);
       if (message.error) reject(new Error(message.error.message));
       else resolve(message.result);
+    });
+    this.socket.addEventListener("close", () => {
+      for (const { reject } of this.pending.values()) reject(new Error("CDP connection closed"));
+      this.pending.clear();
     });
   }
 
@@ -70,22 +75,23 @@ async function evaluate(client, expression) {
 }
 
 (async () => {
-  const child = spawn(executablePath, [`--remote-debugging-port=${port}`], {
-    env: { ...process.env, WANDOU_TEST_USER_DATA_DIR: userDataDir },
+  if (!fs.existsSync(browserPath)) throw new Error(`Chrome was not found: ${browserPath}`);
+  const child = spawn(browserPath, [
+    "--headless=new",
+    "--disable-gpu",
+    "--no-first-run",
+    "--disable-default-apps",
+    "--disable-extensions",
+    `--remote-debugging-port=${port}`,
+    `--user-data-dir=${userDataDir}`,
+    canvasUrl
+  ], {
     stdio: "ignore"
   });
-  let shellClient;
+  child.on("exit", (code, signal) => log(`phase: browser exit code=${code} signal=${signal}`));
+  child.on("error", (error) => log(`phase: browser error ${error.stack || error}`));
   let canvasClient;
   try {
-    const shellTarget = await waitForTarget((target) => target.url.includes("shell.html"));
-    log("phase: shell ready");
-    shellClient = new CdpClient(shellTarget.webSocketDebuggerUrl);
-    const canvasUrl = `${pathToFileURL(path.join(root, "build-output", "win-unpacked", "resources", "app", "ai-node-canvas.html")).href}?project=canvas-smoke`;
-    for (let attempt = 0; attempt < 40; attempt++) {
-      if (await evaluate(shellClient, `Boolean(document.querySelector('webview'))`)) break;
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
-    await evaluate(shellClient, `document.querySelector('webview').loadURL(${JSON.stringify(canvasUrl)}); true`);
     const canvasTarget = await waitForTarget((target) => target.url.includes("ai-node-canvas.html"));
     log("phase: canvas ready");
     canvasClient = new CdpClient(canvasTarget.webSocketDebuggerUrl);
@@ -110,6 +116,11 @@ async function evaluate(client, expression) {
     log(`phase: persisted ${JSON.stringify(persisted)}`);
     log("phase: right selection and zoom");
     const interaction = await evaluate(canvasClient, `(async () => {
+      view.zoom = 0.63;
+      view.x = 80;
+      view.y = 20;
+      applyCanvasTransform();
+      await new Promise(requestAnimationFrame);
       const nodeRects = [...document.querySelectorAll('.node')].slice(0, 4).map((node) => node.getBoundingClientRect());
       const startX = Math.max(2, Math.min(...nodeRects.map((rect) => rect.left)) - 8);
       const startY = Math.max(70, Math.min(...nodeRects.map((rect) => rect.top)) - 8);
@@ -119,8 +130,12 @@ async function evaluate(client, expression) {
       wrap.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 2, buttons: 2, pointerId: 91, clientX: startX, clientY: startY }));
       window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, cancelable: true, button: 2, buttons: 2, pointerId: 91, clientX: endX, clientY: endY }));
       await new Promise(requestAnimationFrame);
+      const selectionRect = document.querySelector('#selectionBox').getBoundingClientRect();
+      const boxStartOffset = Math.hypot(selectionRect.left - startX, selectionRect.top - startY);
       window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, button: 2, buttons: 0, pointerId: 91, clientX: endX, clientY: endY }));
       const selected = document.querySelectorAll('.node.box-selected').length;
+      const menuRect = document.querySelector('#selectionMenu').getBoundingClientRect();
+      const menuOffset = Math.hypot(menuRect.left - endX, menuRect.top - endY);
       const wheelStart = performance.now();
       const bounds = wrap.getBoundingClientRect();
       for (let index = 0; index < 40; index++) {
@@ -134,12 +149,12 @@ async function evaluate(client, expression) {
       ]);
       localStorage.removeItem(projectCanvasStorageKey());
       localStorage.removeItem(folderCanvasStorageKey());
-      return { selected, wheelMs };
+      return { selected, boxStartOffset, menuOffset, wheelMs };
     })()`);
 
     log(`phase: interaction ${JSON.stringify(interaction)}`);
     log("phase: backup restore");
-    await evaluate(shellClient, `document.querySelector('webview').loadURL(${JSON.stringify(canvasUrl)}); true`);
+    await canvasClient.send("Page.reload", { ignoreCache: true });
     await new Promise((resolve) => setTimeout(resolve, 1400));
     canvasClient.close();
     const restoredTarget = await waitForTarget((target) => target.url.includes("ai-node-canvas.html"));
@@ -147,6 +162,8 @@ async function evaluate(client, expression) {
     const restored = await evaluate(canvasClient, `({ nodes: document.querySelectorAll('.node').length, title: document.title })`);
     const passed = persisted.saved > persisted.baseline
       && interaction.selected >= 2
+      && interaction.boxStartOffset <= 1.5
+      && interaction.menuOffset <= 1.5
       && persisted.backupStore
       && restored.nodes === persisted.saved
       && interaction.wheelMs < 5000;
@@ -155,7 +172,6 @@ async function evaluate(client, expression) {
     if (!passed) process.exitCode = 1;
   } finally {
     canvasClient?.close();
-    shellClient?.close();
     child.kill();
   }
   setTimeout(() => process.exit(process.exitCode || 0), 400);
