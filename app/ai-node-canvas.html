@@ -838,6 +838,12 @@
         radial-gradient(circle, rgba(82, 190, 55, 0.24) 1px, transparent 1.4px),
         #e4e7e8;
       background-size: 24px 24px;
+      contain: layout paint;
+    }
+
+    #canvas {
+      will-change: transform;
+      transform-origin: 0 0;
     }
 
     body.dark-theme .canvas-wrap {
@@ -3927,6 +3933,10 @@
     let projectHubPinned = false;
     let favoriteMode = "image";
     let saveTimer = null;
+    let canvasTransformFrame = null;
+    let linkDrawFrame = null;
+    const linkElements = new Map();
+    let temporaryLinkElement = null;
     let isRestoring = false;
     let historyStack = [];
     let redoStack = [];
@@ -4705,7 +4715,7 @@
       syncPromptOverlayLayers();
       applyCanvasTransform();
       updatePendingPort();
-      requestAnimationFrame(drawLinks);
+      scheduleDrawLinks();
       scheduleCanvasSave();
     }
 
@@ -4730,6 +4740,22 @@
       canvasWrap.style.backgroundSize = `${24 * view.zoom}px ${24 * view.zoom}px`;
       canvasWrap.style.backgroundPosition = `${view.x}px ${view.y}px`;
       updatePromptLibraryPosition();
+    }
+
+    function scheduleCanvasTransform() {
+      if (canvasTransformFrame) return;
+      canvasTransformFrame = requestAnimationFrame(() => {
+        canvasTransformFrame = null;
+        applyCanvasTransform();
+      });
+    }
+
+    function scheduleDrawLinks() {
+      if (linkDrawFrame) return;
+      linkDrawFrame = requestAnimationFrame(() => {
+        linkDrawFrame = null;
+        scheduleDrawLinks();
+      });
     }
 
     function screenToWorld(clientX, clientY) {
@@ -6523,6 +6549,95 @@
       };
     }
 
+    function drawLinks() {
+      lines.setAttribute("viewBox", "0 0 6200 4200");
+      lines.setAttribute("overflow", "visible");
+      const activeKeys = new Set();
+      const metricCache = new Map();
+      links.forEach((link) => {
+        const key = `${link.from}:${link.to}`;
+        activeKeys.add(key);
+        const from = getPortCenterFast(link.from, "out", metricCache);
+        const to = getPortCenterFast(link.to, "in", metricCache);
+        if (!from || !to) return;
+        let entry = linkElements.get(key);
+        if (!entry) {
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("class", "line-path");
+          path.dataset.from = link.from;
+          path.dataset.to = link.to;
+          const cut = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          cut.setAttribute("class", "line-cut");
+          cut.dataset.from = link.from;
+          cut.dataset.to = link.to;
+          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          circle.setAttribute("r", "11");
+          const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          label.textContent = "x";
+          cut.append(circle, label);
+          path.addEventListener("pointerdown", (event) => event.stopPropagation());
+          path.addEventListener("dblclick", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            disconnectLink(link.from, link.to);
+          });
+          path.addEventListener("contextmenu", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            disconnectLink(link.from, link.to);
+          });
+          cut.addEventListener("pointerdown", (event) => event.stopPropagation());
+          cut.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            disconnectLink(link.from, link.to);
+          });
+          entry = { path, cut };
+          linkElements.set(key, entry);
+          lines.append(path, cut);
+        }
+        entry.path.setAttribute("d", linkPathData(from, to));
+        entry.cut.setAttribute("transform", `translate(${(from.x + to.x) / 2} ${(from.y + to.y) / 2})`);
+      });
+      linkElements.forEach((entry, key) => {
+        if (activeKeys.has(key)) return;
+        entry.path.remove();
+        entry.cut.remove();
+        linkElements.delete(key);
+      });
+      if (!portDragState) {
+        if (temporaryLinkElement) temporaryLinkElement.hidden = true;
+        return;
+      }
+      const from = getPortCenterFast(portDragState.from, "out", metricCache);
+      const snap = portDragState.snapTo ? getPortCenterFast(portDragState.snapTo, "in", metricCache) : null;
+      const to = snap || screenToWorld(portDragState.currentX || portDragState.startX, portDragState.currentY || portDragState.startY);
+      if (!from || !to) return;
+      if (!temporaryLinkElement) {
+        temporaryLinkElement = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        temporaryLinkElement.setAttribute("class", "line-path temp-line");
+        lines.appendChild(temporaryLinkElement);
+      }
+      temporaryLinkElement.setAttribute("d", linkPathData(from, to));
+      temporaryLinkElement.hidden = false;
+    }
+
+    function getPortCenterFast(nodeIdValue, port, metricCache) {
+      const nodeEl = canvas.querySelector(`[data-id="${nodeIdValue}"]`);
+      if (!nodeEl) return null;
+      const node = nodes.find((item) => item.id === nodeIdValue);
+      if (!node) return null;
+      let metrics = metricCache.get(nodeIdValue);
+      if (!metrics) {
+        metrics = { width: nodeEl.offsetWidth, height: nodeEl.offsetHeight };
+        metricCache.set(nodeIdValue, metrics);
+      }
+      return {
+        x: node.x + (port === "out" ? metrics.width : 0),
+        y: node.y + metrics.height / 2
+      };
+    }
+
     function worldToScreen(point) {
       const rect = canvasWrap.getBoundingClientRect();
       return {
@@ -6564,7 +6679,7 @@
       setTimeout(() => {
         connectNodes(from, to);
         clearSnapPreview();
-        drawLinks();
+        scheduleDrawLinks();
       }, 180);
     }
 
@@ -6643,7 +6758,7 @@
         node.frameHeight = Math.round(height);
         el.style.width = `${node.frameWidth}px`;
         el.style.minHeight = `${node.frameHeight}px`;
-        drawLinks();
+        scheduleDrawLinks();
         return;
       }
       if (portDragState) {
@@ -6654,7 +6769,7 @@
         portDragState.moved = portDragState.moved || Math.hypot(dx, dy) > 8;
         portDragState.snapTo = nearestInputNode(event.clientX, event.clientY, portDragState.from);
         updateSnapPreview(portDragState.from, portDragState.snapTo);
-        drawLinks();
+        scheduleDrawLinks();
       }
       if (!dragState) return;
       event.preventDefault();
@@ -6681,7 +6796,7 @@
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
       }
-      drawLinks();
+      scheduleDrawLinks();
       updatePromptLibraryPosition();
     });
 
@@ -6999,7 +7114,7 @@
       if (!panState || dragState) return;
       view.x = panState.viewX + event.clientX - panState.startX;
       view.y = panState.viewY + event.clientY - panState.startY;
-      applyCanvasTransform();
+      scheduleCanvasTransform();
     });
 
     canvasWrap.addEventListener("wheel", (event) => {
@@ -7010,7 +7125,7 @@
       const rect = canvasWrap.getBoundingClientRect();
       view.x = event.clientX - rect.left - before.x * view.zoom;
       view.y = event.clientY - rect.top - before.y * view.zoom;
-      applyCanvasTransform();
+      scheduleCanvasTransform();
       scheduleCanvasSave();
     }, { passive: false });
 
