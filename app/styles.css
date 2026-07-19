@@ -3003,6 +3003,53 @@ body.home-page {
   line-height: 1.9;
 }
 
+.notice-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(86, 120, 58, 0.16);
+}
+
+.notice-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 1px solid rgba(86, 120, 58, 0.24);
+  border-radius: 6px;
+  color: var(--premium-ink);
+  background: var(--premium-surface, #fff);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.notice-links .notice-download-link {
+  border-color: #2f8f42;
+  color: #fff;
+  background: #2f8f42;
+}
+
+.notice-links a:hover {
+  border-color: #2f8f42;
+  color: #247535;
+}
+
+.notice-links .notice-download-link:hover {
+  color: #fff;
+  background: #247535;
+}
+
+[data-theme="dark"] .notice-links a:not(.notice-download-link),
+:root:not([data-theme="light"]) .notice-links a:not(.notice-download-link) {
+  border-color: rgba(183, 229, 111, 0.22);
+  color: var(--premium-ink);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .guide-card {
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
