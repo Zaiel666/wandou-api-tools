@@ -151,23 +151,19 @@ async function startPortableUpdate(updateInfo) {
     const actual = crypto.createHash("sha256").update(await fs.promises.readFile(packagePath)).digest("hex");
     if (!expected || actual !== expected) throw new Error("更新文件校验失败，已停止安装");
 
-    const sourceUpdater = path.join(process.resourcesPath, "portable-updater.ps1");
-    const updaterPath = path.join(workDir, "portable-updater.ps1");
+    const sourceUpdater = path.join(process.resourcesPath, "portable-updater.exe");
+    const updaterPath = path.join(workDir, "portable-updater.exe");
     const readyPath = path.join(workDir, "updater-ready.txt");
     await fs.promises.copyFile(sourceUpdater, updaterPath);
     sendUpdateStatus("下载完成，正在启动安装程序…", "ready");
 
-    const powershellPath = path.join(process.env.SystemRoot || "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
-    const child = spawn(powershellPath, [
-      "-NoProfile", "-Sta", "-ExecutionPolicy", "Bypass", "-File", updaterPath,
-      "-InstallDirectory", path.dirname(process.execPath),
-      "-PackagePath", packagePath,
-      "-ProcessId", String(process.pid),
-      "-ExecutableName", path.basename(process.execPath),
-      "-ExpectedAppVersion", String(updateInfo.latestVersion || ""),
-      "-TargetVersion", String(updateInfo.latestVersion || ""),
-      "-ReadyPath", readyPath
-    ], { detached: false, stdio: "ignore", windowsHide: true });
+    const args = [
+      `"${updaterPath}"`, "--install", `"${path.dirname(process.execPath)}"`,
+      "--package", `"${packagePath}"`, "--parent", String(process.pid),
+      "--exe", `"${path.basename(process.execPath)}"`, "--ready", `"${readyPath}"`,
+      "--target", `"${String(updateInfo.latestVersion || "")}"`
+    ].join(" ");
+    const child = spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `start \"\" /b ${args}`], { detached: false, stdio: "ignore", windowsHide: true });
 
     await new Promise((resolve, reject) => {
       const startedAt = Date.now();
@@ -183,9 +179,9 @@ async function startPortableUpdate(updateInfo) {
         else resolve();
       };
       child.once("error", (error) => finish(new Error(`无法启动更新程序：${error.message}`)));
-      child.once("exit", (code) => {
-        if (!fs.existsSync(readyPath)) finish(new Error(`更新程序提前退出（代码 ${code ?? "未知"}）`));
-      });
+      // `cmd start` exits after launching the native updater. The updater's
+      // ready marker, not the launcher process lifetime, confirms handoff.
+      child.once("exit", () => {});
       timer = setInterval(() => {
         if (fs.existsSync(readyPath)) return finish();
         if (Date.now() - startedAt > 8000) finish(new Error("更新程序没有成功接管，软件不会关闭，请重试"));
