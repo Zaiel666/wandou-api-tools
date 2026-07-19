@@ -141,6 +141,7 @@ function Set-UpdateStage([string]$Name) {
 
 $windowsRoot = if ($env:SystemRoot) { $env:SystemRoot } else { 'C:\Windows' }
 $powerShell = Join-Path $windowsRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$updateFailed = $false
 
 try {
     Set-UpdateStage 'waiting'
@@ -209,6 +210,7 @@ try {
         Start-Process -FilePath (Join-Path $InstallDirectory $ExecutableName) -WorkingDirectory $InstallDirectory
     }
 } catch {
+    $updateFailed = $true
     Write-UpdateLog "Automatic update failed: $($_.Exception.Message)"
     Set-UpdateStage 'failed'
     if (-not $SkipRestart) {
@@ -221,4 +223,8 @@ try {
         Start-Sleep -Milliseconds 500
         Remove-Item -LiteralPath $StatusPath -Force -ErrorAction SilentlyContinue
     }
+}
+
+if ($updateFailed) {
+    exit 1
 }
