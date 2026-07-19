@@ -1,6 +1,6 @@
 {
   "name": "wandou-ai-desktop",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "description": "豌豆AI Windows 客户端",
   "main": "main.js",
   "author": "PeaFour",
@@ -25,6 +25,6 @@
       { "from": "../app", "to": "app", "filter": ["**/*"] },
       { "from": "portable-updater.ps1", "to": "portable-updater.ps1" }
     ],
-    "win": { "icon": "../app/pea-launcher.ico", "target": [{ "target": "dir", "arch": ["x64"] }] }
+    "win": { "icon": "../app/logo.ico", "target": [{ "target": "dir", "arch": ["x64"] }] }
   }
 }
