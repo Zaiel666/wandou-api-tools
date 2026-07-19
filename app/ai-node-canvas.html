@@ -839,11 +839,13 @@
         #e4e7e8;
       background-size: 24px 24px;
       contain: layout paint;
+      isolation: isolate;
     }
 
     #canvas {
       will-change: transform;
       transform-origin: 0 0;
+      backface-visibility: hidden;
     }
 
     body.dark-theme .canvas-wrap {
@@ -862,13 +864,6 @@
     .canvas-wrap.is-zooming .node {
       backdrop-filter: none;
       transition: none;
-    }
-
-    .canvas-wrap.is-panning .preview img,
-    .canvas-wrap.is-panning .preview video,
-    .canvas-wrap.is-zooming .preview img,
-    .canvas-wrap.is-zooming .preview video {
-      visibility: hidden;
     }
 
     .topbar {
@@ -1521,7 +1516,7 @@
       border: 1px solid rgba(148, 163, 184, .58);
       border-radius: 18px;
       box-shadow: none;
-      backdrop-filter: blur(24px);
+      backdrop-filter: none;
       z-index: 2;
       user-select: none;
       transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
@@ -3966,12 +3961,12 @@
     const projectListStorageKey = `${canvasStorageKey}:project-collection:${currentFolderId}`;
     const activeProjectStorageKey = `${canvasStorageKey}:active-project-collection:${currentFolderId}`;
     const projectHubPinStorageKey = "aiCanvasProjectHubPinnedV1";
-    const canvasMaxAge = 7 * 24 * 60 * 60 * 1000;
     const generationTimeoutSeconds = 999;
     const generationTimeoutMs = generationTimeoutSeconds * 1000;
     const localMediaPrefix = "indexed-media:";
     const localMediaDbName = "ai-node-canvas-media-v1";
     const localMediaStoreName = "media";
+    const canvasStateStoreName = "canvas-state";
     const largeMediaDataUrlLimit = 1200000;
     const canvasStorageWarningText = "\u753b\u5e03\u592a\u5927\uff0c\u5df2\u8df3\u8fc7\u90e8\u5206\u5927\u56fe\u7f13\u5b58\uff0c\u8bf7\u51cf\u5c11\u8282\u70b9\u6216\u6e05\u7406\u65e7\u7ed3\u679c\u3002";
     const autoSaveDbName = "wandou-auto-save-v1";
@@ -4097,6 +4092,7 @@
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => resolve(null);
+        request.onblocked = () => resolve(null);
       });
     }
 
@@ -4750,10 +4746,8 @@
     }
 
     function applyCanvasTransform() {
-      canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`;
+      canvas.style.transform = `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.zoom})`;
       zoomValue.textContent = `${Math.round(view.zoom * 100)}%`;
-      canvasWrap.style.backgroundSize = `${24 * view.zoom}px ${24 * view.zoom}px`;
-      canvasWrap.style.backgroundPosition = `${view.x}px ${view.y}px`;
       updatePromptLibraryPosition();
     }
 
@@ -6891,13 +6885,33 @@
     }
 
     function beginBoxSelection(event) {
-      if (event.button !== 0 || !event.ctrlKey || event.target.closest(".node, .context-menu, .topbar, .project-hub, .toast")) return false;
+      if (event.button !== 2 || event.target.closest(".node, .context-menu, .topbar, .project-hub, .toast")) return false;
       event.preventDefault();
       event.stopPropagation();
       contextMenu.classList.remove("open");
       selectionMenu.classList.remove("open");
       clearBoxSelection();
-      boxSelectState = { startX: event.clientX, startY: event.clientY, currentX: event.clientX, currentY: event.clientY, moved: false };
+      boxSelectState = {
+        startX: event.clientX,
+        startY: event.clientY,
+        currentX: event.clientX,
+        currentY: event.clientY,
+        moved: false,
+        candidates: [...canvas.querySelectorAll(".node")].map((nodeEl) => {
+          const node = nodes.find((item) => item.id === nodeEl.dataset.id);
+          if (!node) return null;
+          return {
+            id: node.id,
+            element: nodeEl,
+            left: node.x,
+            top: node.y,
+            right: node.x + nodeEl.offsetWidth,
+            bottom: node.y + nodeEl.offsetHeight
+          };
+        }).filter(Boolean),
+        previewIds: new Set(),
+        previewFrame: null
+      };
       document.body.classList.add("no-select");
       updateSelectionBox(event.clientX, event.clientY);
       return true;
@@ -6918,15 +6932,36 @@
 
     function previewBoxSelection() {
       if (!boxSelectState?.moved) return;
-      const rect = selectionBox.getBoundingClientRect();
-      canvas.querySelectorAll(".node").forEach((nodeEl) => {
-        nodeEl.classList.toggle("box-selected", rectsIntersect(rect, nodeEl.getBoundingClientRect()));
+      if (boxSelectState.previewFrame) return;
+      boxSelectState.previewFrame = requestAnimationFrame(() => {
+        if (!boxSelectState) return;
+        boxSelectState.previewFrame = null;
+        const ids = selectedCandidateIds(boxSelectState);
+        boxSelectState.candidates.forEach((candidate) => {
+          const selected = ids.has(candidate.id);
+          if (boxSelectState.previewIds.has(candidate.id) === selected) return;
+          candidate.element.classList.toggle("box-selected", selected);
+        });
+        boxSelectState.previewIds = ids;
       });
+    }
+
+    function selectedCandidateIds(state) {
+      const start = screenToWorld(state.startX, state.startY);
+      const current = screenToWorld(state.currentX, state.currentY);
+      const rect = {
+        left: Math.min(start.x, current.x),
+        top: Math.min(start.y, current.y),
+        right: Math.max(start.x, current.x),
+        bottom: Math.max(start.y, current.y)
+      };
+      return new Set(state.candidates.filter((candidate) => rectsIntersect(rect, candidate)).map((candidate) => candidate.id));
     }
 
     function finishBoxSelection(event) {
       const state = boxSelectState;
       boxSelectState = null;
+      if (state?.previewFrame) cancelAnimationFrame(state.previewFrame);
       document.body.classList.remove("no-select");
       if (!state?.moved) {
         selectionBox.classList.remove("open");
@@ -6934,11 +6969,8 @@
         return;
       }
       suppressNextContextMenu = true;
-      const rect = selectionBox.getBoundingClientRect();
       selectionBox.classList.remove("open");
-      boxSelectedIds = [...canvas.querySelectorAll(".node")]
-        .filter((nodeEl) => rectsIntersect(rect, nodeEl.getBoundingClientRect()))
-        .map((nodeEl) => nodeEl.dataset.id);
+      boxSelectedIds = [...selectedCandidateIds(state)];
       if (!boxSelectedIds.length) {
         clearBoxSelection();
         return;
@@ -7112,25 +7144,6 @@
       canvasWrap.classList.add("is-panning");
       document.body.classList.add("no-select");
       canvasWrap.setPointerCapture(event.pointerId);
-    });
-
-    canvasWrap.addEventListener("mousedown", (event) => {
-      if (boxSelectState || event.button !== 0 || !event.ctrlKey) return;
-      beginBoxSelection(event);
-    });
-
-    window.addEventListener("mousemove", (event) => {
-      if (!boxSelectState) return;
-      event.preventDefault();
-      boxSelectState.moved = boxSelectState.moved || Math.hypot(event.clientX - boxSelectState.startX, event.clientY - boxSelectState.startY) > 8;
-      updateSelectionBox(event.clientX, event.clientY);
-      previewBoxSelection();
-    });
-
-    window.addEventListener("mouseup", (event) => {
-      if (!boxSelectState || event.button !== 0) return;
-      event.preventDefault();
-      finishBoxSelection(event);
     });
 
     window.addEventListener("pointermove", (event) => {
@@ -9818,9 +9831,14 @@ ${formatInstruction}`;
       if (!("indexedDB" in window)) return Promise.resolve(null);
       if (openLocalMediaDb.promise) return openLocalMediaDb.promise;
       openLocalMediaDb.promise = new Promise((resolve) => {
-        const request = indexedDB.open(localMediaDbName, 1);
+        const request = indexedDB.open(localMediaDbName, 2);
         request.onupgradeneeded = () => {
-          request.result.createObjectStore(localMediaStoreName, { keyPath: "id" });
+          if (!request.result.objectStoreNames.contains(localMediaStoreName)) {
+            request.result.createObjectStore(localMediaStoreName, { keyPath: "id" });
+          }
+          if (!request.result.objectStoreNames.contains(canvasStateStoreName)) {
+            request.result.createObjectStore(canvasStateStoreName, { keyPath: "id" });
+          }
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => resolve(null);
@@ -9901,6 +9919,34 @@ ${formatInstruction}`;
       localStorage.setItem(folderCanvasStorageKey(), serialized);
     }
 
+    async function writeCanvasStateBackup(state) {
+      const db = await openLocalMediaDb();
+      if (!db) return false;
+      const records = [projectCanvasStorageKey(), folderCanvasStorageKey()].map((id) => ({ id, state, savedAt: Date.now() }));
+      return new Promise((resolve) => {
+        const tx = db.transaction(canvasStateStoreName, "readwrite");
+        records.forEach((record) => tx.objectStore(canvasStateStoreName).put(record));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.onabort = () => resolve(false);
+      });
+    }
+
+    async function readCanvasStateBackup() {
+      const db = await openLocalMediaDb();
+      if (!db) return null;
+      for (const id of [projectCanvasStorageKey(), folderCanvasStorageKey()]) {
+        const record = await new Promise((resolve) => {
+          const tx = db.transaction(canvasStateStoreName, "readonly");
+          const request = tx.objectStore(canvasStateStoreName).get(id);
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => resolve(null);
+        });
+        if (record?.state) return record.state;
+      }
+      return null;
+    }
+
     function warnCanvasStorageSkipped(error) {
       console.warn("Canvas save used compact storage", error);
       if (canvasStorageWarningShown) return;
@@ -9943,6 +9989,7 @@ ${formatInstruction}`;
             warnCanvasStorageSkipped(compactError);
           }
         }
+        await writeCanvasStateBackup(storedState);
         if (activeProject) saveProjects();
       } catch (error) {
         console.warn("Canvas save skipped", error);
@@ -10028,13 +10075,9 @@ ${formatInstruction}`;
     async function loadCanvasState() {
       const raw = localStorage.getItem(projectCanvasStorageKey())
         || (activeProjectId === projects[0]?.id ? (localStorage.getItem(folderCanvasStorageKey()) || localStorage.getItem(canvasStorageKey)) : "");
-      if (!raw) return false;
       try {
-        const state = JSON.parse(raw);
-        if (!state.savedAt || Date.now() - state.savedAt > canvasMaxAge) {
-          localStorage.removeItem(projectCanvasStorageKey());
-          return false;
-        }
+        const state = raw ? JSON.parse(raw) : await readCanvasStateBackup();
+        if (!state || !Array.isArray(state.nodes)) return false;
         isRestoring = true;
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
         removeDeprecatedSelectionNodes();
