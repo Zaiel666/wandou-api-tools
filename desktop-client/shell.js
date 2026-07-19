@@ -216,20 +216,21 @@ async function syncThemeFromActivePage() {
 }
 
 async function openAnnouncement() {
-  if (clientConfig.announcementVersion) {
-    localStorage.setItem("wandou-announcement-seen", clientConfig.announcementVersion);
-    noticeDot.hidden = true;
-  }
   const homeTab = [...tabs.values()].find((tab) => tab.pinned);
   if (!homeTab) return;
   activateTab(homeTab.id);
   try {
-    await homeTab.view.executeJavaScript(`(() => {
+    const opened = await homeTab.view.executeJavaScript(`(() => {
       const items = [...document.querySelectorAll("button, a")];
       const target = items.find((item) => (item.textContent || "").trim().includes("公告"));
       if (target) { target.click(); return true; }
       return false;
     })()`, true);
+    if (opened && clientConfig.announcementVersion) {
+      localStorage.setItem("wandou-announcement-seen", clientConfig.announcementVersion);
+      noticeButton.classList.remove("has-unread");
+      noticeDot.hidden = true;
+    }
   } catch (_error) {
     showToast("请在首页打开公告");
   }
@@ -246,8 +247,13 @@ async function refreshClientState() {
   try {
     clientConfig = await window.wandouShell?.getClientConfig() || {};
     const seen = localStorage.getItem("wandou-announcement-seen");
-    noticeDot.hidden = !clientConfig.announcementVersion || seen === clientConfig.announcementVersion;
-  } catch (_error) { noticeDot.hidden = true; }
+    const unread = Boolean(clientConfig.announcementVersion && seen !== clientConfig.announcementVersion);
+    noticeButton.classList.toggle("has-unread", unread);
+    noticeDot.hidden = !unread;
+  } catch (_error) {
+    noticeButton.classList.remove("has-unread");
+    noticeDot.hidden = true;
+  }
   try {
     updateInfo = await window.wandouShell?.checkForUpdates();
     updateBadge.hidden = !updateInfo?.available;
