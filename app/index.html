@@ -251,46 +251,94 @@
         <details class="info-card notice-card notice-card-latest">
           <summary>
             <span class="info-meta">
-              <span class="info-kicker">v1.0.10 更新</span>
+              <span class="info-kicker">v1.0.14 更新</span>
               <time datetime="2026-07">2026 年 7 月</time>
             </span>
-            <h3>自动更新稳定性验证</h3>
-            <p>更新器现在会等待并清理豌豆 AI 的全部残留进程，再覆盖文件并重启，避免文件占用导致反复更新失败。</p>
+            <h3>完整更新历史与下载直达入口</h3>
+            <p>公告页现在保留每个已发布版本的更新内容，并提供对应的 GitHub 发布页和 Windows ZIP 直接下载入口。</p>
           </summary>
           <div class="notice-detail">
-            <p>主程序以稳定方式启动更新器，不再出现“更新程序提前退出（代码 0）”。</p>
-            <p>复制前会等待所有同名 Electron 进程退出；必要时仅结束豌豆 AI 的残留进程。</p>
-            <p>更新失败会返回明确错误码，不再用代码 0 伪装为正常结束。</p>
-            <p>节点画布连线复用、正确 Windows Logo 和本地媒体缓存策略继续保留。</p>
+            <p>最新版本始终占满公告页第一行，较早版本按发布时间倒序排列在下方。</p>
+            <p>点击任意版本卡片即可查看完整说明；历史内容随软件保存在本地，无需联网后再加载。</p>
+            <p>每个版本都附有 GitHub 发布页和 Windows ZIP 直达下载地址。</p>
+            <nav class="notice-links" aria-label="v1.0.14 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.14" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.14/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
           </div>
         </details>
         <details class="info-card notice-card">
           <summary>
             <span class="info-meta">
-              <span class="info-kicker">更新说明</span>
-              <time datetime="2026-06">2026 年 6 月</time>
+              <span class="info-kicker">v1.0.13 更新</span>
+              <time datetime="2026-07-19">2026 年 7 月 19 日</time>
             </span>
-            <h3>稳定版已加入提示词思维导图</h3>
-            <p>文案提示词专业术语新增思维导图入口，API 设置只保留密钥输入，默认接口地址由工具内部统一保存。</p>
+            <h3>更新检测与独立更新器稳定版</h3>
+            <p>更新前重新查询 GitHub，并由独立更新器完成覆盖、版本校验和自动重启。</p>
           </summary>
           <div class="notice-detail">
-            <p>本次更新把“AI 提示词思维导图”加入首页文案提示词专业术语区域，方便快速打开并查看分类内容。</p>
-            <p>API 配置界面只保留密钥输入，接口地址不再展示给客户，减少误改配置的情况。</p>
+            <p>每次点击更新按钮时重新查询 GitHub 最新版本，避免安装缓存的旧版本。</p>
+            <p>独立更新器负责文件覆盖、双版本校验和自动重启，EXE 内嵌绿色豌豆 Logo。</p>
+            <p>保留节点画布连线刷新与拖动缩放性能修复。</p>
+            <nav class="notice-links" aria-label="v1.0.13 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.13" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.13/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
           </div>
         </details>
         <details class="info-card notice-card">
           <summary>
             <span class="info-meta">
-              <span class="info-kicker">使用建议</span>
-              <time datetime="2026-06">2026 年 6 月</time>
+              <span class="info-kicker">v1.0.12 更新</span>
+              <time datetime="2026-07-19">2026 年 7 月 19 日</time>
             </span>
-            <h3>先保存密钥，再打开各功能模块</h3>
-            <p>密钥保存一次后，首页内的绘图、关键词、文案和图片处理功能会共用同一份本地配置。</p>
+            <h3>原生独立更新器与画布性能修复</h3>
+            <p>更新不再依赖容易卡住的 PowerShell 窗口，并修复画布持续重绘问题。</p>
           </summary>
           <div class="notice-detail">
-            <p>建议第一次使用时先进入右上角设置保存 API 密钥，再打开各个功能模块。</p>
-            <p>如果更换密钥或清理浏览器缓存，需要重新保存一次密钥后再继续使用。</p>
+            <p>使用独立 portable-updater.exe 接管更新，失败时写入日志并尝试重新打开原程序。</p>
+            <p>修复节点画布连线刷新无限循环，优化拖动和缩放期间的图片与模糊效果绘制。</p>
+            <nav class="notice-links" aria-label="v1.0.12 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.12" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.12/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
           </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.11 更新</span><time datetime="2026-07-19">2026 年 7 月 19 日</time></span><h3>节点画布交互性能优化</h3><p>减少连线刷新占用，并在拖动缩放期间降低高成本视觉效果负担。</p></summary>
+          <div class="notice-detail"><p>修复连线刷新持续占用渲染线程的问题。</p><p>拖动和缩放时临时降低预览图与玻璃效果的绘制负担，停止后立即恢复。</p><nav class="notice-links" aria-label="v1.0.11 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.11" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.11/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.10 更新</span><time datetime="2026-07-19">2026 年 7 月 19 日</time></span><h3>自动更新流程验证版</h3><p>集中验证更新下载、文件替换、版本识别和程序重启流程。</p></summary>
+          <div class="notice-detail"><p>该版本用于继续验证便携版自动更新的完整流程，并保留上一版本的 Logo、画布和本地缓存修复。</p><nav class="notice-links" aria-label="v1.0.10 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.10" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.10/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.9 更新</span><time datetime="2026-07-19">2026 年 7 月 19 日</time></span><h3>应用 Logo 与连线复用优化</h3><p>修复 EXE 默认图标，并减少节点拖动时的 DOM 重建和布局计算。</p></summary>
+          <div class="notice-detail"><p>Windows 文件夹中的豌豆AI工具.exe 使用绿色豌豆 Logo。</p><p>连线元素改为复用并只更新坐标；媒体保存在本机 IndexedDB，下载写入本地目录。</p><nav class="notice-links" aria-label="v1.0.9 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.9" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.9/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.8 更新</span><time datetime="2026-07-18">2026 年 7 月 18 日</time></span><h3>本地缓存与公告提醒</h3><p>优化画布操作，媒体和下载改为本地保存，并加入历史公告与铃铛红点。</p></summary>
+          <div class="notice-detail"><p>优化节点画布缩放、移动和拖动性能，减少连线重绘卡顿。</p><p>图片和媒体保存在本机 IndexedDB；公告保留历史内容，最新更新置顶，铃铛红点在阅读后消失。</p><nav class="notice-links" aria-label="v1.0.8 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.8" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.8/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.7 更新</span><time datetime="2026-07-18">2026 年 7 月 18 日</time></span><h3>更新锁定与版本校验</h3><p>修复更新后循环提示，更新期间锁定页面并增强文件替换校验。</p></summary>
+          <div class="notice-detail"><p>修复便携版自动更新后仍循环提示新版本的问题。</p><p>更新期间锁定软件页面，等待安装完成并自动重启后才能继续操作。</p><nav class="notice-links" aria-label="v1.0.7 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.7" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.7/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.6 更新</span><time datetime="2026-07-18">2026 年 7 月 18 日</time></span><h3>可见安装进度</h3><p>下载、校验、解压、安装和验证过程加入明确的状态提示。</p></summary>
+          <div class="notice-detail"><p>主程序关闭后由独立安装窗口显示解压、安装和验证状态。</p><p>安装完成后自动关闭窗口并打开新版本；失败时显示错误并重新打开软件。</p><nav class="notice-links" aria-label="v1.0.6 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.6" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.6/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.5 更新</span><time datetime="2026-07-18">2026 年 7 月 18 日</time></span><h3>视频选项与图片复制</h3><p>整理视频时长和分辨率选项，图片预览增加复制操作。</p></summary>
+          <div class="notice-detail"><p>视频时长按钮简化为“默认时长”，Veo 分辨率保留 720P、1080P 并靠右排列。</p><p>图片预览新增底部复制按钮和右键复制菜单，同时修复便携版替换重启问题。</p><nav class="notice-links" aria-label="v1.0.5 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.5" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.5/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.4 更新</span><time datetime="2026-07-17">2026 年 7 月 17 日</time></span><h3>AI 视频默认参数整理</h3><p>根据模型能力整理模式、时长、分辨率、比例和参考图状态。</p></summary>
+          <div class="notice-detail"><p>AI 视频默认使用文生视频模式，参考图按钮按图片状态自动启用。</p><p>Veo 默认 8 秒、Omni 默认 10 秒，并统一模型、比例下拉菜单的明暗主题样式。</p><nav class="notice-links" aria-label="v1.0.4 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.4" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.4/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.3 更新</span><time datetime="2026-07-17">2026 年 7 月 17 日</time></span><h3>早期稳定版本</h3><p>保留 v1.0.3 的 GitHub 发布记录与安装包下载入口。</p></summary>
+          <div class="notice-detail"><p>这是当前 GitHub Release 中保留的最早版本，可从下方查看提交记录或下载原始安装包。</p><nav class="notice-links" aria-label="v1.0.3 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.3" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.3/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
         </details>
       </div>
     </section>
