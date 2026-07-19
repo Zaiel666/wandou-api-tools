@@ -158,12 +158,18 @@ async function startPortableUpdate(updateInfo) {
     sendUpdateStatus("下载完成，正在启动安装程序…", "ready");
 
     const args = [
-      `"${updaterPath}"`, "--install", `"${path.dirname(process.execPath)}"`,
-      "--package", `"${packagePath}"`, "--parent", String(process.pid),
-      "--exe", `"${path.basename(process.execPath)}"`, "--ready", `"${readyPath}"`,
-      "--target", `"${String(updateInfo.latestVersion || "")}"`
-    ].join(" ");
-    const child = spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `start \"\" /b ${args}`], { detached: false, stdio: "ignore", windowsHide: true });
+      "--install", path.dirname(process.execPath),
+      "--package", packagePath,
+      "--parent", String(process.pid),
+      "--exe", path.basename(process.execPath),
+      "--ready", readyPath,
+      "--target", String(updateInfo.latestVersion || "")
+    ];
+    const child = spawn(updaterPath, args, {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true
+    });
 
     await new Promise((resolve, reject) => {
       const startedAt = Date.now();
@@ -179,12 +185,12 @@ async function startPortableUpdate(updateInfo) {
         else resolve();
       };
       child.once("error", (error) => finish(new Error(`无法启动更新程序：${error.message}`)));
-      // `cmd start` exits after launching the native updater. The updater's
-      // ready marker, not the launcher process lifetime, confirms handoff.
-      child.once("exit", () => {});
+      child.once("exit", (code) => {
+        if (!fs.existsSync(readyPath)) finish(new Error(`更新程序提前退出（代码 ${code ?? "未知"}），软件不会关闭`));
+      });
       timer = setInterval(() => {
         if (fs.existsSync(readyPath)) return finish();
-        if (Date.now() - startedAt > 8000) finish(new Error("更新程序没有成功接管，软件不会关闭，请重试"));
+        if (Date.now() - startedAt > 15000) finish(new Error("更新程序 15 秒内没有成功接管，软件不会关闭，请重试"));
       }, 120);
     });
 
