@@ -234,7 +234,7 @@ function titleForUrl(rawUrl) {
       "keyword-reverse.html": "关键词生成",
       "plain-to-pro.html": "白话转专业语言",
       "video-prompt-pro.html": "视频提示词",
-      "prompt-mind-map.html": "文案生成思维导图"
+      "prompt-mind-map.html": "文案转 XMind 思维导图"
     };
     return names[path.basename(parsed.pathname).toLowerCase()] || APP_NAME;
   } catch (_error) { return APP_NAME; }
