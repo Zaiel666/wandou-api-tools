@@ -251,17 +251,17 @@
         <details class="info-card notice-card notice-card-latest">
           <summary>
             <span class="info-meta">
-              <span class="info-kicker">v1.0.9 更新</span>
+              <span class="info-kicker">v1.0.10 更新</span>
               <time datetime="2026-07">2026 年 7 月</time>
             </span>
-            <h3>节点画布连线性能与桌面图标修复</h3>
-            <p>节点拖动时不再反复删除和重建全部连线；Windows 可执行文件使用豌豆 Logo，不再显示 Electron 默认图标。</p>
+            <h3>自动更新稳定性验证</h3>
+            <p>更新器现在会等待并清理豌豆 AI 的全部残留进程，再覆盖文件并重启，避免文件占用导致反复更新失败。</p>
           </summary>
           <div class="notice-detail">
-            <p>连线元素会被持续复用，只更新坐标，不再在每次鼠标移动时清空 SVG、重建路径和重复绑定事件。</p>
-            <p>同一帧中节点尺寸只读取一次，降低多节点画布拖动时的浏览器布局计算。</p>
-            <p>正式 Windows 打包过程会把 app/logo.ico 写入豌豆AI工具.exe，资源管理器与桌面快捷方式均显示正确 Logo。</p>
-            <p>图片与媒体缓存仍保存在本机 IndexedDB；下载文件保存到用户选择的本地目录。</p>
+            <p>主程序以稳定方式启动更新器，不再出现“更新程序提前退出（代码 0）”。</p>
+            <p>复制前会等待所有同名 Electron 进程退出；必要时仅结束豌豆 AI 的残留进程。</p>
+            <p>更新失败会返回明确错误码，不再用代码 0 伪装为正常结束。</p>
+            <p>节点画布连线复用、正确 Windows Logo 和本地媒体缓存策略继续保留。</p>
           </div>
         </details>
         <details class="info-card notice-card">
