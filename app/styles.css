@@ -2866,6 +2866,10 @@ body.home-page {
   cursor: pointer;
 }
 
+#announcement .info-grid > .notice-card:not(.notice-card-latest) {
+  display: none;
+}
+
 .notice-card-latest {
   grid-column: 1 / -1;
   min-height: 248px;
