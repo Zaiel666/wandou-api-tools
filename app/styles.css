@@ -2866,6 +2866,17 @@ body.home-page {
   cursor: pointer;
 }
 
+.notice-card-latest {
+  grid-column: 1 / -1;
+  min-height: 248px;
+  padding: clamp(30px, 3vw, 46px);
+}
+
+.notice-card-latest h3 {
+  max-width: 760px;
+  font-size: clamp(30px, 2.5vw, 44px);
+}
+
 .notice-card summary {
   display: block;
   list-style: none;
@@ -2920,6 +2931,76 @@ body.home-page {
   border-top: 1px solid rgba(183, 229, 111, 0.16);
   display: grid;
   gap: 10px;
+}
+
+.notice-dialog {
+  width: min(780px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  padding: 0;
+  color: var(--premium-ink);
+  background: transparent;
+  border: 0;
+}
+
+.notice-dialog::backdrop {
+  background: rgba(18, 30, 19, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.notice-dialog-card {
+  position: relative;
+  max-height: inherit;
+  overflow-y: auto;
+  padding: clamp(30px, 4vw, 54px);
+  border: 1px solid rgba(86, 120, 58, 0.18);
+  border-radius: 12px;
+  background: var(--premium-surface, #fff);
+  box-shadow: 0 28px 90px rgba(20, 42, 24, 0.28);
+}
+
+.notice-dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(86, 120, 58, 0.18);
+  border-radius: 8px;
+  color: var(--premium-ink);
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.notice-dialog-card h2 {
+  max-width: 90%;
+  margin: 0 0 8px;
+  font-size: clamp(28px, 3vw, 42px);
+  line-height: 1.2;
+}
+
+.notice-dialog-card time {
+  display: block;
+  margin-bottom: 24px;
+  color: var(--premium-muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.notice-dialog-content {
+  display: grid;
+  gap: 14px;
+}
+
+.notice-dialog-content p {
+  margin: 0;
+  color: var(--premium-muted);
+  font-size: 16px;
+  line-height: 1.9;
 }
 
 .guide-card {
