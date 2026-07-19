@@ -243,6 +243,28 @@ function showUpdateDialog() {
   dialogOverlay.hidden = false;
 }
 
+async function refreshUpdateInfo() {
+  try {
+    updateInfo = await window.wandouShell?.checkForUpdates();
+    updateBadge.hidden = !updateInfo?.available;
+  } catch (_error) {
+    updateInfo = null;
+    updateBadge.hidden = true;
+  }
+  return updateInfo;
+}
+
+async function openFreshUpdateDialog() {
+  if (updateStarted) return;
+  updateBadge.disabled = true;
+  try {
+    await refreshUpdateInfo();
+    showUpdateDialog();
+  } finally {
+    updateBadge.disabled = false;
+  }
+}
+
 async function refreshClientState() {
   try {
     clientConfig = await window.wandouShell?.getClientConfig() || {};
@@ -254,10 +276,7 @@ async function refreshClientState() {
     noticeButton.classList.remove("has-unread");
     noticeDot.hidden = true;
   }
-  try {
-    updateInfo = await window.wandouShell?.checkForUpdates();
-    updateBadge.hidden = !updateInfo?.available;
-  } catch (_error) { updateBadge.hidden = true; }
+  await refreshUpdateInfo();
 }
 
 function showCloseDialog() {
@@ -296,7 +315,7 @@ forwardButton.addEventListener("click", () => {
 });
 reloadButton.addEventListener("click", () => activeView()?.reload?.());
 noticeButton.addEventListener("click", openAnnouncement);
-updateBadge.addEventListener("click", showUpdateDialog);
+updateBadge.addEventListener("click", openFreshUpdateDialog);
 dialogCancel.addEventListener("click", () => { dialogOverlay.hidden = true; });
 dialogDownload.addEventListener("click", async () => {
   if (!updateInfo?.available || updateStarted) return;
