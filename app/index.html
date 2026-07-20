@@ -24,10 +24,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>
           <span>首页</span>
         </button>
-        <button class="home-nav-item" type="button" data-home-nav="market" aria-pressed="false">
+        <a class="home-nav-item" href="https://www.zayapi.top" rel="noopener noreferrer" data-tab-title="商品中心">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6H4z"/><path d="M14 14h6v6h-6z"/></svg>
           <span>商品中心</span>
-        </button>
+        </a>
         <button class="home-nav-item" type="button" data-home-nav="blog" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h10l2 2v14H6z"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
           <span>博客</span>
@@ -266,6 +266,24 @@
       <h2>公告</h2>
       <div class="info-grid">
         <details class="info-card notice-card notice-card-latest">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.20 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>商品中心与会员服务信息更新</h3>
+            <p>商品中心现可直接打开官方网站，并补充会员代充服务的微信联系方式。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>点击首页“商品中心”，将在软件标签页中打开 https://www.zayapi.top。</p>
+            <p>会员代充服务微信联系方式更新为 Sunflower-talk。</p>
+            <nav class="notice-links" aria-label="v1.0.20 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.20" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.20/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
           <summary>
             <span class="info-meta">
               <span class="info-kicker">v1.0.19 更新</span>
@@ -788,7 +806,7 @@
           <section class="service-dialog-section">
             <h3>联系信息</h3>
             <dl class="service-contact-list">
-              <div><dt>微信联系方式</dt><dd>[此处填写微信客服联系方式]</dd></div>
+              <div><dt>微信联系方式</dt><dd>Sunflower-talk</dd></div>
               <div><dt>客服在线时间</dt><dd>早上 8 点到晚上 24 点</dd></div>
             </dl>
           </section>
