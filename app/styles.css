@@ -2728,6 +2728,143 @@ body.home-page {
   display: block;
 }
 
+.blog-panel h2 {
+  margin: 0 0 24px;
+  color: var(--premium-ink);
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.blog-card-list {
+  display: grid;
+  grid-template-columns: minmax(0, 520px);
+}
+
+.blog-entry-card {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  min-height: 168px;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid rgba(86, 120, 58, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 44px rgba(33, 48, 27, 0.1);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.blog-entry-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(76, 151, 37, 0.46);
+  box-shadow: 0 22px 50px rgba(33, 48, 27, 0.14);
+}
+
+.blog-entry-card:focus-visible {
+  outline: 3px solid rgba(76, 151, 37, 0.22);
+  outline-offset: 3px;
+}
+
+.blog-entry-visual {
+  position: relative;
+  min-height: 168px;
+  overflow: hidden;
+  background: #eef2ed;
+}
+
+.blog-entry-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.blog-entry-date {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 5px 9px;
+  color: #173611;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(235, 247, 225, 0.94);
+  border: 1px solid rgba(76, 151, 37, 0.24);
+  border-radius: 6px;
+}
+
+.blog-entry-copy {
+  display: flex;
+  min-width: 0;
+  padding: 20px 22px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.blog-entry-kicker {
+  color: #5f8f2d;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.blog-entry-copy strong {
+  margin-top: 7px;
+  color: var(--premium-ink);
+  font-size: 23px;
+  line-height: 1.2;
+}
+
+.blog-entry-description {
+  margin-top: 9px;
+  color: var(--premium-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.blog-entry-action {
+  display: inline-flex;
+  margin-top: auto;
+  padding-top: 12px;
+  color: #4c9725;
+  font-size: 13px;
+  font-weight: 850;
+  gap: 7px;
+  align-items: center;
+}
+
+[data-theme="dark"] .blog-entry-card,
+:root:not([data-theme="light"]) .blog-entry-card {
+  border-color: rgba(183, 229, 111, 0.16);
+  background: rgba(16, 23, 14, 0.88);
+}
+
+[data-theme="dark"] .blog-entry-visual,
+:root:not([data-theme="light"]) .blog-entry-visual {
+  background: #182018;
+}
+
+@media (max-width: 680px) {
+  .blog-card-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .blog-entry-card {
+    grid-template-columns: 118px minmax(0, 1fr);
+    min-height: 150px;
+  }
+
+  .blog-entry-visual {
+    min-height: 150px;
+  }
+
+  .blog-entry-copy {
+    padding: 17px 16px;
+  }
+
+  .blog-entry-copy strong {
+    font-size: 20px;
+  }
+}
+
 .info-panel {
   margin-top: 0;
 }
@@ -2868,6 +3005,367 @@ body.home-page {
 
 #announcement .info-grid > .notice-card:not(.notice-card-latest) {
   display: none;
+}
+
+.service-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-areas:
+    "icon kicker"
+    "icon title"
+    "icon description"
+    "icon action";
+  align-content: center;
+  gap: 7px 18px;
+  min-height: 230px;
+  padding: clamp(26px, 3vw, 38px);
+  text-align: left;
+  color: #5f171b;
+  border: 1px solid rgba(205, 53, 63, 0.3);
+  background: linear-gradient(145deg, rgba(255, 250, 250, 0.98), rgba(255, 235, 237, 0.9));
+  box-shadow: 0 16px 38px rgba(132, 25, 34, 0.1);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.service-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.service-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(190, 36, 48, 0.56);
+  box-shadow: 0 20px 48px rgba(132, 25, 34, 0.15);
+}
+
+.service-card:focus-visible {
+  outline: 0;
+  border-color: #c73340;
+  box-shadow: 0 0 0 4px rgba(199, 51, 64, 0.14), 0 20px 48px rgba(132, 25, 34, 0.15);
+}
+
+.service-card-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  color: #fff;
+  background: #c73340;
+  font-size: 20px;
+  font-weight: 900;
+  box-shadow: 0 12px 26px rgba(199, 51, 64, 0.22);
+}
+
+.service-card .info-kicker {
+  grid-area: kicker;
+  margin: 0;
+  color: #b42835 !important;
+}
+
+.service-card strong {
+  grid-area: title;
+  color: #401014;
+  font-size: clamp(24px, 2vw, 32px);
+  line-height: 1.22;
+}
+
+.service-card-description {
+  grid-area: description;
+  max-width: 560px;
+  color: #7e4247;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.service-card-action {
+  grid-area: action;
+  margin-top: 7px;
+  color: #b42835;
+  font-weight: 800;
+}
+
+.service-dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  padding: 0;
+  color: var(--premium-ink);
+  background: transparent;
+  border: 0;
+}
+
+.service-dialog::backdrop {
+  background: rgba(38, 10, 13, 0.46);
+  backdrop-filter: blur(8px);
+}
+
+.service-dialog-card {
+  position: relative;
+  max-height: inherit;
+  overflow-y: auto;
+  padding: clamp(30px, 4vw, 52px);
+  border: 1px solid rgba(199, 51, 64, 0.24);
+  border-radius: 12px;
+  background: #fffafa;
+  box-shadow: 0 28px 90px rgba(76, 15, 21, 0.3);
+}
+
+.service-dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(199, 51, 64, 0.2);
+  border-radius: 8px;
+  color: #7b2029;
+  background: #fff;
+  cursor: pointer;
+  font-size: 24px;
+}
+
+.service-dialog-card > .info-kicker {
+  color: #b42835 !important;
+}
+
+.service-dialog-card h2 {
+  margin: 8px 50px 24px 0;
+  color: #351013;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.16;
+}
+
+.service-dialog-content {
+  display: grid;
+  gap: 20px;
+  color: #694045;
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.service-dialog-content p,
+.service-dialog-content ul,
+.service-dialog-content dl {
+  margin: 0;
+}
+
+.service-dialog-section {
+  padding: 20px;
+  border: 1px solid rgba(199, 51, 64, 0.16);
+  border-radius: 10px;
+  background: rgba(199, 51, 64, 0.06);
+}
+
+.service-dialog-section h3 {
+  margin: 0 0 12px;
+  color: #621921;
+  font-size: 17px;
+}
+
+.service-dialog-section ul {
+  padding-left: 1.3em;
+}
+
+.service-contact-list {
+  display: grid;
+  gap: 12px;
+}
+
+.service-contact-list > div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.service-contact-list dt {
+  color: #8d2630;
+  font-weight: 800;
+}
+
+.service-contact-list dd {
+  margin: 0;
+}
+
+.service-dialog-note {
+  color: #8d2630;
+  font-weight: 750;
+}
+
+[data-theme="dark"] .service-card,
+:root:not([data-theme="light"]) .service-card {
+  color: #f4d9dc;
+  border-color: rgba(244, 99, 111, 0.28);
+  background: linear-gradient(145deg, rgba(43, 24, 26, 0.96), rgba(34, 20, 22, 0.96));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .service-card strong,
+:root:not([data-theme="light"]) .service-card strong {
+  color: #fff1f2;
+}
+
+[data-theme="dark"] .service-card-description,
+:root:not([data-theme="light"]) .service-card-description {
+  color: #d5b8bc;
+}
+
+[data-theme="dark"] .service-dialog-card,
+:root:not([data-theme="light"]) .service-dialog-card {
+  color: #f7ecee;
+  border-color: rgba(244, 99, 111, 0.26);
+  background: #211719;
+}
+
+[data-theme="dark"] .service-dialog-card h2,
+:root:not([data-theme="light"]) .service-dialog-card h2,
+[data-theme="dark"] .service-dialog-section h3,
+:root:not([data-theme="light"]) .service-dialog-section h3 {
+  color: #fff1f2;
+}
+
+[data-theme="dark"] .service-dialog-content,
+:root:not([data-theme="light"]) .service-dialog-content {
+  color: #d9c5c8;
+}
+
+[data-theme="dark"] .service-dialog-close,
+:root:not([data-theme="light"]) .service-dialog-close {
+  color: #ffdadd;
+  background: #2c2022;
+}
+
+/* Service cards share the announcement palette instead of forming a separate red theme. */
+.service-card {
+  color: var(--premium-ink);
+  border-color: rgba(86, 120, 58, 0.16);
+  background: var(--premium-surface, #ffffff);
+  box-shadow: 0 16px 38px rgba(20, 42, 24, 0.1);
+}
+
+.service-card:hover {
+  border-color: rgba(71, 139, 58, 0.34);
+  box-shadow: 0 20px 48px rgba(20, 42, 24, 0.14);
+}
+
+.service-card:focus-visible {
+  border-color: #218a4a;
+  box-shadow: 0 0 0 4px rgba(33, 138, 74, 0.12), 0 20px 48px rgba(20, 42, 24, 0.14);
+}
+
+.service-card-icon {
+  background: #218a4a;
+  box-shadow: 0 12px 26px rgba(33, 138, 74, 0.2);
+}
+
+.service-card .info-kicker,
+.service-card-action {
+  color: #218a4a !important;
+}
+
+.service-card strong {
+  color: var(--premium-ink);
+}
+
+.service-card-description {
+  color: var(--premium-muted);
+}
+
+.service-dialog::backdrop {
+  background: rgba(18, 30, 19, 0.5);
+}
+
+.service-dialog-card {
+  color: var(--premium-ink);
+  border-color: rgba(86, 120, 58, 0.18);
+  background: var(--premium-surface, #ffffff);
+  box-shadow: 0 28px 90px rgba(20, 42, 24, 0.28);
+}
+
+.service-dialog-close {
+  color: var(--premium-ink);
+  border-color: rgba(86, 120, 58, 0.18);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.service-dialog-card > .info-kicker,
+.service-dialog-note,
+.service-contact-list dt {
+  color: #218a4a !important;
+}
+
+.service-dialog-card h2,
+.service-dialog-section h3 {
+  color: var(--premium-ink);
+}
+
+.service-dialog-content {
+  color: var(--premium-muted);
+}
+
+.service-dialog-section {
+  border-color: rgba(86, 120, 58, 0.14);
+  background: rgba(183, 229, 111, 0.08);
+}
+
+[data-theme="dark"] .service-card,
+:root:not([data-theme="light"]) .service-card,
+[data-theme="dark"] .service-dialog-card,
+:root:not([data-theme="light"]) .service-dialog-card {
+  color: var(--premium-ink);
+  border-color: rgba(183, 229, 111, 0.14);
+  background: var(--premium-surface);
+}
+
+[data-theme="dark"] .service-card strong,
+:root:not([data-theme="light"]) .service-card strong,
+[data-theme="dark"] .service-dialog-card h2,
+:root:not([data-theme="light"]) .service-dialog-card h2,
+[data-theme="dark"] .service-dialog-section h3,
+:root:not([data-theme="light"]) .service-dialog-section h3 {
+  color: var(--premium-ink);
+}
+
+[data-theme="dark"] .service-card-description,
+:root:not([data-theme="light"]) .service-card-description,
+[data-theme="dark"] .service-dialog-content,
+:root:not([data-theme="light"]) .service-dialog-content {
+  color: var(--premium-muted);
+}
+
+[data-theme="dark"] .service-dialog-close,
+:root:not([data-theme="light"]) .service-dialog-close {
+  color: var(--premium-ink);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 700px) {
+  .service-card {
+    grid-template-columns: 46px minmax(0, 1fr);
+    min-height: 200px;
+    padding: 22px;
+  }
+
+  .service-card-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    font-size: 17px;
+  }
+
+  .service-contact-list > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
 }
 
 .notice-card-latest {

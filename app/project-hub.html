@@ -399,8 +399,9 @@
       .grid.small, .grid.medium, .grid.large { grid-template-columns: 1fr; }
     }
   </style>
+  <link rel="stylesheet" href="./fluid-glass.css">
 </head>
-<body class="light-theme">
+<body class="project-hub-page light-theme">
   <div class="shell">
     <header class="topbar">
       <div class="brand">
@@ -805,6 +806,7 @@
     function applyGlobalTheme(theme) {
       const nextTheme = theme === "light" ? "light" : "dark";
       document.body.classList.toggle("light-theme", nextTheme === "light");
+      document.body.classList.toggle("dark-theme", nextTheme === "dark");
       localStorage.setItem(themeStorageKey, nextTheme);
       window.WandouLocalCache?.syncTheme(nextTheme);
       updateTheme();
@@ -824,4 +826,3 @@
   </script>
 </body>
 </html>
-

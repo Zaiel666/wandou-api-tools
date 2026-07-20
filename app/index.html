@@ -9,6 +9,7 @@
   <link rel="icon" href="./logo.png" type="image/png">
   <link rel="stylesheet" href="./styles.css">
   <title>首页</title>
+  <link rel="stylesheet" href="./fluid-glass.css">
 </head>
 <body class="home-page">
   <main class="shell home-redesign">
@@ -243,12 +244,80 @@
 
     <section class="tool-section home-panel blank-panel" id="market" data-home-panel="market" aria-label="商品中心"></section>
 
-    <section class="tool-section home-panel blank-panel" id="blog" data-home-panel="blog" aria-label="博客"></section>
+    <section class="tool-section home-panel blank-panel blog-panel" id="blog" data-home-panel="blog" aria-label="博客">
+      <h2>博客</h2>
+      <div class="blog-card-list">
+        <a class="blog-entry-card" href="./daily-news/index.html" rel="noopener noreferrer" data-tab-title="豌豆今日简报">
+          <span class="blog-entry-visual" aria-hidden="true">
+            <img src="./daily-news/assets/newspaper-hero.png" alt="">
+            <span class="blog-entry-date">每日更新</span>
+          </span>
+          <span class="blog-entry-copy">
+            <span class="blog-entry-kicker">AI 科技 · 金融</span>
+            <strong>豌豆今日简报</strong>
+            <span class="blog-entry-description">5 分钟掌握国内外关键新闻与影响分析。</span>
+            <span class="blog-entry-action">打开今日新闻 <span aria-hidden="true">→</span></span>
+          </span>
+        </a>
+      </div>
+    </section>
 
     <section class="tool-section home-panel info-panel" id="announcement" data-home-panel="notice">
       <h2>公告</h2>
       <div class="info-grid">
         <details class="info-card notice-card notice-card-latest">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.18 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>全站视觉与服务说明优化</h3>
+            <p>统一首页、节点画布、AI 绘图工作台和项目文件夹的明暗主题，并新增开票与会员代充服务说明。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>页面背景统一使用中性白灰与黑灰，绿色仅用于图标、操作和选中状态，修复主题色块及控件颜色冲突。</p>
+            <p>节点画布补充分辨率、数量和新建项目的明确选中状态，并优化工作台与项目文件夹的主题一致性。</p>
+            <p>公告页新增“开票服务说明”和“会员代充服务”卡片，点击后可查看对应资料与客服说明。</p>
+            <nav class="notice-links" aria-label="v1.0.18 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.18" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.18/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.17 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>每日新闻加入博客</h3>
+            <p>博客页新增“豌豆今日简报”卡片，点击后可在软件标签页中直接阅读每日新闻。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>桌面的每日新闻网页及其样式、脚本和图片资源已完整内置到软件，不依赖桌面原文件路径。</p>
+            <p>新闻内容在本地页面展示；点击新闻来源时，由系统浏览器打开对应官方网站。</p>
+            <p>保留右键框选坐标、画布性能、本地记录、自动更新和 EXE 图标等既有修复。</p>
+            <nav class="notice-links" aria-label="v1.0.17 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.17" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.17/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <button class="info-card service-card" type="button" data-service-card="invoice" aria-haspopup="dialog">
+          <span class="service-card-icon" aria-hidden="true">票</span>
+          <span class="info-kicker">订单服务</span>
+          <strong>开票服务说明</strong>
+          <span class="service-card-description">部分订单支持开具发票，点击查看开票准备资料与联系说明。</span>
+          <span class="service-card-action">查看详情 <span aria-hidden="true">→</span></span>
+        </button>
+        <button class="info-card service-card" type="button" data-service-card="membership" aria-haspopup="dialog">
+          <span class="service-card-icon" aria-hidden="true">充</span>
+          <span class="info-kicker">客服服务</span>
+          <strong>会员代充服务</strong>
+          <span class="service-card-description">提供部分国外会员代充及账号购买咨询，点击查看联系方式与在线时间。</span>
+          <span class="service-card-action">查看详情 <span aria-hidden="true">→</span></span>
+        </button>
+        <details class="info-card notice-card">
           <summary>
             <span class="info-meta">
               <span class="info-kicker">v1.0.16 更新</span>
@@ -414,6 +483,15 @@
         <h2 id="notice-dialog-title">全部更新记录</h2>
         <p class="notice-dialog-intro">最新内容在最上方，向下滚动可查看全部历史版本和原有公告。</p>
         <div class="notice-dialog-history" data-notice-history></div>
+      </article>
+    </dialog>
+
+    <dialog class="service-dialog" data-service-dialog aria-labelledby="service-dialog-title">
+      <article class="service-dialog-card">
+        <button class="service-dialog-close" type="button" data-service-close aria-label="关闭服务说明">×</button>
+        <p class="info-kicker" data-service-kicker>服务说明</p>
+        <h2 id="service-dialog-title" data-service-title></h2>
+        <div class="service-dialog-content" data-service-content></div>
       </article>
     </dialog>
 
@@ -660,6 +738,60 @@
     document.querySelector("[data-notice-close]")?.addEventListener("click", closeNoticeDialog);
     noticeDialog?.addEventListener("click", (event) => {
       if (event.target === noticeDialog) closeNoticeDialog();
+    });
+
+    const serviceDialog = document.querySelector("[data-service-dialog]");
+    const serviceTitle = serviceDialog?.querySelector("[data-service-title]");
+    const serviceKicker = serviceDialog?.querySelector("[data-service-kicker]");
+    const serviceContent = serviceDialog?.querySelector("[data-service-content]");
+    const serviceDetails = {
+      invoice: {
+        kicker: "订单服务",
+        title: "开票服务说明",
+        content: `
+          <p>本单支持部分订单开具发票。如需开发票，请联系微信客服，系统会根据实际情况进行沟通。</p>
+          <section class="service-dialog-section">
+            <h3>开票前请准备</h3>
+            <ul>
+              <li>开票抬头</li>
+              <li>税号</li>
+              <li>订单号</li>
+              <li>接收邮箱</li>
+            </ul>
+          </section>
+          <p class="service-dialog-note">详细情况以跟客服确认为止。</p>
+        `
+      },
+      membership: {
+        kicker: "客服服务",
+        title: "会员代充服务",
+        content: `
+          <p>欢迎每一位使用豌豆 AI 工具的朋友。因为我们提供一些国外会员代充购买账号的服务，可能不方便宣传，有用到此服务的话，请在微信联系我们。</p>
+          <section class="service-dialog-section">
+            <h3>联系信息</h3>
+            <dl class="service-contact-list">
+              <div><dt>微信联系方式</dt><dd>[此处填写微信客服联系方式]</dd></div>
+              <div><dt>客服在线时间</dt><dd>早上 8 点到晚上 24 点</dd></div>
+            </dl>
+          </section>
+          <p class="service-dialog-note">回复较慢，请尽情谅解。</p>
+        `
+      }
+    };
+    const closeServiceDialog = () => serviceDialog?.close();
+    document.querySelectorAll("[data-service-card]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const detail = serviceDetails[card.dataset.serviceCard];
+        if (!detail || !serviceDialog || !serviceTitle || !serviceKicker || !serviceContent) return;
+        serviceKicker.textContent = detail.kicker;
+        serviceTitle.textContent = detail.title;
+        serviceContent.innerHTML = detail.content;
+        serviceDialog.showModal();
+      });
+    });
+    serviceDialog?.querySelector("[data-service-close]")?.addEventListener("click", closeServiceDialog);
+    serviceDialog?.addEventListener("click", (event) => {
+      if (event.target === serviceDialog) closeServiceDialog();
     });
 
     const hasDesktopTabs = Boolean(window.wandouDesktopTabs && typeof window.wandouDesktopTabs.open === "function");
