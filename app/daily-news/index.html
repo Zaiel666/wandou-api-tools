@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f4f2"><title>豌豆今日简报</title><link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../fluid-glass.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="豌豆今日简报首页"><span class="logo-stage"><img class="pea-logo" src="assets/wandou-logo-latest.png" alt=""></span><span>豌豆今日简报</span></a>
+    <nav><a href="#brief">精简新闻</a><a href="#china">国内</a><a href="#world">国外</a></nav>
+    <div class="header-actions"><span id="today"></span><button class="theme-toggle" id="themeToggle" aria-label="切换深色主题" title="切换明暗主题"><span class="sun">☀</span><span class="moon">☾</span></button></div>
+  </header>
+
+  <main id="top">
+    <section class="hero"><div class="hero-date"><strong id="heroDay">07.20</strong><span id="heroYear">2026 · 周一</span></div><div class="hero-copy"><p class="eyebrow">豌豆每日报纸新闻</p><h1>今天发生什么，<br><span>与你有什么关系。</span></h1></div><p class="hero-note"><b>5 分钟掌握关键变化</b><span>聚焦人工智能、科技产业与全球金融，只保留值得进一步判断的信息。</span></p></section>
+
+    <section class="brief panel" id="brief">
+      <div class="section-head"><div><p class="eyebrow">TOP 5 · EDITOR'S PICK</p><h2>今天最值得关注</h2></div><button class="pill dark" data-copy-summary>复制全部</button></div>
+      <div class="top-five" id="topFive"></div>
+      <div class="impact-row">
+        <button class="impact-card" data-impact="person"><span class="line-icon person-icon" aria-hidden="true"></span><span><b>对普通人的影响</b><small>就业、资产与生活成本分析</small></span><em>查看详细分析 →</em></button>
+        <button class="impact-card" data-impact="society"><span class="line-icon society-icon" aria-hidden="true"></span><span><b>对国家与社会的影响</b><small>产业、治理与长期竞争力分析</small></span><em>查看详细分析 →</em></button>
+      </div>
+    </section>
+
+    <section class="news-area" aria-label="国内外新闻">
+      <div class="column" id="china"><div class="column-head"><div><span>国内</span><h2>国内新闻</h2></div><b id="chinaCount">10 条</b></div><div class="cards" id="chinaNews"></div></div>
+      <div class="column" id="world"><div class="column-head"><div><span>全球</span><h2>国外新闻</h2></div><b id="worldCount">10 条</b></div><div class="cards" id="worldNews"></div></div>
+      <div class="load-more-wrap"><button class="load-more" id="loadMore"><span>继续加载 20 条</span><i>↓</i></button><small id="loadStatus">当前显示 20 条 · 最多可查看 120 条</small></div>
+    </section>
+  </main>
+  <footer><span>本地设计预览 · 示例内容不代表实时新闻</span><span>AI 科技 × 金融</span></footer>
+
+  <div class="detail-layer" id="detailLayer" aria-hidden="true"><button class="scrim" aria-label="关闭"></button><article class="detail-sheet" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><button class="close" aria-label="关闭">×</button><div id="detailIcon"></div><p class="eyebrow">DEEP ANALYSIS</p><h2 id="detailTitle"></h2><p class="lead" id="detailLead"></p><div class="detail-sections" id="detailSections"></div></article></div>
+  <div class="toast" role="status" aria-live="polite">✓ <span>已复制</span></div>
+  <script src="app.js"></script>
+</body></html>
