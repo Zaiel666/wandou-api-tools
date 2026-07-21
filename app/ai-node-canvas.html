@@ -909,10 +909,8 @@
     .canvas-wrap.is-panning .preview img,
     .canvas-wrap.is-panning .preview video,
     .canvas-wrap.is-zooming .preview img,
-    .canvas-wrap.is-zooming .preview video,
-    .canvas-wrap.is-panning .lines,
-    .canvas-wrap.is-zooming .lines {
-      display: none;
+    .canvas-wrap.is-zooming .preview video {
+      visibility: hidden;
     }
 
     .canvas-wrap.low-detail .node-menu,
@@ -7791,7 +7789,7 @@
             : rawUrl)
           : rawUrl;
         const previewUrl = apiResult.mediaType === "image" && url
-          ? await createPreviewImageUrl(url, 320, sourceNode.type === "png")
+          ? await createPreviewImageUrl(url, 480, sourceNode.type === "png")
           : "";
         const parsed = parseSize(targetSize);
         pending.pending = false;

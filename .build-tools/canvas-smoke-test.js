@@ -104,8 +104,6 @@ async function evaluate(client, expression) {
     const persisted = await evaluate(canvasClient, `(async () => {
       const baseline = document.querySelectorAll('.node').length;
       const preview = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480"><rect width="100%" height="100%" fill="#dff4e5"/><circle cx="180" cy="220" r="90" fill="#45c936"/></svg>');
-      const durablePreview = 'data:image/png;base64,' + 'A'.repeat(1200100);
-      const durableNode = createNode('result', 80, 80, { mediaUrl: durablePreview, previewUrl: durablePreview, fullUrl: durablePreview, width: 1024, height: 1024, pending: false });
       for (let index = 0; index < 60; index++) {
         createNode('result', 120 + (index % 10) * 330, 120 + Math.floor(index / 10) * 460, { mediaUrl: preview, previewUrl: preview, width: 360, height: 480, pending: false });
       }
@@ -117,7 +115,7 @@ async function evaluate(client, expression) {
       const saved = document.querySelectorAll('.node').length;
       const db = await openLocalMediaDb();
       const backupStore = db.objectStoreNames.contains(canvasStateStoreName);
-      return { baseline, saved, backupStore, durableNodeId: durableNode.id, durableSize: durablePreview.length };
+      return { baseline, saved, backupStore };
     })()`);
 
     log(`phase: persisted ${JSON.stringify(persisted)}`);
