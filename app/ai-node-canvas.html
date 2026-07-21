@@ -6681,7 +6681,7 @@
         linkElements.delete(key);
       });
       if (!portDragState) {
-        if (temporaryLinkElement) temporaryLinkElement.hidden = true;
+        clearTemporaryLink();
         return;
       }
       const from = getPortCenterFast(portDragState.from, "out", metricCache);
@@ -6695,6 +6695,12 @@
       }
       temporaryLinkElement.setAttribute("d", linkPathData(from, to));
       temporaryLinkElement.hidden = false;
+    }
+
+    function clearTemporaryLink() {
+      if (temporaryLinkElement) temporaryLinkElement.remove();
+      temporaryLinkElement = null;
+      lines.querySelectorAll(".temp-line").forEach((element) => element.remove());
     }
 
     function getPortCenterFast(nodeIdValue, port, metricCache) {
@@ -6777,6 +6783,8 @@
       if (nodeEl) nodeEl.classList.add("dragging");
       document.body.classList.add("no-select");
       linkingFrom = null;
+      portDragState = null;
+      clearTemporaryLink();
       updatePendingPort();
       dragState = {
         id: nodeIdValue,
@@ -6898,6 +6906,7 @@
         }
         linkingFrom = null;
         portDragState = null;
+        clearTemporaryLink();
         updatePendingPort();
         if (!snapTo) clearSnapPreview();
         drawLinks();
@@ -10901,6 +10910,14 @@ ${formatInstruction}`;
       const active = document.activeElement;
       const isTyping = active && active.closest?.("input, textarea, select");
       if (isTyping || lightbox.classList.contains("open")) return;
+      if (event.key === "Escape" && (portDragState || temporaryLinkElement)) {
+        linkingFrom = null;
+        portDragState = null;
+        clearSnapPreview();
+        clearTemporaryLink();
+        updatePendingPort();
+        return;
+      }
       if ((event.key === "Delete" || event.key === "Enter") && selectedNodeId) {
         event.preventDefault();
         const deletedId = selectedNodeId;
