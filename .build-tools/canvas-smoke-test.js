@@ -8,7 +8,9 @@ const browserPath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
 const userDataDir = path.join(root, "build-output", `canvas-smoke-${Date.now()}`);
 const logFile = path.join(root, "build-output", "canvas-smoke-test.log");
 const port = 9315 + Math.floor(Math.random() * 200);
-const canvasUrl = `${pathToFileURL(path.join(root, "build-output", "win-unpacked", "resources", "app", "ai-node-canvas.html")).href}?project=canvas-smoke`;
+const builtCanvas = path.join(root, "build-output", "win-unpacked", "resources", "app", "ai-node-canvas.html");
+const canvasFile = fs.existsSync(builtCanvas) ? builtCanvas : path.join(root, "app", "ai-node-canvas.html");
+const canvasUrl = `${pathToFileURL(canvasFile).href}?project=canvas-smoke`;
 fs.mkdirSync(userDataDir, { recursive: true });
 fs.writeFileSync(logFile, "phase: launch\n");
 const log = (message) => fs.appendFileSync(logFile, `${message}\n`);
@@ -78,6 +80,7 @@ async function evaluate(client, expression) {
   if (!fs.existsSync(browserPath)) throw new Error(`Chrome was not found: ${browserPath}`);
   const child = spawn(browserPath, [
     "--headless=new",
+    "--no-sandbox",
     "--disable-gpu",
     "--no-first-run",
     "--disable-default-apps",
@@ -100,9 +103,11 @@ async function evaluate(client, expression) {
     log("phase: create and persist");
     const persisted = await evaluate(canvasClient, `(async () => {
       const baseline = document.querySelectorAll('.node').length;
-      for (let index = 0; index < 12; index++) {
-        createNode(index % 3 === 0 ? 'image' : 'result', 120 + (index % 6) * 330, 120 + Math.floor(index / 6) * 420);
+      const preview = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480"><rect width="100%" height="100%" fill="#dff4e5"/><circle cx="180" cy="220" r="90" fill="#45c936"/></svg>');
+      for (let index = 0; index < 60; index++) {
+        createNode('result', 120 + (index % 10) * 330, 120 + Math.floor(index / 10) * 460, { mediaUrl: preview, previewUrl: preview, width: 360, height: 480, pending: false });
       }
+      render();
       await Promise.race([
         window.wandouSaveBeforeClose(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('save timeout')), 10000))
