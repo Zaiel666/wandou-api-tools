@@ -141,6 +141,18 @@ async function evaluate(client, expression) {
       const selected = document.querySelectorAll('.node.box-selected').length;
       const menuRect = document.querySelector('#selectionMenu').getBoundingClientRect();
       const menuOffset = Math.hypot(menuRect.left - endX, menuRect.top - endY);
+      document.querySelector('#projectHubButton').click();
+      await new Promise(requestAnimationFrame);
+      const newProjectRect = document.querySelector('#newProjectButton').getBoundingClientRect();
+      const pinRect = document.querySelector('#pinProjectHubButton').getBoundingClientRect();
+      const exportRect = document.querySelector('#exportProjectButton').getBoundingClientRect();
+      const importRect = document.querySelector('#importProjectButton').getBoundingClientRect();
+      const projectLayout = {
+        firstRowOffset: Math.abs((newProjectRect.top + newProjectRect.height / 2) - (pinRect.top + pinRect.height / 2)),
+        secondRowOffset: Math.abs(exportRect.top - importRect.top),
+        rowGap: exportRect.top - newProjectRect.bottom,
+        pinIsRight: pinRect.left >= newProjectRect.right
+      };
       const wheelStart = performance.now();
       const bounds = wrap.getBoundingClientRect();
       for (let index = 0; index < 40; index++) {
@@ -154,7 +166,7 @@ async function evaluate(client, expression) {
       ]);
       localStorage.removeItem(projectCanvasStorageKey());
       localStorage.removeItem(folderCanvasStorageKey());
-      return { selected, boxStartOffset, menuOffset, wheelMs };
+      return { selected, boxStartOffset, menuOffset, wheelMs, projectLayout };
     })()`);
 
     log(`phase: interaction ${JSON.stringify(interaction)}`);
@@ -169,6 +181,11 @@ async function evaluate(client, expression) {
       && interaction.selected >= 2
       && interaction.boxStartOffset <= 1.5
       && interaction.menuOffset <= 1.5
+      && interaction.projectLayout.firstRowOffset <= 1.5
+      && interaction.projectLayout.secondRowOffset <= 1.5
+      && interaction.projectLayout.rowGap >= 0
+      && interaction.projectLayout.rowGap <= 6
+      && interaction.projectLayout.pinIsRight
       && persisted.backupStore
       && restored.nodes === persisted.saved
       && interaction.wheelMs < 5000;
