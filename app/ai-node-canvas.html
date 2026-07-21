@@ -908,6 +908,13 @@
       box-sizing: border-box;
     }
 
+    /* Avoid Chromium backdrop compositing bands across the canvas toolbar. */
+    .topbar-actions,
+    .topbar-actions .ghost {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
     .topbar-actions button {
       height: 36px;
       min-height: 36px;
@@ -2196,11 +2203,21 @@
     }
 
     .generator-count-row .count-options {
-      grid-template-columns: repeat(9, 36px);
+      width: max-content;
+      max-width: 100%;
+      grid-template-columns: repeat(9, 30px);
+      gap: 4px;
       justify-content: end;
+      justify-self: end;
     }
 
-    .generator-count-row .count-option,
+    .generator-count-row .count-option {
+      width: 30px;
+      min-height: 30px;
+      padding: 0;
+      aspect-ratio: 1 / 1;
+    }
+
     .video-duration-row .count-option {
       width: 36px;
       min-height: 36px;
