@@ -4,6 +4,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const canvas = fs.readFileSync(path.join(root, "app", "ai-node-canvas.html"), "utf8");
 const main = fs.readFileSync(path.join(root, "desktop-client", "main.js"), "utf8");
+const preload = fs.readFileSync(path.join(root, "desktop-client", "preload.js"), "utf8");
 const updater = fs.readFileSync(path.join(root, "desktop-client", "portable-updater.cs"), "utf8");
 
 const checks = [
@@ -17,7 +18,10 @@ const checks = [
   [canvas.includes("will-change: auto") && canvas.includes(".canvas-wrap.is-panning .lines"), "lightweight pan composition"],
   [canvas.includes('lines.querySelectorAll(".temp-line").forEach((element) => element.remove())'), "temporary connection cleanup"],
   [updater.includes("CopyDirectory(stage, install)") && !updater.includes("Directory.Delete(install"), "update preserves user folders"],
-  [canvas.includes('const autoSaveDbName = "wandou-auto-save-v1"'), "persistent save-directory database"]
+  [canvas.includes('const autoSaveDbName = "wandou-auto-save-v1"'), "persistent save-directory database"],
+  [main.includes('"save-directory.json"') && main.includes('desktop:write-save-file'), "native save-directory persistence"],
+  [preload.includes("getSaveDirectory") && preload.includes("chooseSaveDirectory") && preload.includes("writeSaveFile"), "native save-directory bridge"],
+  [canvas.includes('format: "wandou-node-project"') && canvas.includes("importProjectFile") && canvas.includes("exportCurrentProject"), "project migration package"]
 ];
 
 const failed = checks.filter(([passed]) => !passed).map(([, label]) => label);
