@@ -7,7 +7,7 @@ const { spawn } = require("child_process");
 const { pathToFileURL, fileURLToPath } = require("url");
 
 const APP_NAME = "豌豆AI工具";
-const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app"]);
+const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app", "www.zayapi.top", "zayapi.top"]);
 
 let mainWindow = null;
 let allowWindowClose = false;
@@ -230,6 +230,7 @@ function titleForUrl(rawUrl) {
   try {
     const parsed = new URL(rawUrl);
     if (parsed.hostname === "wandou-video-workbench.netlify.app") return "录音视频转文字";
+    if (parsed.hostname === "www.zayapi.top" || parsed.hostname === "zayapi.top") return "商品中心";
     const names = {
       "index.html": "首页",
       "project-hub.html": "项目文件夹",

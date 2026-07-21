@@ -2196,7 +2196,7 @@
     }
 
     .generator-count-row .count-options {
-      grid-template-columns: repeat(6, 36px);
+      grid-template-columns: repeat(9, 36px);
       justify-content: end;
     }
 
@@ -5365,7 +5365,7 @@
       const modelMenuHtml = models.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-node-model="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const durationHtml = `<button class="count-option active model-default" type="button" disabled>默认时长</button>`;
-      const countHtml = (isVideoNode ? videoCountOptions : [1, 2, 3, 4, 5, 6]).map((count) => (
+      const countHtml = (isVideoNode ? videoCountOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9]).map((count) => (
         `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button">${count}</button>`
       )).join("");
       const resolutionHtml = resolutions.map((resolution) => (
@@ -7311,7 +7311,7 @@
         ? 1
         : node.type === "video"
         ? (videoCountOptions.includes(Number(node.count)) ? Number(node.count) : 1)
-        : Math.max(1, Math.min(6, Number(node.count) || 1));
+        : Math.max(1, Math.min(9, Number(node.count) || 1));
       const pendingNodes = [];
       const parsed = parseSize(targetSize);
 
@@ -8210,7 +8210,7 @@ ${formatInstruction}`;
       const imagePayload = {
         model: imageGenerationApiModel(node.model, requestResolution),
         prompt: node.type === "png" ? transparentEditPrompt : node.prompt,
-        n: Math.max(1, Math.min(6, Number(node.count) || 1)),
+        n: Math.max(1, Math.min(9, Number(node.count) || 1)),
         size: apiSafeGenerationSize(targetSize)
       };
       if (!node._forceBaseGeneration) {
