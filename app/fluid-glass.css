@@ -1189,6 +1189,113 @@ body.project-hub-page.dark-theme .cover {
   background: #101211 !important;
 }
 
+/* Project hub uses two iOS-like material scales: structural chrome and content cards. */
+body.project-hub-page::before,
+body.project-hub-page::after,
+body.project-hub-page .shell::before,
+body.project-hub-page .shell::after {
+  content: none !important;
+  display: none !important;
+}
+
+body.project-hub-page {
+  letter-spacing: 0;
+}
+
+body.project-hub-page .shell {
+  padding: 28px 36px 44px;
+}
+
+body.project-hub-page .topbar,
+body.project-hub-page .toolbar {
+  border: 1px solid var(--line) !important;
+  border-top-color: var(--line) !important;
+  border-radius: 20px !important;
+  background: color-mix(in srgb, var(--panel) 82%, transparent) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: blur(28px) saturate(150%);
+  box-shadow: var(--fg-shadow-sm) !important;
+}
+
+body.project-hub-page .topbar {
+  min-height: 88px;
+  padding: 16px 18px;
+}
+
+body.project-hub-page .toolbar {
+  min-height: 64px;
+  margin-top: 16px;
+  padding: 10px 14px;
+}
+
+body.project-hub-page .grid {
+  gap: 18px;
+  margin-top: 20px;
+}
+
+body.project-hub-page .card {
+  border-radius: 20px !important;
+  background: color-mix(in srgb, var(--panel-strong) 94%, transparent) !important;
+  box-shadow: var(--fg-shadow-sm) !important;
+  transform: translateZ(0);
+  transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, box-shadow 180ms ease;
+}
+
+body.project-hub-page .card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, #218a4a 36%, var(--line)) !important;
+  box-shadow: var(--fg-shadow) !important;
+}
+
+body.project-hub-page .card.selected {
+  transform: translateY(-2px);
+  border-color: #36a763 !important;
+  box-shadow: 0 0 0 3px rgba(54, 167, 99, .14), var(--fg-shadow) !important;
+}
+
+body.project-hub-page .cover {
+  border-bottom-color: var(--line) !important;
+}
+
+body.project-hub-page :is(.button, .icon-button, .search, select) {
+  border-radius: 13px !important;
+  transition: transform 100ms ease-out, background-color 160ms ease, border-color 160ms ease;
+}
+
+body.project-hub-page :is(.button, .icon-button):active {
+  transform: scale(.97);
+}
+
+body.project-hub-page .name-input {
+  border-radius: 10px !important;
+}
+
+body.project-hub-page.dark-theme .topbar,
+body.project-hub-page.dark-theme .toolbar {
+  background: rgba(27, 29, 28, .82) !important;
+}
+
+body.project-hub-page.dark-theme .card {
+  background: rgba(27, 29, 28, .94) !important;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body.project-hub-page .topbar,
+  body.project-hub-page .toolbar,
+  body.project-hub-page .card {
+    background: var(--panel) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.project-hub-page .card,
+  body.project-hub-page :is(.button, .icon-button) {
+    transition: none !important;
+  }
+}
+
 /* Accessibility fallbacks */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .home-topbar,
