@@ -312,6 +312,17 @@
       gap: 8px;
     }
 
+    .project-transfer-actions {
+      grid-template-columns: 1fr 1fr;
+      margin-top: 8px;
+    }
+
+    .project-transfer-actions .wide-button {
+      min-height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
     #newProjectButton {
       width: 100%;
       justify-self: center;
@@ -3680,6 +3691,11 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 3.2a1 1 0 0 1 .7.3l5.1 5.1a1 1 0 0 1-.7 1.7h-2.1l-3.1 3.1.7 3.5a1 1 0 0 1-.27.9l-1.2 1.2-4.25-4.25-4.87 4.87-1.41 1.41-1.42-1.42 1.42-1.41 4.87-4.87L3.9 9.1l1.2-1.2a1 1 0 0 1 .9-.27l3.5.7 3.1-3.1V3.2h2.1Z"/></svg>
             </button>
           </div>
+          <div class="project-menu-actions project-transfer-actions">
+            <button id="exportProjectButton" class="wide-button ghost" type="button">导出项目</button>
+            <button id="importProjectButton" class="wide-button ghost" type="button">导入项目</button>
+            <input id="projectImportInput" type="file" accept=".wandou-project.json,.json,application/json" hidden>
+          </div>
           <div id="projectList" class="project-list"></div>
         </div>
       </div>
@@ -3919,6 +3935,9 @@
     const projectHubButton = document.getElementById("projectHubButton");
     const projectHomeButton = document.getElementById("projectHomeButton");
     const newProjectButton = document.getElementById("newProjectButton");
+    const exportProjectButton = document.getElementById("exportProjectButton");
+    const importProjectButton = document.getElementById("importProjectButton");
+    const projectImportInput = document.getElementById("projectImportInput");
     const pinProjectHubButton = document.getElementById("pinProjectHubButton");
     const projectList = document.getElementById("projectList");
     const galleryOverlay = document.getElementById("galleryOverlay");
@@ -4106,6 +4125,7 @@
     const pendingHistoryMediaPersistIds = new Set();
     let canvasStorageWarningShown = false;
     let autoSaveDirectoryHandle = null;
+    let nativeAutoSaveDirectory = null;
     let autoSaveDirectoryLoaded = false;
 
     function showToast(text) {
@@ -4115,7 +4135,7 @@
     }
 
     function autoSaveSupported() {
-      return typeof window.showDirectoryPicker === "function" && typeof window.indexedDB !== "undefined";
+      return Boolean(window.wandouShell?.chooseSaveDirectory) || (typeof window.showDirectoryPicker === "function" && typeof window.indexedDB !== "undefined");
     }
 
     function openAutoSaveDb() {
@@ -4144,8 +4164,15 @@
     }
 
     async function loadAutoSaveDirectoryHandle() {
-      if (autoSaveDirectoryLoaded || !window.indexedDB) return autoSaveDirectoryHandle;
+      if (autoSaveDirectoryLoaded) return nativeAutoSaveDirectory || autoSaveDirectoryHandle;
       autoSaveDirectoryLoaded = true;
+      if (window.wandouShell?.getSaveDirectory) {
+        nativeAutoSaveDirectory = await window.wandouShell.getSaveDirectory();
+        if (!nativeAutoSaveDirectory?.directory) nativeAutoSaveDirectory = null;
+        updateAutoSaveDirectoryButton();
+        return nativeAutoSaveDirectory;
+      }
+      if (!window.indexedDB) return null;
       const db = await openAutoSaveDb();
       if (!db) return null;
       autoSaveDirectoryHandle = await new Promise((resolve) => {
@@ -4172,7 +4199,8 @@
     function updateAutoSaveDirectoryButton() {
       const button = document.getElementById("autoSaveDirectoryButton");
       if (!button) return;
-      const isMissing = !autoSaveDirectoryHandle;
+      const selectedDirectory = nativeAutoSaveDirectory || autoSaveDirectoryHandle;
+      const isMissing = !selectedDirectory;
       button.classList.toggle("required-warning", isMissing);
       button.setAttribute("aria-invalid", isMissing ? "true" : "false");
       if (!autoSaveSupported()) {
@@ -4182,8 +4210,8 @@
         button.title = "\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u81ea\u52a8\u4fdd\u5b58\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae";
         return;
       }
-      const directoryName = autoSaveDirectoryHandle?.name?.trim() || "";
-      button.textContent = directoryName || (autoSaveDirectoryHandle ? "已设置保存位置" : "⚠ 必须设置保存位置");
+      const directoryName = selectedDirectory?.name?.trim() || "";
+      button.textContent = directoryName || (selectedDirectory ? "已设置保存位置" : "⚠ 必须设置保存位置");
       button.setAttribute(
         "aria-label",
         directoryName ? `当前保存位置：${directoryName}，点击更改` : "必须设置保存位置"
@@ -4201,6 +4229,15 @@
         return;
       }
       try {
+        if (window.wandouShell?.chooseSaveDirectory) {
+          const selected = await window.wandouShell.chooseSaveDirectory();
+          if (!selected || selected.canceled) return;
+          nativeAutoSaveDirectory = selected;
+          autoSaveDirectoryHandle = null;
+          updateAutoSaveDirectoryButton();
+          showToast(`已选择保存位置：${selected.name || selected.directory}`);
+          return;
+        }
         const handle = await window.showDirectoryPicker({ mode: "readwrite" });
         if (!/^[A-Za-z0-9._ -]+$/.test(handle.name || "")) {
           showToast("保存文件夹名称只能使用英文字母、数字、空格、横线或下划线");
@@ -4578,6 +4615,138 @@
       renderProjects();
       if (!projectHubPinned) projectHub.classList.remove("open");
       showToast("已新建项目");
+    }
+
+    function blobToDataUrl(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error || new Error("文件读取失败"));
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function portableProjectMedia(value) {
+      if (typeof value !== "string" || !value) return value || "";
+      const resolved = await getLocalMedia(value);
+      if (!resolved || resolved.startsWith("data:")) return resolved;
+      try {
+        const blob = await sourceToBlob(resolved);
+        return blob ? await blobToDataUrl(blob) : resolved;
+      } catch (error) {
+        console.warn("Project media export kept original source", error);
+        return resolved;
+      }
+    }
+
+    async function serializeNodeForProjectExport(node) {
+      const copy = JSON.parse(JSON.stringify(node));
+      copy.mediaUrl = await portableProjectMedia(copy.mediaUrl);
+      copy.previewUrl = await portableProjectMedia(copy.previewUrl);
+      copy.fullUrl = await portableProjectMedia(copy.fullUrl);
+      if (Array.isArray(copy.references)) {
+        copy.references = await Promise.all(copy.references.map(async (item) => ({
+          ...item,
+          url: await portableProjectMedia(item.url)
+        })));
+      }
+      return copy;
+    }
+
+    function safeProjectExportName(name) {
+      return String(name || "wandou-project").replace(/[\\/:*?"<>|]/g, "-").trim() || "wandou-project";
+    }
+
+    async function exportCurrentProject() {
+      const project = projects.find((item) => item.id === activeProjectId);
+      if (!project) return;
+      exportProjectButton.disabled = true;
+      showToast("正在整理项目文件...");
+      try {
+        await saveCanvasState();
+        const cleanNodes = nodesWithoutRemovedTypes();
+        const cleanIds = new Set(cleanNodes.map((node) => node.id));
+        const payload = {
+          format: "wandou-node-project",
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          project: {
+            name: project.name,
+            color: project.color,
+            createdAt: project.createdAt,
+            updatedAt: project.updatedAt,
+            favorite: Boolean(project.favorite)
+          },
+          canvas: {
+            nodes: await Promise.all(cleanNodes.map(serializeNodeForProjectExport)),
+            links: links.filter((link) => cleanIds.has(link.from) && cleanIds.has(link.to)),
+            nodeId,
+            view
+          }
+        };
+        const blob = new Blob([JSON.stringify(payload)], { type: "application/json;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `${safeProjectExportName(project.name)}.wandou-project.json`;
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast("项目已导出");
+      } catch (error) {
+        console.error("Project export failed", error);
+        showToast("项目导出失败，请重试");
+      } finally {
+        exportProjectButton.disabled = false;
+      }
+    }
+
+    async function importProjectFile(file) {
+      if (!file) return;
+      if (projects.length >= 30) {
+        showToast("最多只能保留 30 个项目");
+        return;
+      }
+      importProjectButton.disabled = true;
+      try {
+        const payload = JSON.parse(await file.text());
+        if (payload?.format !== "wandou-node-project" || !Array.isArray(payload?.canvas?.nodes) || !Array.isArray(payload?.canvas?.links)) {
+          throw new Error("Unsupported project file");
+        }
+        await saveCanvasState();
+        const now = Date.now();
+        const importedProject = {
+          id: `project-${now}`,
+          name: String(payload.project?.name || file.name.replace(/\.wandou-project\.json$|\.json$/i, "") || "导入项目").slice(0, 80),
+          color: payload.project?.color || projectColorPalette[projects.length % projectColorPalette.length],
+          createdAt: Number(payload.project?.createdAt) || now,
+          updatedAt: now,
+          favorite: Boolean(payload.project?.favorite)
+        };
+        projects.push(importedProject);
+        activeProjectId = importedProject.id;
+        nodes = payload.canvas.nodes;
+        links = payload.canvas.links;
+        nodeId = Math.max(Number(payload.canvas.nodeId) || 1, ...nodes.map((node) => Number(node.id) || 0)) + 1;
+        view = payload.canvas.view && Number.isFinite(payload.canvas.view.scale) ? payload.canvas.view : view;
+        selectedNodeId = null;
+        historyStack = [];
+        redoStack = [];
+        removeDeprecatedSelectionNodes();
+        await Promise.all(nodes.map(cleanLoadedNode));
+        pruneBrokenLinks();
+        saveProjects();
+        await saveCanvasState();
+        renderProjects();
+        render();
+        if (!projectHubPinned) projectHub.classList.remove("open");
+        showToast("项目已导入");
+      } catch (error) {
+        console.error("Project import failed", error);
+        showToast("项目文件无效或已损坏");
+      } finally {
+        importProjectButton.disabled = false;
+        projectImportInput.value = "";
+      }
     }
 
     function getCanvasSnapshot() {
@@ -7326,8 +7495,9 @@
         showToast("生成前必须先填写 API 密钥");
         return;
       }
-      const saveHandle = autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-      if (!saveHandle || !await hasAutoSaveDirectoryPermission(saveHandle, true)) {
+      const saveHandle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
+      const saveReady = nativeAutoSaveDirectory || (saveHandle && await hasAutoSaveDirectoryPermission(saveHandle, true));
+      if (!saveReady) {
         showToast("生成前必须先设置英文名称的强制保存位置");
         await chooseAutoSaveDirectory();
         return;
@@ -9662,8 +9832,21 @@ ${formatInstruction}`;
     }
 
     async function writeBlobToAutoSaveDirectory(blob, filename) {
-      const handle = autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
+      const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
       if (!handle) return false;
+      if (window.wandouShell?.writeSaveFile && nativeAutoSaveDirectory) {
+        const result = await window.wandouShell.writeSaveFile(filename, new Uint8Array(await blob.arrayBuffer()));
+        if (result?.success) {
+          showToast(`已自动保存：${result.filename}`);
+          return true;
+        }
+        if (result?.missingDirectory) {
+          nativeAutoSaveDirectory = null;
+          updateAutoSaveDirectoryButton();
+          showToast("原保存文件夹已不存在，请重新选择保存位置");
+        }
+        return false;
+      }
       if (!await hasAutoSaveDirectoryPermission(handle, false)) {
         showToast("\u4fdd\u5b58\u4f4d\u7f6e\u9700\u8981\u91cd\u65b0\u6388\u6743\uff0c\u8bf7\u70b9\u51fb\u66f4\u6539\u4fdd\u5b58\u4f4d\u7f6e");
         return false;
@@ -9682,7 +9865,7 @@ ${formatInstruction}`;
 
     async function autoSaveGeneratedNodeMedia(node) {
       if (!node || node.type !== "result" || node.pending || node.mediaType !== "image" || node.autoSaved) return;
-      const handle = autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
+      const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
       if (!handle) return;
       const src = favoriteMediaUrl(node);
       if (!src) return;
@@ -10504,6 +10687,9 @@ ${formatInstruction}`;
       updateProjectHubPinState();
     });
     newProjectButton.addEventListener("click", createProject);
+    exportProjectButton.addEventListener("click", exportCurrentProject);
+    importProjectButton.addEventListener("click", () => projectImportInput.click());
+    projectImportInput.addEventListener("change", () => importProjectFile(projectImportInput.files?.[0]));
     projectMenu.querySelector("[data-project-delete]").addEventListener("click", (event) => {
       event.stopPropagation();
       if (!activeProjectMenuId) return;
