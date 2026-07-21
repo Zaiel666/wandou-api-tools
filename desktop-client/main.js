@@ -371,7 +371,11 @@ function createWindow() {
 }
 
 ipcMain.on("desktop:open-tab", (_event, payload = {}) => {
-  if (isInternalUrl(payload.url)) sendTab(payload.url, payload.title || titleForUrl(payload.url));
+  if (isInternalUrl(payload.url)) {
+    sendTab(payload.url, payload.title || titleForUrl(payload.url));
+    return;
+  }
+  if (isSafeHttpsUrl(payload.url)) shell.openExternal(payload.url);
 });
 ipcMain.on("desktop:set-theme", (_event, theme) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
