@@ -7,7 +7,7 @@ const { spawn } = require("child_process");
 const { pathToFileURL, fileURLToPath } = require("url");
 
 const APP_NAME = "豌豆AI工具";
-const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app", "www.zayapi.top", "zayapi.top"]);
+const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app"]);
 
 let mainWindow = null;
 let allowWindowClose = false;
