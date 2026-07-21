@@ -50,7 +50,7 @@ async function checkForUpdates() {
   const checksumAssetName = String(config.checksumAssetName || `${assetName}.sha256`).trim();
   if (!owner || !repository || !assetName) return { available: false, configured: false, currentVersion };
   try {
-    const response = await net.fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/releases/latest`, {
+    const response = await net.fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/releases/latest?timestamp=${Date.now()}`, {
       cache: "no-store",
       headers: {
         Accept: "application/vnd.github+json",
@@ -66,6 +66,9 @@ async function checkForUpdates() {
     const checksumAsset = assets.find((asset) => asset?.name === checksumAssetName);
     const downloadUrl = String(packageAsset?.browser_download_url || "").trim();
     const checksumUrl = String(checksumAsset?.browser_download_url || "").trim();
+    const releaseError = !latestVersion
+      ? "GitHub 最新发布缺少版本标签"
+      : (!packageAsset || !checksumAsset ? "GitHub 最新发布缺少更新包或 SHA256 校验文件" : "");
     return {
       available: Boolean(latestVersion && isSafeHttpsUrl(downloadUrl) && isSafeHttpsUrl(checksumUrl) && compareVersions(latestVersion, currentVersion) > 0),
       configured: true,
@@ -76,6 +79,7 @@ async function checkForUpdates() {
       packageApiUrl: String(packageAsset?.url || "").trim(),
       checksumApiUrl: String(checksumAsset?.url || "").trim(),
       assetName,
+      error: releaseError,
       notes: String(release.body || "新版本已经准备好，建议更新后继续使用。")
     };
   } catch (error) {
