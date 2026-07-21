@@ -23,8 +23,9 @@ const checks = [
   [main.includes('"save-directory.json"') && main.includes('desktop:write-save-file'), "native save-directory persistence"],
   [preload.includes("getSaveDirectory") && preload.includes("chooseSaveDirectory") && preload.includes("writeSaveFile"), "native save-directory bridge"],
   [canvas.includes('format: "wandou-node-project"') && canvas.includes("importProjectFile") && canvas.includes("exportCurrentProject"), "project migration package"],
-  [canvas.includes("grid-template-columns: minmax(92px, 1fr) minmax(58px, .68fr) minmax(58px, .68fr) 34px") && canvas.includes(".project-transfer-actions {\n      display: contents;"), "single-row project actions"],
+  [canvas.includes("grid-template-columns: minmax(0, 1fr) 34px") && canvas.includes("grid-column: 1 / -1") && canvas.includes("grid-template-columns: repeat(2, minmax(0, 1fr))"), "two-row project actions"],
   [canvas.includes("body.node-canvas-page::before") && canvas.includes(".canvas-wrap::after") && fluidGlass.includes("body.project-hub-page::before") && fluidGlass.includes("body.project-hub-page .shell::after"), "top accent strip suppression"],
+  [canvas.includes("body.node-canvas-page.dark-theme .topbar") && canvas.includes("background: transparent !important") && canvas.includes("backdrop-filter: none !important"), "canvas toolbar remains transparent"],
   [fluidGlass.includes("two iOS-like material scales") && fluidGlass.includes("backdrop-filter: blur(28px)"), "project hub two-level material styling"]
 ];
 
