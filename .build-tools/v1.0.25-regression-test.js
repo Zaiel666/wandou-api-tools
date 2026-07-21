@@ -8,11 +8,13 @@ const updater = fs.readFileSync(path.join(root, "desktop-client", "portable-upda
 
 const checks = [
   [canvas.includes("refreshRenderedNode(pendingNodes[index].id)"), "single-node batch refresh"],
-  [canvas.includes("createPreviewImageUrl(url, 480"), "lightweight display preview"],
+  [canvas.includes("createPreviewImageUrl(url, 320"), "lightweight display preview"],
   [canvas.includes("fitCanvasToContent(true)"), "automatic large-canvas fit"],
   [canvas.includes("attempt < 3") && canvas.includes("isRetryableGenerationError"), "per-image retry"],
   [canvas.includes('classList.toggle("low-detail"'), "low-detail zoom mode"],
   [!main.match(/TRUSTED_WEB_APPS[^\n]+zayapi/), "product center uses external browser"],
+  [main.includes('if (isSafeHttpsUrl(payload.url)) shell.openExternal(payload.url);'), "external tab IPC opens system browser"],
+  [canvas.includes("will-change: auto") && canvas.includes(".canvas-wrap.is-panning .lines"), "lightweight pan composition"],
   [updater.includes("CopyDirectory(stage, install)") && !updater.includes("Directory.Delete(install"), "update preserves user folders"],
   [canvas.includes('const autoSaveDbName = "wandou-auto-save-v1"'), "persistent save-directory database"]
 ];
