@@ -237,7 +237,18 @@ button { font: inherit; }
   background: #dcff9d;
   box-shadow: 0 0 0 4px rgba(220, 255, 157, .15);
 }
-.version-text { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.version-text {
+  padding: 4px 2px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.version-text:hover { color: var(--text); }
+.version-text:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .views {
   position: relative;
