@@ -147,11 +147,15 @@ async function evaluate(client, expression) {
       const pinRect = document.querySelector('#pinProjectHubButton').getBoundingClientRect();
       const exportRect = document.querySelector('#exportProjectButton').getBoundingClientRect();
       const importRect = document.querySelector('#importProjectButton').getBoundingClientRect();
+      const hubButtonRect = document.querySelector('#projectHubButton').getBoundingClientRect();
+      const hubMenuRect = document.querySelector('#projectHubMenu').getBoundingClientRect();
       const projectLayout = {
         firstRowOffset: Math.abs((newProjectRect.top + newProjectRect.height / 2) - (pinRect.top + pinRect.height / 2)),
         secondRowOffset: Math.abs(exportRect.top - importRect.top),
         rowGap: exportRect.top - newProjectRect.bottom,
-        pinIsRight: pinRect.left >= newProjectRect.right
+        pinIsRight: pinRect.left >= newProjectRect.right,
+        menuWidthOffset: Math.abs(hubMenuRect.width - hubButtonRect.width),
+        menuRightOverflow: Math.max(0, hubMenuRect.right - window.innerWidth)
       };
       const wheelStart = performance.now();
       const bounds = wrap.getBoundingClientRect();
@@ -186,6 +190,8 @@ async function evaluate(client, expression) {
       && interaction.projectLayout.rowGap >= 0
       && interaction.projectLayout.rowGap <= 6
       && interaction.projectLayout.pinIsRight
+      && interaction.projectLayout.menuWidthOffset <= 1.5
+      && interaction.projectLayout.menuRightOverflow === 0
       && persisted.backupStore
       && restored.nodes === persisted.saved
       && interaction.wheelMs < 5000;
