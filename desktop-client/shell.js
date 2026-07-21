@@ -247,7 +247,8 @@ async function refreshUpdateInfo() {
   try {
     updateInfo = await window.wandouShell?.checkForUpdates();
     updateBadge.hidden = !updateInfo?.available;
-  } catch (_error) {
+  } catch (error) {
+    console.warn("Update check failed", error);
     updateInfo = null;
     updateBadge.hidden = true;
   }
@@ -277,6 +278,11 @@ async function refreshClientState() {
     noticeDot.hidden = true;
   }
   await refreshUpdateInfo();
+}
+
+async function initializeClientState() {
+  await refreshClientState();
+  if (updateInfo?.available) showUpdateDialog();
 }
 
 function showCloseDialog() {
@@ -364,5 +370,6 @@ window.wandouShell?.onUpdateStatus((payload) => {
 });
 
 openTab({ url: homeUrl, title: "首页", pinned: true });
-refreshClientState();
+initializeClientState();
+setInterval(refreshUpdateInfo, 30 * 60 * 1000);
 setInterval(syncThemeFromActivePage, 1000);
