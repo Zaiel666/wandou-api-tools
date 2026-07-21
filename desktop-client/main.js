@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, shell, net, session } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, shell, net, session, dialog } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -39,6 +39,39 @@ function compareVersions(left, right) {
 
 function isSafeHttpsUrl(value) {
   try { return new URL(value).protocol === "https:"; } catch (_error) { return false; }
+}
+
+function saveDirectoryConfigPath() {
+  return path.join(app.getPath("userData"), "save-directory.json");
+}
+
+function readSavedDirectory() {
+  try {
+    const value = JSON.parse(fs.readFileSync(saveDirectoryConfigPath(), "utf8"));
+    const directory = String(value.directory || "").trim();
+    return directory && fs.existsSync(directory) && fs.statSync(directory).isDirectory() ? directory : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+function storeSavedDirectory(directory) {
+  fs.mkdirSync(app.getPath("userData"), { recursive: true });
+  fs.writeFileSync(saveDirectoryConfigPath(), JSON.stringify({ directory }, null, 2), "utf8");
+}
+
+function safeOutputName(filename) {
+  const cleaned = path.basename(String(filename || "output.bin")).replace(/[<>:"/\\|?*\x00-\x1f]/g, "_");
+  return cleaned || "output.bin";
+}
+
+function uniqueOutputPath(directory, filename) {
+  const parsed = path.parse(safeOutputName(filename));
+  let candidate = path.join(directory, `${parsed.name}${parsed.ext}`);
+  for (let index = 2; fs.existsSync(candidate) && index < 1000; index += 1) {
+    candidate = path.join(directory, `${parsed.name}-${index}${parsed.ext}`);
+  }
+  return candidate;
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
@@ -397,6 +430,33 @@ ipcMain.handle("desktop:open-external", (_event, url) => {
   if (!isSafeHttpsUrl(url)) return false;
   shell.openExternal(url);
   return true;
+});
+ipcMain.handle("desktop:get-save-directory", () => {
+  const directory = readSavedDirectory();
+  return { directory, name: directory ? path.basename(directory) : "" };
+});
+ipcMain.handle("desktop:choose-save-directory", async () => {
+  const current = readSavedDirectory();
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "选择生成文件保存位置",
+    defaultPath: current || app.getPath("pictures"),
+    properties: ["openDirectory", "createDirectory"]
+  });
+  if (result.canceled || !result.filePaths[0]) return { canceled: true };
+  const directory = result.filePaths[0];
+  storeSavedDirectory(directory);
+  return { canceled: false, directory, name: path.basename(directory) };
+});
+ipcMain.handle("desktop:write-save-file", async (_event, payload = {}) => {
+  const directory = readSavedDirectory();
+  if (!directory) return { success: false, missingDirectory: true };
+  try {
+    const destination = uniqueOutputPath(directory, payload.filename);
+    await fs.promises.writeFile(destination, Buffer.from(payload.bytes || []));
+    return { success: true, path: destination, filename: path.basename(destination) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 app.whenReady().then(createWindow);
