@@ -117,32 +117,58 @@ async function checkForUpdates() {
   const assetName = String(config.assetName || "").trim();
   const checksumAssetName = String(config.checksumAssetName || `${assetName}.sha256`).trim();
   if (!owner || !repository || !assetName) return { available: false, configured: false, currentVersion };
-  const encodedOwner = encodeURIComponent(owner);
-  const encodedRepository = encodeURIComponent(repository);
-  const headers = { "User-Agent": "WandouAI-Desktop-Updater", Accept: "application/vnd.github+json" };
-  const checks = [
-    async () => {
-      const response = await fetchWithTimeout(`https://api.github.com/repos/${encodedOwner}/${encodedRepository}/releases/latest?timestamp=${Date.now()}`, { cache: "no-store", headers: { ...headers, "X-GitHub-Api-Version": "2022-11-28" } });
-      if (!response.ok) throw new Error(`GitHub API HTTP ${response.status}`);
-      return normalizeUpdateInfo(await response.json(), currentVersion, assetName, checksumAssetName);
-    },
-    async () => {
-      const response = await fetchWithTimeout(`https://github.com/${encodedOwner}/${encodedRepository}/releases/latest/download/update-manifest.json?timestamp=${Date.now()}`, { cache: "no-store", redirect: "follow", headers });
-      if (!response.ok) throw new Error(`版本清单 HTTP ${response.status}`);
-      return normalizeUpdateInfo(await response.json(), currentVersion, assetName, checksumAssetName);
-    },
-    async () => {
-      const response = await fetchWithTimeout(`https://github.com/${encodedOwner}/${encodedRepository}/releases/latest`, { cache: "no-store", redirect: "follow", headers });
-      if (!response.ok) throw new Error(`发布页 HTTP ${response.status}`);
-      const match = response.url.match(/\/releases\/tag\/v?([^/?#]+)/i);
-      if (!match) throw new Error("发布页没有返回版本号");
-      const latestVersion = decodeURIComponent(match[1]);
-      const base = `https://github.com/${encodedOwner}/${encodedRepository}/releases/download/v${latestVersion}`;
-      return normalizeUpdateInfo({ version: latestVersion, downloadUrl: `${base}/${encodeURIComponent(assetName)}`, checksumUrl: `${base}/${encodeURIComponent(checksumAssetName)}` }, currentVersion, assetName, checksumAssetName);
-    }
-  ];
-  const errors = [];
-  for (const check of checks) {
+  try {
+    const response = await net.fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/releases/latest?timestamp=${Date.now()}`, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "WandouAI-Desktop-Updater",
+        "X-GitHub-Api-Version": "2022-11-28"
+      }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const release = await response.json();
+    const latestVersion = String(release.tag_name || "").trim().replace(/^v/i, "");
+    const assets = Array.isArray(release.assets) ? release.assets : [];
+    const packageAsset = assets.find((asset) => asset?.name === assetName);
+    const checksumAsset = assets.find((asset) => asset?.name === checksumAssetName);
+    const downloadUrl = String(packageAsset?.browser_download_url || "").trim();
+    const checksumUrl = String(checksumAsset?.browser_download_url || "").trim();
+    const releaseError = !latestVersion
+      ? "GitHub 最新发布缺少版本标签"
+      : (!packageAsset || !checksumAsset ? "GitHub 最新发布缺少更新包或 SHA256 校验文件" : "");
+    return {
+      available: Boolean(latestVersion && isSafeHttpsUrl(downloadUrl) && isSafeHttpsUrl(checksumUrl) && compareVersions(latestVersion, currentVersion) > 0),
+      configured: true,
+      currentVersion,
+      latestVersion,
+      downloadUrl,
+      checksumUrl,
+      packageApiUrl: String(packageAsset?.url || "").trim(),
+      checksumApiUrl: String(checksumAsset?.url || "").trim(),
+      assetName,
+      error: releaseError,
+      notes: String(release.body || "新版本已经准备好，建议更新后继续使用。")
+    };
+  } catch (error) {
+    return { available: false, configured: true, currentVersion, error: error.message };
+  }
+}
+
+async function downloadFile(url, destination) {
+  const response = await net.fetch(url, {
+    cache: "no-store",
+    headers: { "User-Agent": "WandouAI-Desktop-Updater" }
+  });
+  if (!response.ok) throw new Error(`下载失败：HTTP ${response.status}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  await fs.promises.writeFile(destination, buffer);
+}
+
+async function downloadFileWithFallback(url, destination, fallbackUrl = "") {
+  const sources = [...new Set([url, fallbackUrl].filter(isSafeHttpsUrl))];
+  let lastError = new Error("Update download failed");
+  for (const source of sources) {
     try {
       return await check();
     } catch (error) {

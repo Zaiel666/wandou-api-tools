@@ -375,14 +375,20 @@ function showUpdateDialog() {
   dialogOverlay.hidden = false;
 }
 
-async function refreshUpdateInfo() {
-  try {
-    updateInfo = await window.wandouShell?.checkForUpdates();
-    updateBadge.hidden = !updateInfo?.available;
-  } catch (error) {
-    console.warn("Update check failed", error);
-    updateInfo = null;
-    updateBadge.hidden = true;
+function wait(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function refreshUpdateInfo({ retries = 0 } = {}) {
+  let result = null;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      result = await window.wandouShell?.checkForUpdates();
+    } catch (error) {
+      result = { available: false, error: error.message || "检查更新失败" };
+    }
+    if (!result?.error || attempt === retries) break;
+    await wait(1500 * (attempt + 1));
   }
   updateInfo = result;
   updateBadge.hidden = !updateInfo?.available;
@@ -390,6 +396,20 @@ async function refreshUpdateInfo() {
 }
 
 async function checkForUpdatesManually() {
+  if (updateStarted) return;
+  versionText.disabled = true;
+  showToast("正在检查更新…");
+  try {
+    await refreshUpdateInfo({ retries: 2 });
+    if (updateInfo?.available) showUpdateDialog();
+    else if (updateInfo?.error) showToast(`暂时无法检查更新：${updateInfo.error}`, true);
+    else showToast(`当前 v${version || updateInfo?.currentVersion || ""} 已是最新版本`);
+  } finally {
+    versionText.disabled = false;
+  }
+}
+
+async function openFreshUpdateDialog() {
   if (updateStarted) return;
   versionText.disabled = true;
   showToast("正在检查更新…");
@@ -430,6 +450,7 @@ async function refreshClientState() {
 
 async function initializeClientState() {
   await refreshClientState();
+  if (updateInfo?.error) await refreshUpdateInfo({ retries: 2 });
   if (updateInfo?.available) showUpdateDialog();
 }
 
@@ -533,4 +554,5 @@ window.wandouShell?.onUpdateStatus((payload) => {
 openTab({ url: homeUrl, title: "首页", pinned: true });
 initializeClientState();
 setInterval(refreshUpdateInfo, 30 * 60 * 1000);
+window.addEventListener("online", () => refreshUpdateInfo({ retries: 1 }));
 setInterval(syncThemeFromActivePage, 1000);
