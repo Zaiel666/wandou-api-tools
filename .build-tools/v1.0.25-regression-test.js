@@ -15,6 +15,7 @@ const checks = [
   [!main.match(/TRUSTED_WEB_APPS[^\n]+zayapi/), "product center uses external browser"],
   [main.includes('if (isSafeHttpsUrl(payload.url)) shell.openExternal(payload.url);'), "external tab IPC opens system browser"],
   [canvas.includes("will-change: auto") && canvas.includes(".canvas-wrap.is-panning .lines"), "lightweight pan composition"],
+  [canvas.includes('lines.querySelectorAll(".temp-line").forEach((element) => element.remove())'), "temporary connection cleanup"],
   [updater.includes("CopyDirectory(stage, install)") && !updater.includes("Directory.Delete(install"), "update preserves user folders"],
   [canvas.includes('const autoSaveDbName = "wandou-auto-save-v1"'), "persistent save-directory database"]
 ];
