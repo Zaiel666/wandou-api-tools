@@ -6,6 +6,7 @@ const canvas = fs.readFileSync(path.join(root, "app", "ai-node-canvas.html"), "u
 const main = fs.readFileSync(path.join(root, "desktop-client", "main.js"), "utf8");
 const preload = fs.readFileSync(path.join(root, "desktop-client", "preload.js"), "utf8");
 const updater = fs.readFileSync(path.join(root, "desktop-client", "portable-updater.cs"), "utf8");
+const fluidGlass = fs.readFileSync(path.join(root, "app", "fluid-glass.css"), "utf8");
 
 const checks = [
   [canvas.includes("refreshRenderedNode(pendingNodes[index].id)"), "single-node batch refresh"],
@@ -21,7 +22,10 @@ const checks = [
   [canvas.includes('const autoSaveDbName = "wandou-auto-save-v1"'), "persistent save-directory database"],
   [main.includes('"save-directory.json"') && main.includes('desktop:write-save-file'), "native save-directory persistence"],
   [preload.includes("getSaveDirectory") && preload.includes("chooseSaveDirectory") && preload.includes("writeSaveFile"), "native save-directory bridge"],
-  [canvas.includes('format: "wandou-node-project"') && canvas.includes("importProjectFile") && canvas.includes("exportCurrentProject"), "project migration package"]
+  [canvas.includes('format: "wandou-node-project"') && canvas.includes("importProjectFile") && canvas.includes("exportCurrentProject"), "project migration package"],
+  [canvas.includes("grid-template-columns: minmax(92px, 1fr) minmax(58px, .68fr) minmax(58px, .68fr) 34px") && canvas.includes(".project-transfer-actions {\n      display: contents;"), "single-row project actions"],
+  [canvas.includes("body.node-canvas-page::before") && canvas.includes(".canvas-wrap::after") && fluidGlass.includes("body.project-hub-page::before") && fluidGlass.includes("body.project-hub-page .shell::after"), "top accent strip suppression"],
+  [fluidGlass.includes("two iOS-like material scales") && fluidGlass.includes("backdrop-filter: blur(28px)"), "project hub two-level material styling"]
 ];
 
 const failed = checks.filter(([passed]) => !passed).map(([, label]) => label);
