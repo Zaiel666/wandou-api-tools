@@ -104,6 +104,8 @@ async function evaluate(client, expression) {
     const persisted = await evaluate(canvasClient, `(async () => {
       const baseline = document.querySelectorAll('.node').length;
       const preview = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480"><rect width="100%" height="100%" fill="#dff4e5"/><circle cx="180" cy="220" r="90" fill="#45c936"/></svg>');
+      const durablePreview = 'data:image/png;base64,' + 'A'.repeat(1200100);
+      const durableNode = createNode('result', 80, 80, { mediaUrl: durablePreview, previewUrl: durablePreview, fullUrl: durablePreview, width: 1024, height: 1024, pending: false });
       for (let index = 0; index < 60; index++) {
         createNode('result', 120 + (index % 10) * 330, 120 + Math.floor(index / 10) * 460, { mediaUrl: preview, previewUrl: preview, width: 360, height: 480, pending: false });
       }
@@ -115,7 +117,7 @@ async function evaluate(client, expression) {
       const saved = document.querySelectorAll('.node').length;
       const db = await openLocalMediaDb();
       const backupStore = db.objectStoreNames.contains(canvasStateStoreName);
-      return { baseline, saved, backupStore };
+      return { baseline, saved, backupStore, durableNodeId: durableNode.id, durableSize: durablePreview.length };
     })()`);
 
     log(`phase: persisted ${JSON.stringify(persisted)}`);
@@ -157,6 +159,40 @@ async function evaluate(client, expression) {
         menuWidthOffset: Math.abs(hubMenuRect.width - hubButtonRect.width),
         menuRightOverflow: Math.max(0, hubMenuRect.right - window.innerWidth)
       };
+      const refineNode = createNode('generator', 240, 240, { prompt: '原始提示词', promptRefineOpen: true });
+      let refinePanel = document.querySelector('[data-id="' + refineNode.id + '"] [data-prompt-refine-panel]');
+      const initialRefineState = {
+        outputTag: refinePanel.querySelector('[data-prompt-refine-output]').tagName,
+        runText: refinePanel.querySelector('[data-prompt-refine-run]').textContent.trim(),
+        applyText: refinePanel.querySelector('[data-prompt-refine-apply]').textContent.trim(),
+        applyDisabled: refinePanel.querySelector('[data-prompt-refine-apply]').disabled,
+        applyDisplay: getComputedStyle(refinePanel.querySelector('[data-prompt-refine-apply]')).display,
+        applyVisibility: getComputedStyle(refinePanel.querySelector('[data-prompt-refine-apply]')).visibility,
+        applyWidth: Math.round(refinePanel.querySelector('[data-prompt-refine-apply]').getBoundingClientRect().width)
+      };
+      refineNode.promptRefineLoading = true;
+      render();
+      refinePanel = document.querySelector('[data-id="' + refineNode.id + '"] [data-prompt-refine-panel]');
+      const loadingRefineState = {
+        runText: refinePanel.querySelector('[data-prompt-refine-run]').textContent.trim(),
+        runDisabled: refinePanel.querySelector('[data-prompt-refine-run]').disabled
+      };
+      refineNode.promptRefineLoading = false;
+      refineNode.promptRefineResult = '修改完成内容';
+      render();
+      refinePanel = document.querySelector('[data-id="' + refineNode.id + '"] [data-prompt-refine-panel]');
+      const output = refinePanel.querySelector('[data-prompt-refine-output]');
+      output.value = '鼠标编辑后的关键词';
+      output.dispatchEvent(new Event('input', { bubbles: true }));
+      const completedRefineState = {
+        runText: refinePanel.querySelector('[data-prompt-refine-run]').textContent.trim(),
+        applyText: refinePanel.querySelector('[data-prompt-refine-apply]').textContent.trim(),
+        applyEnabled: !refinePanel.querySelector('[data-prompt-refine-apply]').disabled,
+        storedResult: refineNode.promptRefineResult
+      };
+      nodes = nodes.filter((node) => node.id !== refineNode.id);
+      links = links.filter((link) => link.from !== refineNode.id && link.to !== refineNode.id);
+      render();
       const wheelStart = performance.now();
       const bounds = wrap.getBoundingClientRect();
       for (let index = 0; index < 40; index++) {
@@ -168,9 +204,7 @@ async function evaluate(client, expression) {
         window.wandouSaveBeforeClose(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('save timeout')), 10000))
       ]);
-      localStorage.removeItem(projectCanvasStorageKey());
-      localStorage.removeItem(folderCanvasStorageKey());
-      return { selected, boxStartOffset, menuOffset, wheelMs, projectLayout };
+      return { selected, boxStartOffset, menuOffset, wheelMs, projectLayout, initialRefineState, loadingRefineState, completedRefineState };
     })()`);
 
     log(`phase: interaction ${JSON.stringify(interaction)}`);
@@ -180,7 +214,10 @@ async function evaluate(client, expression) {
     canvasClient.close();
     const restoredTarget = await waitForTarget((target) => target.url.includes("ai-node-canvas.html"));
     canvasClient = new CdpClient(restoredTarget.webSocketDebuggerUrl);
-    const restored = await evaluate(canvasClient, `({ nodes: document.querySelectorAll('.node').length, title: document.title })`);
+    const restored = await evaluate(canvasClient, `(() => {
+      const durableNode = nodes.find((node) => node.id === ${JSON.stringify(persisted.durableNodeId)});
+      return { nodes: document.querySelectorAll('.node').length, title: document.title, durableSize: String(durableNode?.mediaUrl || '').length };
+    })()`);
     const passed = persisted.saved > persisted.baseline
       && interaction.selected >= 2
       && interaction.boxStartOffset <= 1.5
@@ -192,8 +229,22 @@ async function evaluate(client, expression) {
       && interaction.projectLayout.pinIsRight
       && interaction.projectLayout.menuWidthOffset <= 1.5
       && interaction.projectLayout.menuRightOverflow === 0
+      && interaction.initialRefineState.outputTag === 'TEXTAREA'
+      && interaction.initialRefineState.runText === '开始修改'
+      && interaction.initialRefineState.applyText === '使用关键词'
+      && interaction.initialRefineState.applyDisabled
+      && interaction.initialRefineState.applyDisplay !== 'none'
+      && interaction.initialRefineState.applyVisibility === 'visible'
+      && interaction.initialRefineState.applyWidth >= 80
+      && interaction.loadingRefineState.runText === '正在修改'
+      && interaction.loadingRefineState.runDisabled
+      && interaction.completedRefineState.runText === '开始修改'
+      && interaction.completedRefineState.applyText === '使用关键词'
+      && interaction.completedRefineState.applyEnabled
+      && interaction.completedRefineState.storedResult === '鼠标编辑后的关键词'
       && persisted.backupStore
       && restored.nodes === persisted.saved
+      && restored.durableSize === persisted.durableSize
       && interaction.wheelMs < 5000;
     console.log(JSON.stringify({ passed, persisted, interaction, restored, userDataDir }, null, 2));
     log(`result: ${JSON.stringify({ passed, persisted, interaction, restored, userDataDir })}`);
