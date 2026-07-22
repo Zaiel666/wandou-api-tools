@@ -164,7 +164,7 @@ function saveTabBeforeClose(tab) {
       }
       return false;
     })()`, true).catch(() => false);
-    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), 4000));
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), 20000));
     return Promise.race([saveTask, timeout]);
   } catch (_error) {
     return Promise.resolve(false);
@@ -353,6 +353,9 @@ dialogDownload.addEventListener("click", async () => {
   document.body.classList.add("update-in-progress");
   dialogCancel.disabled = true;
   dialogDownload.disabled = true;
+  dialogDownload.textContent = "正在保存…";
+  dialogNotes.textContent = "正在保存本地项目和生成记录，请不要关闭软件。";
+  await Promise.all([...tabs.values()].map(saveTabBeforeClose));
   dialogDownload.textContent = "正在下载…";
   dialogNotes.textContent = "正在从 GitHub 安全下载新版本，请不要关闭软件。";
   const result = await window.wandouShell?.startUpdate(updateInfo);
