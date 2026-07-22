@@ -2101,12 +2101,19 @@
     .prompt-refine-models { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
     .prompt-refine-models button { min-height:31px; padding:4px 6px; font-size:11px; background:#f4f7f5; border-color:#d9e0dc; color:#33413a; }
     .prompt-refine-models button.active { color:#258d20; background:rgba(67,209,59,.1); border-color:#43d13b; }
-    .prompt-refine-output { min-height:126px; max-height:240px; overflow:auto; padding:10px; border:1px solid #d9e0dc; border-radius:9px; background:#f5f7f6; color:#26342d; font-size:12px; line-height:1.65; white-space:pre-wrap; user-select:text; }
-    .prompt-refine-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .prompt-refine-output { width:100%; min-height:126px; max-height:240px; overflow:auto; resize:vertical; padding:10px; border:1px solid #d9e0dc; border-radius:9px; background:#f5f7f6; color:#26342d; font-size:12px; line-height:1.65; white-space:pre-wrap; user-select:text; -webkit-user-select:text; cursor:text; outline:none; }
+    .prompt-refine-output:focus { border-color:#43d13b; box-shadow:0 0 0 3px rgba(67,209,59,.12); }
+    .prompt-refine-actions { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:7px; }
+    .prompt-refine-actions button { display:flex; align-items:center; justify-content:center; width:100%; min-width:0; visibility:visible; opacity:1; }
+    .prompt-refine-actions [data-prompt-refine-run] { color:#26342d; background:#fff; border-color:#d9e0dc; }
+    .prompt-refine-actions [data-prompt-refine-apply] { color:#fff; background:#258f4e; border-color:#258f4e; }
+    .prompt-refine-actions [data-prompt-refine-apply]:hover:not(:disabled) { color:#fff; background:#1f7d43; border-color:#1f7d43; }
+    .prompt-refine-actions button:disabled { opacity:.48; cursor:not-allowed; }
     body.dark-theme .prompt-refine-panel { color:#f1f5f2; background:#242927; border-color:rgba(255,255,255,.14); box-shadow:0 20px 52px rgba(0,0,0,.48); }
     body.dark-theme .prompt-refine-models button { color:#e4ebe6; background:#303633; border-color:#4b5550; }
     body.dark-theme .prompt-refine-models button.active { color:#8fe887; background:rgba(67,209,59,.12); border-color:#43d13b; }
     body.dark-theme .prompt-refine-output { color:#e9efeb; background:#1b1f1d; border-color:#444e49; }
+    body.dark-theme .prompt-refine-actions [data-prompt-refine-run] { color:#e9efeb; background:#1b1f1d; border-color:#444e49; }
 
     .keyword-library-button {
       position: absolute;
@@ -4024,6 +4031,7 @@
     let projectHubPinned = false;
     let favoriteMode = "image";
       let saveTimer = null;
+      let canvasSaveQueue = Promise.resolve();
       let canvasTransformFrame = null;
       let linkDrawFrame = null;
       let zoomInteractionTimer = null;
@@ -5632,8 +5640,8 @@
         <aside class="prompt-refine-panel" data-prompt-refine-panel>
           <div class="prompt-refine-head"><strong>AI修改提示词</strong><button class="mini ghost" data-prompt-refine-close type="button">×</button></div>
           <div class="prompt-refine-models">${promptModelOptions.map((model) => `<button class="${refineModel === model ? "active" : ""}" data-prompt-refine-model="${model}" type="button">${model}</button>`).join("")}</div>
-          <div class="prompt-refine-output">${escapeHtml(node.promptRefineLoading ? "正在修改提示词…" : node.promptRefineResult || "选择模型后点击“开始修改”，修改结果会显示在这里。")}</div>
-          <div class="prompt-refine-actions"><button class="ghost" data-prompt-refine-run type="button" ${node.promptRefineLoading ? "disabled" : ""}>开始修改</button><button class="primary" data-prompt-refine-apply type="button" ${node.promptRefineResult ? "" : "disabled"}>应用结果</button></div>
+          <textarea class="prompt-refine-output" data-prompt-refine-output ${node.promptRefineLoading ? "readonly" : ""} placeholder="选择模型后点击“开始修改”，修改结果会显示在这里。">${escapeHtml(node.promptRefineLoading ? "正在修改提示词…" : node.promptRefineResult || "")}</textarea>
+          <div class="prompt-refine-actions"><button class="ghost" data-prompt-refine-run type="button" ${node.promptRefineLoading ? "disabled" : ""}>${node.promptRefineLoading ? "正在修改" : "开始修改"}</button><button class="primary" data-prompt-refine-apply type="button" ${(!node.promptRefineResult || node.promptRefineLoading || /^修改失败：/.test(node.promptRefineResult)) ? "disabled" : ""}>使用关键词</button></div>
         </aside>` : "";
 
       wrap.innerHTML = `
@@ -5738,6 +5746,11 @@
         render();
       }));
       wrap.querySelector("[data-prompt-refine-run]")?.addEventListener("click", () => refineNodePrompt(node));
+      wrap.querySelector("[data-prompt-refine-output]")?.addEventListener("input", (event) => {
+        node.promptRefineResult = event.target.value;
+        const applyButton = wrap.querySelector("[data-prompt-refine-apply]");
+        if (applyButton) applyButton.disabled = !node.promptRefineResult.trim() || /^修改失败：/.test(node.promptRefineResult);
+      });
       wrap.querySelector("[data-prompt-refine-apply]")?.addEventListener("click", () => {
         if (!node.promptRefineResult || /^修改失败：/.test(node.promptRefineResult)) return;
         pushHistory();
@@ -10272,7 +10285,7 @@ ${formatInstruction}`;
       }, 5000);
     }
 
-    async function saveCanvasState() {
+    async function saveCanvasStateNow() {
       try {
         clearTimeout(saveTimer);
         removeDeprecatedSelectionNodes();
@@ -10307,12 +10320,27 @@ ${formatInstruction}`;
       }
     }
 
+    function saveCanvasState() {
+      canvasSaveQueue = canvasSaveQueue
+        .catch((error) => console.warn("Previous canvas save failed", error))
+        .then(saveCanvasStateNow);
+      return canvasSaveQueue;
+    }
+
     window.wandouSaveBeforeClose = async () => {
       clearTimeout(saveTimer);
       saveTimer = null;
       await saveCanvasState();
       return true;
     };
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") saveCanvasState();
+    });
+
+    window.addEventListener("pagehide", () => {
+      saveCanvasState();
+    });
 
     function nodesWithoutRemovedTypes() {
       return nodes.filter((node) => node?.type !== "selection");
@@ -10383,10 +10411,15 @@ ${formatInstruction}`;
     }
 
     async function loadCanvasState() {
-      const raw = localStorage.getItem(projectCanvasStorageKey())
-        || (activeProjectId === projects[0]?.id ? (localStorage.getItem(folderCanvasStorageKey()) || localStorage.getItem(canvasStorageKey)) : "");
       try {
-        const state = raw ? JSON.parse(raw) : await readCanvasStateBackup();
+        const raw = localStorage.getItem(projectCanvasStorageKey())
+          || (activeProjectId === projects[0]?.id ? (localStorage.getItem(folderCanvasStorageKey()) || localStorage.getItem(canvasStorageKey)) : "");
+        let compactState = null;
+        try { compactState = raw ? JSON.parse(raw) : null; } catch (error) { console.warn("Compact canvas state is invalid", error); }
+        const backupState = await readCanvasStateBackup();
+        const compactSavedAt = Number(compactState?.savedAt) || 0;
+        const backupSavedAt = Number(backupState?.savedAt) || 0;
+        const state = backupState && backupSavedAt >= compactSavedAt ? backupState : compactState;
         if (!state || !Array.isArray(state.nodes)) return false;
         isRestoring = true;
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
@@ -10404,7 +10437,7 @@ ${formatInstruction}`;
       isRestoring = false;
         return nodes.length > 0;
       } catch (error) {
-        localStorage.removeItem(projectCanvasStorageKey());
+        console.warn("Canvas restore failed; local records were preserved", error);
         isRestoring = false;
         return false;
       }
