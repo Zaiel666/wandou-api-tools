@@ -718,14 +718,16 @@
       min-height: 34px;
       padding: 0;
       border-radius: 10px;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #fff;
-      background: linear-gradient(135deg, #8bd600 0%, #76b900 100%);
-      border-color: rgba(118, 185, 0, 0.58);
+      background: #43cf3a;
+      border-color: rgba(35, 165, 58, 0.58);
       font-size: 22px;
       line-height: 1;
-      box-shadow: 0 12px 30px rgba(0, 185, 129, 0.22);
+      text-align: center;
+      box-shadow: 0 12px 30px rgba(35, 165, 58, 0.22);
     }
 
     .floating-sidebar-button.sidebar-collapse-tab {
@@ -733,7 +735,7 @@
     }
 
     .app.sidebar-collapsed .floating-sidebar-button.sidebar-collapse-tab {
-      display: grid;
+      display: flex;
     }
 
     .button-grid {
@@ -768,8 +770,8 @@
     body.dark-theme .sidebar-collapse-tab,
     .sidebar-collapse-tab:hover {
       color: #fff;
-      background: linear-gradient(135deg, #8bd600 0%, #76b900 100%);
-      border-color: rgba(118, 185, 0, 0.58);
+      background: #43cf3a;
+      border-color: rgba(35, 165, 58, 0.58);
     }
 
     .button-grid button:hover {
@@ -2468,6 +2470,36 @@
       transform: none;
     }
 
+    #collapseSidebarButton.sidebar-collapse-tab,
+    body.dark-theme #collapseSidebarButton.sidebar-collapse-tab,
+    #collapseSidebarButton.sidebar-collapse-tab:hover,
+    body.dark-theme #collapseSidebarButton.sidebar-collapse-tab:hover {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      min-height: 34px;
+      padding: 0;
+      color: #fff;
+      background: #43cf3a;
+      background-image: none;
+      border: 1px solid rgba(35, 165, 58, 0.68);
+      box-shadow: 0 10px 24px rgba(35, 165, 58, 0.24);
+    }
+
+    #collapseSidebarButton svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
     .meta-line {
       margin-top: 9px;
       color: var(--muted);
@@ -3712,7 +3744,9 @@
       </div>
     </aside>
     <div class="sidebar-controls">
-      <button id="collapseSidebarButton" class="ghost sidebar-collapse-tab" type="button" title="收起侧栏">‹</button>
+      <button id="collapseSidebarButton" class="ghost sidebar-collapse-tab" type="button" title="收起侧栏" aria-label="收起侧栏">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5"/></svg>
+      </button>
     </div>
 
     <main class="canvas-wrap">
@@ -7521,10 +7555,51 @@
     function getImageDimensions(src) {
       return new Promise((resolve) => {
         const img = new Image();
-        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-        img.onerror = () => resolve({});
+        let settled = false;
+        const finish = (value) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        };
+        const timer = setTimeout(() => finish({}), 12000);
+        img.onload = () => finish({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => finish({});
         img.src = src;
       });
+    }
+
+    function settleWithin(promise, timeoutMs, fallbackValue, label) {
+      let timer = null;
+      return Promise.race([
+        Promise.resolve(promise),
+        new Promise((resolve) => {
+          timer = setTimeout(() => {
+            console.warn(`${label || "异步处理"}超时，已使用降级结果`);
+            resolve(fallbackValue);
+          }, timeoutMs);
+        })
+      ]).finally(() => {
+        if (timer) clearTimeout(timer);
+      });
+    }
+
+    async function fetchMediaWithTimeout(src, options = {}, timeoutMs = 15000) {
+      const controller = new AbortController();
+      const upstreamSignal = options.signal;
+      const abortFromUpstream = () => controller.abort();
+      if (upstreamSignal?.aborted) controller.abort();
+      else upstreamSignal?.addEventListener("abort", abortFromUpstream, { once: true });
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const requestOptions = { ...options, signal: controller.signal };
+        return /^https?:\/\//i.test(src)
+          ? await fetchMaybeProxied(src, requestOptions)
+          : await fetch(src, requestOptions);
+      } finally {
+        clearTimeout(timer);
+        upstreamSignal?.removeEventListener("abort", abortFromUpstream);
+      }
     }
 
     async function generateFromNode(id) {
@@ -7637,24 +7712,22 @@
         });
       }, 1000);
 
-      if (node.type === "generator" && pendingNodes.length > 1) {
-        let nextIndex = 0;
-        const workerCount = Math.min(2, pendingNodes.length);
-        const workers = Array.from({ length: workerCount }, async () => {
-          while (nextIndex < pendingNodes.length) {
-            const index = nextIndex++;
-            await generateOneResult(node, pendingNodes[index], index, targetSize);
-            await saveCanvasState();
-            refreshRenderedNode(pendingNodes[index].id);
-          }
-        });
-        await Promise.all(workers);
-      } else {
-        for (let index = 0; index < pendingNodes.length; index++) {
-          await generateOneResult(node, pendingNodes[index], index, targetSize);
-          await saveCanvasState();
-          refreshRenderedNode(pendingNodes[index].id);
-        }
+      // Freeze the batch parameters, then run a small concurrent queue. Three
+      // selected images start together; larger batches are submitted three at a
+      // time so slow requests do not block every result behind them.
+      const batchSource = {
+        ...node,
+        prompt: String(node.prompt || ""),
+        references: Array.isArray(node.references) ? node.references.map((item) => ({ ...item })) : []
+      };
+      const generationConcurrency = 3;
+      for (let offset = 0; offset < pendingNodes.length; offset += generationConcurrency) {
+        const batch = pendingNodes.slice(offset, offset + generationConcurrency);
+        await Promise.all(batch.map((pending, batchIndex) =>
+          generateOneResult(batchSource, pending, offset + batchIndex, targetSize)
+        ));
+        await saveCanvasState();
+        batch.forEach((pending) => refreshRenderedNode(pending.id));
       }
       clearInterval(timer);
       const failed = pendingNodes.filter((pending) => !pending.mediaUrl && pending.mediaType !== "text").length;
@@ -7774,27 +7847,42 @@
         };
         const apiResult = await callApi(requestNode, controller.signal);
         const apiSeconds = Math.max(1, Math.round((Date.now() - apiStartedAt) / 1000));
+        const rawUrl = apiResult.urls?.[0] || apiResult.url || "";
+        if (!rawUrl && apiResult.mediaType !== "text") throw new Error("接口没有返回可显示的图片地址。");
+        const parsed = parseSize(targetSize);
         pending.apiReturned = true;
         pending.apiSeconds = apiSeconds;
+        pending.pending = false;
+        pending.mediaUrl = rawUrl;
+        pending.previewUrl = rawUrl;
+        pending.fullUrl = rawUrl;
+        pending.sourceUrl = rawUrl;
+        pending.mediaType = apiResult.mediaType;
+        pending.transparent = sourceNode.type === "png";
+        pending.text = apiResult.text || "";
+        pending.width = parsed.width;
+        pending.height = parsed.height;
+        pending.references = apiResult.mediaType === "image" && rawUrl
+          ? [{ url: rawUrl, mediaType: "image", width: parsed.width, height: parsed.height, name: pending.title || "效果图" }]
+          : [];
         pending.status = apiResult.mediaType === "video"
           ? `接口已返回，用时 ${apiSeconds}s，正在处理视频显示...`
           : `接口已返回，用时 ${apiSeconds}s，正在处理图片显示...`;
         setNodeStatus(pending.id, pending.status);
-        const rawUrl = apiResult.urls?.[0] || apiResult.url || "";
+        refreshRenderedNode(pending.id);
+        await settleWithin(saveCanvasState(), 8000, null, "生成结果初次保存");
         // 请求接口按所选画幅直接构图。返回尺寸不一致时只做完整画面缩放，
         // 禁止使用 cover 裁边，预览、下载和自动保存统一使用校验后的图片。
         const url = apiResult.mediaType === "image" && rawUrl
           ? (sourceNode.type === "png"
-            ? await normalizeGeneratedImage(rawUrl, targetSize, true)
+            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, true), 18000, rawUrl, "透明图标准化")
             : normalizeToTargetSize
-            ? await normalizeGeneratedImage(rawUrl, targetSize, false, false)
+            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 18000, rawUrl, "图片尺寸标准化")
             : rawUrl)
           : rawUrl;
         const previewUrl = apiResult.mediaType === "image" && url
-          ? await createPreviewImageUrl(url, 320, sourceNode.type === "png")
+          ? await settleWithin(createPreviewImageUrl(url, 320, sourceNode.type === "png"), 12000, url, "预览图生成")
           : "";
-        const parsed = parseSize(targetSize);
-        pending.pending = false;
         pending.mediaUrl = url;
         pending.previewUrl = previewUrl || url;
         pending.fullUrl = url;
@@ -7812,8 +7900,9 @@
           ? (apiResult.fromApi ? "透明 PNG 已生成，可放大预览、收藏和下载。" : "透明 PNG 演示图已生成，可下载测试。")
           : apiResult.fromApi ? `接口生成完成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。` : "演示生成完成，可下载。";
         setNodeStatus(pending.id, pending.status);
-        await autoSaveGeneratedNodeMedia(pending);
-        await saveCanvasState();
+        refreshRenderedNode(pending.id);
+        await settleWithin(autoSaveGeneratedNodeMedia(pending), 18000, null, "图片自动保存");
+        await settleWithin(saveCanvasState(), 10000, null, "生成结果保存");
       } catch (error) {
         if (sourceNode.type === "generator" && attempt < 3 && isRetryableGenerationError(error)) {
           if (timeout) clearTimeout(timeout);
@@ -9172,7 +9261,7 @@ ${formatInstruction}`;
         };
         try {
           if (/^https?:\/\//i.test(src)) {
-            const response = await fetch(src);
+            const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
             const blob = await response.blob();
             objectUrl = URL.createObjectURL(blob);
             img.src = objectUrl;
@@ -9233,7 +9322,7 @@ ${formatInstruction}`;
         };
         try {
           if (/^https?:\/\//i.test(src)) {
-            const response = await fetch(src, { cache: "no-store" });
+            const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
             const blob = await response.blob();
             objectUrl = URL.createObjectURL(blob);
             img.src = objectUrl;
@@ -9299,7 +9388,7 @@ ${formatInstruction}`;
         };
         try {
           if (/^https?:\/\//i.test(src)) {
-            const response = await fetch(src, { cache: "no-store" });
+            const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
             const blob = await response.blob();
             objectUrl = URL.createObjectURL(blob);
             img.src = objectUrl;
@@ -9482,7 +9571,7 @@ ${formatInstruction}`;
         };
         try {
           if (/^https?:\/\//i.test(src)) {
-            const response = await fetch(src);
+            const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
             const blob = await response.blob();
             if ("createImageBitmap" in window && !keepTransparent) {
               try {
@@ -9863,9 +9952,7 @@ ${formatInstruction}`;
 
     async function sourceToBlob(src, fallbackType = "application/octet-stream") {
       if (!src) return null;
-      const response = /^https?:\/\//i.test(src)
-        ? await fetchMaybeProxied(src, { cache: "no-store" })
-        : await fetch(src);
+      const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       return blob.type ? blob : new Blob([blob], { type: fallbackType });
@@ -9930,9 +10017,7 @@ ${formatInstruction}`;
       if (!src) return "";
       if (src.startsWith("blob:")) return src;
       try {
-        const response = /^https?:\/\//i.test(src)
-          ? await fetchMaybeProxied(src, { cache: "no-store" })
-          : await fetch(src);
+        const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
         return URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: fallbackType }));
@@ -10046,7 +10131,7 @@ ${formatInstruction}`;
         };
         try {
           if (/^https?:\/\//i.test(src)) {
-            const response = await fetch(src, { cache: "no-store" });
+            const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
             const blob = await response.blob();
             objectUrl = URL.createObjectURL(blob);
             img.src = objectUrl;
@@ -10207,8 +10292,18 @@ ${formatInstruction}`;
     }
 
     async function persistMediaValue(value) {
-      if (typeof value !== "string" || !value.startsWith("data:")) return value;
-      return putLocalMedia(value);
+      if (typeof value !== "string" || !value) return value || "";
+      if (value.startsWith(localMediaPrefix)) return value;
+      if (value.startsWith("data:")) return putLocalMedia(value);
+      if (!/^(?:https?:|blob:)/i.test(value)) return value;
+      try {
+        const blob = await sourceToBlob(value);
+        if (!blob) return value;
+        return putLocalMedia(await blobToDataUrl(blob));
+      } catch (error) {
+        console.warn("Remote media could not be mirrored locally", error);
+        return value;
+      }
     }
 
     async function mirrorLargeLoadedMedia(value) {
@@ -10362,6 +10457,9 @@ ${formatInstruction}`;
 
     async function serializeNodeForStorage(node) {
       const copy = { ...node };
+      if (/^https?:/i.test(copy.mediaUrl || "")) copy.mediaSourceUrl = copy.mediaUrl;
+      if (/^https?:/i.test(copy.previewUrl || "")) copy.previewSourceUrl = copy.previewUrl;
+      if (/^https?:/i.test(copy.fullUrl || "")) copy.fullSourceUrl = copy.fullUrl;
       copy.mediaUrl = await persistMediaValue(copy.mediaUrl);
       copy.previewUrl = await persistMediaValue(copy.previewUrl);
       copy.fullUrl = await persistMediaValue(copy.fullUrl);
@@ -10390,9 +10488,9 @@ ${formatInstruction}`;
         node.references = [];
         node.status = node.type === "result" ? "" : "可上传参考图。";
       }
-      node.mediaUrl = await getLocalMedia(node.mediaUrl);
-      node.previewUrl = await getLocalMedia(node.previewUrl);
-      node.fullUrl = await getLocalMedia(node.fullUrl);
+      node.mediaUrl = await getLocalMedia(node.mediaUrl) || node.mediaSourceUrl || "";
+      node.previewUrl = await getLocalMedia(node.previewUrl) || node.previewSourceUrl || node.mediaUrl || "";
+      node.fullUrl = await getLocalMedia(node.fullUrl) || node.fullSourceUrl || node.mediaUrl || "";
       await Promise.all([
         mirrorLargeLoadedMedia(node.mediaUrl),
         mirrorLargeLoadedMedia(node.previewUrl),

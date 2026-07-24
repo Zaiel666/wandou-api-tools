@@ -1,4 +1,5 @@
 const fs = require("fs");
+const http = require("http");
 const path = require("path");
 const { pathToFileURL } = require("url");
 const { spawn } = require("child_process");
@@ -8,8 +9,7 @@ const browserPath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
 const userDataDir = path.join(root, "build-output", `canvas-smoke-${Date.now()}`);
 const logFile = path.join(root, "build-output", "canvas-smoke-test.log");
 const port = 9315 + Math.floor(Math.random() * 200);
-const builtCanvas = path.join(root, "build-output", "win-unpacked", "resources", "app", "ai-node-canvas.html");
-const canvasFile = fs.existsSync(builtCanvas) ? builtCanvas : path.join(root, "app", "ai-node-canvas.html");
+const canvasFile = path.join(root, "app", "ai-node-canvas.html");
 const canvasUrl = `${pathToFileURL(canvasFile).href}?project=canvas-smoke`;
 fs.mkdirSync(userDataDir, { recursive: true });
 fs.writeFileSync(logFile, "phase: launch\n");
@@ -78,6 +78,21 @@ async function evaluate(client, expression) {
 
 (async () => {
   if (!fs.existsSync(browserPath)) throw new Error(`Chrome was not found: ${browserPath}`);
+  const remoteSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="#43cf3a"/></svg>';
+  const mediaServer = http.createServer((request, response) => {
+    response.writeHead(200, {
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-store",
+      "Content-Type": "image/svg+xml"
+    });
+    response.end(remoteSvg);
+  });
+  const mediaPort = 18000 + Math.floor(Math.random() * 1000);
+  await new Promise((resolve, reject) => {
+    mediaServer.once("error", reject);
+    mediaServer.listen(mediaPort, "127.0.0.1", resolve);
+  });
+  const remoteMediaUrl = `http://127.0.0.1:${mediaServer.address().port}/temporary-image.svg`;
   const child = spawn(browserPath, [
     "--headless=new",
     "--no-sandbox",
@@ -100,10 +115,66 @@ async function evaluate(client, expression) {
     canvasClient = new CdpClient(canvasTarget.webSocketDebuggerUrl);
     await new Promise((resolve) => setTimeout(resolve, 900));
 
+    log("phase: three image generation pipeline");
+    const generated = await evaluate(canvasClient, `(async () => {
+      const originalCallApi = callApi;
+      const source = createNode('generator', 40, 40, {
+        prompt: '三张并发测试图',
+        model: 'GPT-image-2',
+        resolution: '1K',
+        count: 3
+      });
+      const pendingNodes = [0, 1, 2].map((index) => createNode('result', 420 + index * 340, 40, {
+        title: '并发测试图 ' + (index + 1),
+        pending: true,
+        mediaType: 'image',
+        status: '等待生成'
+      }));
+      let requestIndex = 0;
+      callApi = async () => {
+        const delay = [120, 40, 80][requestIndex++] || 20;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return {
+          url: ${JSON.stringify(remoteMediaUrl)},
+          urls: [${JSON.stringify(remoteMediaUrl)}],
+          mediaType: 'image',
+          fromApi: true
+        };
+      };
+      try {
+        await Promise.all(pendingNodes.map((pending, index) =>
+          generateOneResult(source, pending, index, '1024x1024')
+        ));
+        return {
+          count: pendingNodes.length,
+          completed: pendingNodes.filter((node) => !node.pending).length,
+          visible: pendingNodes.filter((node) => Boolean(node.mediaUrl && node.previewUrl)).length,
+          statuses: pendingNodes.map((node) => node.status)
+        };
+      } finally {
+        callApi = originalCallApi;
+        const generatedIds = new Set([source.id, ...pendingNodes.map((node) => node.id)]);
+        nodes = nodes.filter((node) => !generatedIds.has(node.id));
+        links = links.filter((link) => !generatedIds.has(link.from) && !generatedIds.has(link.to));
+        render();
+      }
+    })()`);
+    log(`phase: generated ${JSON.stringify(generated)}`);
+
     log("phase: create and persist");
     const persisted = await evaluate(canvasClient, `(async () => {
       const baseline = document.querySelectorAll('.node').length;
       const preview = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480"><rect width="100%" height="100%" fill="#dff4e5"/><circle cx="180" cy="220" r="90" fill="#45c936"/></svg>');
+      const durablePreview = 'data:image/png;base64,' + 'A'.repeat(1200100);
+      const durableNode = createNode('result', 80, 80, { mediaUrl: durablePreview, previewUrl: durablePreview, fullUrl: durablePreview, width: 1024, height: 1024, pending: false });
+      const remoteNode = createNode('result', 420, 80, {
+        mediaUrl: ${JSON.stringify(remoteMediaUrl)},
+        previewUrl: ${JSON.stringify(remoteMediaUrl)},
+        fullUrl: ${JSON.stringify(remoteMediaUrl)},
+        width: 320,
+        height: 180,
+        pending: false
+      });
       for (let index = 0; index < 60; index++) {
         createNode('result', 120 + (index % 10) * 330, 120 + Math.floor(index / 10) * 460, { mediaUrl: preview, previewUrl: preview, width: 360, height: 480, pending: false });
       }
@@ -115,7 +186,18 @@ async function evaluate(client, expression) {
       const saved = document.querySelectorAll('.node').length;
       const db = await openLocalMediaDb();
       const backupStore = db.objectStoreNames.contains(canvasStateStoreName);
-      return { baseline, saved, backupStore };
+      const backup = await readCanvasStateBackup();
+      const storedRemote = backup.nodes.find((node) => node.id === remoteNode.id);
+      return {
+        baseline,
+        saved,
+        backupStore,
+        durableNodeId: durableNode.id,
+        durableSize: durablePreview.length,
+        remoteNodeId: remoteNode.id,
+        storedRemoteMedia: String(storedRemote?.mediaUrl || '').slice(0, 40),
+        storedRemoteSource: String(storedRemote?.mediaSourceUrl || '').slice(0, 40)
+      };
     })()`);
 
     log(`phase: persisted ${JSON.stringify(persisted)}`);
@@ -207,6 +289,7 @@ async function evaluate(client, expression) {
 
     log(`phase: interaction ${JSON.stringify(interaction)}`);
     log("phase: backup restore");
+    await new Promise((resolve) => mediaServer.close(resolve));
     await canvasClient.send("Page.reload", { ignoreCache: true });
     await new Promise((resolve) => setTimeout(resolve, 1400));
     canvasClient.close();
@@ -214,9 +297,20 @@ async function evaluate(client, expression) {
     canvasClient = new CdpClient(restoredTarget.webSocketDebuggerUrl);
     const restored = await evaluate(canvasClient, `(() => {
       const durableNode = nodes.find((node) => node.id === ${JSON.stringify(persisted.durableNodeId)});
-      return { nodes: document.querySelectorAll('.node').length, title: document.title, durableSize: String(durableNode?.mediaUrl || '').length };
+      const remoteNode = nodes.find((node) => node.id === ${JSON.stringify(persisted.remoteNodeId)});
+      return {
+        nodes: document.querySelectorAll('.node').length,
+        title: document.title,
+        durableSize: String(durableNode?.mediaUrl || '').length,
+        remoteMediaIsLocal: String(remoteNode?.mediaUrl || '').startsWith('data:image/svg+xml'),
+        remotePreviewIsLocal: String(remoteNode?.previewUrl || '').startsWith('data:image/svg+xml')
+      };
     })()`);
-    const passed = persisted.saved > persisted.baseline
+    const passed = generated.count === 3
+      && generated.completed === 3
+      && generated.visible === 3
+      && generated.statuses.every((status) => status.includes("生成完成"))
+      && persisted.saved > persisted.baseline
       && interaction.selected >= 2
       && interaction.boxStartOffset <= 1.5
       && interaction.menuOffset <= 1.5
@@ -243,11 +337,14 @@ async function evaluate(client, expression) {
       && persisted.backupStore
       && restored.nodes === persisted.saved
       && restored.durableSize === persisted.durableSize
+      && restored.remoteMediaIsLocal
+      && restored.remotePreviewIsLocal
       && interaction.wheelMs < 5000;
-    console.log(JSON.stringify({ passed, persisted, interaction, restored, userDataDir }, null, 2));
-    log(`result: ${JSON.stringify({ passed, persisted, interaction, restored, userDataDir })}`);
+    console.log(JSON.stringify({ passed, generated, persisted, interaction, restored, userDataDir }, null, 2));
+    log(`result: ${JSON.stringify({ passed, generated, persisted, interaction, restored, userDataDir })}`);
     if (!passed) process.exitCode = 1;
   } finally {
+    if (mediaServer.listening) await new Promise((resolve) => mediaServer.close(resolve));
     canvasClient?.close();
     child.kill();
   }

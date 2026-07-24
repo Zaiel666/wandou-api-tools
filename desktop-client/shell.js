@@ -296,7 +296,7 @@ function saveTabBeforeClose(tab) {
       }
       return false;
     })()`, true).catch(() => false);
-    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), 4000));
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), 20000));
     return Promise.race([saveTask, timeout]);
   } catch (_error) {
     return Promise.resolve(false);

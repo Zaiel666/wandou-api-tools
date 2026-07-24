@@ -4,7 +4,8 @@ const { spawn } = require("child_process");
 
 const root = path.resolve(__dirname, "..");
 const updater = path.join(root, "build-output", "win-unpacked", "resources", "portable-updater.exe");
-const packagePath = path.resolve(root, "..", "..", "v1.0.16 GitHub上传文件", "wandou-ai-tools-windows-x64.zip");
+const packagePath = path.join(root, "build-output", "wandou-ai-tools-windows-x64.zip");
+const targetVersion = fs.readFileSync(path.join(root, "app", "VERSION.txt"), "utf8").split(/\r?\n/)[0].trim().replace(/^v/, "");
 const installDirectory = path.join(root, "updater-handshake-test");
 const readyPath = path.join(installDirectory, "updater-ready.txt");
 const restartMarker = path.join(installDirectory, "restart-complete.txt");
@@ -39,7 +40,7 @@ async function main() {
     "--parent", String(oldApp.pid),
     "--exe", path.basename(restartScript),
     "--ready", readyPath,
-    "--target", "1.0.16"
+    "--target", targetVersion
   ], { detached: true, stdio: "ignore", windowsHide: true });
 
   await waitForFile(readyPath, 15000, "Updater did not create its ready marker");
@@ -53,7 +54,7 @@ async function main() {
 
   const version = fs.readFileSync(path.join(installDirectory, "resources", "app", "VERSION.txt"), "utf8").split(/\r?\n/)[0].trim();
   const installedExe = path.join(installDirectory, "豌豆AI工具.exe");
-  if (version !== "v1.0.16" || !fs.existsSync(installedExe)) {
+  if (version !== `v${targetVersion}` || !fs.existsSync(installedExe)) {
     throw new Error(`Unexpected installed result: version=${version}; executable=${fs.existsSync(installedExe)}`);
   }
   console.log(JSON.stringify({
