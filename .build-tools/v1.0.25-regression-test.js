@@ -27,7 +27,9 @@ const checks = [
   [canvas.includes(".project-hub-menu {\n      display: none") && canvas.includes("width: 100%;\n      min-width: 0;\n      max-width: 100%;\n      box-sizing: border-box;"), "project menu matches trigger width"],
   [canvas.includes("body.node-canvas-page::before") && canvas.includes(".canvas-wrap::after") && fluidGlass.includes("body.project-hub-page::before") && fluidGlass.includes("body.project-hub-page .shell::after"), "top accent strip suppression"],
   [canvas.includes("body.node-canvas-page.dark-theme .topbar") && canvas.includes("background: transparent !important") && canvas.includes("backdrop-filter: none !important"), "canvas toolbar remains transparent"],
-  [fluidGlass.includes("two iOS-like material scales") && fluidGlass.includes("backdrop-filter: blur(28px)"), "project hub two-level material styling"]
+  [fluidGlass.includes("two iOS-like material scales") && fluidGlass.includes("backdrop-filter: blur(28px)"), "project hub two-level material styling"],
+  [canvas.includes("_apiTargetSize: targetSize") && !canvas.includes("forceExactOutput ? oneKGenerationSizeForTarget"), "image request keeps selected target size"],
+  [canvas.includes("normalizeGeneratedImage(rawUrl, targetSize, false, false)") && !canvas.includes("normalizeGeneratedImage(rawUrl, targetSize, false, true)"), "generated images are never cover-cropped"]
 ];
 
 const failed = checks.filter(([passed]) => !passed).map(([, label]) => label);
