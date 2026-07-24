@@ -889,6 +889,11 @@
       backface-visibility: hidden;
     }
 
+    .canvas-wrap.is-panning #canvas,
+    .canvas-wrap.is-zooming #canvas {
+      will-change: transform;
+    }
+
     body.dark-theme .canvas-wrap {
       background:
         radial-gradient(circle, rgba(118, 185, 0, 0.16) 1px, transparent 1.35px),
@@ -914,7 +919,7 @@
     .canvas-wrap.is-zooming .preview video,
     .canvas-wrap.is-panning .lines,
     .canvas-wrap.is-zooming .lines {
-      display: none;
+      visibility: hidden;
     }
 
     .canvas-wrap.low-detail .node-menu,
@@ -7875,9 +7880,9 @@
         // 禁止使用 cover 裁边，预览、下载和自动保存统一使用校验后的图片。
         const url = apiResult.mediaType === "image" && rawUrl
           ? (sourceNode.type === "png"
-            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, true), 18000, rawUrl, "透明图标准化")
+            ? await normalizeGeneratedImage(rawUrl, targetSize, true)
             : normalizeToTargetSize
-            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 18000, rawUrl, "图片尺寸标准化")
+            ? await normalizeGeneratedImage(rawUrl, targetSize, false, false)
             : rawUrl)
           : rawUrl;
         const previewUrl = apiResult.mediaType === "image" && url
@@ -8601,7 +8606,7 @@ ${formatInstruction}`;
         model: imageGenerationApiModel(node.model, requestResolution),
         prompt: node.type === "png" ? transparentEditPrompt : node.prompt,
         n: Math.max(1, Math.min(9, Number(node.count) || 1)),
-        size: apiSafeGenerationSize(targetSize)
+        size: apiSizeFromTarget(targetSize)
       };
       if (!node._forceBaseGeneration) {
         imagePayload.quality = "high";
