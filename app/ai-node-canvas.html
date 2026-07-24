@@ -7764,14 +7764,13 @@
           return;
         }
         const apiStartedAt = Date.now();
-        const forceExactOutput = sourceNode.type === "generator" && modelToApiModel(sourceNode.model) === "gpt-image-2";
-        const needsClientUpscale = forceExactOutput && String(sourceNode.resolution || "1K").toUpperCase() !== "1K";
+        const normalizeToTargetSize = sourceNode.type === "generator" && modelToApiModel(sourceNode.model) === "gpt-image-2";
         const requestNode = {
           ...sourceNode,
           count: 1,
           _targetSize: targetSize,
-          _apiTargetSize: forceExactOutput ? oneKGenerationSizeForTarget(targetSize) : targetSize,
-          _forceBaseGeneration: forceExactOutput
+          _apiTargetSize: targetSize,
+          _forceBaseGeneration: false
         };
         const apiResult = await callApi(requestNode, controller.signal);
         const apiSeconds = Math.max(1, Math.round((Date.now() - apiStartedAt) / 1000));
@@ -7782,13 +7781,13 @@
           : `接口已返回，用时 ${apiSeconds}s，正在处理图片显示...`;
         setNodeStatus(pending.id, pending.status);
         const rawUrl = apiResult.urls?.[0] || apiResult.url || "";
-        // GPT 图片接口只负责返回同画幅的基础图；选择 2K/4K 时，页面强制
-        // 放大并校验到目标像素。预览、下载和自动保存统一使用处理后的原图。
+        // 请求接口按所选画幅直接构图。返回尺寸不一致时只做完整画面缩放，
+        // 禁止使用 cover 裁边，预览、下载和自动保存统一使用校验后的图片。
         const url = apiResult.mediaType === "image" && rawUrl
           ? (sourceNode.type === "png"
             ? await normalizeGeneratedImage(rawUrl, targetSize, true)
-            : forceExactOutput
-            ? await normalizeGeneratedImage(rawUrl, targetSize, false, true)
+            : normalizeToTargetSize
+            ? await normalizeGeneratedImage(rawUrl, targetSize, false, false)
             : rawUrl)
           : rawUrl;
         const previewUrl = apiResult.mediaType === "image" && url
