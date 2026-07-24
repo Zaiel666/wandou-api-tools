@@ -12,6 +12,7 @@ const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app"]);
 let mainWindow = null;
 let allowWindowClose = false;
 let closePromptPending = false;
+let shellReady = false;
 let downloadListenerReady = false;
 let updateInProgress = false;
 
@@ -374,6 +375,7 @@ function configureDownloads() {
 function createWindow() {
   allowWindowClose = false;
   closePromptPending = false;
+  shellReady = false;
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 930,
@@ -402,6 +404,7 @@ function createWindow() {
 
   mainWindow.on("close", (event) => {
     if (allowWindowClose) return;
+    if (!shellReady) return;
     event.preventDefault();
     if (updateInProgress) {
       mainWindow.focus();
@@ -418,6 +421,7 @@ function createWindow() {
     mainWindow = null;
     allowWindowClose = false;
     closePromptPending = false;
+    shellReady = false;
   });
 
   mainWindow.loadFile(path.join(__dirname, "shell.html"), {
@@ -438,6 +442,7 @@ ipcMain.on("desktop:set-theme", (_event, theme) => {
   const dark = theme === "dark";
   mainWindow.setTitleBarOverlay({ color: dark ? "#0c0e0d" : "#ffffff", symbolColor: dark ? "#eef6f0" : "#203128", height: 48 });
 });
+ipcMain.on("desktop:shell-ready", () => { shellReady = true; });
 ipcMain.on("desktop:cancel-close", () => { closePromptPending = false; });
 ipcMain.handle("desktop:confirm-close", () => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;

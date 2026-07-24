@@ -255,138 +255,6 @@ async function refreshUpdateInfo({ retries = 0 } = {}) {
     } catch (error) {
       result = { available: false, error: error.message || "检查更新失败" };
     }
-  });
-  view.addEventListener("did-start-loading", () => tab.button.classList.add("loading"));
-  view.addEventListener("did-stop-loading", () => {
-    tab.button.classList.remove("loading");
-    syncThemeFromActivePage();
-  });
-  view.addEventListener("did-fail-load", () => tab.button.classList.remove("loading"));
-
-  activateTab(id);
-  return tab;
-}
-
-function activateTab(id) {
-  if (!tabs.has(id)) return;
-  activeId = id;
-  for (const tab of tabs.values()) {
-    const active = tab.id === id;
-    tab.button.classList.toggle("active", active);
-    tab.button.setAttribute("aria-selected", String(active));
-    tab.view.classList.toggle("active", active);
-  }
-  const tab = tabs.get(id);
-  tab.button.scrollIntoView({ block: "nearest", inline: "nearest" });
-  brandText.textContent = "首页";
-  brandButton.title = "返回首页";
-  brandButton.classList.toggle("active", tab.pinned);
-  brandButton.setAttribute("aria-current", tab.pinned ? "page" : "false");
-  updateNavigation();
-  syncThemeFromActivePage();
-}
-
-function saveTabBeforeClose(tab) {
-  if (!tab?.view || tab.view.isLoading?.()) return Promise.resolve(false);
-  try {
-    const saveTask = tab.view.executeJavaScript(`(async () => {
-      if (typeof window.wandouSaveBeforeClose === "function") {
-        await window.wandouSaveBeforeClose();
-        return true;
-      }
-      return false;
-    })()`, true).catch(() => false);
-    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), 20000));
-    return Promise.race([saveTask, timeout]);
-  } catch (_error) {
-    return Promise.resolve(false);
-  }
-}
-
-async function closeTab(id) {
-  const tab = tabs.get(id);
-  if (!tab || tab.pinned) return;
-  await saveTabBeforeClose(tab);
-  const order = [...tabs.keys()];
-  const index = order.indexOf(id);
-  tab.view.remove();
-  tab.button.remove();
-  tabs.delete(id);
-  if (activeId === id) activateTab(order[index - 1] || order[index + 1] || [...tabs.keys()][0]);
-}
-
-function activeView() { return tabs.get(activeId)?.view || null; }
-
-function safeWebviewCall(view, method, fallback = false) {
-  try { return view && typeof view[method] === "function" ? view[method]() : fallback; }
-  catch (_error) { return fallback; }
-}
-
-function updateNavigation() {
-  const view = activeView();
-  backButton.disabled = !safeWebviewCall(view, "canGoBack");
-  forwardButton.disabled = !safeWebviewCall(view, "canGoForward");
-}
-
-async function syncThemeFromActivePage() {
-  const view = activeView();
-  if (!view || safeWebviewCall(view, "isLoading", true)) return;
-  try {
-    const theme = await view.executeJavaScript(`(() => {
-      const saved = localStorage.getItem("ai-tools-theme") || localStorage.getItem("wd-theme");
-      if (saved === "dark" || saved === "light") return saved;
-      const root = document.documentElement;
-      const body = document.body;
-      return root.dataset.theme === "dark" || root.classList.contains("dark") || body?.classList.contains("dark-theme") ? "dark" : "light";
-    })()`, true);
-    const safeTheme = theme === "dark" ? "dark" : "light";
-    document.documentElement.dataset.theme = safeTheme;
-    window.wandouShell?.setTheme(safeTheme);
-  } catch (_error) {
-    // 页面加载完成后的下一轮会继续同步。
-  }
-}
-
-async function openAnnouncement() {
-  const homeTab = [...tabs.values()].find((tab) => tab.pinned);
-  if (!homeTab) return;
-  activateTab(homeTab.id);
-  try {
-    const opened = await homeTab.view.executeJavaScript(`(() => {
-      const items = [...document.querySelectorAll("button, a")];
-      const target = items.find((item) => (item.textContent || "").trim().includes("公告"));
-      if (target) { target.click(); return true; }
-      return false;
-    })()`, true);
-    if (opened && clientConfig.announcementVersion) {
-      localStorage.setItem("wandou-announcement-seen", clientConfig.announcementVersion);
-      noticeButton.classList.remove("has-unread");
-      noticeDot.hidden = true;
-    }
-  } catch (_error) {
-    showToast("请在首页打开公告");
-  }
-}
-
-function showUpdateDialog() {
-  if (!updateInfo?.available || updateStarted) return;
-  dialogVersion.textContent = `当前 ${updateInfo.currentVersion} · 最新 ${updateInfo.latestVersion}`;
-  dialogNotes.textContent = updateInfo.notes || "新版本已经准备好。";
-  dialogOverlay.hidden = false;
-}
-
-function wait(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-async function refreshUpdateInfo({ retries = 0 } = {}) {
-  let result = null;
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    try {
-      result = await window.wandouShell?.checkForUpdates();
-    } catch (error) {
-      result = { available: false, error: error.message || "检查更新失败" };
-    }
     if (!result?.error || attempt === retries) break;
     await wait(1500 * (attempt + 1));
   }
@@ -423,17 +291,6 @@ async function openFreshUpdateDialog() {
   }
 }
 
-async function openFreshUpdateDialog() {
-  if (updateStarted) return;
-  updateBadge.disabled = true;
-  try {
-    await refreshUpdateInfo();
-    showUpdateDialog();
-  } finally {
-    updateBadge.disabled = false;
-  }
-}
-
 async function refreshClientState() {
   try {
     clientConfig = await window.wandouShell?.getClientConfig() || {};
@@ -452,15 +309,6 @@ async function initializeClientState() {
   await refreshClientState();
   if (updateInfo?.error) await refreshUpdateInfo({ retries: 2 });
   if (updateInfo?.available) showUpdateDialog();
-}
-
-function showCloseDialog() {
-  closeInProgress = false;
-  closeDialogStatus.textContent = "关闭前会自动保存所有已打开的节点工作流。";
-  closeDialogCancel.disabled = false;
-  closeDialogConfirm.disabled = false;
-  closeDialogConfirm.textContent = "保存并关闭";
-  closeDialogOverlay.hidden = false;
 }
 
 function showCloseDialog() {
@@ -535,6 +383,7 @@ closeDialogConfirm.addEventListener("click", saveAllAndClose);
 
 window.wandouShell?.onOpenTab((payload) => openTab(payload));
 window.wandouShell?.onCloseRequested(showCloseDialog);
+window.wandouShell?.markReady();
 window.wandouShell?.onDownloadResult((payload) => {
   const name = payload?.filename ? `：${payload.filename}` : "";
   showToast(payload?.success ? `下载完成${name}` : `下载失败${name}`, !payload?.success);

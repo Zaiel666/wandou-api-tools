@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld("wandouShell", {
   },
   confirmClose: () => ipcRenderer.invoke("desktop:confirm-close"),
   cancelClose: () => ipcRenderer.send("desktop:cancel-close"),
+  markReady: () => ipcRenderer.send("desktop:shell-ready"),
   setTheme: (theme) => ipcRenderer.send("desktop:set-theme", theme),
   getClientConfig: () => ipcRenderer.invoke("desktop:get-client-config"),
   checkForUpdates: () => ipcRenderer.invoke("desktop:check-for-updates"),
