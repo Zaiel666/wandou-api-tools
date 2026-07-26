@@ -51,8 +51,8 @@ function apiSizeFromTarget(targetSize) {
   return width > height ? "1536x1024" : "1024x1536";
 }
 
-function containRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
-  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+function coverRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
+  const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
   const width = sourceWidth * scale;
   const height = sourceHeight * scale;
   return {
@@ -86,10 +86,13 @@ for (const [resolution, ratios] of Object.entries(sizeMap)) {
     }
 
     const [apiWidth, apiHeight] = apiSize.split("x").map(Number);
-    const rect = containRect(apiWidth, apiHeight, width, height);
-    assert.ok(rect.width <= width + 0.001, `${resolution} ${ratio} overflows width`);
-    assert.ok(rect.height <= height + 0.001, `${resolution} ${ratio} overflows height`);
-    assert.ok(rect.x >= -0.001 && rect.y >= -0.001, `${resolution} ${ratio} is cropped`);
+    const rect = coverRect(apiWidth, apiHeight, width, height);
+    assert.ok(rect.width >= width - 0.001, `${resolution} ${ratio} leaves horizontal padding`);
+    assert.ok(rect.height >= height - 0.001, `${resolution} ${ratio} leaves vertical padding`);
+    assert.ok(
+      Math.abs(rect.x) <= 0.001 || Math.abs(rect.y) <= 0.001,
+      `${resolution} ${ratio} must align one axis exactly`,
+    );
     tested += 1;
   }
 }
@@ -97,6 +100,9 @@ for (const [resolution, ratios] of Object.entries(sizeMap)) {
 assert.equal(tested, 33);
 const pageSource = fs.readFileSync(new URL("../app/ai-node-canvas.html", import.meta.url), "utf8");
 assert.match(pageSource, /size:\s*apiSizeFromTarget\(targetSize\)/);
+assert.match(pageSource, /prompt:\s*node\.type === "png" \? transparentEditPrompt : promptWithSize\(node\.prompt,\s*targetSize\)/);
+assert.match(pageSource, /normalizeGeneratedImage\(rawUrl,\s*targetSize,\s*false,\s*true\)/);
+assert.doesNotMatch(pageSource, /imagePayload\.targetSize\s*=\s*targetSize/);
 assert.doesNotMatch(pageSource, /settleWithin\(normalizeGeneratedImage\([^)]*\),\s*18000,\s*rawUrl/);
 assert.match(pageSource, /\.canvas-wrap\.is-panning[\s\S]*?visibility:\s*hidden/);
 console.log(`PASS: ${tested} size combinations`);
