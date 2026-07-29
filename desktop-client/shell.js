@@ -11,7 +11,6 @@ const brandLogo = $("brandLogo");
 const brandText = $("brandText");
 const backButton = $("backButton");
 const forwardButton = $("forwardButton");
-const reloadButton = $("reloadButton");
 const noticeButton = $("noticeButton");
 const noticeDot = noticeButton.querySelector(".notice-dot");
 const updateBadge = $("updateBadge");
@@ -345,7 +344,6 @@ forwardButton.addEventListener("click", () => {
   const view = activeView();
   if (safeWebviewCall(view, "canGoForward")) view.goForward();
 });
-reloadButton.addEventListener("click", () => activeView()?.reload?.());
 noticeButton.addEventListener("click", openAnnouncement);
 updateBadge.addEventListener("click", openFreshUpdateDialog);
 versionText.addEventListener("click", checkForUpdatesManually);

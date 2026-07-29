@@ -523,6 +523,14 @@ body.node-canvas-page .reference-upload-trigger:hover {
   box-shadow: 0 0 0 3px var(--fg-fill-strong) !important;
 }
 
+body.node-canvas-page .prompt-field-wrap .prompt-textarea.prompt-token-input,
+body.node-canvas-page.dark-theme .prompt-field-wrap .prompt-textarea.prompt-token-input {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
 body.node-canvas-page button:not(.node-resize),
 body.node-canvas-page .button-like {
   border-radius: var(--fg-radius-pill) !important;

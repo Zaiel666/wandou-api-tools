@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "修复节点画布历史丢失与参考图重复，增加参考图排序、提示词图号联动、双向连线和断联，并优化效果图布局与下载收藏。"
+            notes = "修复提示词默认显示不全、生成中背景透明、卡顿提醒误报及无法关闭的问题，并移除顶部刷新按钮。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
