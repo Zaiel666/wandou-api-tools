@@ -476,6 +476,53 @@ body.node-canvas-page .canvas-wrap.is-zooming .node {
   transition: none !important;
 }
 
+body.node-canvas-page .node.result,
+body.node-canvas-page.dark-theme .node.result,
+body.node-canvas-page .node.image,
+body.node-canvas-page.dark-theme .node.image {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.node-canvas-page .node.result:hover,
+body.node-canvas-page .node.result.selected {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: 0 0 0 2px rgba(67, 209, 59, .82), 0 0 0 6px rgba(67, 209, 59, .13), 0 10px 28px rgba(18, 63, 35, .12) !important;
+}
+
+body.node-canvas-page .node.image:hover,
+body.node-canvas-page .node.image.selected {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.node-canvas-page .node.image .node-body {
+  padding: 0 !important;
+}
+
+body.node-canvas-page .node.image:hover .preview,
+body.node-canvas-page .node.image.selected .preview {
+  border-color: var(--fg-green) !important;
+  box-shadow: 0 0 0 3px var(--fg-fill-strong), 0 6px 18px rgba(18, 63, 35, .12) !important;
+}
+
+body.node-canvas-page .reference-upload-trigger {
+  width: 82px !important;
+  height: 82px !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+body.node-canvas-page .reference-upload-trigger:hover {
+  box-shadow: 0 0 0 3px var(--fg-fill-strong) !important;
+}
+
 body.node-canvas-page button:not(.node-resize),
 body.node-canvas-page .button-like {
   border-radius: var(--fg-radius-pill) !important;

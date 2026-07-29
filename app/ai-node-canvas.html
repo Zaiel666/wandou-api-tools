@@ -925,6 +925,7 @@
     .canvas-wrap.low-detail .node-menu,
     .canvas-wrap.low-detail .status,
     .canvas-wrap.low-detail .meta-line,
+    .canvas-wrap.low-detail .result-meta-line,
     .canvas-wrap.low-detail .result-actions {
       visibility: hidden;
     }
@@ -1592,6 +1593,60 @@
       transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
     }
 
+    .node.result {
+      width: 240px;
+      background: transparent !important;
+      border: 0 !important;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .node.result .node-body {
+      padding: 0;
+    }
+
+    .node.result .preview {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .node.result .preview img,
+    .node.result .preview video {
+      border-radius: 0;
+    }
+
+    body.dark-theme .node.result {
+      background: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .node.image {
+      background: transparent !important;
+      border: 0 !important;
+      border-radius: 0;
+      box-shadow: none !important;
+    }
+
+    .node.image .node-body {
+      padding: 0;
+    }
+
+    .node.image .preview,
+    .node.result {
+      transition: box-shadow .16s ease, filter .16s ease;
+    }
+
+    .node.image:hover .preview,
+    .node.image.selected .preview,
+    .node.result:hover,
+    .node.result.selected {
+      box-shadow: 0 0 0 2px rgba(67, 209, 59, .82), 0 0 0 6px rgba(67, 209, 59, .13), 0 10px 28px rgba(18, 63, 35, .12) !important;
+      filter: brightness(1.015);
+    }
+
     .node.generator:focus-within,
     .node.prompt-overlay-owner {
       z-index: 190;
@@ -1738,9 +1793,13 @@
     }
 
     .node.generator {
-      width: 520px;
-      min-width: 430px;
-      min-height: 430px;
+      width: 500px;
+      min-width: 420px;
+      min-height: 410px;
+    }
+
+    .node.generator .node-body {
+      padding: 10px;
     }
 
     .node.video {
@@ -1845,6 +1904,23 @@
       border-color: var(--blue);
       background: var(--blue);
       box-shadow: 0 0 0 4px rgba(47, 125, 80, 0.18);
+    }
+
+    .port.connected {
+      border-color: #43d13b;
+      background: #43d13b;
+      box-shadow: 0 0 0 3px rgba(67, 209, 59, .16);
+    }
+
+    .port.connected:hover {
+      border-color: #ef4444;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, .14);
+      cursor: pointer;
+    }
+
+    body.dark-theme .port.connected:hover {
+      background: #252a28;
     }
 
     .port.in {
@@ -1953,33 +2029,82 @@
     }
 
     .reference-empty-visual {
-      justify-items: center;
-      text-align: center;
-      gap: 8px;
+      grid-template-columns: minmax(0, 1fr) 82px;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      text-align: left;
       background: rgba(248, 250, 252, .76);
+      cursor: grab;
+    }
+
+    .reference-empty-copy {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+      pointer-events: none;
+    }
+
+    .reference-upload-trigger,
+    .reference-add-thumb {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 5px;
+      border: 1px solid rgba(148, 163, 184, .52);
+      border-radius: 12px;
+      color: #334155;
+      background: #fff;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, .09);
       cursor: pointer;
     }
 
-    .reference-empty-icon {
-      width: 48px;
-      height: 48px;
-      display: grid;
-      place-items: center;
-      border: 1px dashed rgba(71, 85, 105, .48);
-      border-radius: 14px;
-      color: #5f6f68;
-      background: #fff;
+    .reference-upload-trigger {
+      width: 82px;
+      height: 82px;
+      padding: 8px;
+      border-radius: 10px;
+      box-shadow: none;
     }
 
-    .reference-empty-icon svg {
-      width: 24px;
-      height: 24px;
-      stroke: currentColor;
+    .reference-add-thumb {
+      flex: 0 0 68px;
+      width: 68px;
+      height: 68px;
+      padding: 6px;
+    }
+
+    .reference-upload-trigger:hover,
+    .reference-add-thumb:hover {
+      color: var(--blue-dark);
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(118, 185, 0, .12);
+    }
+
+    .reference-upload-plus {
+      font-size: 30px;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .reference-upload-trigger small,
+    .reference-add-thumb small {
+      color: currentColor;
+      font-size: 11px;
+      font-weight: 700;
     }
 
     .reference-empty-visual small {
       color: var(--muted);
       font-size: 11px;
+    }
+
+    body.dark-theme .reference-upload-trigger,
+    body.dark-theme .reference-add-thumb {
+      color: #dbe7e1;
+      background: #252a28;
+      border-color: rgba(255, 255, 255, .18);
+      box-shadow: none;
     }
 
     .result-empty-visual {
@@ -2016,6 +2141,85 @@
 
     .prompt-field-wrap .prompt-textarea {
       padding-right: 54px;
+    }
+
+    .prompt-token-overlay {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      overflow: hidden;
+      padding: 9px 54px 9px 10px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: var(--wd-type-body);
+      font-weight: var(--wd-weight-regular);
+      line-height: 1.65;
+      letter-spacing: .005em;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      pointer-events: none;
+    }
+
+    .prompt-field-wrap .prompt-textarea.prompt-token-input {
+      position: relative;
+      z-index: 2;
+      background: transparent !important;
+      color: transparent !important;
+      -webkit-text-fill-color: transparent;
+      caret-color: var(--text);
+    }
+
+    .prompt-field-wrap .prompt-textarea.prompt-token-input::placeholder {
+      color: var(--muted);
+      -webkit-text-fill-color: var(--muted);
+    }
+
+    .prompt-reference-token {
+      color: var(--reference-color);
+      font-weight: 800;
+      text-shadow: 0 0 12px color-mix(in srgb, var(--reference-color) 22%, transparent);
+    }
+
+    .generator-reference-field {
+      margin-top: -2px;
+      margin-bottom: 10px;
+    }
+
+    .generator-reference-field .upload-box {
+      margin-top: 0;
+      padding: 8px;
+      border: 1px solid rgba(15, 23, 42, .10);
+      border-radius: 10px;
+      background: rgba(246, 249, 248, .7);
+    }
+
+    .generator-reference-field .thumb {
+      border-color: color-mix(in srgb, var(--reference-color) 58%, var(--line));
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--reference-color) 11%, transparent);
+    }
+
+    .generator-reference-field .thumb-index {
+      right: 5px;
+      left: auto;
+      width: auto;
+      min-width: 24px;
+      padding: 0 6px;
+      background: var(--reference-color);
+      box-shadow: 0 3px 9px color-mix(in srgb, var(--reference-color) 30%, transparent);
+    }
+
+    .generator-reference-field .add-thumb {
+      display: grid;
+      place-items: center;
+      color: #52615a;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    body.dark-theme .generator-reference-field .upload-box {
+      border-color: rgba(255, 255, 255, .11);
+      background: rgba(24, 29, 27, .72);
     }
 
     .node-header [data-favorite],
@@ -2082,11 +2286,53 @@
       border: 1px solid rgba(100,116,139,.3);
       border-radius: 9px;
       box-shadow: 0 7px 18px rgba(15,23,42,.1);
+      opacity: .42;
+      transition: opacity .16s ease, color .16s ease, border-color .16s ease, background .16s ease, transform .16s ease;
     }
-    .preview-favorite svg { width: 17px; height: 17px; fill: currentColor; stroke: currentColor; stroke-width: 1.4; }
-    .preview-favorite.active { color: #43d13b; border-color: rgba(67,209,59,.62); background: rgba(246,255,245,.96); }
+    .preview-favorite:hover { opacity: .92; transform: translateY(-1px); }
+    .preview-favorite svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+    .preview-favorite.active { color: #ef4444; border-color: rgba(239,68,68,.58); background: rgba(255,245,245,.96); opacity: 1; }
+    .preview-favorite.active svg { fill: currentColor; stroke: currentColor; }
     body.dark-theme .preview-favorite { color:#8d9992; background:rgba(35,40,38,.94); border-color:rgba(255,255,255,.16); }
-    body.dark-theme .preview-favorite.active { color:#72df69; border-color:rgba(67,209,59,.55); background:rgba(31,50,33,.96); }
+    body.dark-theme .preview-favorite.active { color:#ff6363; border-color:rgba(255,99,99,.55); background:rgba(61,31,34,.96); }
+
+    .preview-download {
+      position: absolute;
+      z-index: 8;
+      top: 46px;
+      right: 8px;
+      width: 30px;
+      min-height: 30px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      color: #475569;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(100,116,139,.3);
+      border-radius: 999px;
+      box-shadow: 0 7px 18px rgba(15,23,42,.1);
+    }
+
+    .preview-download svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .preview-download:disabled {
+      opacity: .36;
+      cursor: default;
+    }
+
+    body.dark-theme .preview-download {
+      color: #d5dfda;
+      background: rgba(35,40,38,.94);
+      border-color: rgba(255,255,255,.16);
+    }
 
     .prompt-refine-panel {
       position: absolute;
@@ -2512,6 +2758,24 @@
       font-weight: 500;
     }
 
+    .result-meta-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .result-meta-line span:last-child {
+      text-align: right;
+      white-space: nowrap;
+    }
+
     .text-result {
       min-height: 180px;
       padding: 12px;
@@ -2653,6 +2917,34 @@
       border-color: rgba(255, 255, 255, 0.7);
     }
 
+    .thumb-order-controls {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .thumb-order-button {
+      width: 22px;
+      min-height: 20px;
+      padding: 0;
+      border-radius: 6px;
+      color: #fff;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      line-height: 1;
+      pointer-events: auto;
+    }
+
+    .thumb-order-button:disabled {
+      opacity: .28;
+      cursor: default;
+    }
+
     .add-thumb {
       display: grid;
       place-items: center;
@@ -2697,6 +2989,46 @@
 
     .toast.show {
       opacity: 1;
+    }
+
+    .performance-warning {
+      position: absolute;
+      left: 50%;
+      top: 72px;
+      z-index: 210;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      max-width: min(560px, calc(100% - 32px));
+      padding: 11px 14px;
+      border: 1px solid rgba(245, 158, 11, .55);
+      border-radius: 12px;
+      color: #7c2d12;
+      background: rgba(255, 247, 237, .96);
+      box-shadow: 0 16px 40px rgba(124, 45, 18, .18);
+      transform: translateX(-50%);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .performance-warning.show {
+      display: flex;
+    }
+
+    .performance-warning button {
+      flex: 0 0 auto;
+      min-height: 26px;
+      padding: 2px 8px;
+      border-radius: 7px;
+      color: inherit;
+      background: transparent;
+      border-color: rgba(124, 45, 18, .28);
+    }
+
+    body.dark-theme .performance-warning {
+      color: #fed7aa;
+      background: rgba(67, 31, 13, .96);
+      border-color: rgba(251, 191, 36, .5);
     }
 
     .lightbox {
@@ -3834,6 +4166,10 @@
         <button type="button" data-link-cancel>取消连接</button>
       </div>
       <div id="toast" class="toast">已完成</div>
+      <div id="performanceWarning" class="performance-warning" role="alert">
+        <span>页面卡住，建议新建画布或新建项目</span>
+        <button id="dismissPerformanceWarning" type="button">知道了</button>
+      </div>
     </main>
   </div>
   <div id="lightbox" class="lightbox">
@@ -3961,6 +4297,8 @@
     const canvas = document.getElementById("canvas");
     const lines = document.getElementById("lines");
     const toast = document.getElementById("toast");
+    const performanceWarning = document.getElementById("performanceWarning");
+    const dismissPerformanceWarning = document.getElementById("dismissPerformanceWarning");
     const zoomValue = document.getElementById("zoomValue");
     const apiUrlInput = document.getElementById("apiUrl");
     const apiKeyInput = document.getElementById("apiKey");
@@ -4035,6 +4373,7 @@
     let nodeId = 1;
     let selectedNodeId = null;
     let linkingFrom = null;
+    let linkingTo = null;
     let portDragState = null;
     let dragState = null;
     let resizeState = null;
@@ -4074,6 +4413,8 @@
       let canvasTransformFrame = null;
       let linkDrawFrame = null;
       let zoomInteractionTimer = null;
+      let performanceWarningCooldownUntil = 0;
+      let lastHealthHeartbeat = performance.now();
     const linkElements = new Map();
     let temporaryLinkElement = null;
     let isRestoring = false;
@@ -4096,6 +4437,7 @@
     const localMediaDbName = "ai-node-canvas-media-v1";
     const localMediaStoreName = "media";
     const canvasStateStoreName = "canvas-state";
+    const canvasSessionId = `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const largeMediaDataUrlLimit = 1200000;
     const canvasStorageWarningText = "\u672c\u5730\u72b6\u6001\u5df2\u4f7f\u7528\u7cbe\u7b80\u5b58\u50a8\uff0c\u539f\u56fe\u4e0b\u8f7d\u4e0d\u53d7\u5f71\u54cd\u3002";
     const autoSaveDbName = "wandou-auto-save-v1";
@@ -4208,6 +4550,23 @@
       toast.classList.add("show");
       setTimeout(() => toast.classList.remove("show"), 1600);
     }
+
+    function showPerformanceWarning() {
+      if (!performanceWarning || Date.now() < performanceWarningCooldownUntil) return;
+      performanceWarning.classList.add("show");
+    }
+
+    dismissPerformanceWarning?.addEventListener("click", () => {
+      performanceWarning.classList.remove("show");
+      performanceWarningCooldownUntil = Date.now() + 60000;
+    });
+
+    setInterval(() => {
+      const now = performance.now();
+      const lag = now - lastHealthHeartbeat - 2500;
+      lastHealthHeartbeat = now;
+      if (lag > 1400) showPerformanceWarning();
+    }, 2500);
 
     function autoSaveSupported() {
       return Boolean(window.wandouShell?.chooseSaveDirectory) || (typeof window.showDirectoryPicker === "function" && typeof window.indexedDB !== "undefined");
@@ -4996,6 +5355,7 @@
     }
 
     function render() {
+      const renderStartedAt = performance.now();
       [...canvas.querySelectorAll(".node")].forEach((node) => node.remove());
       nodes.forEach((node) => {
         const nodeEl = renderNode(node);
@@ -5007,6 +5367,9 @@
       updatePendingPort();
       scheduleDrawLinks();
       scheduleCanvasSave();
+      if (performance.now() - renderStartedAt > 420 || nodes.length > 80) {
+        setTimeout(showPerformanceWarning, 0);
+      }
     }
 
     function stabilizeMountedNode(nodeEl, node) {
@@ -5153,7 +5516,7 @@
 
       el.addEventListener("pointerdown", () => {
         activePasteNodeId = node.id;
-        if (node.type === "image") {
+        if (node.type === "image" || node.type === "result") {
           selectedNodeId = node.id;
           updateSelection();
         }
@@ -5229,18 +5592,19 @@
         port.addEventListener("pointerdown", (event) => {
           event.preventDefault();
           event.stopPropagation();
-          if (port.dataset.port === "out") {
-            beginPortDrag(event, node.id);
-          }
-        });
-        port.addEventListener("pointerup", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          finishPortDrag(node.id, port.dataset.port, event);
+          beginPortDrag(event, node.id, port.dataset.port);
         });
         port.addEventListener("click", (event) => {
           event.stopPropagation();
           handlePortClick(node.id, port.dataset.port);
+        });
+        port.addEventListener("dblclick", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          linkingFrom = null;
+          linkingTo = null;
+          disconnectPortLinks(node.id, port.dataset.port);
+          updatePendingPort();
         });
       });
 
@@ -5256,6 +5620,7 @@
     }
 
     function isInteractiveTarget(target) {
+      if (target.closest(".reference-empty-visual") && !target.closest("button, input, label")) return false;
       return Boolean(target.closest("button, input, textarea, select, label, .port, video, img, .preview, .thumb, [data-resize-handle]"));
     }
 
@@ -5431,6 +5796,7 @@
           removeReference(node, Number(button.dataset.removeRef));
         });
       });
+      bindReferenceOrderButtons(wrap, node);
       wrap.querySelector("[data-generate]").addEventListener("click", () => generateFromNode(node.id));
       wrap.querySelector("[data-prompt-refine-open]")?.addEventListener("click", () => {
         closePromptLibrary();
@@ -5687,7 +6053,16 @@
         <div class="field">
           <div class="prompt-field-wrap">
             ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div>` : ""}
-            <textarea class="prompt-textarea" data-field="prompt" data-autogrow style="${node.promptHeight ? `height:${node.promptHeight}px;` : ""}" placeholder="输入提示词">${node.prompt}</textarea>
+            <div class="prompt-token-overlay" data-prompt-token-overlay aria-hidden="true">${renderPromptReferenceTokens(node.prompt, generatorReferenceItems(node).length)}</div>
+            <textarea class="prompt-textarea prompt-token-input" data-field="prompt" data-autogrow style="${node.promptHeight ? `height:${node.promptHeight}px;` : ""}" placeholder="输入提示词">${escapeHtml(node.prompt)}</textarea>
+          </div>
+        </div>
+        <div class="field generator-reference-field" ${node.type === "keyword" ? "hidden" : ""}>
+          <div class="upload-box">
+            ${renderGeneratorRefs(node)}
+            <label class="add-thumb" title="添加参考图">+
+              <input data-upload type="file" accept="image/*" ${isVideoNode && node.videoMode === "firstLast" ? "" : "multiple"} hidden>
+            </label>
           </div>
         </div>
         ${isVideoNode ? `
@@ -5732,20 +6107,23 @@
             ${countHtml}
           </div>
         </div>`}
-        <div class="field" ${node.type === "keyword" ? "hidden" : ""}>
-          <div class="upload-box">
-            ${renderGeneratorRefs(node)}
-            <label class="add-thumb">+
-              <input data-upload type="file" accept="image/*" ${isVideoNode && node.videoMode === "firstLast" ? "" : "multiple"} hidden>
-            </label>
-          </div>
-        </div>
         <button data-generate class="wide-button ${/^正在生成/.test(node.status || "") ? "generating" : ""}" type="button">${actionText}</button>
         <div class="status">${node.status || referenceHint}</div>
         ${promptRefinePanelHtml}
       `;
 
       bindFields(wrap, node);
+      const promptField = wrap.querySelector('[data-field="prompt"]');
+      const promptOverlay = wrap.querySelector("[data-prompt-token-overlay]");
+      const syncPromptReferenceTokens = () => {
+        if (!promptField || !promptOverlay) return;
+        promptOverlay.innerHTML = renderPromptReferenceTokens(promptField.value, generatorReferenceItems(node).length);
+        promptOverlay.scrollTop = promptField.scrollTop;
+        promptOverlay.scrollLeft = promptField.scrollLeft;
+        promptOverlay.style.height = `${promptField.getBoundingClientRect().height}px`;
+      };
+      promptField?.addEventListener("input", syncPromptReferenceTokens);
+      promptField?.addEventListener("scroll", syncPromptReferenceTokens);
       const keywordToggle = wrap.querySelector("[data-keyword-toggle]");
       const keywordMenu = wrap.querySelector("[data-keyword-menu]");
       if (keywordToggle && keywordMenu) {
@@ -5900,11 +6278,17 @@
         render();
       });
       autoGrowTextareas(wrap);
+      syncPromptReferenceTokens();
       return wrap;
     }
 
     function previewFavoriteButton(node) {
       return `<button class="preview-favorite ${node.favorite ? "active" : ""}" data-favorite type="button" title="${node.favorite ? "取消图片收藏" : "收藏图片"}" aria-label="${node.favorite ? "取消图片收藏" : "收藏图片"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg></button>`;
+    }
+
+    function previewDownloadButton(node) {
+      const unavailable = node.pending || (!node.mediaUrl && !node.fullUrl && !node.previewUrl);
+      return `<button class="preview-download" data-download type="button" title="下载原图" aria-label="下载原图" ${unavailable ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10"/><path d="m8 10 4 4 4-4"/><path d="M5 19h14"/></svg></button>`;
     }
 
     function renderUpscaleBody(node) {
@@ -6084,11 +6468,17 @@
       );
     }
 
+    function visibleResultStatus(text) {
+      const status = publicNodeStatus(text);
+      return /失败|错误|超时|中断/.test(status) ? status : "";
+    }
+
     function renderMediaBody(node) {
       const wrap = document.createElement("div");
       const isVideo = node.mediaType === "video";
       const refs = normalizeReferences(node);
       const publicStatus = publicNodeStatus(node.status);
+      const visibleMediaStatus = node.type === "image" && publicStatus === "参考图已自动转换为 JPG。" ? "" : publicStatus;
       const media = node.pending
         ? `<div class="loading-state"><span class="spinner"></span><strong>${isVideo ? "效果视频正在生成" : "效果图正在生成"}</strong><span data-elapsed>${isVideo ? `已等待 ${node.elapsed || 0}s` : `已等待 ${node.elapsed || 0}s，最多 ${generationTimeoutSeconds}s`}</span></div>`
         : node.type === "image"
@@ -6104,15 +6494,18 @@
         : `<div class="placeholder-art"><strong>参考图片</strong><span>可上传素材，也可连接生成节点输出。</span></div>`;
 
       wrap.innerHTML = `
-        <div class="preview ${isVideo ? "wide" : ""}${node.pending ? " loading" : ""}${node.transparent ? " transparent-preview" : ""}" data-preview>${media}${node.type === "result" ? previewFavoriteButton(node) : ""}</div>
-        ${node.type === "result" ? `<div class="meta-line" data-meta>${resultMetaText(node)}</div>` : ""}
-        <div class="result-actions" style="${node.type === "result" || node.type === "image" ? "grid-template-columns:1fr;" : ""}">
-          ${node.type === "result" ? "" : `<label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">上传
+        <div class="preview ${isVideo ? "wide" : ""}${node.pending ? " loading" : ""}${node.transparent ? " transparent-preview" : ""}" data-preview>${media}${node.type === "result" ? `${previewFavoriteButton(node)}${previewDownloadButton(node)}` : ""}</div>
+        ${node.type === "result" ? `<div class="result-meta-line" data-meta>${resultMetaHtml(node)}</div>` : ""}
+        ${node.type === "result" ? "" : `<div class="result-actions" style="${node.type === "image" ? "grid-template-columns:1fr;" : ""}">
+          ${node.type === "result" || node.type === "image" ? "" : `<label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">上传
             <input data-upload type="file" accept="image/*,video/*" ${node.type === "image" ? "multiple" : ""} hidden>
           </label>`}
+          ${node.type === "image" ? `<input data-upload type="file" accept="image/*" multiple hidden>` : ""}
           ${node.type === "image" ? "" : `<button class="mini ghost" data-download type="button">下载</button>`}
-        </div>
-        ${(node.type === "image" || node.type === "result") && !publicStatus ? "" : `<div class="status">${publicStatus || "可作为参考图输入，或保存生成结果。"}</div>`}
+        </div>`}
+        ${node.type === "result"
+          ? (visibleResultStatus(publicStatus) ? `<div class="status">${visibleResultStatus(publicStatus)}</div>` : "")
+          : (node.type === "image" && !visibleMediaStatus ? "" : `<div class="status">${visibleMediaStatus || "可作为参考图输入，或保存生成结果。"}</div>`)}
       `;
 
       const uploadInput = wrap.querySelector("[data-upload]");
@@ -6140,17 +6533,11 @@
       });
       const dropTarget = wrap.querySelector("[data-preview]");
       if (dropTarget && node.type === "image") {
-        const openImagePicker = (event) => {
-          if (!event.target.closest(".reference-empty-visual")) return;
+        wrap.querySelectorAll("[data-reference-upload-trigger]").forEach((button) => button.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
           uploadInput?.click();
-        };
-        dropTarget.addEventListener("click", openImagePicker);
-        dropTarget.addEventListener("keydown", (event) => {
-          if (event.key !== "Enter" && event.key !== " ") return;
-          openImagePicker(event);
-        });
+        }));
         dropTarget.addEventListener("dragover", (event) => {
           if (!hasImageFiles(event.dataTransfer?.items || event.dataTransfer?.files)) return;
           event.preventDefault();
@@ -6188,7 +6575,7 @@
           const nodeEl = canvas.querySelector(`[data-id="${node.id}"]`);
           if (nodeEl) nodeEl.style.setProperty("--preview-ratio", `${previewImg.naturalWidth} / ${previewImg.naturalHeight}`);
           const meta = nodeEl?.querySelector("[data-meta]");
-          if (meta) meta.textContent = resultMetaText(node);
+          if (meta) meta.innerHTML = resultMetaHtml(node);
         };
         previewImg.addEventListener("load", syncRatio, { once: true });
         if (previewImg.complete) syncRatio();
@@ -6230,6 +6617,7 @@
           removeReference(node, Number(button.dataset.removeRef));
         });
       });
+      bindReferenceOrderButtons(wrap, node);
       return wrap;
     }
 
@@ -6286,6 +6674,14 @@
 
     function normalizeReferences(node) {
       if (!Array.isArray(node.references)) node.references = [];
+      const seen = new Set();
+      node.references = node.references.filter((item) => {
+        const url = typeof item?.url === "string" ? item.url.trim() : "";
+        if (!url || seen.has(url)) return false;
+        seen.add(url);
+        item.url = url;
+        return true;
+      });
       if (node.mediaUrl && !node.references.length) {
         node.references.unshift({ url: node.mediaUrl, mediaType: node.mediaType || "image" });
       }
@@ -6296,19 +6692,47 @@
       return Array.isArray(references) ? references.map((item) => ({ ...item })) : [];
     }
 
-    function renderGeneratorRefs(node) {
-      const refs = [
+    const referenceTokenColors = ["#22c55e", "#ef4444", "#3b82f6", "#f59e0b", "#a855f7", "#06b6d4", "#ec4899", "#84cc16"];
+
+    function referenceTokenColor(index) {
+      return referenceTokenColors[(Math.max(1, Number(index)) - 1) % referenceTokenColors.length];
+    }
+
+    function generatorReferenceItems(node) {
+      const limit = node.type === "video" && node.videoMode === "firstLast" ? 2 : 8;
+      return [
         ...getInputMediaList(node.id).flatMap((source) => normalizeReferences(source)),
         ...normalizeReferences(node)
-      ];
+      ].filter((item) => isRenderableImageUrl(item?.url)).slice(0, limit);
+    }
+
+    function renderPromptReferenceTokens(value, referenceCount) {
+      const text = String(value || "");
+      const tokenPattern = /(?:关联图|图)\s*([1-9]\d*)/g;
+      let cursor = 0;
+      let html = "";
+      let match;
+      while ((match = tokenPattern.exec(text))) {
+        html += escapeHtml(text.slice(cursor, match.index));
+        const index = Number(match[1]);
+        const token = escapeHtml(match[0]);
+        html += index <= referenceCount
+          ? `<span class="prompt-reference-token" style="--reference-color:${referenceTokenColor(index)}">${token}</span>`
+          : token;
+        cursor = match.index + match[0].length;
+      }
+      return html + escapeHtml(text.slice(cursor));
+    }
+
+    function renderGeneratorRefs(node) {
+      const refs = generatorReferenceItems(node);
       if (!refs.length) return "";
-      const limit = node.type === "video" && node.videoMode === "firstLast" ? 2 : 8;
-      return refs.slice(0, limit).map((item, index) => {
+      return refs.map((item, index) => {
         const label = node.type === "video" && node.videoMode === "firstLast"
           ? index === 0 ? "首帧" : "尾帧"
-          : index + 1;
+          : `图${index + 1}`;
         return `
-        <div class="thumb" title="${node.type === "video" && node.videoMode === "firstLast" ? label : `参考图 ${index + 1}`}">
+        <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" title="${node.type === "video" && node.videoMode === "firstLast" ? label : `参考图 ${index + 1}`}">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           <span class="thumb-index">${label}</span>
         </div>
@@ -6330,6 +6754,7 @@
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           <span class="thumb-index">${index + 1}</span>
           <button class="thumb-remove" data-remove-ref="${index}" type="button">×</button>
+          ${referenceOrderControls(index, ownRefs.length)}
         </div>
       `).join("");
       return linkedHtml || ownHtml ? `${linkedHtml}${ownHtml}` : "";
@@ -6339,15 +6764,49 @@
       const refs = normalizeReferences(node);
       const visibleRefs = refs.map((item, index) => ({ item, index })).filter(({ item }) => isRenderableImageUrl(item?.url));
       if (!visibleRefs.length) {
-        return `<div class="placeholder-art reference-empty-visual" role="button" tabindex="0" aria-label="点击上传参考图片"><span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><circle cx="9" cy="10" r="2" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>添加参考图片</strong><span>拖入或点击此处上传</span><small>自动转为 JPG，上传后可拖动调整顺序</small></div>`;
+        return `<div class="placeholder-art reference-empty-visual">
+          <div class="reference-empty-copy">
+            <strong>添加参考图片</strong>
+            <span>可按 Ctrl+V 粘贴，或直接拖入图片</span>
+            <small>点击空白区域不会打开文件夹，可拖动节点</small>
+          </div>
+          <button class="reference-upload-trigger" data-reference-upload-trigger type="button" aria-label="选择参考图片">
+            <span class="reference-upload-plus" aria-hidden="true">＋</span>
+            <small>上传图片</small>
+          </button>
+        </div>`;
       }
       return `<div class="upload-box">${visibleRefs.map(({ item, index }) => `
         <div class="thumb" draggable="true" data-ref-index="${index}" title="拖动调整顺序">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           <span class="thumb-index">${index + 1}</span>
           <button class="thumb-remove" data-remove-ref="${index}" type="button">×</button>
+          ${referenceOrderControls(index, visibleRefs.length)}
         </div>
-      `).join("")}</div>`;
+      `).join("")}
+        <button class="reference-add-thumb" data-reference-upload-trigger type="button" aria-label="继续添加参考图片" title="继续添加参考图片">
+          <span class="reference-upload-plus" aria-hidden="true">＋</span>
+        </button>
+      </div>`;
+    }
+
+    function referenceOrderControls(index, count) {
+      if (count < 2) return "";
+      return `<div class="thumb-order-controls">
+        <button class="thumb-order-button" data-ref-move="-1" data-ref-index="${index}" type="button" title="向前移动" aria-label="参考图向前移动" ${index === 0 ? "disabled" : ""}>←</button>
+        <button class="thumb-order-button" data-ref-move="1" data-ref-index="${index}" type="button" title="向后移动" aria-label="参考图向后移动" ${index === count - 1 ? "disabled" : ""}>→</button>
+      </div>`;
+    }
+
+    function bindReferenceOrderButtons(root, node) {
+      root.querySelectorAll("[data-ref-move]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const fromIndex = Number(button.dataset.refIndex);
+          reorderReference(node, fromIndex, fromIndex + Number(button.dataset.refMove));
+        });
+      });
     }
 
     function isImageFile(file) {
@@ -6463,6 +6922,7 @@
       const added = [];
       for (const url of limitedUrls) {
         const dimensions = await getImageDimensions(url);
+        if (!dimensions.width || !dimensions.height) continue;
         added.push({ url, mediaType: "image", name: `剪贴板参考图-${added.length + 1}`, ...dimensions });
       }
       existing.push(...added);
@@ -6655,9 +7115,9 @@
       if (!images.length && !htmlUrls.length && !plainUrls.length) return;
       event.preventDefault();
       pushHistory();
-      if (images.length) await addFilesToNode(node, images);
-      const urlCount = await addImageUrlsToNode(node, [...htmlUrls, ...plainUrls]);
-      const total = images.length + urlCount;
+      const fileCount = images.length ? await addFilesToNode(node, images) : 0;
+      const urlCount = images.length ? 0 : await addImageUrlsToNode(node, [...htmlUrls, ...plainUrls]);
+      const total = fileCount + urlCount;
       node.status = `已从剪贴板粘贴 ${total} 张参考图。`;
       selectedNodeId = node.id;
       activePasteNodeId = node.id;
@@ -6665,11 +7125,25 @@
       showToast("剪贴板图片已加入参考图");
     }
 
-    function resultMetaText(node) {
-      if (node.pending) return node.mediaType === "video" ? `生成中 · ${node.elapsed || 0}s` : `生成中 · ${node.elapsed || 0}s / ${generationTimeoutSeconds}s`;
-      if (node.width && node.height) return `尺寸 ${node.width} × ${node.height}px${node.transparent ? ` · 模型 ${node.model || "gpt-image-2"}` : ""}`;
-      if (node.mediaUrl) return `尺寸识别中`;
-      return `暂无图片尺寸`;
+    function resultElapsedSeconds(node) {
+      const direct = Number(node.totalSeconds) || Number(node.apiSeconds) || Number(node.elapsed);
+      if (direct > 0) return Math.round(direct);
+      const status = String(node.status || "");
+      const totalMatch = status.match(/(?:页面总用时|页面用时|总用时)\s*(\d+)\s*s/i);
+      if (totalMatch) return Number(totalMatch[1]);
+      const apiMatch = status.match(/(?:接口用时|用时)\s*(\d+)\s*s/i);
+      return apiMatch ? Number(apiMatch[1]) : 0;
+    }
+
+    function resultMetaHtml(node) {
+      const size = node.width && node.height
+        ? `尺寸 ${node.width} × ${node.height}px`
+        : node.mediaUrl ? "尺寸识别中" : "暂无尺寸";
+      const seconds = resultElapsedSeconds(node);
+      const elapsed = node.pending
+        ? `用时 ${Number(node.elapsed) || 0}秒`
+        : seconds ? `用时 ${seconds}秒` : "用时 --";
+      return `<span>${size}</span><span>${elapsed}</span>`;
     }
 
     function updateInlineReadouts(field, node) {
@@ -6712,44 +7186,55 @@
 
     function handlePortClick(nodeIdValue, port) {
       if (port === "out") {
+        if (linkingTo && linkingTo !== nodeIdValue) {
+          connectNodes(nodeIdValue, linkingTo);
+          linkingFrom = null;
+          linkingTo = null;
+          updatePendingPort();
+          drawLinks();
+          return;
+        }
         linkingFrom = nodeIdValue;
+        linkingTo = null;
         updatePendingPort();
         showToast("请选择目标节点的输入圆点");
         return;
       }
 
-      if (!linkingFrom || linkingFrom === nodeIdValue) return;
-      connectNodes(linkingFrom, nodeIdValue);
+      if (linkingFrom && linkingFrom !== nodeIdValue) {
+        connectNodes(linkingFrom, nodeIdValue);
+        linkingFrom = null;
+        linkingTo = null;
+        updatePendingPort();
+        drawLinks();
+        return;
+      }
+      if (linkingFrom === nodeIdValue) return;
+      const hadConnection = links.some((link) => link.to === nodeIdValue);
+      if (hadConnection) disconnectPortLinks(nodeIdValue, "in", { announce: false });
       linkingFrom = null;
+      linkingTo = nodeIdValue;
       updatePendingPort();
-      drawLinks();
+      showToast(hadConnection ? "输入端已断开，请选择新的输出圆点" : "请选择来源节点的输出圆点");
     }
 
-    function beginPortDrag(event, nodeIdValue) {
-      linkingFrom = nodeIdValue;
+    function beginPortDrag(event, nodeIdValue, port) {
       portDragState = {
-        from: nodeIdValue,
+        anchorNode: nodeIdValue,
+        anchorPort: port,
         startX: event.clientX,
         startY: event.clientY,
         currentX: event.clientX,
         currentY: event.clientY,
         snapTo: null,
-        moved: false
+        moved: false,
+        detached: false,
+        hadConnection: links.some((link) => port === "in" ? link.to === nodeIdValue : link.from === nodeIdValue)
       };
       document.body.classList.add("no-select");
       updatePendingPort();
       drawLinks();
-      showToast("拖到节点输入点连接，拖到空白处选择新建节点");
-    }
-
-    function finishPortDrag(nodeIdValue, port, event) {
-      if (!portDragState || port !== "in" || portDragState.from === nodeIdValue) return;
-      connectNodes(portDragState.from, nodeIdValue);
-      linkingFrom = null;
-      portDragState = null;
-      document.body.classList.remove("no-select");
-      updatePendingPort();
-      drawLinks();
+      showToast(port === "out" ? "拖到任意输入点连接" : "拖到任意输出点连接");
     }
 
     function connectNodes(from, to) {
@@ -6794,14 +7279,50 @@
       if (!exists) return;
       pushHistory();
       links = links.filter((link) => !(link.from === from && link.to === to));
+      refreshRenderedNode(to);
       drawLinks();
       scheduleCanvasSave();
       showToast("连线已断开");
     }
 
+    function disconnectInputLinks(targetId) {
+      return disconnectPortLinks(targetId, "in");
+    }
+
+    function disconnectPortLinks(nodeIdValue, port, options = {}) {
+      const removedLinks = links.filter((link) => port === "in" ? link.to === nodeIdValue : link.from === nodeIdValue);
+      if (!removedLinks.length) return 0;
+      pushHistory();
+      links = links.filter((link) => port === "in" ? link.to !== nodeIdValue : link.from !== nodeIdValue);
+      const affectedTargets = new Set(port === "in" ? [nodeIdValue] : removedLinks.map((link) => link.to));
+      affectedTargets.forEach((targetId) => refreshRenderedNode(targetId));
+      updatePendingPort();
+      drawLinks();
+      scheduleCanvasSave();
+      if (options.announce !== false) {
+        showToast(removedLinks.length > 1 ? `已断开 ${removedLinks.length} 条连线` : "连线已断开");
+      }
+      return removedLinks.length;
+    }
+
     function updatePendingPort() {
       canvas.querySelectorAll(".port.out").forEach((portEl) => {
-        portEl.classList.toggle("pending", portEl.closest(".node")?.dataset.id === linkingFrom);
+        const nodeIdValue = portEl.closest(".node")?.dataset.id;
+        const connected = links.some((link) => link.from === nodeIdValue);
+        portEl.classList.toggle("connected", connected);
+        const dragPending = portDragState?.anchorPort === "out" && portDragState.anchorNode === nodeIdValue;
+        portEl.classList.toggle("pending", nodeIdValue === linkingFrom || dragPending);
+        portEl.title = connected ? "双击或向外拖动以断开输出连线" : "输出；可从此端向输入点拖动连接";
+        portEl.setAttribute("aria-label", portEl.title);
+      });
+      canvas.querySelectorAll(".port.in").forEach((portEl) => {
+        const nodeIdValue = portEl.closest(".node")?.dataset.id;
+        const connected = links.some((link) => link.to === nodeIdValue);
+        portEl.classList.toggle("connected", connected);
+        const dragPending = portDragState?.anchorPort === "in" && portDragState.anchorNode === nodeIdValue;
+        portEl.classList.toggle("pending", nodeIdValue === linkingTo || dragPending);
+        portEl.title = connected ? "单击、双击或向外拖动以断开输入连线" : "输入；可从此端向输出点拖动连接";
+        portEl.setAttribute("aria-label", portEl.title);
       });
     }
 
@@ -6933,9 +7454,12 @@
         clearTemporaryLink();
         return;
       }
-      const from = getPortCenterFast(portDragState.from, "out", metricCache);
-      const snap = portDragState.snapTo ? getPortCenterFast(portDragState.snapTo, "in", metricCache) : null;
-      const to = snap || screenToWorld(portDragState.currentX || portDragState.startX, portDragState.currentY || portDragState.startY);
+      const pointer = screenToWorld(portDragState.currentX || portDragState.startX, portDragState.currentY || portDragState.startY);
+      const anchor = getPortCenterFast(portDragState.anchorNode, portDragState.anchorPort, metricCache);
+      const snapPort = portDragState.anchorPort === "out" ? "in" : "out";
+      const snap = portDragState.snapTo ? getPortCenterFast(portDragState.snapTo, snapPort, metricCache) : null;
+      const from = portDragState.anchorPort === "out" ? anchor : (snap || pointer);
+      const to = portDragState.anchorPort === "out" ? (snap || pointer) : anchor;
       if (!from || !to) return;
       if (!temporaryLinkElement) {
         temporaryLinkElement = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -6976,12 +7500,12 @@
       };
     }
 
-    function nearestInputNode(clientX, clientY, fromId, maxDistance = 56) {
+    function nearestPortNode(clientX, clientY, port, excludedId, maxDistance = 56) {
       let nearest = null;
       let nearestDistance = maxDistance;
       nodes.forEach((node) => {
-        if (node.id === fromId) return;
-        const center = getPortCenter(node.id, "in");
+        if (node.id === excludedId) return;
+        const center = getPortCenter(node.id, port);
         if (!center) return;
         const screen = worldToScreen(center);
         const distance = Math.hypot(clientX - screen.x, clientY - screen.y);
@@ -6991,6 +7515,10 @@
         }
       });
       return nearest;
+    }
+
+    function nearestInputNode(clientX, clientY, fromId, maxDistance = 56) {
+      return nearestPortNode(clientX, clientY, "in", fromId, maxDistance);
     }
 
     function updateSnapPreview(fromId, toId) {
@@ -7032,6 +7560,7 @@
       if (nodeEl) nodeEl.classList.add("dragging");
       document.body.classList.add("no-select");
       linkingFrom = null;
+      linkingTo = null;
       portDragState = null;
       clearTemporaryLink();
       updatePendingPort();
@@ -7099,8 +7628,15 @@
         portDragState.currentX = event.clientX;
         portDragState.currentY = event.clientY;
         portDragState.moved = portDragState.moved || Math.hypot(dx, dy) > 8;
-        portDragState.snapTo = nearestInputNode(event.clientX, event.clientY, portDragState.from);
-        updateSnapPreview(portDragState.from, portDragState.snapTo);
+        if (portDragState.moved && !portDragState.detached) {
+          linkingFrom = null;
+          linkingTo = null;
+          disconnectPortLinks(portDragState.anchorNode, portDragState.anchorPort, { announce: false });
+          portDragState.detached = true;
+        }
+        const targetPort = portDragState.anchorPort === "out" ? "in" : "out";
+        portDragState.snapTo = nearestPortNode(event.clientX, event.clientY, targetPort, portDragState.anchorNode);
+        updateSnapPreview(portDragState.anchorNode, portDragState.snapTo);
         scheduleDrawLinks();
       }
       if (!dragState) return;
@@ -7146,14 +7682,23 @@
         if (nodeEl) nodeEl.classList.remove("dragging");
       }
       if (portDragState) {
-        const targetPort = event.target.closest?.(".port.in");
-        const snapTo = portDragState.snapTo || nearestInputNode(event.clientX, event.clientY, portDragState.from);
+        const dragSnapshot = { ...portDragState };
+        const targetPortName = dragSnapshot.anchorPort === "out" ? "in" : "out";
+        const targetPort = event.target.closest?.(`.port.${targetPortName}`);
+        const snapTo = dragSnapshot.snapTo || nearestPortNode(event.clientX, event.clientY, targetPortName, dragSnapshot.anchorNode);
         if (snapTo) {
-          connectWithSnapFeedback(portDragState.from, snapTo);
-        } else if (!targetPort && portDragState.moved) {
-          openLinkCreateMenu(event, portDragState.from);
+          const from = dragSnapshot.anchorPort === "out" ? dragSnapshot.anchorNode : snapTo;
+          const to = dragSnapshot.anchorPort === "out" ? snapTo : dragSnapshot.anchorNode;
+          connectWithSnapFeedback(from, to);
+        } else if (!targetPort && dragSnapshot.moved && dragSnapshot.anchorPort === "out" && !dragSnapshot.hadConnection) {
+          openLinkCreateMenu(event, dragSnapshot.anchorNode);
+        } else if (dragSnapshot.moved && dragSnapshot.detached) {
+          showToast("连线已拉开");
         }
-        linkingFrom = null;
+        if (dragSnapshot.moved) {
+          linkingFrom = null;
+          linkingTo = null;
+        }
         portDragState = null;
         clearTemporaryLink();
         updatePendingPort();
@@ -7685,7 +8230,7 @@
           ratio: node.ratio,
           width: parsed.width,
           height: parsed.height,
-          frameWidth: isLandscapeResult ? 600 : undefined,
+          frameWidth: isLandscapeResult ? 360 : 240,
           model: node.model,
           mediaType: node.type === "video" ? "video" : node.type === "keyword" ? "text" : "image",
           transparent: node.type === "png",
@@ -7744,8 +8289,8 @@
     function resultGridPositioner(node, count, parsed = { width: 1024, height: 1024 }) {
       const columns = count === 4 ? 2 : count >= 5 ? 3 : count;
       const isLandscape = parsed.width > parsed.height;
-      const resultWidth = isLandscape ? 600 : 300;
-      const resultHeight = isLandscape ? Math.max(280, Math.round(resultWidth * parsed.height / Math.max(1, parsed.width)) + 150) : 440;
+      const resultWidth = isLandscape ? 360 : 240;
+      const resultHeight = isLandscape ? Math.max(220, Math.round(resultWidth * parsed.height / Math.max(1, parsed.width)) + 130) : 370;
       const gapX = resultWidth + 40;
       const gapY = resultHeight + 40;
       const startX = node.x + nodeWidth(node) + 110;
@@ -7833,6 +8378,7 @@
           pending.height = parsed.height;
           pending.references = [{ url, mediaType: "image", width: parsed.width, height: parsed.height, name: pending.title || "透明PNG效果图" }];
           const totalSeconds = Math.max(1, Math.round((Date.now() - totalStartedAt) / 1000));
+          pending.totalSeconds = totalSeconds;
           pending.status = apiSeconds
             ? `透明 PNG 已生成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。`
             : "透明 PNG 已从原图抠出，未重新绘制主体，可放大预览、收藏和下载。";
@@ -7901,6 +8447,7 @@
           ? [{ url, mediaType: "image", width: parsed.width, height: parsed.height, name: pending.title || "效果图" }]
           : [];
         const totalSeconds = Math.max(1, Math.round((Date.now() - totalStartedAt) / 1000));
+        pending.totalSeconds = totalSeconds;
         pending.status = sourceNode.type === "png"
           ? (apiResult.fromApi ? "透明 PNG 已生成，可放大预览、收藏和下载。" : "透明 PNG 演示图已生成，可下载测试。")
           : apiResult.fromApi ? `接口生成完成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。` : "演示生成完成，可下载。";
@@ -7939,14 +8486,16 @@
 
     function updatePendingElapsed(id, seconds, overrideText = "") {
       const el = canvas.querySelector(`[data-id="${id}"] [data-elapsed]`);
+      const node = nodes.find((item) => item.id === id);
       if (el) {
         if (overrideText) {
           el.textContent = overrideText;
-          return;
+        } else {
+          el.textContent = node?.mediaType === "video" ? `已等待 ${seconds}s` : `已等待 ${seconds}s，最多 ${generationTimeoutSeconds}s`;
         }
-        const node = nodes.find((item) => item.id === id);
-        el.textContent = node?.mediaType === "video" ? `已等待 ${seconds}s` : `已等待 ${seconds}s，最多 ${generationTimeoutSeconds}s`;
       }
+      const meta = canvas.querySelector(`[data-id="${id}"] [data-meta]`);
+      if (meta && node) meta.innerHTML = resultMetaHtml(node);
     }
 
     function nodeWidth(node) {
@@ -7957,6 +8506,7 @@
       if (node.type === "png") return 420;
       if (node.type === "upscale") return 430;
       if (node.type === "selection") return 760;
+      if (node.type === "result") return 240;
       return 300;
     }
 
@@ -10364,16 +10914,24 @@ ${formatInstruction}`;
       };
     }
 
-    function writeCanvasStateToLocalStorage(state) {
+    function writeCanvasStateToLocalStorage(state, storageKeys = {}) {
       const serialized = JSON.stringify(compactStateForLocalStorage(state));
-      localStorage.setItem(projectCanvasStorageKey(), serialized);
-      localStorage.setItem(folderCanvasStorageKey(), serialized);
+      localStorage.setItem(storageKeys.projectKey || projectCanvasStorageKey(), serialized);
+      localStorage.setItem(storageKeys.folderKey || folderCanvasStorageKey(), serialized);
     }
 
-    async function writeCanvasStateBackup(state) {
+    async function writeCanvasStateBackup(state, storageKeys = {}) {
       const db = await openLocalMediaDb();
       if (!db) return false;
-      const records = [projectCanvasStorageKey(), folderCanvasStorageKey()].map((id) => ({ id, state, savedAt: Date.now() }));
+      const savedAt = Number(state.savedAt) || Date.now();
+      const projectKey = storageKeys.projectKey || projectCanvasStorageKey();
+      const folderKey = storageKeys.folderKey || folderCanvasStorageKey();
+      const records = [
+        projectKey,
+        folderKey,
+        `${projectKey}:${canvasSessionId}`,
+        `${folderKey}:${canvasSessionId}`
+      ].map((id) => ({ id, state, savedAt }));
       return new Promise((resolve) => {
         const tx = db.transaction(canvasStateStoreName, "readwrite");
         records.forEach((record) => tx.objectStore(canvasStateStoreName).put(record));
@@ -10386,16 +10944,16 @@ ${formatInstruction}`;
     async function readCanvasStateBackup() {
       const db = await openLocalMediaDb();
       if (!db) return null;
-      for (const id of [projectCanvasStorageKey(), folderCanvasStorageKey()]) {
-        const record = await new Promise((resolve) => {
-          const tx = db.transaction(canvasStateStoreName, "readonly");
-          const request = tx.objectStore(canvasStateStoreName).get(id);
-          request.onsuccess = () => resolve(request.result || null);
-          request.onerror = () => resolve(null);
-        });
-        if (record?.state) return record.state;
-      }
-      return null;
+      const prefixes = [projectCanvasStorageKey(), folderCanvasStorageKey()];
+      const records = await new Promise((resolve) => {
+        const tx = db.transaction(canvasStateStoreName, "readonly");
+        const request = tx.objectStore(canvasStateStoreName).getAll();
+        request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+        request.onerror = () => resolve([]);
+      });
+      return records
+        .filter((record) => record?.state && prefixes.some((prefix) => record.id === prefix || record.id.startsWith(`${prefix}:session-`)))
+        .sort((a, b) => Number(b.savedAt || b.state?.savedAt) - Number(a.savedAt || a.state?.savedAt))[0]?.state || null;
     }
 
     function warnCanvasStorageSkipped(error) {
@@ -10408,34 +10966,64 @@ ${formatInstruction}`;
       }, 5000);
     }
 
-    async function saveCanvasStateNow() {
+    function createCanvasStateSnapshot() {
+      removeDeprecatedSelectionNodes();
+      pruneBrokenLinks();
+      const cleanNodes = nodesWithoutRemovedTypes().map((node) => ({
+        ...node,
+        references: cloneReferences(node.references)
+      }));
+      const cleanIds = new Set(cleanNodes.map((node) => node.id));
+      return {
+        savedAt: Date.now(),
+        nodes: cleanNodes,
+        links: links.filter((link) => cleanIds.has(link.from) && cleanIds.has(link.to)).map((link) => ({ ...link })),
+        nodeId,
+        view: { ...view },
+        theme: document.body.classList.contains("dark-theme") ? "dark" : "light",
+        collapsed: document.querySelector(".app").classList.contains("sidebar-collapsed")
+      };
+    }
+
+    function createCanvasSaveContext() {
+      const projectId = activeProjectId;
+      return {
+        projectId,
+        projectKey: projectCanvasStorageKey(projectId),
+        folderKey: folderCanvasStorageKey(),
+        state: createCanvasStateSnapshot()
+      };
+    }
+
+    function saveCanvasStateImmediate(context = createCanvasSaveContext()) {
+      try {
+        writeCanvasStateToLocalStorage(context.state, context);
+        return true;
+      } catch (storageError) {
+        warnCanvasStorageSkipped(storageError);
+        return false;
+      }
+    }
+
+    async function saveCanvasStateNow(context) {
       try {
         clearTimeout(saveTimer);
-        removeDeprecatedSelectionNodes();
-        pruneBrokenLinks();
-        const cleanNodes = nodesWithoutRemovedTypes();
-        const cleanIds = new Set(cleanNodes.map((node) => node.id));
-        const storedNodes = await Promise.all(cleanNodes.map(serializeNodeForStorage));
-        const activeProject = projects.find((project) => project.id === activeProjectId);
+        const storedNodes = await Promise.all(context.state.nodes.map(serializeNodeForStorage));
+        const activeProject = projects.find((project) => project.id === context.projectId);
         if (activeProject) {
-          activeProject.updatedAt = Date.now();
-          activeProject.nodeCount = cleanNodes.length;
+          activeProject.updatedAt = context.state.savedAt;
+          activeProject.nodeCount = context.state.nodes.length;
         }
         const storedState = {
-          savedAt: Date.now(),
-          nodes: storedNodes,
-          links: links.filter((link) => cleanIds.has(link.from) && cleanIds.has(link.to)),
-          nodeId,
-          view,
-          theme: document.body.classList.contains("dark-theme") ? "dark" : "light",
-          collapsed: document.querySelector(".app").classList.contains("sidebar-collapsed")
+          ...context.state,
+          nodes: storedNodes
         };
         try {
-          writeCanvasStateToLocalStorage(storedState);
+          writeCanvasStateToLocalStorage(storedState, context);
         } catch (storageError) {
           warnCanvasStorageSkipped(storageError);
         }
-        await writeCanvasStateBackup(storedState);
+        await writeCanvasStateBackup(storedState, context);
         if (activeProject) saveProjects();
       } catch (error) {
         console.warn("Canvas save skipped", error);
@@ -10444,9 +11032,13 @@ ${formatInstruction}`;
     }
 
     function saveCanvasState() {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      const context = createCanvasSaveContext();
+      saveCanvasStateImmediate(context);
       canvasSaveQueue = canvasSaveQueue
         .catch((error) => console.warn("Previous canvas save failed", error))
-        .then(saveCanvasStateNow);
+        .then(() => saveCanvasStateNow(context));
       return canvasSaveQueue;
     }
 
@@ -10462,6 +11054,7 @@ ${formatInstruction}`;
     });
 
     window.addEventListener("pagehide", () => {
+      saveCanvasStateImmediate();
       saveCanvasState();
     });
 
@@ -10536,6 +11129,30 @@ ${formatInstruction}`;
       }
     }
 
+    function mergeCanvasRecoveryState(compactState, backupState) {
+      if (!compactState) return backupState;
+      if (!backupState) return compactState;
+      const compactSavedAt = Number(compactState.savedAt) || 0;
+      const backupSavedAt = Number(backupState.savedAt) || 0;
+      if (backupSavedAt >= compactSavedAt) return backupState;
+      const backupNodes = new Map((backupState.nodes || []).map((node) => [node.id, node]));
+      return {
+        ...compactState,
+        nodes: (compactState.nodes || []).map((node) => {
+          const backupNode = backupNodes.get(node.id);
+          if (!backupNode) return node;
+          const merged = { ...node };
+          for (const key of ["mediaUrl", "previewUrl", "fullUrl", "mediaSourceUrl", "previewSourceUrl", "fullSourceUrl"]) {
+            if (!merged[key] && backupNode[key]) merged[key] = backupNode[key];
+          }
+          if ((backupNode.references?.length || 0) > (merged.references?.length || 0)) {
+            merged.references = cloneReferences(backupNode.references);
+          }
+          return merged;
+        })
+      };
+    }
+
     async function loadCanvasState() {
       try {
         const raw = localStorage.getItem(projectCanvasStorageKey())
@@ -10543,9 +11160,7 @@ ${formatInstruction}`;
         let compactState = null;
         try { compactState = raw ? JSON.parse(raw) : null; } catch (error) { console.warn("Compact canvas state is invalid", error); }
         const backupState = await readCanvasStateBackup();
-        const compactSavedAt = Number(compactState?.savedAt) || 0;
-        const backupSavedAt = Number(backupState?.savedAt) || 0;
-        const state = backupState && backupSavedAt >= compactSavedAt ? backupState : compactState;
+        const state = mergeCanvasRecoveryState(compactState, backupState);
         if (!state || !Array.isArray(state.nodes)) return false;
         isRestoring = true;
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
@@ -11283,8 +11898,9 @@ ${formatInstruction}`;
       const active = document.activeElement;
       const isTyping = active && active.closest?.("input, textarea, select");
       if (isTyping || lightbox.classList.contains("open")) return;
-      if (event.key === "Escape" && (portDragState || temporaryLinkElement)) {
+      if (event.key === "Escape" && (linkingFrom || linkingTo || portDragState || temporaryLinkElement)) {
         linkingFrom = null;
+        linkingTo = null;
         portDragState = null;
         clearSnapPreview();
         clearTemporaryLink();
