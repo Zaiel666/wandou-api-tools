@@ -4433,6 +4433,12 @@
     const linkElements = new Map();
     let temporaryLinkElement = null;
     let isRestoring = false;
+    let canvasRecoveryBlocked = false;
+    let startupRecoveredProjectName = "";
+    let intentionalResetAt = 0;
+    const lastDesktopBackupAt = new Map();
+    const pendingDesktopBackupTimers = new Map();
+    const pendingDesktopBackupContexts = new Map();
     let historyStack = [];
     let redoStack = [];
     let isApplyingHistory = false;
@@ -4856,6 +4862,66 @@
       return { id: `project-${now}`, name: "项目01", color: "#76b900", createdAt: now, updatedAt: now, favorite: false };
     }
 
+    function parseProjectCanvasState(projectId) {
+      try {
+        const raw = localStorage.getItem(projectCanvasStorageKey(projectId));
+        return raw ? JSON.parse(raw) : null;
+      } catch (error) {
+        console.warn("Project canvas state is invalid", projectId, error);
+        return null;
+      }
+    }
+
+    function canvasStateHasMedia(state) {
+      return (state?.nodes || []).some((node) =>
+        Boolean(node?.mediaUrl || node?.previewUrl || node?.fullUrl || node?.mediaSourceUrl || node?.previewSourceUrl || node?.fullSourceUrl)
+        || (Array.isArray(node?.references) && node.references.some((item) => item?.url))
+      );
+    }
+
+    function canvasStateHasGeneratedContent(state) {
+      return (state?.nodes || []).some((node) =>
+        node?.type === "result"
+        && (Number(node.elapsed) > 0 || Number(node.width) > 0 || Number(node.height) > 0 || String(node.status || "").trim())
+      );
+    }
+
+    function isSeedCanvasState(state) {
+      if (!state || !Array.isArray(state.nodes) || state.nodes.length !== 3) return false;
+      const types = state.nodes.map((node) => node?.type).sort().join(",");
+      if (types !== "generator,image,result" || (state.links || []).length !== 2 || canvasStateHasMedia(state) || canvasStateHasGeneratedContent(state)) return false;
+      return state.nodes.every((node) => {
+        const prompt = String(node?.prompt || "").trim();
+        return !prompt || (node.type === "generator" && prompt === defaultPrompt);
+      });
+    }
+
+    function isMeaningfulCanvasState(state) {
+      return Boolean(state && Array.isArray(state.nodes) && state.nodes.length && !isSeedCanvasState(state));
+    }
+
+    function recoverStaleActiveProjectSelection() {
+      const activeProject = projects.find((project) => project.id === activeProjectId);
+      const activeState = parseProjectCanvasState(activeProjectId);
+      if (!activeProject || !isSeedCanvasState(activeState) || Number(activeState?.intentionalResetAt) > 0) return false;
+      const activeSavedAt = Number(activeState.savedAt || activeProject.updatedAt || activeProject.createdAt || 0);
+      const candidates = projects
+        .filter((project) => project.id !== activeProjectId)
+        .map((project) => ({ project, state: parseProjectCanvasState(project.id) }))
+        .filter(({ project, state }) =>
+          isMeaningfulCanvasState(state)
+          && Number(state.savedAt || project.updatedAt || 0) > activeSavedAt + 250
+        )
+        .sort((left, right) =>
+          Number(right.state.savedAt || right.project.updatedAt || 0)
+          - Number(left.state.savedAt || left.project.updatedAt || 0)
+        );
+      if (!candidates.length) return false;
+      activeProjectId = candidates[0].project.id;
+      startupRecoveredProjectName = candidates[0].project.name || "上次项目";
+      return true;
+    }
+
     function loadProjects() {
       try {
         projects = JSON.parse(localStorage.getItem(projectListStorageKey) || "[]");
@@ -4872,6 +4938,7 @@
       });
       activeProjectId = localStorage.getItem(activeProjectStorageKey) || projects[0].id;
       if (!projects.some((project) => project.id === activeProjectId)) activeProjectId = projects[0].id;
+      recoverStaleActiveProjectSelection();
       saveProjects();
       renderProjects();
     }
@@ -5028,9 +5095,9 @@
       selectedNodeId = null;
       historyStack = [];
       redoStack = [];
-      if (!(await loadCanvasState())) seedCanvas();
+      await restoreOrSeedCanvas();
       renderProjects();
-      showToast("已切换项目");
+      if (!canvasRecoveryBlocked) showToast("已切换项目");
     }
 
     async function deleteProject(projectId) {
@@ -5050,7 +5117,7 @@
         selectedNodeId = null;
         historyStack = [];
         redoStack = [];
-        if (!(await loadCanvasState())) seedCanvas();
+        await restoreOrSeedCanvas();
       }
       saveProjects();
       renderProjects();
@@ -5075,6 +5142,8 @@
       };
       projects.push(project);
       activeProjectId = project.id;
+      canvasRecoveryBlocked = false;
+      intentionalResetAt = 0;
       saveProjects();
       nodes = [];
       links = [];
@@ -10822,10 +10891,13 @@ ${formatInstruction}`;
 
     function clearCanvas() {
       pushHistory();
+      writeDesktopCanvasBackup(createCanvasSaveContext(), true);
       localStorage.removeItem(projectCanvasStorageKey());
       nodes = [];
       links = [];
       nodeId = 1;
+      canvasRecoveryBlocked = false;
+      intentionalResetAt = Date.now();
       seedCanvas();
       showToast("画布已重置");
     }
@@ -10854,7 +10926,7 @@ ${formatInstruction}`;
     }
 
     function scheduleCanvasSave(delay = canvasSaveDelayMs) {
-      if (isRestoring) return;
+      if (isRestoring || canvasRecoveryBlocked) return;
       clearTimeout(saveTimer);
       saveTimer = setTimeout(saveCanvasState, delay);
     }
@@ -10864,6 +10936,17 @@ ${formatInstruction}`;
       if (openLocalMediaDb.promise) return openLocalMediaDb.promise;
       openLocalMediaDb.promise = new Promise((resolve) => {
         const request = indexedDB.open(localMediaDbName, 2);
+        let settled = false;
+        const finish = (value) => {
+          if (settled) {
+            if (value?.close) value.close();
+            return;
+          }
+          settled = true;
+          clearTimeout(timeout);
+          resolve(value);
+        };
+        const timeout = setTimeout(() => finish(null), 3500);
         request.onupgradeneeded = () => {
           if (!request.result.objectStoreNames.contains(localMediaStoreName)) {
             request.result.createObjectStore(localMediaStoreName, { keyPath: "id" });
@@ -10872,8 +10955,9 @@ ${formatInstruction}`;
             request.result.createObjectStore(canvasStateStoreName, { keyPath: "id" });
           }
         };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => resolve(null);
+        request.onsuccess = () => finish(request.result);
+        request.onerror = () => finish(null);
+        request.onblocked = () => finish(null);
       });
       return openLocalMediaDb.promise;
     }
@@ -10985,15 +11069,23 @@ ${formatInstruction}`;
     async function readCanvasStateBackup() {
       const db = await openLocalMediaDb();
       if (!db) return null;
-      const prefixes = [projectCanvasStorageKey(), folderCanvasStorageKey()];
+      const projectPrefix = projectCanvasStorageKey();
+      const folderPrefix = folderCanvasStorageKey();
       const records = await new Promise((resolve) => {
         const tx = db.transaction(canvasStateStoreName, "readonly");
         const request = tx.objectStore(canvasStateStoreName).getAll();
         request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
         request.onerror = () => resolve([]);
       });
-      return records
-        .filter((record) => record?.state && prefixes.some((prefix) => record.id === prefix || record.id.startsWith(`${prefix}:session-`)))
+      const projectRecords = records.filter((record) =>
+        record?.state && (record.id === projectPrefix || record.id.startsWith(`${projectPrefix}:session-`))
+      );
+      const candidates = projectRecords.length
+        ? projectRecords
+        : records.filter((record) =>
+          record?.state && (record.id === folderPrefix || record.id.startsWith(`${folderPrefix}:session-`))
+        );
+      return candidates
         .sort((a, b) => Number(b.savedAt || b.state?.savedAt) - Number(a.savedAt || a.state?.savedAt))[0]?.state || null;
     }
 
@@ -11022,7 +11114,8 @@ ${formatInstruction}`;
         nodeId,
         view: { ...view },
         theme: document.body.classList.contains("dark-theme") ? "dark" : "light",
-        collapsed: document.querySelector(".app").classList.contains("sidebar-collapsed")
+        collapsed: document.querySelector(".app").classList.contains("sidebar-collapsed"),
+        intentionalResetAt
       };
     }
 
@@ -11037,6 +11130,7 @@ ${formatInstruction}`;
     }
 
     function saveCanvasStateImmediate(context = createCanvasSaveContext()) {
+      if (canvasRecoveryBlocked) return false;
       try {
         writeCanvasStateToLocalStorage(context.state, context);
         return true;
@@ -11047,6 +11141,7 @@ ${formatInstruction}`;
     }
 
     async function saveCanvasStateNow(context) {
+      if (canvasRecoveryBlocked) return false;
       try {
         clearTimeout(saveTimer);
         const storedNodes = await Promise.all(context.state.nodes.map(serializeNodeForStorage));
@@ -11065,14 +11160,18 @@ ${formatInstruction}`;
           warnCanvasStorageSkipped(storageError);
         }
         await writeCanvasStateBackup(storedState, context);
+        queueDesktopCanvasBackup(context);
         if (activeProject) saveProjects();
+        return true;
       } catch (error) {
         console.warn("Canvas save skipped", error);
         warnCanvasStorageSkipped(error);
+        return false;
       }
     }
 
     function saveCanvasState() {
+      if (canvasRecoveryBlocked) return Promise.resolve(false);
       clearTimeout(saveTimer);
       saveTimer = null;
       const context = createCanvasSaveContext();
@@ -11083,11 +11182,58 @@ ${formatInstruction}`;
       return canvasSaveQueue;
     }
 
+    function verifyCanvasStateSaved(context) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(context.projectKey) || "null");
+        return Boolean(
+          saved
+          && Array.isArray(saved.nodes)
+          && saved.nodes.length === context.state.nodes.length
+          && Number(saved.savedAt) >= Number(context.state.savedAt)
+        );
+      } catch (error) {
+        return false;
+      }
+    }
+
     window.wandouSaveBeforeClose = async () => {
       clearTimeout(saveTimer);
       saveTimer = null;
-      await saveCanvasState();
-      return true;
+      const project = projects.find((item) => item.id === activeProjectId);
+      if (canvasRecoveryBlocked) {
+        return {
+          success: false,
+          supported: true,
+          projectId: activeProjectId,
+          projectName: project?.name || "当前项目",
+          error: "历史记录读取异常，程序已停止覆盖原数据"
+        };
+      }
+      await canvasSaveQueue.catch(() => false);
+      const context = createCanvasSaveContext();
+      const immediateSaved = saveCanvasStateImmediate(context);
+      const durableSaved = await saveCanvasStateNow(context);
+      const desktopBackupRequired = Boolean(window.wandouShell?.writeCanvasBackup);
+      const desktopBackup = desktopBackupRequired
+        ? await writeDesktopCanvasBackup(context, true)
+        : null;
+      const localVerified = verifyCanvasStateSaved(context);
+      const success = Boolean(
+        immediateSaved
+        && durableSaved
+        && localVerified
+        && (!desktopBackupRequired || desktopBackup?.success)
+      );
+      return {
+        success,
+        supported: true,
+        projectId: context.projectId,
+        projectName: project?.name || "当前项目",
+        nodeCount: context.state.nodes.length,
+        savedAt: context.state.savedAt,
+        backupPath: desktopBackup?.path || "",
+        error: success ? "" : "节点工作流未能通过保存校验"
+      };
     };
 
     document.addEventListener("visibilitychange", () => {
@@ -11194,16 +11340,93 @@ ${formatInstruction}`;
       };
     }
 
+    function canvasStateSavedAt(state) {
+      return Number(state?.savedAt) || 0;
+    }
+
+    function chooseCanvasRecoveryState(states) {
+      const validStates = states
+        .filter((state) => state && Array.isArray(state.nodes) && state.nodes.length)
+        .sort((left, right) => canvasStateSavedAt(right) - canvasStateSavedAt(left));
+      if (!validStates.length) return null;
+      const latest = validStates[0];
+      const latestMeaningful = validStates.find(isMeaningfulCanvasState);
+      const resetAt = Number(latest.intentionalResetAt) || 0;
+      if (isSeedCanvasState(latest) && !resetAt && latestMeaningful) return latestMeaningful;
+      if (resetAt && latestMeaningful && resetAt < canvasStateSavedAt(latestMeaningful)) return latestMeaningful;
+      return latest;
+    }
+
+    async function readDesktopCanvasBackups(projectId = activeProjectId) {
+      if (!window.wandouShell?.readCanvasBackups) return [];
+      try {
+        const result = await window.wandouShell.readCanvasBackups({
+          folderId: currentFolderId,
+          projectId
+        });
+        return result?.success && Array.isArray(result.states) ? result.states : [];
+      } catch (error) {
+        console.warn("Desktop canvas backups could not be read", error);
+        return [];
+      }
+    }
+
+    async function writeDesktopCanvasBackup(context, force = false) {
+      if (!window.wandouShell?.writeCanvasBackup || !context?.state || canvasRecoveryBlocked) return false;
+      const now = Date.now();
+      const projectId = context.projectId || "default";
+      const previousBackupAt = lastDesktopBackupAt.get(projectId) || 0;
+      if (force && pendingDesktopBackupTimers.has(projectId)) {
+        clearTimeout(pendingDesktopBackupTimers.get(projectId));
+        pendingDesktopBackupTimers.delete(projectId);
+        pendingDesktopBackupContexts.delete(projectId);
+      }
+      if (!force && now - previousBackupAt < 10000) {
+        pendingDesktopBackupContexts.set(projectId, context);
+        if (!pendingDesktopBackupTimers.has(projectId)) {
+          const timer = setTimeout(() => {
+            pendingDesktopBackupTimers.delete(projectId);
+            const latestContext = pendingDesktopBackupContexts.get(projectId);
+            pendingDesktopBackupContexts.delete(projectId);
+            writeDesktopCanvasBackup(latestContext, true);
+          }, Math.max(250, 10000 - (now - previousBackupAt)));
+          pendingDesktopBackupTimers.set(projectId, timer);
+        }
+        return false;
+      }
+      try {
+        const result = await window.wandouShell.writeCanvasBackup({
+          folderId: currentFolderId,
+          projectId: context.projectId,
+          state: context.state
+        });
+        if (result?.success) lastDesktopBackupAt.set(projectId, Date.now());
+        return result?.success ? result : false;
+      } catch (error) {
+        console.warn("Desktop canvas backup could not be written", error);
+        return false;
+      }
+    }
+
+    function queueDesktopCanvasBackup(context) {
+      writeDesktopCanvasBackup(context);
+    }
+
     async function loadCanvasState() {
+      isRestoring = true;
       try {
         const raw = localStorage.getItem(projectCanvasStorageKey())
           || (activeProjectId === projects[0]?.id ? (localStorage.getItem(folderCanvasStorageKey()) || localStorage.getItem(canvasStorageKey)) : "");
         let compactState = null;
         try { compactState = raw ? JSON.parse(raw) : null; } catch (error) { console.warn("Compact canvas state is invalid", error); }
         const backupState = await readCanvasStateBackup();
-        const state = mergeCanvasRecoveryState(compactState, backupState);
-        if (!state || !Array.isArray(state.nodes)) return false;
-        isRestoring = true;
+        const desktopStates = await readDesktopCanvasBackups();
+        const localState = mergeCanvasRecoveryState(compactState, backupState);
+        const state = chooseCanvasRecoveryState([localState, compactState, backupState, ...desktopStates]);
+        if (!state || !Array.isArray(state.nodes) || !state.nodes.length) {
+          isRestoring = false;
+          return false;
+        }
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
         removeDeprecatedSelectionNodes();
         await Promise.all(nodes.map(cleanLoadedNode));
@@ -11211,18 +11434,51 @@ ${formatInstruction}`;
         pruneBrokenLinks();
         nodeId = Number(state.nodeId) || 1;
         view = state.view || view;
+        intentionalResetAt = Number(state.intentionalResetAt) || 0;
         document.body.classList.toggle("dark-theme", readGlobalTheme() === "dark");
         document.querySelector(".app").classList.toggle("sidebar-collapsed", Boolean(state.collapsed));
       updateThemeLabel();
       render();
       syncDeletedResultsWithCanvas();
       isRestoring = false;
+        canvasRecoveryBlocked = false;
+        if (desktopStates.includes(state) && state !== localState) {
+          showToast("已从安全备份恢复画布");
+        }
         return nodes.length > 0;
       } catch (error) {
         console.warn("Canvas restore failed; local records were preserved", error);
         isRestoring = false;
+        canvasRecoveryBlocked = true;
         return false;
       }
+    }
+
+    function projectHasStoredCanvasEvidence(projectId = activeProjectId) {
+      const project = projects.find((item) => item.id === projectId);
+      return Boolean(
+        localStorage.getItem(projectCanvasStorageKey(projectId))
+        || Number(project?.nodeCount) > 0
+        || Number(project?.updatedAt || 0) > Number(project?.createdAt || 0) + 2000
+      );
+    }
+
+    async function restoreOrSeedCanvas() {
+      canvasRecoveryBlocked = false;
+      const hadStoredCanvas = projectHasStoredCanvasEvidence();
+      if (await loadCanvasState()) return true;
+      if (hadStoredCanvas) {
+        canvasRecoveryBlocked = true;
+        nodes = [];
+        links = [];
+        nodeId = 1;
+        render();
+        showToast("历史记录读取失败，已停止覆盖并保留原数据");
+        return false;
+      }
+      intentionalResetAt = 0;
+      seedCanvas();
+      return true;
     }
 
     function resultNodes(mode = galleryMode) {
@@ -11489,6 +11745,9 @@ ${formatInstruction}`;
     }
 
     function seedCanvas() {
+      canvasRecoveryBlocked = false;
+      const wasRestoring = isRestoring;
+      isRestoring = true;
       const image = createNode("image", 70, 130, {
         status: ""
       });
@@ -11498,6 +11757,7 @@ ${formatInstruction}`;
         status: ""
       });
       links.push({ from: image.id, to: generator.id }, { from: generator.id, to: result.id });
+      isRestoring = wasRestoring;
       render();
     }
 
@@ -11984,8 +12244,11 @@ ${formatInstruction}`;
       updateProjectHubPinState();
       updateCurrentFolderName();
       applyGlobalTheme(readGlobalTheme());
-      if (!(await loadCanvasState())) seedCanvas();
+      await restoreOrSeedCanvas();
       renderProjects();
+      if (startupRecoveredProjectName) {
+        showToast(`已恢复到 ${startupRecoveredProjectName}`);
+      }
 
     })();
   </script>

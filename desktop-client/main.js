@@ -75,6 +75,90 @@ function uniqueOutputPath(directory, filename) {
   return candidate;
 }
 
+function safeCanvasBackupId(value, fallback) {
+  const cleaned = String(value || "").replace(/[^0-9A-Za-z_-]/g, "_").slice(0, 100);
+  return cleaned || fallback;
+}
+
+function canvasBackupRootDirectory() {
+  return path.join(app.getPath("userData"), "canvas-backups");
+}
+
+function canvasBackupDirectory(folderId, projectId) {
+  return path.join(
+    canvasBackupRootDirectory(),
+    safeCanvasBackupId(folderId, "default-folder"),
+    safeCanvasBackupId(projectId, "default-project")
+  );
+}
+
+async function writeCanvasBackup(payload = {}) {
+  const state = payload.state;
+  if (!state || !Array.isArray(state.nodes)) return { success: false, error: "Invalid canvas state" };
+  const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
+  const projectId = safeCanvasBackupId(payload.projectId, "default-project");
+  const savedAt = Number(state.savedAt) || Date.now();
+  const envelope = {
+    format: "wandou-canvas-backup",
+    version: 1,
+    folderId,
+    projectId,
+    savedAt,
+    state
+  };
+  const serialized = JSON.stringify(envelope);
+  if (Buffer.byteLength(serialized, "utf8") > 160 * 1024 * 1024) {
+    return { success: false, error: "Canvas backup is larger than 160 MB" };
+  }
+  try {
+    const directory = canvasBackupDirectory(folderId, projectId);
+    await fs.promises.mkdir(directory, { recursive: true });
+    const suffix = crypto.randomBytes(4).toString("hex");
+    const destination = path.join(directory, `${savedAt}-${suffix}.json`);
+    const temporary = `${destination}.tmp`;
+    await fs.promises.writeFile(temporary, serialized, "utf8");
+    await fs.promises.rename(temporary, destination);
+    const snapshots = (await fs.promises.readdir(directory, { withFileTypes: true }))
+      .filter((entry) => entry.isFile() && /^\d+-[0-9a-f]+\.json$/i.test(entry.name))
+      .map((entry) => entry.name)
+      .sort((left, right) => Number(right.split("-")[0]) - Number(left.split("-")[0]));
+    await Promise.all(snapshots.slice(12).map((name) =>
+      fs.promises.unlink(path.join(directory, name)).catch(() => {})
+    ));
+    return { success: true, path: destination, savedAt };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function readCanvasBackups(payload = {}) {
+  const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
+  const projectId = safeCanvasBackupId(payload.projectId, "default-project");
+  const directory = canvasBackupDirectory(folderId, projectId);
+  try {
+    const snapshots = (await fs.promises.readdir(directory, { withFileTypes: true }))
+      .filter((entry) => entry.isFile() && /^\d+-[0-9a-f]+\.json$/i.test(entry.name))
+      .map((entry) => entry.name)
+      .sort((left, right) => Number(right.split("-")[0]) - Number(left.split("-")[0]))
+      .slice(0, 12);
+    const states = [];
+    for (const name of snapshots) {
+      try {
+        const backup = JSON.parse(await fs.promises.readFile(path.join(directory, name), "utf8"));
+        if (backup?.format === "wandou-canvas-backup" && Array.isArray(backup.state?.nodes)) {
+          states.push(backup.state);
+        }
+      } catch (_error) {
+        // A damaged snapshot must not prevent older snapshots from being read.
+      }
+    }
+    return { success: true, states };
+  } catch (error) {
+    if (error.code === "ENOENT") return { success: true, states: [] };
+    return { success: false, states: [], error: error.message };
+  }
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -225,6 +309,9 @@ function sendUpdateStatus(message, state = "working") {
 async function startPortableUpdate(updateInfo) {
   if (updateInProgress) return { started: false, error: "更新正在进行中" };
   if (!app.isPackaged) return { started: false, error: "开发模式不执行覆盖更新" };
+  if (!updateInfo?.saveVerified || Date.now() - Number(updateInfo.saveVerifiedAt || 0) > 30000) {
+    return { started: false, error: "更新前的工作流保存尚未通过校验，已停止更新" };
+  }
   if (!updateInfo?.available || !isSafeHttpsUrl(updateInfo.downloadUrl) || !isSafeHttpsUrl(updateInfo.checksumUrl)) {
     return { started: false, error: "没有可安装的新版本" };
   }
@@ -444,8 +531,9 @@ ipcMain.on("desktop:set-theme", (_event, theme) => {
 });
 ipcMain.on("desktop:shell-ready", () => { shellReady = true; });
 ipcMain.on("desktop:cancel-close", () => { closePromptPending = false; });
-ipcMain.handle("desktop:confirm-close", () => {
+ipcMain.handle("desktop:confirm-close", (_event, verification = {}) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (!verification.saveVerified || Date.now() - Number(verification.verifiedAt || 0) > 30000) return false;
   allowWindowClose = true;
   closePromptPending = false;
   mainWindow.close();
@@ -486,6 +574,11 @@ ipcMain.handle("desktop:write-save-file", async (_event, payload = {}) => {
     return { success: false, error: error.message };
   }
 });
+ipcMain.handle("desktop:write-canvas-backup", (_event, payload = {}) => writeCanvasBackup(payload));
+ipcMain.handle("desktop:read-canvas-backups", (_event, payload = {}) => readCanvasBackups(payload));
+ipcMain.handle("desktop:get-canvas-backup-directory", () => ({
+  directory: canvasBackupRootDirectory()
+}));
 
 app.whenReady().then(createWindow);
 app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });

@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld("wandouShell", {
     ipcRenderer.on("desktop:update-status", handler);
     return () => ipcRenderer.removeListener("desktop:update-status", handler);
   },
-  confirmClose: () => ipcRenderer.invoke("desktop:confirm-close"),
+  confirmClose: (verification) => ipcRenderer.invoke("desktop:confirm-close", verification),
   cancelClose: () => ipcRenderer.send("desktop:cancel-close"),
   markReady: () => ipcRenderer.send("desktop:shell-ready"),
   setTheme: (theme) => ipcRenderer.send("desktop:set-theme", theme),
@@ -35,5 +35,8 @@ contextBridge.exposeInMainWorld("wandouShell", {
   openExternal: (url) => ipcRenderer.invoke("desktop:open-external", url),
   getSaveDirectory: () => ipcRenderer.invoke("desktop:get-save-directory"),
   chooseSaveDirectory: () => ipcRenderer.invoke("desktop:choose-save-directory"),
-  writeSaveFile: (filename, bytes) => ipcRenderer.invoke("desktop:write-save-file", { filename, bytes })
+  writeSaveFile: (filename, bytes) => ipcRenderer.invoke("desktop:write-save-file", { filename, bytes }),
+  writeCanvasBackup: (payload) => ipcRenderer.invoke("desktop:write-canvas-backup", payload),
+  readCanvasBackups: (payload) => ipcRenderer.invoke("desktop:read-canvas-backups", payload),
+  getCanvasBackupDirectory: () => ipcRenderer.invoke("desktop:get-canvas-backup-directory")
 });

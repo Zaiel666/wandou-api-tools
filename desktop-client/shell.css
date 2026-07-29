@@ -396,6 +396,14 @@ button { font: inherit; }
 .dialog-kicker { margin: 1px 0 4px; color: var(--brand-deep); font-size: 12px; font-weight: 650; }
 .dialog-copy h2 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.02em; }
 .dialog-version { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.save-location {
+  margin: 8px 0 0;
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .dialog-notes {
   margin-top: 16px;
   max-height: 150px;

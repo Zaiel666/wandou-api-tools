@@ -22,6 +22,7 @@ const dialogCancel = $("dialogCancel");
 const dialogDownload = $("dialogDownload");
 const closeDialogOverlay = $("closeDialogOverlay");
 const closeDialogStatus = $("closeDialogStatus");
+const closeDialogLocation = $("closeDialogLocation");
 const closeDialogCancel = $("closeDialogCancel");
 const closeDialogConfirm = $("closeDialogConfirm");
 const desktopToast = $("desktopToast");
@@ -37,6 +38,7 @@ let clientConfig = {};
 let toastTimer = 0;
 let closeInProgress = false;
 let updateStarted = false;
+let canvasBackupDirectory = "";
 
 function normalizedUrl(url) {
   try { return new URL(url, homeUrl).href; } catch (_error) { return url; }
@@ -153,27 +155,74 @@ function activateTab(id) {
   syncThemeFromActivePage();
 }
 
-function saveTabBeforeClose(tab) {
-  if (!tab?.view || tab.view.isLoading?.()) return Promise.resolve(false);
+function isNodeCanvasTab(tab) {
+  try { return new URL(tab?.url || "").pathname.toLowerCase().endsWith("/ai-node-canvas.html"); }
+  catch (_error) { return false; }
+}
+
+async function saveTabBeforeClose(tab) {
+  const base = { tabId: tab?.id || "", tabTitle: tab?.title || "未命名标签" };
+  if (!tab?.view) return { ...base, success: true, supported: false };
+  if (tab.view.isLoading?.()) {
+    return isNodeCanvasTab(tab)
+      ? { ...base, success: false, supported: true, error: "页面仍在加载，尚未保存" }
+      : { ...base, success: true, supported: false };
+  }
   try {
     const saveTask = tab.view.executeJavaScript(`(async () => {
       if (typeof window.wandouSaveBeforeClose === "function") {
-        await window.wandouSaveBeforeClose();
-        return true;
+        const result = await window.wandouSaveBeforeClose();
+        if (result && typeof result === "object") return { supported: true, ...result };
+        return { supported: true, success: result === true };
       }
-      return false;
-    })()`, true).catch(() => false);
-    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), 20000));
-    return Promise.race([saveTask, timeout]);
-  } catch (_error) {
-    return Promise.resolve(false);
+      return { supported: false, success: true };
+    })()`, true).catch((error) => ({
+      supported: isNodeCanvasTab(tab),
+      success: !isNodeCanvasTab(tab),
+      error: error?.message || "保存调用失败"
+    }));
+    let timeoutId = null;
+    const timeout = new Promise((resolve) => {
+      timeoutId = setTimeout(() => resolve({
+        supported: isNodeCanvasTab(tab),
+        success: !isNodeCanvasTab(tab),
+        error: "保存超过 20 秒，已停止关闭或更新"
+      }), 20000);
+    });
+    const result = await Promise.race([saveTask, timeout]);
+    clearTimeout(timeoutId);
+    return { ...base, ...result };
+  } catch (error) {
+    return {
+      ...base,
+      supported: isNodeCanvasTab(tab),
+      success: !isNodeCanvasTab(tab),
+      error: error?.message || "保存调用失败"
+    };
   }
+}
+
+async function saveAllOpenWorkflows() {
+  const results = await Promise.all([...tabs.values()].map(saveTabBeforeClose));
+  const failures = results.filter((result) => result.supported && !result.success);
+  const saved = results.filter((result) => result.supported && result.success);
+  return {
+    success: failures.length === 0,
+    results,
+    failures,
+    saved,
+    backupPath: saved.find((result) => result.backupPath)?.backupPath || canvasBackupDirectory
+  };
 }
 
 async function closeTab(id) {
   const tab = tabs.get(id);
   if (!tab || tab.pinned) return;
-  await saveTabBeforeClose(tab);
+  const saveResult = await saveTabBeforeClose(tab);
+  if (saveResult.supported && !saveResult.success) {
+    showToast(`${tab.title || "当前标签"}保存失败，标签没有关闭`, true);
+    return;
+  }
   const order = [...tabs.keys()];
   const index = order.indexOf(id);
   tab.view.remove();
@@ -238,7 +287,8 @@ async function openAnnouncement() {
 function showUpdateDialog() {
   if (!updateInfo?.available || updateStarted) return;
   dialogVersion.textContent = `当前 ${updateInfo.currentVersion} · 最新 ${updateInfo.latestVersion}`;
-  dialogNotes.textContent = updateInfo.notes || "新版本已经准备好。";
+  const location = canvasBackupDirectory ? `\n\n工作流备份位置：\n${canvasBackupDirectory}` : "";
+  dialogNotes.textContent = `${updateInfo.notes || "新版本已经准备好。"}\n\n更新前会强制保存并校验当前工作流，保存失败时不会更新。${location}`;
   dialogOverlay.hidden = false;
 }
 
@@ -305,6 +355,12 @@ async function refreshClientState() {
 }
 
 async function initializeClientState() {
+  try {
+    const backupInfo = await window.wandouShell?.getCanvasBackupDirectory();
+    canvasBackupDirectory = backupInfo?.directory || "";
+  } catch (_error) {
+    canvasBackupDirectory = "";
+  }
   await refreshClientState();
   if (updateInfo?.error) await refreshUpdateInfo({ retries: 2 });
   if (updateInfo?.available) showUpdateDialog();
@@ -312,7 +368,10 @@ async function initializeClientState() {
 
 function showCloseDialog() {
   closeInProgress = false;
-  closeDialogStatus.textContent = "关闭前会自动保存所有已打开的节点工作流。";
+  closeDialogStatus.textContent = "关闭前会强制保存并校验所有已打开的节点工作流；保存失败时不会关闭。";
+  closeDialogLocation.textContent = canvasBackupDirectory
+    ? `工作流备份位置：\n${canvasBackupDirectory}`
+    : "工作流保存在软件数据目录的 canvas-backups 文件夹中。";
   closeDialogCancel.disabled = false;
   closeDialogConfirm.disabled = false;
   closeDialogConfirm.textContent = "保存并关闭";
@@ -325,11 +384,33 @@ async function saveAllAndClose() {
   closeDialogCancel.disabled = true;
   closeDialogConfirm.disabled = true;
   closeDialogConfirm.textContent = "正在保存…";
-  closeDialogStatus.textContent = "正在保存所有已打开的节点工作流，请稍候…";
-  await Promise.all([...tabs.values()].map(saveTabBeforeClose));
-  closeDialogStatus.textContent = "保存完成，正在关闭软件…";
+  closeDialogStatus.textContent = "正在保存并核对所有已打开的节点工作流，请稍候…";
+  const saveReport = await saveAllOpenWorkflows();
+  if (!saveReport.success) {
+    const failedNames = saveReport.failures.map((item) => item.tabTitle).join("、") || "当前工作流";
+    closeInProgress = false;
+    closeDialogCancel.disabled = false;
+    closeDialogConfirm.disabled = false;
+    closeDialogConfirm.textContent = "重新保存";
+    closeDialogStatus.textContent = `保存校验失败：${failedNames}。软件没有关闭，请检查页面后重试。`;
+    showToast("工作流没有保存成功，已停止关闭", true);
+    return;
+  }
+  closeDialogStatus.textContent = `已验证保存 ${saveReport.saved.length} 个工作流，正在关闭软件…`;
+  if (saveReport.backupPath) closeDialogLocation.textContent = `本次备份：\n${saveReport.backupPath}`;
   closeDialogConfirm.textContent = "正在关闭…";
-  await window.wandouShell?.confirmClose();
+  const closed = await window.wandouShell?.confirmClose({
+    saveVerified: true,
+    verifiedAt: Date.now(),
+    savedWorkflowCount: saveReport.saved.length
+  });
+  if (!closed) {
+    closeInProgress = false;
+    closeDialogCancel.disabled = false;
+    closeDialogConfirm.disabled = false;
+    closeDialogConfirm.textContent = "重新保存";
+    closeDialogStatus.textContent = "关闭前保存凭证已失效，请重新保存。";
+  }
 }
 
 brandButton.addEventListener("click", () => {
@@ -355,11 +436,28 @@ dialogDownload.addEventListener("click", async () => {
   dialogCancel.disabled = true;
   dialogDownload.disabled = true;
   dialogDownload.textContent = "正在保存…";
-  dialogNotes.textContent = "正在保存本地项目和生成记录，请不要关闭软件。";
-  await Promise.all([...tabs.values()].map(saveTabBeforeClose));
+  dialogNotes.textContent = "正在强制保存并校验本地项目和生成记录，请不要关闭软件。";
+  const saveReport = await saveAllOpenWorkflows();
+  if (!saveReport.success) {
+    const failedNames = saveReport.failures.map((item) => item.tabTitle).join("、") || "当前工作流";
+    updateStarted = false;
+    document.body.classList.remove("update-in-progress");
+    dialogCancel.disabled = false;
+    dialogDownload.disabled = false;
+    dialogDownload.textContent = "重新保存并更新";
+    dialogNotes.textContent = `工作流保存校验失败：${failedNames}。\n更新已经停止，旧版本和原数据均未覆盖。`;
+    showToast("保存失败，已停止更新", true);
+    return;
+  }
   dialogDownload.textContent = "正在下载…";
-  dialogNotes.textContent = "正在从 GitHub 安全下载新版本，请不要关闭软件。";
-  const result = await window.wandouShell?.startUpdate(updateInfo);
+  const savedLocation = saveReport.backupPath || canvasBackupDirectory;
+  dialogNotes.textContent = `已验证保存 ${saveReport.saved.length} 个工作流。${savedLocation ? `\n备份位置：${savedLocation}` : ""}\n\n正在从 GitHub 安全下载新版本，请不要关闭软件。`;
+  const result = await window.wandouShell?.startUpdate({
+    ...updateInfo,
+    saveVerified: true,
+    saveVerifiedAt: Date.now(),
+    savedWorkflowCount: saveReport.saved.length
+  });
   if (!result?.started) {
     updateStarted = false;
     document.body.classList.remove("update-in-progress");
