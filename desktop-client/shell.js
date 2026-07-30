@@ -186,8 +186,8 @@ async function saveTabBeforeClose(tab) {
       timeoutId = setTimeout(() => resolve({
         supported: isNodeCanvasTab(tab),
         success: !isNodeCanvasTab(tab),
-        error: "保存超过 20 秒，已停止关闭或更新"
-      }), 20000);
+        error: "保存超过 120 秒，已停止关闭或更新"
+      }), 120000);
     });
     const result = await Promise.race([saveTask, timeout]);
     clearTimeout(timeoutId);
@@ -203,7 +203,10 @@ async function saveTabBeforeClose(tab) {
 }
 
 async function saveAllOpenWorkflows() {
-  const results = await Promise.all([...tabs.values()].map(saveTabBeforeClose));
+  const results = [];
+  for (const tab of tabs.values()) {
+    results.push(await saveTabBeforeClose(tab));
+  }
   const failures = results.filter((result) => result.supported && !result.success);
   const saved = results.filter((result) => result.supported && result.success);
   return {
@@ -368,7 +371,7 @@ async function initializeClientState() {
 
 function showCloseDialog() {
   closeInProgress = false;
-  closeDialogStatus.textContent = "关闭前会强制保存并校验所有已打开的节点工作流；保存失败时不会关闭。";
+  closeDialogStatus.textContent = "关闭前会强制保存并校验所有已打开的节点工作流；大画布可能需要 1–2 分钟。";
   closeDialogLocation.textContent = canvasBackupDirectory
     ? `工作流备份位置：\n${canvasBackupDirectory}`
     : "工作流保存在软件数据目录的 canvas-backups 文件夹中。";
@@ -384,7 +387,7 @@ async function saveAllAndClose() {
   closeDialogCancel.disabled = true;
   closeDialogConfirm.disabled = true;
   closeDialogConfirm.textContent = "正在保存…";
-  closeDialogStatus.textContent = "正在保存并核对所有已打开的节点工作流，请稍候…";
+  closeDialogStatus.textContent = "正在逐个保存并核对已打开的节点工作流，大画布可能需要 1–2 分钟，请稍候…";
   const saveReport = await saveAllOpenWorkflows();
   if (!saveReport.success) {
     const failedNames = saveReport.failures.map((item) => item.tabTitle).join("、") || "当前工作流";

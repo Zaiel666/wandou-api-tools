@@ -11177,7 +11177,7 @@ ${formatInstruction}`;
       }
     }
 
-    async function saveCanvasStateNow(context) {
+    async function saveCanvasStateNow(context, options = {}) {
       if (canvasRecoveryBlocked) return false;
       try {
         clearTimeout(saveTimer);
@@ -11197,7 +11197,7 @@ ${formatInstruction}`;
           warnCanvasStorageSkipped(storageError);
         }
         await writeCanvasStateBackup(storedState, context);
-        queueDesktopCanvasBackup(context);
+        if (!options.skipDesktopBackup) queueDesktopCanvasBackup(context);
         if (activeProject) saveProjects();
         return true;
       } catch (error) {
@@ -11249,17 +11249,17 @@ ${formatInstruction}`;
       await canvasSaveQueue.catch(() => false);
       const context = createCanvasSaveContext();
       const immediateSaved = saveCanvasStateImmediate(context);
-      const durableSaved = await saveCanvasStateNow(context);
+      const durableSaved = await saveCanvasStateNow(context, { skipDesktopBackup: true });
       const desktopBackupRequired = Boolean(window.wandouShell?.writeCanvasBackup);
       const desktopBackup = desktopBackupRequired
         ? await writeDesktopCanvasBackup(context, true)
         : null;
       const localVerified = verifyCanvasStateSaved(context);
       const success = Boolean(
-        immediateSaved
-        && durableSaved
-        && localVerified
-        && (!desktopBackupRequired || desktopBackup?.success)
+        durableSaved
+        && (desktopBackupRequired
+          ? desktopBackup?.success
+          : immediateSaved && localVerified)
       );
       return {
         success,
