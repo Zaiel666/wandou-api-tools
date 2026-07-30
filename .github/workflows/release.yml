@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "紧急修复大画布关闭时重复写入完整备份、20 秒超时及磁盘备份成功仍被误判失败的问题；大画布最长等待 120 秒，并逐个保存已打开的工作流。"
+            notes = "修复画布缩放时提示词文字裁切；节点标题、复制和删除按钮固定在节点上方 2px；参考图状态文字及效果图尺寸与用时固定在内容下方 2px。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
