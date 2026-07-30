@@ -1597,7 +1597,7 @@
       width: 240px;
       background: transparent !important;
       border: 0 !important;
-      border-radius: 0;
+      border-radius: 12px;
       box-shadow: none;
     }
 
@@ -1607,7 +1607,7 @@
 
     .node.result .preview {
       border: 0;
-      border-radius: 0;
+      border-radius: 12px !important;
       background: transparent;
       box-shadow: none;
     }
@@ -1623,7 +1623,11 @@
 
     .node.result .preview img,
     .node.result .preview video {
-      border-radius: 0;
+      border-radius: 12px !important;
+    }
+
+    .node.result .result-empty-visual {
+      border-radius: 12px !important;
     }
 
     body.dark-theme .node.result {
@@ -1633,14 +1637,29 @@
     }
 
     .node.image {
-      background: transparent !important;
+      background: #fff !important;
       border: 0 !important;
-      border-radius: 0;
+      border-radius: 10px;
       box-shadow: none !important;
     }
 
     .node.image .node-body {
       padding: 0;
+    }
+
+    .node.image .preview {
+      background: #fff !important;
+      border: 1px solid rgba(100, 116, 139, .48) !important;
+      border-radius: 10px !important;
+    }
+
+    body.dark-theme .node.image {
+      background: #1b1f1d !important;
+    }
+
+    body.dark-theme .node.image .preview {
+      background: #1b1f1d !important;
+      border-color: rgba(148, 163, 184, .52) !important;
     }
 
     .node.image .preview,
@@ -1649,11 +1668,21 @@
     }
 
     .node.image:hover .preview,
-    .node.image.selected .preview,
-    .node.result:hover,
-    .node.result.selected {
+    .node.image.selected .preview {
       box-shadow: 0 0 0 2px rgba(67, 209, 59, .82), 0 0 0 6px rgba(67, 209, 59, .13), 0 10px 28px rgba(18, 63, 35, .12) !important;
       filter: brightness(1.015);
+    }
+
+    .node.result:hover .preview,
+    .node.result.selected .preview {
+      box-shadow: none !important;
+      filter: brightness(1.02);
+    }
+
+    .node.result:hover,
+    .node.result.selected {
+      box-shadow: none !important;
+      filter: none;
     }
 
     .node.generator:focus-within,
@@ -4179,10 +4208,6 @@
         <button type="button" data-link-cancel>取消连接</button>
       </div>
       <div id="toast" class="toast">已完成</div>
-      <div id="performanceWarning" class="performance-warning" role="alert" hidden>
-        <span>页面卡住，建议新建画布或新建项目</span>
-        <button id="dismissPerformanceWarning" type="button">知道了</button>
-      </div>
     </main>
   </div>
   <div id="lightbox" class="lightbox">
@@ -5484,7 +5509,7 @@
         nodeEl.querySelectorAll("textarea[data-autogrow]").forEach((field) => {
           autoGrowTextarea(field);
           if (field.dataset.field === "prompt") {
-            const height = Math.ceil(field.getBoundingClientRect().height);
+            const height = Math.ceil(field.offsetHeight);
             if (height && node.promptHeight !== height) {
               node.promptHeight = height;
               scheduleCanvasSave();
@@ -6740,7 +6765,7 @@
           node[key] = key === "count" ? Math.max(1, Math.min(8, Number(field.value) || 1)) : field.value;
           if (field.matches("textarea[data-autogrow]")) {
             autoGrowTextarea(field);
-            if (key === "prompt") node.promptHeight = Math.ceil(field.getBoundingClientRect().height);
+            if (key === "prompt") node.promptHeight = Math.ceil(field.offsetHeight);
           }
           if (key === "model" && node.type === "generator") {
             node.resolution = imageResolutionOptionsForModel(node.model)[0];
@@ -8399,21 +8424,33 @@
       const columns = count === 4 ? 2 : count >= 5 ? 3 : count;
       const isLandscape = parsed.width > parsed.height;
       const resultWidth = isLandscape ? 360 : 240;
-      const resultHeight = isLandscape ? Math.max(220, Math.round(resultWidth * parsed.height / Math.max(1, parsed.width)) + 130) : 370;
+      const resultHeaderHeight = 40;
+      const resultGap = 3;
+      const resultBodyHeight = Math.round(resultWidth * parsed.height / Math.max(1, parsed.width)) + 28;
       const gapX = resultWidth + 40;
-      const gapY = resultHeight + 40;
+      const gapY = resultBodyHeight + resultHeaderHeight + resultGap;
       const startX = node.x + nodeWidth(node) + 110;
       const existing = links
         .filter((link) => link.from === node.id)
         .map((link) => nodes.find((item) => item.id === link.to))
         .filter((item) => item?.type === "result");
       const startY = existing.length
-        ? Math.max(...existing.map((item) => item.y + estimatedNodeHeight(item))) + 50
+        ? Math.max(...existing.map((item) => item.y + renderedResultBodyHeight(item))) + resultHeaderHeight + resultGap
         : node.y + 12;
       return (index) => ({
         x: startX + (index % columns) * Math.max(gapX, resultWidth + 40),
         y: startY + Math.floor(index / columns) * gapY
       });
+    }
+
+    function renderedResultBodyHeight(node) {
+      const element = canvas.querySelector(`[data-id="${node.id}"]`);
+      if (element?.offsetHeight) return element.offsetHeight;
+      const width = node.frameWidth || nodeWidth(node);
+      const mediaHeight = node.width && node.height
+        ? Math.round(width * node.height / Math.max(1, node.width))
+        : 260;
+      return mediaHeight + 28;
     }
 
     function estimatedNodeHeight(node) {
