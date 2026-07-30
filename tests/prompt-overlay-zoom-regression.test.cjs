@@ -4,6 +4,8 @@ const path = require("node:path");
 
 const pagePath = path.resolve(__dirname, "../app/ai-node-canvas.html");
 const pageSource = fs.readFileSync(pagePath, "utf8");
+const styleEnd = pageSource.indexOf("</style>");
+const styles = pageSource.slice(0, styleEnd);
 const syncStart = pageSource.indexOf("const syncPromptReferenceTokens = () => {");
 const syncEnd = pageSource.indexOf(
   'promptField?.addEventListener("input", syncPromptReferenceTokens);',
@@ -14,16 +16,18 @@ assert.notEqual(syncStart, -1, "prompt overlay synchronization function is missi
 assert.notEqual(syncEnd, -1, "prompt overlay synchronization boundary is missing");
 
 const syncSource = pageSource.slice(syncStart, syncEnd);
+const overlayRule =
+  styles.match(/\.prompt-token-overlay\s*\{([^}]+)\}/)?.[1] || "";
 
 assert.match(
-  syncSource,
-  /promptOverlay\.style\.height = `\$\{promptField\.offsetHeight\}px`;/,
-  "prompt overlay must use the textarea's unscaled layout height",
+  overlayRule,
+  /inset:\s*0/,
+  "prompt overlay must fill its textarea wrapper through CSS",
 );
 assert.doesNotMatch(
   syncSource,
-  /getBoundingClientRect\(\)\.height/,
-  "prompt overlay must not reuse the canvas-scaled visual height",
+  /promptOverlay\.style\.height/,
+  "prompt overlay height must not be measured before the node is mounted",
 );
 
-console.log("PASS: prompt overlay height remains stable while the canvas is zoomed");
+console.log("PASS: prompt overlay fills its mounted wrapper without early height measurement");
