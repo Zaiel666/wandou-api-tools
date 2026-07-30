@@ -6253,7 +6253,10 @@
         promptOverlay.innerHTML = renderPromptReferenceTokens(promptField.value, generatorReferenceItems(node).length);
         promptOverlay.scrollTop = promptField.scrollTop;
         promptOverlay.scrollLeft = promptField.scrollLeft;
-        promptOverlay.style.height = `${promptField.getBoundingClientRect().height}px`;
+        // The canvas itself is transformed for zooming. getBoundingClientRect()
+        // returns the already-scaled visual height, which would shrink this
+        // overlay a second time and clip prompt text at zoom levels below 100%.
+        promptOverlay.style.height = `${promptField.offsetHeight}px`;
       };
       promptField?.addEventListener("input", syncPromptReferenceTokens);
       promptField?.addEventListener("scroll", syncPromptReferenceTokens);
