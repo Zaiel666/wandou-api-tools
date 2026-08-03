@@ -2046,6 +2046,24 @@
       aspect-ratio: 16 / 9;
     }
 
+    .preview.workflow-source-preview {
+      min-height: 220px;
+      max-height: 560px;
+      aspect-ratio: var(--source-preview-ratio, 16 / 9);
+      background: rgba(248, 250, 252, .76);
+    }
+
+    .preview.workflow-source-preview > img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      object-position: center !important;
+    }
+
+    body.dark-theme .preview.workflow-source-preview {
+      background: rgba(24, 30, 27, .86);
+    }
+
     .preview.loading {
       cursor: default;
     }
@@ -6506,12 +6524,15 @@
       const linkedRefs = getInputMediaList(node.id).flatMap((source) => normalizeReferences(source));
       const refs = [...linkedRefs, ...normalizeReferences(node)].filter((item) => isRenderableImageUrl(item?.url));
       const first = refs[0];
+      const sourcePreviewRatio = first?.width && first?.height
+        ? `${Math.max(1, Number(first.width))} / ${Math.max(1, Number(first.height))}`
+        : "16 / 9";
       const upscaleModelMenuHtml = upscaleModelOptions.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-upscale-model-option="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const preview = first
         ? `<img src="${first.url}" alt="4K 放大来源图片" loading="lazy" decoding="async">`
         : `<div class="placeholder-art reference-empty-visual workflow-empty-visual"><span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>添加需要放大的图片</strong><span>上传，或连接参考图/效果图</span><span class="ratio-readout">一次只能上传一张</span></div>`;
       wrap.innerHTML = `
-        <div class="preview wide" data-upscale-drop>${preview}${previewFavoriteButton(node)}</div>
+        <div class="preview workflow-source-preview" style="--source-preview-ratio:${sourcePreviewRatio};" data-upscale-drop>${preview}${previewFavoriteButton(node)}</div>
         <div class="result-actions" style="grid-template-columns:1fr;margin-top:8px;">
           <label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">上传图片<input data-upscale-upload type="file" accept="image/*" hidden></label>
         </div>
@@ -6582,6 +6603,9 @@
       const linkedRefs = getInputMediaList(node.id).flatMap((source) => normalizeReferences(source));
       const refs = [...linkedRefs, ...normalizeReferences(node)].filter((item) => isRenderableImageUrl(item?.url));
       const first = refs[0];
+      const sourcePreviewRatio = first?.width && first?.height
+        ? `${Math.max(1, Number(first.width))} / ${Math.max(1, Number(first.height))}`
+        : "16 / 9";
       const preview = first
         ? `<img src="${escapeHtml(first.url)}" alt="扩图来源图片" loading="lazy" decoding="async">`
         : `<div class="placeholder-art reference-empty-visual workflow-empty-visual"><span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>添加需要扩展的图片</strong><span>上传图片，或连接参考图/效果图</span><span class="ratio-readout">原图区域会原位覆盖回输出，避免主体被重绘</span></div>`;
@@ -6591,7 +6615,7 @@
       const amountButtons = outpaintAmountOptions.map((amount) => `<button class="choice-option ${node.outpaintAmount === amount ? "active" : ""}" data-outpaint-amount="${amount}" type="button" ${node.outpaintAmount === amount ? `style="${selectedOutpaintStyle}"` : ""}>扩展 ${amount}%</button>`).join("");
       const resolutionButtons = allowedResolutions.map((resolution) => `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-outpaint-resolution="${resolution}" type="button">${resolution}</button>`).join("");
       wrap.innerHTML = `
-        <div class="preview wide" data-outpaint-drop>${preview}</div>
+        <div class="preview workflow-source-preview" style="--source-preview-ratio:${sourcePreviewRatio};" data-outpaint-drop>${preview}</div>
         <div class="result-actions" style="grid-template-columns:1fr;margin-top:8px;">
           <label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">上传图片<input data-outpaint-upload type="file" accept="image/*" hidden></label>
         </div>

@@ -30,6 +30,42 @@ const { chromium } = require("playwright");
     const selectedAmount = page.locator('.node.outpaint').last().locator('[data-outpaint-amount="100"]');
     assert.equal(await selectedAmount.evaluate((element) => getComputedStyle(element).backgroundColor), "rgb(223, 248, 216)");
 
+    const portraitUrl = await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 540;
+      canvas.height = 720;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ef233c";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/png");
+    });
+    await page.evaluate((url) => {
+      const node = nodes.filter((item) => item.type === "outpaint").at(-1);
+      node.references = [{ url, mediaType: "image", width: 540, height: 720 }];
+      node.mediaUrl = url;
+      node.width = 540;
+      node.height = 720;
+      render();
+    }, portraitUrl);
+    const outpaintPreview = page.locator('.node.outpaint').last().locator('.workflow-source-preview');
+    const outpaintBox = await outpaintPreview.boundingBox();
+    assert.ok(outpaintBox.height > outpaintBox.width, "portrait outpaint preview should be taller than wide");
+    assert.equal(await outpaintPreview.locator('img').evaluate((element) => getComputedStyle(element).objectFit), "contain");
+
+    await page.locator('[data-add-node="upscale"]').click();
+    await page.evaluate((url) => {
+      const node = nodes.filter((item) => item.type === "upscale").at(-1);
+      node.references = [{ url, mediaType: "image", width: 540, height: 720 }];
+      node.mediaUrl = url;
+      node.width = 540;
+      node.height = 720;
+      render();
+    }, portraitUrl);
+    const upscalePreview = page.locator('.node.upscale').last().locator('.workflow-source-preview');
+    const upscaleBox = await upscalePreview.boundingBox();
+    assert.ok(upscaleBox.height > upscaleBox.width, "portrait upscale preview should be taller than wide");
+    assert.equal(await upscalePreview.locator('img').evaluate((element) => getComputedStyle(element).objectFit), "contain");
+
     const result = await page.evaluate(async () => {
       const makeImage = (width, height, color) => {
         const canvas = document.createElement("canvas");
