@@ -14,6 +14,22 @@ const { chromium } = require("playwright");
       waitUntil: "domcontentloaded",
     });
 
+    await page.locator('[data-add-node="outpaint"]').click();
+    const outpaintNode = page.locator('.node.outpaint').last();
+    assert.equal(await outpaintNode.locator('[data-outpaint-url]').count(), 0, "URL controls should be removed");
+    assert.equal(await outpaintNode.locator('.workflow-empty-visual').evaluate((element) => getComputedStyle(element).textAlign), "center");
+    await outpaintNode.locator('[data-outpaint-direction="vertical"]').click();
+    const selectedDirection = page.locator('.node.outpaint').last().locator('[data-outpaint-direction="vertical"]');
+    assert.equal(await selectedDirection.evaluate((element) => element.classList.contains("active")), true);
+    const directionStyle = await selectedDirection.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, border: style.borderColor, color: style.color, theme: document.body.className };
+    });
+    assert.equal(directionStyle.background, "rgb(223, 248, 216)");
+    await page.locator('.node.outpaint').last().locator('[data-outpaint-amount="100"]').click();
+    const selectedAmount = page.locator('.node.outpaint').last().locator('[data-outpaint-amount="100"]');
+    assert.equal(await selectedAmount.evaluate((element) => getComputedStyle(element).backgroundColor), "rgb(223, 248, 216)");
+
     const result = await page.evaluate(async () => {
       const makeImage = (width, height, color) => {
         const canvas = document.createElement("canvas");

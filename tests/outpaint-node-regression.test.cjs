@@ -16,6 +16,13 @@ test("outpaint exposes horizontal, vertical and all-side expansion", () => {
   assert.match(html, /value:\s*"vertical",\s*label:\s*"上下扩图"/);
   assert.match(html, /value:\s*"all",\s*label:\s*"四周扩图"/);
   assert.match(html, /function renderOutpaintBody\(node\)/);
+  assert.doesNotMatch(html, /data-outpaint-url/);
+  assert.doesNotMatch(html, /data-outpaint-load-url/);
+});
+
+test("workflow empty-state copy is centered", () => {
+  assert.match(html, /\.reference-empty-visual\.workflow-empty-visual\s*\{[\s\S]*?justify-items:\s*center;[\s\S]*?text-align:\s*center;/);
+  assert.match(html, /reference-empty-visual workflow-empty-visual/);
 });
 
 test("outpaint restores the source image over the generated canvas", () => {

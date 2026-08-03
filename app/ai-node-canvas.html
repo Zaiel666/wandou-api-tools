@@ -1855,27 +1855,6 @@
       min-width: 410px;
     }
 
-    .outpaint-source-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .outpaint-source-row input {
-      min-width: 0;
-      height: 36px;
-      padding: 0 10px;
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel-strong);
-    }
-
-    .outpaint-source-row button {
-      min-height: 36px;
-    }
-
     .outpaint-direction-options,
     .outpaint-amount-options {
       display: grid;
@@ -1889,6 +1868,43 @@
       min-height: 34px;
       padding: 6px 8px;
       font-size: 12px;
+    }
+
+    .reference-empty-visual.workflow-empty-visual {
+      grid-template-columns: minmax(0, 1fr);
+      grid-auto-flow: row;
+      justify-items: center;
+      align-content: center;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .reference-empty-visual.workflow-empty-visual > * {
+      justify-self: center;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .outpaint-direction-options .choice-option.active,
+    .outpaint-amount-options .choice-option.active,
+    body.dark-theme .outpaint-direction-options .choice-option.active,
+    body.dark-theme .outpaint-amount-options .choice-option.active {
+      color: #143f08;
+      -webkit-text-fill-color: currentColor;
+      background: #dff8d8;
+      background-image: none;
+      border-color: #43c83e;
+      box-shadow: 0 0 0 2px rgba(67, 200, 62, .18);
+      background-clip: border-box;
+      -webkit-background-clip: border-box;
+    }
+
+    body.dark-theme .outpaint-direction-options .choice-option.active,
+    body.dark-theme .outpaint-amount-options .choice-option.active {
+      color: #dfffd8;
+      background: #245b22;
+      border-color: #65df5d;
+      box-shadow: 0 0 0 2px rgba(101, 223, 93, .18);
     }
 
     .node.keyword {
@@ -6493,7 +6509,7 @@
       const upscaleModelMenuHtml = upscaleModelOptions.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-upscale-model-option="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const preview = first
         ? `<img src="${first.url}" alt="4K 放大来源图片" loading="lazy" decoding="async">`
-        : `<div class="placeholder-art reference-empty-visual"><span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>添加需要放大的图片</strong><span>上传，或连接参考图/效果图</span><span class="ratio-readout">一次只能上传一张</span></div>`;
+        : `<div class="placeholder-art reference-empty-visual workflow-empty-visual"><span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>添加需要放大的图片</strong><span>上传，或连接参考图/效果图</span><span class="ratio-readout">一次只能上传一张</span></div>`;
       wrap.innerHTML = `
         <div class="preview wide" data-upscale-drop>${preview}${previewFavoriteButton(node)}</div>
         <div class="result-actions" style="grid-template-columns:1fr;margin-top:8px;">
@@ -6568,17 +6584,14 @@
       const first = refs[0];
       const preview = first
         ? `<img src="${escapeHtml(first.url)}" alt="扩图来源图片" loading="lazy" decoding="async">`
-        : `<div class="placeholder-art reference-empty-visual"><span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>添加需要扩展的图片</strong><span>粘贴图片链接、上传，或连接参考图/效果图</span><span class="ratio-readout">原图区域会原位覆盖回输出，避免主体被重绘</span></div>`;
+        : `<div class="placeholder-art reference-empty-visual workflow-empty-visual"><span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>添加需要扩展的图片</strong><span>上传图片，或连接参考图/效果图</span><span class="ratio-readout">原图区域会原位覆盖回输出，避免主体被重绘</span></div>`;
       const modelMenu = imageModelOptions.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-outpaint-model-option="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
-      const directionButtons = outpaintDirectionOptions.map((item) => `<button class="choice-option ${node.outpaintDirection === item.value ? "active" : ""}" data-outpaint-direction="${item.value}" type="button">${item.label}</button>`).join("");
-      const amountButtons = outpaintAmountOptions.map((amount) => `<button class="choice-option ${node.outpaintAmount === amount ? "active" : ""}" data-outpaint-amount="${amount}" type="button">扩展 ${amount}%</button>`).join("");
+      const selectedOutpaintStyle = "color:#143f08!important;-webkit-text-fill-color:#143f08!important;background:#dff8d8!important;background-image:none!important;border-color:#43c83e!important;box-shadow:0 0 0 2px rgba(67,200,62,.18)!important;";
+      const directionButtons = outpaintDirectionOptions.map((item) => `<button class="choice-option ${node.outpaintDirection === item.value ? "active" : ""}" data-outpaint-direction="${item.value}" type="button" ${node.outpaintDirection === item.value ? `style="${selectedOutpaintStyle}"` : ""}>${item.label}</button>`).join("");
+      const amountButtons = outpaintAmountOptions.map((amount) => `<button class="choice-option ${node.outpaintAmount === amount ? "active" : ""}" data-outpaint-amount="${amount}" type="button" ${node.outpaintAmount === amount ? `style="${selectedOutpaintStyle}"` : ""}>扩展 ${amount}%</button>`).join("");
       const resolutionButtons = allowedResolutions.map((resolution) => `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-outpaint-resolution="${resolution}" type="button">${resolution}</button>`).join("");
       wrap.innerHTML = `
         <div class="preview wide" data-outpaint-drop>${preview}</div>
-        <div class="outpaint-source-row">
-          <input data-outpaint-url type="url" inputmode="url" placeholder="粘贴图片链接（https://...）" value="${escapeHtml(node.outpaintSourceUrl || "")}">
-          <button class="ghost mini" data-outpaint-load-url type="button">载入链接</button>
-        </div>
         <div class="result-actions" style="grid-template-columns:1fr;margin-top:8px;">
           <label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">上传图片<input data-outpaint-upload type="file" accept="image/*" hidden></label>
         </div>
@@ -6600,32 +6613,8 @@
         </div>
         <div class="upscale-ratio-copy"><strong>保护原图内容</strong><div class="ratio-readout">AI 只生成新增区域，完成后把原图原位覆盖回画面</div></div>
         <button data-generate class="wide-button" type="button">生成扩图</button>
-        <div class="status">${node.status || "请选择扩展方向；支持图片链接、上传及节点连线。"}</div>
+        <div class="status">${node.status || "请选择扩展方向；支持上传图片及节点连线。"}</div>
       `;
-
-      const loadUrl = async () => {
-        const input = wrap.querySelector("[data-outpaint-url]");
-        const url = String(input.value || "").trim();
-        if (!/^(?:https?:\/\/|data:image\/)/i.test(url)) {
-          node.status = "请输入可访问的 http(s) 图片链接。";
-          render();
-          return;
-        }
-        pushHistory();
-        const dimensions = await getImageDimensions(url);
-        node.outpaintSourceUrl = url;
-        node.mediaUrl = url;
-        node.mediaType = "image";
-        node.references = [{ url, mediaType: "image", width: dimensions.width, height: dimensions.height, name: "扩图来源" }];
-        node.status = dimensions.width && dimensions.height ? `图片链接已载入：${dimensions.width} × ${dimensions.height}px。` : "图片链接已载入，生成时将读取原图尺寸。";
-        render();
-      };
-      wrap.querySelector("[data-outpaint-load-url]").addEventListener("click", loadUrl);
-      wrap.querySelector("[data-outpaint-url]").addEventListener("keydown", (event) => {
-        if (event.key !== "Enter") return;
-        event.preventDefault();
-        loadUrl();
-      });
       wrap.querySelector("[data-outpaint-model-toggle]").addEventListener("click", (event) => {
         event.stopPropagation();
         const select = event.currentTarget.closest("[data-node-select]");
@@ -6703,7 +6692,7 @@
             <span class="png-source-size">${refs[0].width || "-"} x ${refs[0].height || "-"}px</span>
             <button class="thumb-remove" data-remove-ref="0" type="button">×</button>
           </div>`
-        : `<label class="placeholder-art reference-empty-visual png-empty-visual">
+        : `<label class="placeholder-art reference-empty-visual workflow-empty-visual png-empty-visual">
             <span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <strong>添加需要处理的图片</strong>
             <span>上传，或连接参考图/效果图</span>
