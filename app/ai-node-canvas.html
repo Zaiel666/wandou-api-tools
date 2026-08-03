@@ -752,7 +752,8 @@
     }
 
     .button-grid button[data-add-node="png"],
-    .button-grid button[data-add-node="upscale"] {
+    .button-grid button[data-add-node="upscale"],
+    .button-grid button[data-add-node="outpaint"] {
       white-space: nowrap;
     }
 
@@ -1847,6 +1848,47 @@
     .node.upscale {
       width: 430px;
       min-width: 390px;
+    }
+
+    .node.outpaint {
+      width: 450px;
+      min-width: 410px;
+    }
+
+    .outpaint-source-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .outpaint-source-row input {
+      min-width: 0;
+      height: 36px;
+      padding: 0 10px;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-strong);
+    }
+
+    .outpaint-source-row button {
+      min-height: 36px;
+    }
+
+    .outpaint-direction-options,
+    .outpaint-amount-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      width: 100%;
+    }
+
+    .outpaint-direction-options button,
+    .outpaint-amount-options button {
+      min-height: 34px;
+      padding: 6px 8px;
+      font-size: 12px;
     }
 
     .node.keyword {
@@ -4083,6 +4125,7 @@
           <button type="button" data-add-node="keyword">反推/生成提示词</button>
           <button type="button" data-add-node="upscale">4K放大</button>
           <button type="button" data-add-node="png">PNG透明底/抠图</button>
+          <button type="button" data-add-node="outpaint">扩图</button>
         </div>
         <p class="hint">拖动节点标题可移动。点击一个输出圆点，再点另一个输入圆点即可连线。</p>
       </div>
@@ -4195,6 +4238,7 @@
         <button type="button" data-menu-node="keyword">新建反推/生成提示词</button>
         <button type="button" data-menu-node="upscale">新建4K放大</button>
         <button type="button" data-menu-node="png">新建PNG透明底/抠图</button>
+        <button type="button" data-menu-node="outpaint">新建扩图</button>
         <button type="button" data-menu-node="image-upload">上传图片</button>
       </div>
       <div id="selectionBox" class="selection-box"></div>
@@ -4206,6 +4250,7 @@
         <button type="button" data-link-create="generator">连接到 AI 图片</button>
         <button type="button" data-link-create="video">连接到 AI 视频</button>
         <button type="button" data-link-create="keyword">连接到反推/生成提示词</button>
+        <button type="button" data-link-create="outpaint">连接到扩图</button>
         <button type="button" data-link-cancel>取消连接</button>
       </div>
       <div id="toast" class="toast">已完成</div>
@@ -4533,6 +4578,12 @@
     const defaultKeywordPrompt = "";
     const imageModelOptions = ["GPT-image-2", "Nano Banana2", "Nano BananaPro"];
     const upscaleModelOptions = ["GPT-image-2", "Nano Banana2", "Nano BananaPro"];
+    const outpaintDirectionOptions = [
+      { value: "horizontal", label: "左右扩图" },
+      { value: "vertical", label: "上下扩图" },
+      { value: "all", label: "四周扩图" }
+    ];
+    const outpaintAmountOptions = [25, 50, 100];
     const builtInKeywordPresets = [
       { name: "图片高清放大", text: "4K超清放大，增强纹理与边缘细节，保持原始构图、比例、文字和主体不变" },
       { name: "商业海报", text: "商业海报设计，高级版式，清晰视觉层级，醒目标题区，专业品牌质感" },
@@ -5440,13 +5491,13 @@
         x,
         y,
         title: nodeTitle(type),
-        prompt: type === "keyword" ? defaultKeywordPrompt : type === "png" ? "请只抠出上传原图里的主体，移除背景并输出透明底 PNG，不要重绘、不要美化、不要改变人物/产品/文字/Logo/衣服/姿势/构图。" : type === "upscale" ? "将输入图片无损放大到 4K，保持原图构图、比例、文字、Logo、人物和产品细节不变，只增强清晰度与纹理细节。" : type === "generator" || type === "video" ? defaultPrompt : "",
+        prompt: type === "keyword" ? defaultKeywordPrompt : type === "png" ? "请只抠出上传原图里的主体，移除背景并输出透明底 PNG，不要重绘、不要美化、不要改变人物/产品/文字/Logo/衣服/姿势/构图。" : type === "upscale" ? "将输入图片无损放大到 4K，保持原图构图、比例、文字、Logo、人物和产品细节不变，只增强清晰度与纹理细节。" : type === "outpaint" ? "只在原图外部自然延展背景、环境、光影和纹理，原图内部的主体、人物、产品、文字、Logo、构图、颜色与全部细节必须保持不变。" : type === "generator" || type === "video" ? defaultPrompt : "",
         model: type === "video" ? videoPrimaryModel : type === "keyword" ? "GPT" : "GPT-image-2",
         promptFormat: "paragraph",
         promptReverseMode: type === "keyword" ? "image" : "",
         negativePrompt: "",
         ratio: type === "video" ? "9:16 竖屏" : "Auto自适应",
-        resolution: type === "video" ? "720P" : type === "upscale" ? "4K" : "1K",
+        resolution: type === "video" ? "720P" : type === "upscale" ? "4K" : type === "outpaint" ? "2K" : "1K",
         count: 1,
         duration: type === "video" ? "default" : "5s",
         videoMode: type === "video" ? "text" : "",
@@ -5457,6 +5508,8 @@
         favorite: false,
         pending: false,
         elapsed: 0,
+        outpaintDirection: type === "outpaint" ? "horizontal" : "",
+        outpaintAmount: type === "outpaint" ? 50 : 0,
         status: "",
         ...extra
       };
@@ -5471,6 +5524,7 @@
       if (type === "keyword") return "反推/生成提示词";
       if (type === "png") return "PNG/透明底工作流";
       if (type === "upscale") return "4K放大";
+      if (type === "outpaint") return "扩图";
       if (type === "result") return "效果图";
       if (type === "selection") return "选区";
       return "参考图";
@@ -5481,6 +5535,7 @@
       if (type === "keyword") return "#";
       if (type === "png") return "◫";
       if (type === "upscale") return "4K";
+      if (type === "outpaint") return "↔";
       if (type === "generator") return "✦";
       if (type === "result") return "↓";
       return "▣";
@@ -5629,7 +5684,7 @@
           </div>
         </div>
         <div class="node-body"></div>
-        ${!isSelection && (node.type === "generator" || node.type === "video" || node.type === "keyword" || node.type === "png" || node.type === "upscale") ? '<div class="node-resize" data-resize-handle title="拖动缩放节点"></div>' : ''}
+        ${!isSelection && (node.type === "generator" || node.type === "video" || node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint") ? '<div class="node-resize" data-resize-handle title="拖动缩放节点"></div>' : ''}
       `;
 
       const body = el.querySelector(".node-body");
@@ -5639,6 +5694,8 @@
         body.appendChild(renderPngWorkflowBody(node));
       } else if (node.type === "upscale") {
         body.appendChild(renderUpscaleBody(node));
+      } else if (node.type === "outpaint") {
+        body.appendChild(renderOutpaintBody(node));
       } else if (node.type === "generator" || node.type === "video") {
         body.appendChild(renderGeneratorBody(node));
       } else if (node.type === "selection") {
@@ -6498,6 +6555,136 @@
       return wrap;
     }
 
+    function renderOutpaintBody(node) {
+      const wrap = document.createElement("div");
+      node.model = imageModelOptions.includes(node.model) ? node.model : imageModelOptions[0];
+      node.outpaintDirection = outpaintDirectionOptions.some((item) => item.value === node.outpaintDirection) ? node.outpaintDirection : "horizontal";
+      node.outpaintAmount = outpaintAmountOptions.includes(Number(node.outpaintAmount)) ? Number(node.outpaintAmount) : 50;
+      const allowedResolutions = imageResolutionOptionsForModel(node.model);
+      node.resolution = allowedResolutions.includes(node.resolution) ? node.resolution : allowedResolutions[0];
+      node.count = 1;
+      const linkedRefs = getInputMediaList(node.id).flatMap((source) => normalizeReferences(source));
+      const refs = [...linkedRefs, ...normalizeReferences(node)].filter((item) => isRenderableImageUrl(item?.url));
+      const first = refs[0];
+      const preview = first
+        ? `<img src="${escapeHtml(first.url)}" alt="扩图来源图片" loading="lazy" decoding="async">`
+        : `<div class="placeholder-art reference-empty-visual"><span class="reference-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>添加需要扩展的图片</strong><span>粘贴图片链接、上传，或连接参考图/效果图</span><span class="ratio-readout">原图区域会原位覆盖回输出，避免主体被重绘</span></div>`;
+      const modelMenu = imageModelOptions.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-outpaint-model-option="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
+      const directionButtons = outpaintDirectionOptions.map((item) => `<button class="choice-option ${node.outpaintDirection === item.value ? "active" : ""}" data-outpaint-direction="${item.value}" type="button">${item.label}</button>`).join("");
+      const amountButtons = outpaintAmountOptions.map((amount) => `<button class="choice-option ${node.outpaintAmount === amount ? "active" : ""}" data-outpaint-amount="${amount}" type="button">扩展 ${amount}%</button>`).join("");
+      const resolutionButtons = allowedResolutions.map((resolution) => `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-outpaint-resolution="${resolution}" type="button">${resolution}</button>`).join("");
+      wrap.innerHTML = `
+        <div class="preview wide" data-outpaint-drop>${preview}</div>
+        <div class="outpaint-source-row">
+          <input data-outpaint-url type="url" inputmode="url" placeholder="粘贴图片链接（https://...）" value="${escapeHtml(node.outpaintSourceUrl || "")}">
+          <button class="ghost mini" data-outpaint-load-url type="button">载入链接</button>
+        </div>
+        <div class="result-actions" style="grid-template-columns:1fr;margin-top:8px;">
+          <label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">上传图片<input data-outpaint-upload type="file" accept="image/*" hidden></label>
+        </div>
+        <div class="form-row">
+          <label>模型</label>
+          <div class="node-select" data-node-select><button class="node-select-trigger" data-outpaint-model-toggle type="button"><span>${escapeHtml(node.model)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu">${modelMenu}</div></div>
+        </div>
+        <div class="form-row">
+          <label>扩展方向</label>
+          <div class="outpaint-direction-options">${directionButtons}</div>
+        </div>
+        <div class="form-row">
+          <label>扩展范围</label>
+          <div class="outpaint-amount-options">${amountButtons}</div>
+        </div>
+        <div class="form-row resolution-row">
+          <label>生成精度</label>
+          <div class="choice-options">${resolutionButtons}</div>
+        </div>
+        <div class="upscale-ratio-copy"><strong>保护原图内容</strong><div class="ratio-readout">AI 只生成新增区域，完成后把原图原位覆盖回画面</div></div>
+        <button data-generate class="wide-button" type="button">生成扩图</button>
+        <div class="status">${node.status || "请选择扩展方向；支持图片链接、上传及节点连线。"}</div>
+      `;
+
+      const loadUrl = async () => {
+        const input = wrap.querySelector("[data-outpaint-url]");
+        const url = String(input.value || "").trim();
+        if (!/^(?:https?:\/\/|data:image\/)/i.test(url)) {
+          node.status = "请输入可访问的 http(s) 图片链接。";
+          render();
+          return;
+        }
+        pushHistory();
+        const dimensions = await getImageDimensions(url);
+        node.outpaintSourceUrl = url;
+        node.mediaUrl = url;
+        node.mediaType = "image";
+        node.references = [{ url, mediaType: "image", width: dimensions.width, height: dimensions.height, name: "扩图来源" }];
+        node.status = dimensions.width && dimensions.height ? `图片链接已载入：${dimensions.width} × ${dimensions.height}px。` : "图片链接已载入，生成时将读取原图尺寸。";
+        render();
+      };
+      wrap.querySelector("[data-outpaint-load-url]").addEventListener("click", loadUrl);
+      wrap.querySelector("[data-outpaint-url]").addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        loadUrl();
+      });
+      wrap.querySelector("[data-outpaint-model-toggle]").addEventListener("click", (event) => {
+        event.stopPropagation();
+        const select = event.currentTarget.closest("[data-node-select]");
+        const shouldOpen = !select.classList.contains("open");
+        if (shouldOpen) {
+          select.classList.add("open");
+          document.addEventListener("click", () => select.classList.remove("open"), { once: true });
+        } else select.classList.remove("open");
+      });
+      wrap.querySelectorAll("[data-outpaint-model-option]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        node.model = imageModelOptions.includes(button.dataset.outpaintModelOption) ? button.dataset.outpaintModelOption : imageModelOptions[0];
+        node.resolution = imageResolutionOptionsForModel(node.model)[0];
+        render();
+      }));
+      wrap.querySelectorAll("[data-outpaint-direction]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        node.outpaintDirection = button.dataset.outpaintDirection;
+        render();
+      }));
+      wrap.querySelectorAll("[data-outpaint-amount]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        node.outpaintAmount = Number(button.dataset.outpaintAmount);
+        render();
+      }));
+      wrap.querySelectorAll("[data-outpaint-resolution]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        node.resolution = button.dataset.outpaintResolution;
+        render();
+      }));
+      wrap.querySelector("[data-outpaint-upload]").addEventListener("change", async (event) => {
+        pushHistory();
+        await replaceFilesInNode(node, event.target.files);
+        node.outpaintSourceUrl = "";
+        node.status = "图片已上传，请选择左右、上下或四周扩图。";
+        event.target.value = "";
+        render();
+      });
+      const drop = wrap.querySelector("[data-outpaint-drop]");
+      drop.addEventListener("dragover", (event) => {
+        if (!hasImageFiles(event.dataTransfer?.items || event.dataTransfer?.files)) return;
+        event.preventDefault();
+        drop.classList.add("drop-ready");
+      });
+      drop.addEventListener("dragleave", () => drop.classList.remove("drop-ready"));
+      drop.addEventListener("drop", async (event) => {
+        if (!hasImageFiles(event.dataTransfer?.items || event.dataTransfer?.files)) return;
+        event.preventDefault();
+        drop.classList.remove("drop-ready");
+        pushHistory();
+        await replaceFilesInNode(node, event.dataTransfer.files);
+        node.outpaintSourceUrl = "";
+        node.status = "图片已拖入，请选择扩图方向。";
+        render();
+      });
+      wrap.querySelector("[data-generate]").addEventListener("click", () => generateFromNode(node.id));
+      return wrap;
+    }
+
     function renderPngWorkflowBody(node) {
       const wrap = document.createElement("div");
       wrap.className = "transparent-workflow";
@@ -6613,7 +6800,7 @@
       const publicStatus = publicNodeStatus(node.status);
       const visibleMediaStatus = node.type === "image" && publicStatus === "参考图已自动转换为 JPG。" ? "" : publicStatus;
       const media = node.pending
-        ? `<div class="loading-state"><span class="spinner"></span><strong>${isVideo ? "效果视频正在生成" : "效果图正在生成"}</strong><span data-elapsed>${isVideo ? `已等待 ${node.elapsed || 0}s` : `已等待 ${node.elapsed || 0}s，最多 ${generationTimeoutSeconds}s`}</span></div>`
+        ? `<div class="loading-state"><span class="spinner"></span><strong>${isVideo ? "效果视频正在生成" : "效果图正在生成"}</strong></div>`
         : node.type === "image"
         ? renderReferenceGallery(node)
         : node.mediaType === "text"
@@ -7389,6 +7576,9 @@
         return { from: to, to: from };
       }
       if (fromNode?.type === "upscale" && (toNode?.type === "image" || toNode?.type === "result")) {
+        return { from: to, to: from };
+      }
+      if (fromNode?.type === "outpaint" && (toNode?.type === "image" || toNode?.type === "result")) {
         return { from: to, to: from };
       }
       return { from, to };
@@ -8211,7 +8401,7 @@
         if (!file) return;
         const node = nodes.find((item) => item.id === id);
         if (!node) return;
-        if (node.type === "png" && isImageFile(file)) {
+        if ((node.type === "png" || node.type === "outpaint" || node.type === "upscale") && isImageFile(file)) {
           await replaceFilesInNode(node, [file]);
           node.ratio = "Auto自适应";
         } else if (node.type === "image" && isImageFile(file)) {
@@ -8285,6 +8475,52 @@
       }
     }
 
+    function outpaintDirectionLabel(direction) {
+      return outpaintDirectionOptions.find((item) => item.value === direction)?.label || "左右扩图";
+    }
+
+    function outpaintTargetFrame(reference = {}, direction = "horizontal", amount = 50) {
+      const sourceWidth = Math.max(1, Number(reference.width) || 1024);
+      const sourceHeight = Math.max(1, Number(reference.height) || 1024);
+      const factor = 1 + Math.max(0.1, Math.min(1, (Number(amount) || 50) / 100));
+      let targetWidth = direction === "vertical" ? sourceWidth : Math.round(sourceWidth * factor);
+      let targetHeight = direction === "horizontal" ? sourceHeight : Math.round(sourceHeight * factor);
+      const maxSide = 6144;
+      const scale = Math.min(1, maxSide / Math.max(targetWidth, targetHeight));
+      targetWidth = Math.max(1, Math.round(targetWidth * scale));
+      targetHeight = Math.max(1, Math.round(targetHeight * scale));
+      const originalWidth = Math.max(1, Math.round(sourceWidth * scale));
+      const originalHeight = Math.max(1, Math.round(sourceHeight * scale));
+      const x = direction === "vertical" ? 0 : Math.round((targetWidth - originalWidth) / 2);
+      const y = direction === "horizontal" ? 0 : Math.round((targetHeight - originalHeight) / 2);
+      return {
+        size: `${targetWidth}x${targetHeight}`,
+        targetWidth,
+        targetHeight,
+        originalWidth,
+        originalHeight,
+        x,
+        y
+      };
+    }
+
+    function outpaintPromptFor(node, targetSize) {
+      const direction = node.outpaintDirection || "horizontal";
+      const placement = direction === "horizontal"
+        ? "原图完整放在新画布中央，新增区域只在左侧和右侧。"
+        : direction === "vertical"
+        ? "原图完整放在新画布中央，新增区域只在上方和下方。"
+        : "原图完整放在新画布中央，新增区域分布在上、下、左、右四周。";
+      return [
+        node.prompt || "",
+        `扩图方向：${outpaintDirectionLabel(direction)}；输出尺寸：${targetSize}。`,
+        placement,
+        "这是严格的画布扩展任务，只生成原图边界以外的新增区域。",
+        "原图内部像素必须保持不变，不得重绘、裁切、拉伸、移动或覆盖原图中的人物、产品、文字、Logo、构图、颜色和细节。",
+        "新增区域需要自然延续原图的透视、光线、纹理、景深和环境，边缘无接缝。"
+      ].filter(Boolean).join("\n\n");
+    }
+
     async function generateFromNode(id) {
       const node = nodes.find((item) => item.id === id);
       if (!node) return;
@@ -8311,9 +8547,9 @@
           node
         ];
       let references = collectReferenceItems(referenceSources);
-      if (node.type === "upscale") references = references.slice(0, 1);
+      if (node.type === "upscale" || node.type === "outpaint") references = references.slice(0, 1);
       await ensureReferenceDimensions(references);
-      if (node.type === "upscale" && !references.length) {
+      if ((node.type === "upscale" || node.type === "outpaint") && !references.length) {
         node.status = "请先上传图片，或连接一个参考图/效果图节点。";
         render();
         return;
@@ -8323,13 +8559,15 @@
         prompt: node.prompt
       };
       const fixedVideoRatio = node.type === "video" ? fixedVideoAspectRatio(node.model) : "";
-      const sizeDecision = node.type === "png"
+      const sizeDecision = node.type === "outpaint"
+        ? { size: outpaintTargetFrame(references[0], node.outpaintDirection, node.outpaintAmount).size, source: `扩图 ${outpaintDirectionLabel(node.outpaintDirection)}` }
+        : node.type === "png"
         ? { size: transparentTargetSize(references, node.resolution), source: "透明 PNG 原图比例" }
         : fixedVideoRatio
         ? { size: sizeFromRatio(fixedVideoRatio, node.resolution, [], { prompt: "" }), source: `视频模型固定 ${fixedVideoRatio}` }
         : sizeDecisionFromRatio(node.ratio, node.resolution, references, autoOptions);
       const targetSize = sizeDecision.size;
-      const count = node.type === "keyword" || node.type === "png" || node.type === "upscale"
+      const count = node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint"
         ? 1
         : node.type === "video"
         ? (videoCountOptions.includes(Number(node.count)) ? Number(node.count) : 1)
@@ -8360,8 +8598,8 @@
         const position = layout(index);
         const isLandscapeResult = parsed.width > parsed.height && node.type !== "video";
         const pending = createNode("result", position.x, position.y, {
-          title: node.type === "keyword" ? "反推/生成提示词" : node.type === "video" ? "效果视频" : node.type === "png" ? "透明PNG效果图" : node.type === "upscale" ? "4K效果图" : "效果图",
-          ratio: node.ratio,
+          title: node.type === "keyword" ? "反推/生成提示词" : node.type === "video" ? "效果视频" : node.type === "png" ? "透明PNG效果图" : node.type === "upscale" ? "4K效果图" : node.type === "outpaint" ? "扩图效果图" : "效果图",
+          ratio: node.type === "outpaint" ? `${parsed.width}:${parsed.height}` : node.ratio,
           width: parsed.width,
           height: parsed.height,
           frameWidth: isLandscapeResult ? 360 : 240,
@@ -8401,7 +8639,7 @@
       // time so slow requests do not block every result behind them.
       const batchSource = {
         ...node,
-        prompt: String(node.prompt || ""),
+        prompt: node.type === "outpaint" ? outpaintPromptFor(node, targetSize, references[0]) : String(node.prompt || ""),
         references: Array.isArray(node.references) ? node.references.map((item) => ({ ...item })) : []
       };
       const generationConcurrency = 3;
@@ -8574,6 +8812,11 @@
         const url = apiResult.mediaType === "image" && rawUrl
           ? (sourceNode.type === "png"
             ? await normalizeGeneratedImage(rawUrl, targetSize, true)
+            : sourceNode.type === "outpaint"
+            ? await composeOutpaintImage(rawUrl, collectReferenceItems([
+                ...getInputMediaList(sourceNode.id),
+                sourceNode
+              ])[0], targetSize, sourceNode.outpaintDirection, sourceNode.outpaintAmount)
             : normalizeToTargetSize
             ? await normalizeGeneratedImage(rawUrl, targetSize, false, true)
             : rawUrl)
@@ -8603,7 +8846,7 @@
         await settleWithin(autoSaveGeneratedNodeMedia(pending), 18000, null, "图片自动保存");
         await settleWithin(saveCanvasState(), 10000, null, "生成结果保存");
       } catch (error) {
-        if (sourceNode.type === "generator" && attempt < 3 && isRetryableGenerationError(error)) {
+        if ((sourceNode.type === "generator" || sourceNode.type === "outpaint") && attempt < 3 && isRetryableGenerationError(error)) {
           if (timeout) clearTimeout(timeout);
           pending.pending = true;
           pending.status = `第 ${index + 1} 张正在重试（${attempt}/2）...`;
@@ -8652,6 +8895,7 @@
       if (node.type === "video") return 420;
       if (node.type === "png") return 420;
       if (node.type === "upscale") return 430;
+      if (node.type === "outpaint") return 450;
       if (node.type === "selection") return 760;
       if (node.type === "result") return 240;
       return 300;
@@ -10015,6 +10259,76 @@ ${formatInstruction}`;
         throw new Error(`图片尺寸校验失败：期望 ${expected.width}×${expected.height}，实际 ${actual.width || 0}×${actual.height || 0}。`);
       }
       return normalized;
+    }
+
+    function loadCanvasImage(src) {
+      return new Promise(async (resolve, reject) => {
+        let objectUrl = "";
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        const release = () => {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          objectUrl = "";
+        };
+        image.onload = () => resolve({ image, release });
+        image.onerror = () => {
+          release();
+          reject(new Error("扩图图片读取失败。"));
+        };
+        try {
+          if (/^https?:\/\//i.test(src)) {
+            const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
+            if (!response.ok) throw new Error(`图片下载失败（HTTP ${response.status}）`);
+            objectUrl = URL.createObjectURL(await response.blob());
+            image.src = objectUrl;
+          } else {
+            image.src = src;
+          }
+        } catch (error) {
+          release();
+          reject(error);
+        }
+      });
+    }
+
+    async function composeOutpaintImage(generatedSrc, reference, targetSize, direction, amount) {
+      if (!reference?.url) throw new Error("扩图缺少原图。请重新上传或连接图片节点。");
+      const dimensions = reference.width && reference.height
+        ? reference
+        : { ...reference, ...await getImageDimensions(reference.url) };
+      if (!dimensions.width || !dimensions.height) throw new Error("无法读取扩图原图尺寸。");
+      const frame = outpaintTargetFrame(dimensions, direction, amount);
+      const expected = parseSize(targetSize);
+      const generated = await loadCanvasImage(generatedSrc);
+      let original;
+      try {
+        original = await loadCanvasImage(reference.url);
+      } catch (error) {
+        generated.release();
+        throw error;
+      }
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = expected.width;
+        canvas.height = expected.height;
+        const ctx = canvas.getContext("2d");
+        drawImageAspectSafe(ctx, generated.image, expected.width, expected.height, false, true);
+        const scaleX = expected.width / frame.targetWidth;
+        const scaleY = expected.height / frame.targetHeight;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(
+          original.image,
+          Math.round(frame.x * scaleX),
+          Math.round(frame.y * scaleY),
+          Math.round(frame.originalWidth * scaleX),
+          Math.round(frame.originalHeight * scaleY)
+        );
+        return canvas.toDataURL("image/png");
+      } finally {
+        generated.release();
+        original.release();
+      }
     }
 
     function makeTransparentPngDataUrl(src, targetSize) {
