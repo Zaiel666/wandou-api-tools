@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "修复画布缩放时提示词文字裁切；节点标题、复制和删除按钮固定在节点上方 2px；参考图状态文字及效果图尺寸与用时固定在内容下方 2px。"
+            notes = "新增扩图节点，支持左右、上下及四周扩图，并在输出前原位覆盖回原图以保护主体、文字、Logo 和构图；修复扩图与 4K 放大上传图片预览裁切；生成等待时间只在底部尺寸栏显示；修复暗色公告、卡片高光、空白提示居中及扩图选中状态。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
