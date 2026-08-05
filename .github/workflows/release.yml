@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "优化大型节点画布保存：图片数据改为独立持久化并保留磁盘恢复副本，降低桌面端卡顿和关闭时保存失败；后台画布标签安全降载，项目文件夹显示真实生成图封面；修复生成中的横向效果图被默认比例撑高、下方多出大块空白的问题。"
+            notes = "修复多节点工作流保存失败：旧版画布内嵌的大图片在保存时自动迁移到独立磁盘存储；浏览器图片数据库不可用或被占用时自动使用桌面磁盘兜底并允许重试；关闭校验会显示具体失败字段，避免只提示保存失败。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

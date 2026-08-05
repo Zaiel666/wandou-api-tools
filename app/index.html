@@ -268,6 +268,24 @@
         <details class="info-card notice-card notice-card-latest">
           <summary>
             <span class="info-meta">
+              <span class="info-kicker">v1.0.48 多画布保存修复</span>
+              <time datetime="2026-08">2026 年 8 月</time>
+            </span>
+            <h3>旧画布图片迁移与磁盘保存兜底</h3>
+            <p>修复包含多张生成图或旧版 Base64 图片的工作流无法保存、无法关闭的问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>保存时会把旧画布的大图片自动迁移到独立磁盘文件，避免同一张图在节点数据中重复占用几十兆内存。</p>
+            <p>浏览器图片数据库被占用或不可用时自动改用桌面磁盘保存，并在失败时显示具体字段，方便准确排查。</p>
+            <nav class="notice-links" aria-label="v1.0.48 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.48" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.48/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
               <span class="info-kicker">v1.0.47 画布保存与预览修复</span>
               <time datetime="2026-08">2026 年 8 月</time>
             </span>

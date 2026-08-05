@@ -579,7 +579,7 @@
     function openLocalMediaDb() {
       if (!window.indexedDB) return Promise.resolve(null);
       if (openLocalMediaDb.promise) return openLocalMediaDb.promise;
-      openLocalMediaDb.promise = new Promise((resolve) => {
+      const openTask = new Promise((resolve) => {
         const request = indexedDB.open(localMediaDbName, 2);
         let settled = false;
         const finish = (value) => {
@@ -588,7 +588,7 @@
           clearTimeout(timeout);
           resolve(value);
         };
-        const timeout = setTimeout(() => finish(null), 3500);
+        const timeout = setTimeout(() => finish(null), 8000);
         request.onupgradeneeded = () => {
           if (!request.result.objectStoreNames.contains(localMediaStoreName)) {
             request.result.createObjectStore(localMediaStoreName, { keyPath: "id" });
@@ -597,9 +597,16 @@
             request.result.createObjectStore("canvas-state", { keyPath: "id" });
           }
         };
-        request.onsuccess = () => finish(request.result);
+        request.onsuccess = () => {
+          request.result.onversionchange = () => request.result.close();
+          finish(request.result);
+        };
         request.onerror = () => finish(null);
-        request.onblocked = () => finish(null);
+        request.onblocked = () => console.warn("Canvas media database upgrade is waiting for another tab");
+      });
+      openLocalMediaDb.promise = openTask.then((db) => {
+        if (!db) openLocalMediaDb.promise = null;
+        return db;
       });
       return openLocalMediaDb.promise;
     }

@@ -155,11 +155,31 @@ function containsEmbeddedCanvasMedia(value) {
   return Object.values(value).some(containsEmbeddedCanvasMedia);
 }
 
+function embeddedCanvasMediaPath(value, currentPath = "state") {
+  if (typeof value === "string") {
+    return value.startsWith("data:") && value.length > 1200000 ? currentPath : "";
+  }
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const found = embeddedCanvasMediaPath(value[index], `${currentPath}[${index}]`);
+      if (found) return found;
+    }
+    return "";
+  }
+  if (!value || typeof value !== "object") return "";
+  for (const [key, nested] of Object.entries(value)) {
+    const found = embeddedCanvasMediaPath(nested, `${currentPath}.${key}`);
+    if (found) return found;
+  }
+  return "";
+}
+
 async function writeCanvasBackup(payload = {}) {
   const state = payload.state;
   if (!state || !Array.isArray(state.nodes)) return { success: false, error: "Invalid canvas state" };
   if (containsEmbeddedCanvasMedia(state)) {
-    return { success: false, error: "Canvas media was not compacted before backup" };
+    const field = embeddedCanvasMediaPath(state);
+    return { success: false, error: `图片未完成独立存储${field ? `：${field}` : ""}` };
   }
   const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
   const projectId = safeCanvasBackupId(payload.projectId, "default-project");

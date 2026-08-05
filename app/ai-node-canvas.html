@@ -11308,7 +11308,7 @@ ${formatInstruction}`;
     function openLocalMediaDb() {
       if (!("indexedDB" in window)) return Promise.resolve(null);
       if (openLocalMediaDb.promise) return openLocalMediaDb.promise;
-      openLocalMediaDb.promise = new Promise((resolve) => {
+      const openTask = new Promise((resolve) => {
         const request = indexedDB.open(localMediaDbName, 2);
         let settled = false;
         const finish = (value) => {
@@ -11320,7 +11320,7 @@ ${formatInstruction}`;
           clearTimeout(timeout);
           resolve(value);
         };
-        const timeout = setTimeout(() => finish(null), 3500);
+        const timeout = setTimeout(() => finish(null), 8000);
         request.onupgradeneeded = () => {
           if (!request.result.objectStoreNames.contains(localMediaStoreName)) {
             request.result.createObjectStore(localMediaStoreName, { keyPath: "id" });
@@ -11329,9 +11329,16 @@ ${formatInstruction}`;
             request.result.createObjectStore(canvasStateStoreName, { keyPath: "id" });
           }
         };
-        request.onsuccess = () => finish(request.result);
+        request.onsuccess = () => {
+          request.result.onversionchange = () => request.result.close();
+          finish(request.result);
+        };
         request.onerror = () => finish(null);
-        request.onblocked = () => finish(null);
+        request.onblocked = () => console.warn("Canvas media database upgrade is waiting for another tab");
+      });
+      openLocalMediaDb.promise = openTask.then((db) => {
+        if (!db) openLocalMediaDb.promise = null;
+        return db;
       });
       return openLocalMediaDb.promise;
     }
@@ -11345,36 +11352,45 @@ ${formatInstruction}`;
     }
 
     async function putLocalMedia(value) {
-      const db = await openLocalMediaDb();
-      if (!db) return value;
       const id = mediaStorageId(value);
       const storedValue = `${localMediaPrefix}${id}`;
       if (persistedLocalMediaIds.has(id)) return storedValue;
       if (pendingLocalMediaWrites.has(id)) return pendingLocalMediaWrites.get(id);
       const writeTask = (async () => {
-        const storedInBrowser = await new Promise((resolve) => {
-          try {
-            const tx = db.transaction(localMediaStoreName, "readwrite");
-            tx.objectStore(localMediaStoreName).put({ id, value, savedAt: Date.now() });
-            tx.oncomplete = () => resolve(true);
-            tx.onerror = () => resolve(false);
-            tx.onabort = () => resolve(false);
-          } catch (_error) {
-            resolve(false);
-          }
-        });
-        if (!storedInBrowser) return value;
-        if (window.wandouShell?.writeCanvasMedia) {
+        const browserWriteTask = (async () => {
+          const db = await openLocalMediaDb();
+          return db
+            ? await new Promise((resolve) => {
+              try {
+                const tx = db.transaction(localMediaStoreName, "readwrite");
+                tx.objectStore(localMediaStoreName).put({ id, value, savedAt: Date.now() });
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+                tx.onabort = () => resolve(false);
+              } catch (_error) {
+                resolve(false);
+              }
+            })
+            : false;
+        })();
+        const desktopMediaRequired = Boolean(window.wandouShell?.writeCanvasMedia);
+        let storedOnDesktop = false;
+        if (desktopMediaRequired) {
           try {
             const existing = await window.wandouShell.hasCanvasMedia?.({ id });
-            if (!existing?.exists) {
+            storedOnDesktop = Boolean(existing?.exists);
+            if (!storedOnDesktop) {
               const desktopResult = await window.wandouShell.writeCanvasMedia({ id, value });
-              if (!desktopResult?.success) return value;
+              storedOnDesktop = Boolean(desktopResult?.success);
             }
           } catch (_error) {
-            return value;
+            storedOnDesktop = false;
           }
         }
+        const storedInBrowser = desktopMediaRequired ? false : await browserWriteTask;
+        if (desktopMediaRequired) void browserWriteTask.catch(() => false);
+        const durablyStored = desktopMediaRequired ? storedOnDesktop : storedInBrowser;
+        if (!durablyStored) return value;
         persistedLocalMediaIds.add(id);
         return storedValue;
       })().finally(() => pendingLocalMediaWrites.delete(id));
@@ -11400,8 +11416,18 @@ ${formatInstruction}`;
 
     async function getLocalMedia(value) {
       if (typeof value !== "string" || !value.startsWith(localMediaPrefix)) return value;
-      const db = await openLocalMediaDb();
       const id = value.slice(localMediaPrefix.length);
+      if (window.wandouShell?.readCanvasMedia) {
+        try {
+          const desktopResult = await window.wandouShell.readCanvasMedia({ id });
+          if (desktopResult?.success && desktopResult.value) {
+            void cacheRecoveredDesktopMedia(id, desktopResult.value);
+            persistedLocalMediaIds.add(id);
+            return desktopResult.value;
+          }
+        } catch (_error) {}
+      }
+      const db = await openLocalMediaDb();
       let localValue = "";
       if (db) {
         localValue = await new Promise((resolve) => {
@@ -11418,16 +11444,6 @@ ${formatInstruction}`;
       if (localValue) {
         persistedLocalMediaIds.add(id);
         return localValue;
-      }
-      if (window.wandouShell?.readCanvasMedia) {
-        try {
-          const desktopResult = await window.wandouShell.readCanvasMedia({ id });
-          if (desktopResult?.success && desktopResult.value) {
-            await cacheRecoveredDesktopMedia(id, desktopResult.value);
-            persistedLocalMediaIds.add(id);
-            return desktopResult.value;
-          }
-        } catch (_error) {}
       }
       return "";
     }
@@ -11665,6 +11681,15 @@ ${formatInstruction}`;
           ? desktopBackup?.success
           : immediateSaved && localVerified)
       );
+      const error = success
+        ? ""
+        : !durableSaved
+        ? "图片或画布状态未能写入本地存储"
+        : desktopBackupRequired && !desktopBackup?.success
+        ? (desktopBackup?.error || "桌面备份写入失败")
+        : !immediateSaved || !localVerified
+        ? "浏览器画布状态校验失败"
+        : "节点工作流未能通过保存校验";
       return {
         success,
         supported: true,
@@ -11673,7 +11698,7 @@ ${formatInstruction}`;
         nodeCount: context.state.nodes.length,
         savedAt: context.state.savedAt,
         backupPath: desktopBackup?.path || "",
-        error: success ? "" : "节点工作流未能通过保存校验"
+        error
       };
     };
 
@@ -11713,6 +11738,8 @@ ${formatInstruction}`;
       copy.mediaUrl = await persistMediaValue(copy.mediaUrl);
       copy.previewUrl = await persistMediaValue(copy.previewUrl);
       copy.fullUrl = await persistMediaValue(copy.fullUrl);
+      copy.sourceUrl = await persistMediaValue(copy.sourceUrl);
+      copy.outpaintSourceUrl = await persistMediaValue(copy.outpaintSourceUrl);
       if (Array.isArray(copy.references)) {
         copy.references = await Promise.all(copy.references.map(async (item) => ({
           ...item,
@@ -11741,10 +11768,14 @@ ${formatInstruction}`;
       node.mediaUrl = await getLocalMedia(node.mediaUrl) || node.mediaSourceUrl || "";
       node.previewUrl = await getLocalMedia(node.previewUrl) || node.previewSourceUrl || node.mediaUrl || "";
       node.fullUrl = await getLocalMedia(node.fullUrl) || node.fullSourceUrl || node.mediaUrl || "";
+      node.sourceUrl = await getLocalMedia(node.sourceUrl) || "";
+      node.outpaintSourceUrl = await getLocalMedia(node.outpaintSourceUrl) || "";
       await Promise.all([
         mirrorLargeLoadedMedia(node.mediaUrl),
         mirrorLargeLoadedMedia(node.previewUrl),
-        mirrorLargeLoadedMedia(node.fullUrl)
+        mirrorLargeLoadedMedia(node.fullUrl),
+        mirrorLargeLoadedMedia(node.sourceUrl),
+        mirrorLargeLoadedMedia(node.outpaintSourceUrl)
       ]);
       if (Array.isArray(node.references)) {
         node.references = (await Promise.all(node.references.map(async (item) => ({
@@ -11770,7 +11801,7 @@ ${formatInstruction}`;
           const backupNode = backupNodes.get(node.id);
           if (!backupNode) return node;
           const merged = { ...node };
-          for (const key of ["mediaUrl", "previewUrl", "fullUrl", "mediaSourceUrl", "previewSourceUrl", "fullSourceUrl"]) {
+          for (const key of ["mediaUrl", "previewUrl", "fullUrl", "sourceUrl", "outpaintSourceUrl", "mediaSourceUrl", "previewSourceUrl", "fullSourceUrl"]) {
             if (!merged[key] && backupNode[key]) merged[key] = backupNode[key];
           }
           if ((backupNode.references?.length || 0) > (merged.references?.length || 0)) {

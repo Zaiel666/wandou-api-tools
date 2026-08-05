@@ -302,7 +302,8 @@ async function closeTab(id) {
   clearTabSuspendTimer(tab);
   const saveResult = await saveTabBeforeClose(tab);
   if (saveResult.supported && !saveResult.success) {
-    showToast(`${tab.title || "当前标签"}保存失败，标签没有关闭`, true);
+    const reason = saveResult.error ? `：${saveResult.error}` : "";
+    showToast(`${tab.title || "当前标签"}保存失败，标签没有关闭${reason}`, true);
     return;
   }
   const order = [...tabs.keys()];
