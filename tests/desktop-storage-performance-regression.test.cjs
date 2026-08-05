@@ -31,7 +31,8 @@ assert.match(shell, /wandouPrepareTabSuspend[\s\S]*if \(!result\?\.safe/);
 assert.match(shell, /tab\.suspended[\s\S]*tab\.view\.src = "about:blank"/);
 
 assert.match(main, /containsEmbeddedCanvasMedia\(state\)/);
-assert.match(main, /embeddedCanvasMediaPath[\s\S]*图片未完成独立存储/);
+assert.match(main, /compactEmbeddedCanvasMedia[\s\S]*writeCanvasMedia[\s\S]*indexed-media:/);
+assert.match(main, /state = await compactEmbeddedCanvasMedia\(state\)/);
 assert.match(main, /canvasBackupFingerprint[\s\S]*deduplicated: true/);
 assert.match(main, /function writeCanvasMedia[\s\S]*canvasMediaRootDirectory/);
 assert.match(preload, /desktop:has-canvas-media/);

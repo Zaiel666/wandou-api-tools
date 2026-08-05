@@ -25,8 +25,34 @@ internal static class PortableUpdater
         {
             var destination = file.Replace(from, to);
             Directory.CreateDirectory(Path.GetDirectoryName(destination));
-            File.Copy(file, destination, true);
+            try { File.Copy(file, destination, true); }
+            catch (Exception ex) { throw new IOException("Failed to replace " + destination + ": " + ex.Message, ex); }
         }
+    }
+
+    static void StopInstallProcesses(string install, string executable, string log)
+    {
+        var name = Path.GetFileNameWithoutExtension(executable);
+        for (var round = 0; round < 8; round++)
+        {
+            var found = false;
+            foreach (var process in Process.GetProcessesByName(name))
+            {
+                try
+                {
+                    var processPath = process.MainModule.FileName;
+                    if (!processPath.StartsWith(install, StringComparison.OrdinalIgnoreCase)) continue;
+                    found = true;
+                    process.Kill();
+                    process.WaitForExit(5000);
+                }
+                catch { }
+                finally { process.Dispose(); }
+            }
+            if (!found) return;
+            Thread.Sleep(500);
+        }
+        Log(log, "Warning: some application processes may still be running before copy.");
     }
 
     public static int Main(string[] args)
@@ -46,16 +72,19 @@ internal static class PortableUpdater
             if (String.IsNullOrWhiteSpace(install) || !Directory.Exists(install) || !File.Exists(package)) throw new InvalidOperationException("Invalid update arguments.");
             File.WriteAllText(ready, "ready");
             Log(log, "Native updater accepted update request.");
-            try { Process.GetProcessById(parent).WaitForExit(30000); } catch { }
-            Thread.Sleep(800);
-            try { Process.Start(new ProcessStartInfo("taskkill", "/PID " + parent + " /T /F") { CreateNoWindow = true, UseShellExecute = false }).WaitForExit(10000); } catch { }
+            // Kill the tree while the parent PID still exists. Waiting for the parent first
+            // reparents Electron renderer/GPU children and leaves app.asar memory-mapped.
+            Thread.Sleep(1800);
+            try { Process.Start(new ProcessStartInfo("taskkill", "/PID " + parent + " /T /F") { CreateNoWindow = true, UseShellExecute = false }).WaitForExit(15000); } catch { }
+            StopInstallProcesses(install, executable, log);
+            Thread.Sleep(1000);
             Directory.CreateDirectory(stage);
             ZipFile.ExtractToDirectory(package, stage);
             Exception last = null;
             for (var attempt = 0; attempt < 30; attempt++)
             {
                 try { CopyDirectory(stage, install); last = null; break; }
-                catch (Exception ex) { last = ex; Thread.Sleep(1000); }
+                catch (Exception ex) { last = ex; Log(log, "Native copy attempt " + (attempt + 1) + " failed: " + ex.Message); Thread.Sleep(1000); }
             }
             if (last != null) throw last;
             if (!String.IsNullOrWhiteSpace(target))

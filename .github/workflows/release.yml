@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "修复多节点工作流保存失败：旧版画布内嵌的大图片在保存时自动迁移到独立磁盘存储；浏览器图片数据库不可用或被占用时自动使用桌面磁盘兜底并允许重试；关闭校验会显示具体失败字段，避免只提示保存失败。"
+            notes = "专项修复自动更新与多节点保存：更新器在主进程仍存在时结束完整 Electron 进程树，避免渲染/GPU 子进程继续占用 app.asar 导致覆盖失败；桌面备份会自行扫描并抽取任何字段中的大图片，即使页面遗漏字段也不再拒绝保存。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

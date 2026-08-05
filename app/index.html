@@ -268,6 +268,24 @@
         <details class="info-card notice-card notice-card-latest">
           <summary>
             <span class="info-meta">
+              <span class="info-kicker">v1.0.49 更新与保存专项修复</span>
+              <time datetime="2026-08">2026 年 8 月</time>
+            </span>
+            <h3>解除更新文件占用并增加桌面保存终极兜底</h3>
+            <p>修复下载完成后仍停留旧版本，以及复杂节点工作流因遗漏图片字段而无法保存的问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>更新器会在旧程序主进程仍存在时结束完整 Electron 进程树，避免渲染和 GPU 子进程继续占用 app.asar。</p>
+            <p>桌面备份会再次扫描整个工作流，自动抽取任意字段内的大图片，不再依赖页面提前列出全部图片字段。</p>
+            <nav class="notice-links" aria-label="v1.0.49 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.49" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.49/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
               <span class="info-kicker">v1.0.48 多画布保存修复</span>
               <time datetime="2026-08">2026 年 8 月</time>
             </span>

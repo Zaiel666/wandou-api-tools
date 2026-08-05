@@ -174,12 +174,51 @@ function embeddedCanvasMediaPath(value, currentPath = "state") {
   return "";
 }
 
+function canvasMediaStorageId(value) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += Math.max(1, Math.floor(value.length / 4096))) {
+    hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
+  }
+  return `${Math.abs(hash).toString(36)}-${value.length}`;
+}
+
+async function compactEmbeddedCanvasMedia(value, currentPath = "state", writes = new Map()) {
+  if (typeof value === "string") {
+    if (!value.startsWith("data:") || value.length <= 1200000) return value;
+    const id = canvasMediaStorageId(value);
+    if (!writes.has(id)) writes.set(id, writeCanvasMedia({ id, value }));
+    const result = await writes.get(id);
+    if (!result?.success) {
+      throw new Error(`图片独立存储失败：${currentPath}${result?.error ? `（${result.error}）` : ""}`);
+    }
+    return `indexed-media:${id}`;
+  }
+  if (Array.isArray(value)) {
+    const compact = [];
+    for (let index = 0; index < value.length; index += 1) {
+      compact.push(await compactEmbeddedCanvasMedia(value[index], `${currentPath}[${index}]`, writes));
+    }
+    return compact;
+  }
+  if (!value || typeof value !== "object") return value;
+  const compact = {};
+  for (const [key, nested] of Object.entries(value)) {
+    compact[key] = await compactEmbeddedCanvasMedia(nested, `${currentPath}.${key}`, writes);
+  }
+  return compact;
+}
+
 async function writeCanvasBackup(payload = {}) {
-  const state = payload.state;
+  let state = payload.state;
   if (!state || !Array.isArray(state.nodes)) return { success: false, error: "Invalid canvas state" };
+  try {
+    state = await compactEmbeddedCanvasMedia(state);
+  } catch (error) {
+    return { success: false, error: error.message || "图片独立存储失败" };
+  }
   if (containsEmbeddedCanvasMedia(state)) {
     const field = embeddedCanvasMediaPath(state);
-    return { success: false, error: `图片未完成独立存储${field ? `：${field}` : ""}` };
+    return { success: false, error: `图片仍未完成独立存储${field ? `：${field}` : ""}` };
   }
   const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
   const projectId = safeCanvasBackupId(payload.projectId, "default-project");
