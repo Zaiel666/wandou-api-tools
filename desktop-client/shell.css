@@ -130,6 +130,9 @@ button { font: inherit; }
   color: var(--text);
   background: var(--tab-active);
 }
+.tab.suspended:not(.active) .tab-icon {
+  opacity: .55;
+}
 .tab:active { transform: translateY(1px); }
 .tab-icon {
   display: grid;

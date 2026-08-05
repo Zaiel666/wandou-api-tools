@@ -84,6 +84,57 @@ function canvasBackupRootDirectory() {
   return path.join(app.getPath("userData"), "canvas-backups");
 }
 
+function canvasMediaRootDirectory() {
+  return path.join(app.getPath("userData"), "canvas-media");
+}
+
+function canvasMediaPath(id) {
+  return path.join(canvasMediaRootDirectory(), `${safeCanvasBackupId(id, "invalid-media")}.data`);
+}
+
+async function hasCanvasMedia(payload = {}) {
+  const id = safeCanvasBackupId(payload.id, "");
+  if (!id) return { success: false, exists: false, error: "Invalid media id" };
+  return { success: true, exists: fs.existsSync(canvasMediaPath(id)) };
+}
+
+async function writeCanvasMedia(payload = {}) {
+  const id = safeCanvasBackupId(payload.id, "");
+  const value = typeof payload.value === "string" ? payload.value : "";
+  if (!id || !value.startsWith("data:")) return { success: false, error: "Invalid canvas media" };
+  if (Buffer.byteLength(value, "utf8") > 96 * 1024 * 1024) {
+    return { success: false, error: "Canvas media is larger than 96 MB" };
+  }
+  try {
+    const destination = canvasMediaPath(id);
+    if (fs.existsSync(destination)) return { success: true, path: destination, deduplicated: true };
+    await fs.promises.mkdir(canvasMediaRootDirectory(), { recursive: true });
+    const temporary = `${destination}.${process.pid}-${crypto.randomBytes(4).toString("hex")}.tmp`;
+    await fs.promises.writeFile(temporary, value, "utf8");
+    try {
+      await fs.promises.rename(temporary, destination);
+    } catch (error) {
+      if (!fs.existsSync(destination)) throw error;
+      await fs.promises.unlink(temporary).catch(() => {});
+    }
+    return { success: true, path: destination };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function readCanvasMedia(payload = {}) {
+  const id = safeCanvasBackupId(payload.id, "");
+  if (!id) return { success: false, value: "", error: "Invalid media id" };
+  try {
+    const value = await fs.promises.readFile(canvasMediaPath(id), "utf8");
+    return { success: value.startsWith("data:"), value: value.startsWith("data:") ? value : "" };
+  } catch (error) {
+    if (error.code === "ENOENT") return { success: false, value: "", missing: true };
+    return { success: false, value: "", error: error.message };
+  }
+}
+
 function canvasBackupDirectory(folderId, projectId) {
   return path.join(
     canvasBackupRootDirectory(),
@@ -92,9 +143,24 @@ function canvasBackupDirectory(folderId, projectId) {
   );
 }
 
+function canvasBackupFingerprint(state) {
+  const stableState = { ...state, savedAt: 0 };
+  return crypto.createHash("sha256").update(JSON.stringify(stableState)).digest("hex");
+}
+
+function containsEmbeddedCanvasMedia(value) {
+  if (typeof value === "string") return value.startsWith("data:") && value.length > 1200000;
+  if (Array.isArray(value)) return value.some(containsEmbeddedCanvasMedia);
+  if (!value || typeof value !== "object") return false;
+  return Object.values(value).some(containsEmbeddedCanvasMedia);
+}
+
 async function writeCanvasBackup(payload = {}) {
   const state = payload.state;
   if (!state || !Array.isArray(state.nodes)) return { success: false, error: "Invalid canvas state" };
+  if (containsEmbeddedCanvasMedia(state)) {
+    return { success: false, error: "Canvas media was not compacted before backup" };
+  }
   const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
   const projectId = safeCanvasBackupId(payload.projectId, "default-project");
   const savedAt = Number(state.savedAt) || Date.now();
@@ -113,11 +179,24 @@ async function writeCanvasBackup(payload = {}) {
   try {
     const directory = canvasBackupDirectory(folderId, projectId);
     await fs.promises.mkdir(directory, { recursive: true });
+    const fingerprint = canvasBackupFingerprint(state);
+    const fingerprintPath = path.join(directory, ".latest-backup.json");
+    try {
+      const latest = JSON.parse(await fs.promises.readFile(fingerprintPath, "utf8"));
+      if (latest?.fingerprint === fingerprint && latest?.path && fs.existsSync(latest.path)) {
+        return { success: true, path: latest.path, savedAt, deduplicated: true };
+      }
+    } catch (_error) {
+      // 首次保存或旧版本没有指纹文件时继续写入新快照。
+    }
     const suffix = crypto.randomBytes(4).toString("hex");
     const destination = path.join(directory, `${savedAt}-${suffix}.json`);
     const temporary = `${destination}.tmp`;
     await fs.promises.writeFile(temporary, serialized, "utf8");
     await fs.promises.rename(temporary, destination);
+    const fingerprintTemporary = `${fingerprintPath}.tmp`;
+    await fs.promises.writeFile(fingerprintTemporary, JSON.stringify({ fingerprint, path: destination, savedAt }), "utf8");
+    await fs.promises.rename(fingerprintTemporary, fingerprintPath);
     const snapshots = (await fs.promises.readdir(directory, { withFileTypes: true }))
       .filter((entry) => entry.isFile() && /^\d+-[0-9a-f]+\.json$/i.test(entry.name))
       .map((entry) => entry.name)
@@ -576,6 +655,9 @@ ipcMain.handle("desktop:write-save-file", async (_event, payload = {}) => {
 });
 ipcMain.handle("desktop:write-canvas-backup", (_event, payload = {}) => writeCanvasBackup(payload));
 ipcMain.handle("desktop:read-canvas-backups", (_event, payload = {}) => readCanvasBackups(payload));
+ipcMain.handle("desktop:has-canvas-media", (_event, payload = {}) => hasCanvasMedia(payload));
+ipcMain.handle("desktop:write-canvas-media", (_event, payload = {}) => writeCanvasMedia(payload));
+ipcMain.handle("desktop:read-canvas-media", (_event, payload = {}) => readCanvasMedia(payload));
 ipcMain.handle("desktop:get-canvas-backup-directory", () => ({
   directory: canvasBackupRootDirectory()
 }));

@@ -4548,8 +4548,9 @@
     let redoStack = [];
     let isApplyingHistory = false;
     const historyStackLimit = 12;
-    const canvasSaveDelayMs = 300;
-    const typingCanvasSaveDelayMs = 1200;
+    const canvasSaveDelayMs = 900;
+    const typingCanvasSaveDelayMs = 1600;
+    const desktopBackupIntervalMs = 30000;
     const canvasStorageKey = "aiCanvasStateV1";
     const homeProjectListStorageKey = "aiCanvasProjectsV1";
     const homeActiveProjectStorageKey = "aiCanvasActiveProjectV1";
@@ -4563,6 +4564,8 @@
     const localMediaDbName = "ai-node-canvas-media-v1";
     const localMediaStoreName = "media";
     const canvasStateStoreName = "canvas-state";
+    const persistedLocalMediaIds = new Set();
+    const pendingLocalMediaWrites = new Map();
     const canvasSessionId = `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const largeMediaDataUrlLimit = 1200000;
     const canvasStorageWarningText = "\u672c\u5730\u72b6\u6001\u5df2\u4f7f\u7528\u7cbe\u7b80\u5b58\u50a8\uff0c\u539f\u56fe\u4e0b\u8f7d\u4e0d\u53d7\u5f71\u54cd\u3002";
@@ -4707,7 +4710,7 @@
       const now = performance.now();
       const lag = now - lastHealthHeartbeat - 2500;
       lastHealthHeartbeat = now;
-      if (document.hidden || now < performanceMonitorPausedUntil || nodes.some((node) => node.pending)) {
+      if (document.hidden || window.__wandouDesktopTabActive === false || now < performanceMonitorPausedUntil || nodes.some((node) => node.pending)) {
         performanceLagStrikes = 0;
         return;
       }
@@ -5696,7 +5699,14 @@
       if (node.frameWidth) el.style.width = `${node.frameWidth}px`;
       if (node.frameHeight) el.style.minHeight = `${node.frameHeight}px`;
       const pngRef = node.type === "png" ? normalizeReferences(node).find((item) => item.width && item.height) : null;
-      el.style.setProperty("--preview-ratio", pngRef ? `${pngRef.width} / ${pngRef.height}` : cssAspectRatio(node.ratio));
+      const resultWidth = node.type === "result" ? Number(node.width) : 0;
+      const resultHeight = node.type === "result" ? Number(node.height) : 0;
+      const previewRatio = resultWidth > 0 && resultHeight > 0
+        ? `${resultWidth} / ${resultHeight}`
+        : pngRef
+        ? `${pngRef.width} / ${pngRef.height}`
+        : cssAspectRatio(node.ratio);
+      el.style.setProperty("--preview-ratio", previewRatio);
       const isSelection = node.type === "selection";
 
       el.innerHTML = `
@@ -11338,25 +11348,88 @@ ${formatInstruction}`;
       const db = await openLocalMediaDb();
       if (!db) return value;
       const id = mediaStorageId(value);
-      return new Promise((resolve) => {
-        const tx = db.transaction(localMediaStoreName, "readwrite");
-        tx.objectStore(localMediaStoreName).put({ id, value, savedAt: Date.now() });
-        tx.oncomplete = () => resolve(`${localMediaPrefix}${id}`);
-        tx.onerror = () => resolve(value);
+      const storedValue = `${localMediaPrefix}${id}`;
+      if (persistedLocalMediaIds.has(id)) return storedValue;
+      if (pendingLocalMediaWrites.has(id)) return pendingLocalMediaWrites.get(id);
+      const writeTask = (async () => {
+        const storedInBrowser = await new Promise((resolve) => {
+          try {
+            const tx = db.transaction(localMediaStoreName, "readwrite");
+            tx.objectStore(localMediaStoreName).put({ id, value, savedAt: Date.now() });
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+            tx.onabort = () => resolve(false);
+          } catch (_error) {
+            resolve(false);
+          }
+        });
+        if (!storedInBrowser) return value;
+        if (window.wandouShell?.writeCanvasMedia) {
+          try {
+            const existing = await window.wandouShell.hasCanvasMedia?.({ id });
+            if (!existing?.exists) {
+              const desktopResult = await window.wandouShell.writeCanvasMedia({ id, value });
+              if (!desktopResult?.success) return value;
+            }
+          } catch (_error) {
+            return value;
+          }
+        }
+        persistedLocalMediaIds.add(id);
+        return storedValue;
+      })().finally(() => pendingLocalMediaWrites.delete(id));
+      pendingLocalMediaWrites.set(id, writeTask);
+      return writeTask;
+    }
+
+    async function cacheRecoveredDesktopMedia(id, value) {
+      const db = await openLocalMediaDb();
+      if (!db || !value) return;
+      await new Promise((resolve) => {
+        try {
+          const tx = db.transaction(localMediaStoreName, "readwrite");
+          tx.objectStore(localMediaStoreName).put({ id, value, savedAt: Date.now() });
+          tx.oncomplete = resolve;
+          tx.onerror = resolve;
+          tx.onabort = resolve;
+        } catch (_error) {
+          resolve();
+        }
       });
     }
 
     async function getLocalMedia(value) {
       if (typeof value !== "string" || !value.startsWith(localMediaPrefix)) return value;
       const db = await openLocalMediaDb();
-      if (!db) return "";
       const id = value.slice(localMediaPrefix.length);
-      return new Promise((resolve) => {
-        const tx = db.transaction(localMediaStoreName, "readonly");
-        const request = tx.objectStore(localMediaStoreName).get(id);
-        request.onsuccess = () => resolve(request.result?.value || "");
-        request.onerror = () => resolve("");
-      });
+      let localValue = "";
+      if (db) {
+        localValue = await new Promise((resolve) => {
+          try {
+            const tx = db.transaction(localMediaStoreName, "readonly");
+            const request = tx.objectStore(localMediaStoreName).get(id);
+            request.onsuccess = () => resolve(request.result?.value || "");
+            request.onerror = () => resolve("");
+          } catch (_error) {
+            resolve("");
+          }
+        });
+      }
+      if (localValue) {
+        persistedLocalMediaIds.add(id);
+        return localValue;
+      }
+      if (window.wandouShell?.readCanvasMedia) {
+        try {
+          const desktopResult = await window.wandouShell.readCanvasMedia({ id });
+          if (desktopResult?.success && desktopResult.value) {
+            await cacheRecoveredDesktopMedia(id, desktopResult.value);
+            persistedLocalMediaIds.add(id);
+            return desktopResult.value;
+          }
+        } catch (_error) {}
+      }
+      return "";
     }
 
     async function persistMediaValue(value) {
@@ -11518,6 +11591,10 @@ ${formatInstruction}`;
           ...context.state,
           nodes: storedNodes
         };
+        // 后续桌面备份必须使用已经转成 indexed-media 引用的精简状态。
+        // 否则每次关闭都会把全部 base64 原图再次塞进 JSON，百兆画布会在
+        // shell 的超时之后才写完，造成“实际已保存但校验失败”的误报。
+        context.state = storedState;
         try {
           writeCanvasStateToLocalStorage(storedState, context);
         } catch (storageError) {
@@ -11745,7 +11822,7 @@ ${formatInstruction}`;
         pendingDesktopBackupTimers.delete(projectId);
         pendingDesktopBackupContexts.delete(projectId);
       }
-      if (!force && now - previousBackupAt < 10000) {
+      if (!force && now - previousBackupAt < desktopBackupIntervalMs) {
         pendingDesktopBackupContexts.set(projectId, context);
         if (!pendingDesktopBackupTimers.has(projectId)) {
           const timer = setTimeout(() => {
@@ -11753,7 +11830,7 @@ ${formatInstruction}`;
             const latestContext = pendingDesktopBackupContexts.get(projectId);
             pendingDesktopBackupContexts.delete(projectId);
             writeDesktopCanvasBackup(latestContext, true);
-          }, Math.max(250, 10000 - (now - previousBackupAt)));
+          }, Math.max(250, desktopBackupIntervalMs - (now - previousBackupAt)));
           pendingDesktopBackupTimers.set(projectId, timer);
         }
         return false;
@@ -11775,6 +11852,36 @@ ${formatInstruction}`;
     function queueDesktopCanvasBackup(context) {
       writeDesktopCanvasBackup(context);
     }
+
+    window.__wandouDesktopTabActive = true;
+    window.wandouSetDesktopTabActive = (active) => {
+      window.__wandouDesktopTabActive = Boolean(active);
+      document.body.classList.toggle("desktop-tab-inactive", !window.__wandouDesktopTabActive);
+      if (!window.__wandouDesktopTabActive) {
+        pausePerformanceMonitor(60000);
+        saveCanvasState();
+      } else {
+        pausePerformanceMonitor(5000);
+        render();
+      }
+      return {
+        active: window.__wandouDesktopTabActive,
+        pending: nodes.some((node) => node.pending)
+      };
+    };
+
+    window.wandouPrepareTabSuspend = async () => {
+      if (nodes.some((node) => node.pending)) {
+        return { safe: false, reason: "generation-in-progress" };
+      }
+      const result = await window.wandouSaveBeforeClose();
+      return {
+        safe: Boolean(result?.success),
+        backupPath: result?.backupPath || "",
+        savedAt: result?.savedAt || 0,
+        reason: result?.success ? "" : (result?.error || "save-failed")
+      };
+    };
 
     async function loadCanvasState() {
       isRestoring = true;

@@ -272,6 +272,58 @@
       display: block;
     }
 
+    .cover-media-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      width: 100%;
+      height: 100%;
+      gap: 2px;
+      background: var(--bg-soft);
+    }
+
+    .cover-media-grid.count-1 {
+      display: block;
+    }
+
+    .cover-media-grid.count-2 {
+      grid-template-rows: 1fr;
+    }
+
+    .cover-media-grid.count-3 .cover-media-cell:first-child {
+      grid-row: 1 / 3;
+    }
+
+    .cover-media-cell {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: rgba(118, 185, 0, .08);
+    }
+
+    .cover-media-cell img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .cover-media-label {
+      position: absolute;
+      left: 8px;
+      bottom: 8px;
+      padding: 4px 8px;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-radius: 999px;
+      color: #fff;
+      background: rgba(0, 0, 0, .58);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .24);
+      font-size: 11px;
+      line-height: 1;
+      pointer-events: none;
+    }
+
     .empty-cover {
       height: 100%;
       display: grid;
@@ -450,6 +502,9 @@
     const selectedProjectStorageKey = "aiCanvasProjectHubSelected";
     const themeStorageKey = "ai-tools-theme";
     const canvasFile = "ai-node-canvas.html";
+    const localMediaPrefix = "indexed-media:";
+    const localMediaDbName = "ai-node-canvas-media-v1";
+    const localMediaStoreName = "media";
     const colors = ["#76b900", "#28c76f", "#00bcd4", "#7c4dff", "#ffb020", "#ff4d4f"];
 
     const grid = document.getElementById("projectGrid");
@@ -462,6 +517,7 @@
     let sizeMode = localStorage.getItem(viewSizeStorageKey) || "medium";
     let selectedProjectId = localStorage.getItem(selectedProjectStorageKey) || "";
     let showFavoritesOnly = false;
+    let coverRenderToken = 0;
 
     function projectCanvasStorageKey(projectId) {
       return `${canvasStorageKey}:${projectId || "default"}`;
@@ -518,6 +574,100 @@
       } catch {
         return null;
       }
+    }
+
+    function openLocalMediaDb() {
+      if (!window.indexedDB) return Promise.resolve(null);
+      if (openLocalMediaDb.promise) return openLocalMediaDb.promise;
+      openLocalMediaDb.promise = new Promise((resolve) => {
+        const request = indexedDB.open(localMediaDbName, 2);
+        let settled = false;
+        const finish = (value) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          resolve(value);
+        };
+        const timeout = setTimeout(() => finish(null), 3500);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(localMediaStoreName)) {
+            request.result.createObjectStore(localMediaStoreName, { keyPath: "id" });
+          }
+          if (!request.result.objectStoreNames.contains("canvas-state")) {
+            request.result.createObjectStore("canvas-state", { keyPath: "id" });
+          }
+        };
+        request.onsuccess = () => finish(request.result);
+        request.onerror = () => finish(null);
+        request.onblocked = () => finish(null);
+      });
+      return openLocalMediaDb.promise;
+    }
+
+    async function resolveProjectMedia(value) {
+      if (typeof value !== "string" || !value.startsWith(localMediaPrefix)) return value || "";
+      const db = await openLocalMediaDb();
+      const id = value.slice(localMediaPrefix.length);
+      let localValue = "";
+      if (db) {
+        localValue = await new Promise((resolve) => {
+          try {
+            const tx = db.transaction(localMediaStoreName, "readonly");
+            const request = tx.objectStore(localMediaStoreName).get(id);
+            request.onsuccess = () => resolve(request.result?.value || "");
+            request.onerror = () => resolve("");
+          } catch (_error) {
+            resolve("");
+          }
+        });
+      }
+      if (localValue) return localValue;
+      if (window.wandouShell?.readCanvasMedia) {
+        try {
+          const desktopResult = await window.wandouShell.readCanvasMedia({ id });
+          return desktopResult?.success ? (desktopResult.value || "") : "";
+        } catch (_error) {}
+      }
+      return "";
+    }
+
+    function projectResultPreviewSources(state) {
+      const seen = new Set();
+      return (Array.isArray(state?.nodes) ? state.nodes : [])
+        .filter((node) => node?.type === "result" && node.mediaType !== "video" && !node.pending)
+        .reverse()
+        .map((node) => node.previewUrl || node.mediaUrl || node.fullUrl || "")
+        .filter((source) => source && !seen.has(source) && seen.add(source))
+        .slice(0, 3);
+    }
+
+    async function hydrateProjectCovers(projectList, renderToken) {
+      await Promise.all(projectList.map(async (project) => {
+        const cover = grid.querySelector(`[data-cover="${project.id}"]`);
+        if (!cover) return;
+        const sources = projectResultPreviewSources(readState(project.id));
+        if (!sources.length) return;
+        const resolved = (await Promise.all(sources.map(resolveProjectMedia))).filter(Boolean);
+        if (renderToken !== coverRenderToken || !resolved.length || !cover.isConnected) return;
+        const mediaGrid = document.createElement("div");
+        mediaGrid.className = `cover-media-grid count-${resolved.length}`;
+        resolved.forEach((source, index) => {
+          const cell = document.createElement("div");
+          cell.className = "cover-media-cell";
+          const image = document.createElement("img");
+          image.src = source;
+          image.alt = `${project.name} 最近效果图 ${index + 1}`;
+          image.loading = "lazy";
+          image.decoding = "async";
+          cell.append(image);
+          mediaGrid.append(cell);
+        });
+        const label = document.createElement("span");
+        label.className = "cover-media-label";
+        label.textContent = resolved.length > 1 ? `最近 ${resolved.length} 张效果图` : "最近效果图";
+        mediaGrid.append(label);
+        cover.replaceChildren(mediaGrid);
+      }));
     }
 
     function formatTime(value) {
@@ -656,6 +806,7 @@
     }
 
     function render() {
+      const renderToken = ++coverRenderToken;
       document.querySelectorAll("[data-size]").forEach((button) => {
         button.classList.toggle("active", button.dataset.size === sizeMode);
       });
@@ -689,6 +840,7 @@
         </article>`;
       }).join("");
       bindCards();
+      hydrateProjectCovers(list, renderToken);
     }
 
     function bindCards() {
@@ -820,6 +972,15 @@
     applyGlobalTheme(window.WandouLocalCache?.readTheme(localStorage.getItem(themeStorageKey) || "light") || "light");
     window.addEventListener("storage", (event) => {
       if (event.key === themeStorageKey) applyGlobalTheme(event.newValue || "light");
+      if (event.key === projectListStorageKey || event.key?.startsWith(`${canvasStorageKey}:`)) {
+        loadProjects();
+        render();
+      }
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
+      loadProjects();
+      render();
     });
     loadProjects();
     render();

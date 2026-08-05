@@ -2,6 +2,7 @@ const params = new URLSearchParams(location.search);
 const homeUrl = params.get("home");
 const version = params.get("version") || "";
 const preloadUrl = new URL("./preload.js", location.href).href;
+const inactiveCanvasSuspendDelayMs = 120000;
 
 const $ = (id) => document.getElementById(id);
 const tabList = $("tabList");
@@ -39,6 +40,53 @@ let toastTimer = 0;
 let closeInProgress = false;
 let updateStarted = false;
 let canvasBackupDirectory = "";
+
+function clearTabSuspendTimer(tab) {
+  if (!tab?.suspendTimer) return;
+  clearTimeout(tab.suspendTimer);
+  tab.suspendTimer = 0;
+}
+
+function notifyTabActivity(tab, active) {
+  if (!tab?.view || tab.suspended || tab.view.isLoading?.()) return;
+  tab.view.executeJavaScript(
+    `typeof window.wandouSetDesktopTabActive === "function" ? window.wandouSetDesktopTabActive(${active ? "true" : "false"}) : null`,
+    true
+  ).catch(() => null);
+}
+
+async function suspendInactiveCanvasTab(tab) {
+  clearTabSuspendTimer(tab);
+  if (!tab || tab.id === activeId || tab.suspended || tab.suspending || !isNodeCanvasTab(tab)) return;
+  tab.suspending = true;
+  try {
+    const result = await tab.view.executeJavaScript(`(async () => {
+      if (typeof window.wandouPrepareTabSuspend !== "function") return { safe: false, reason: "unsupported" };
+      return window.wandouPrepareTabSuspend();
+    })()`, true);
+    if (!result?.safe || tab.id === activeId) return;
+    tab.lastSaveResult = {
+      success: true,
+      supported: true,
+      backupPath: result.backupPath || "",
+      savedAt: result.savedAt || Date.now()
+    };
+    tab.suspended = true;
+    tab.resumeUrl = tab.url;
+    tab.button.classList.add("suspended");
+    tab.view.src = "about:blank";
+  } catch (_error) {
+    // 保存或校验失败时保持页面原样，不做任何卸载。
+  } finally {
+    tab.suspending = false;
+  }
+}
+
+function scheduleTabSuspend(tab) {
+  clearTabSuspendTimer(tab);
+  if (!tab || tab.pinned || tab.id === activeId || tab.suspended || !isNodeCanvasTab(tab)) return;
+  tab.suspendTimer = window.setTimeout(() => suspendInactiveCanvasTab(tab), inactiveCanvasSuspendDelayMs);
+}
 
 function normalizedUrl(url) {
   try { return new URL(url, homeUrl).href; } catch (_error) { return url; }
@@ -105,14 +153,28 @@ function openTab({ url, title = "新标签页", pinned = false }) {
   view.setAttribute("webpreferences", "contextIsolation=yes, sandbox=yes");
   view.src = targetUrl;
 
-  const tab = { id, url: targetUrl, title, pinned, view, button: null };
+  const tab = {
+    id,
+    url: targetUrl,
+    resumeUrl: targetUrl,
+    title,
+    pinned,
+    view,
+    button: null,
+    suspended: false,
+    suspending: false,
+    suspendTimer: 0,
+    lastSaveResult: null
+  };
   tab.button = createTabButton(tab, !pinned);
   tabs.set(id, tab);
   tabList.append(tab.button);
   views.append(view);
 
   view.addEventListener("did-navigate", (event) => {
+    if (tab.suspended && event.url === "about:blank") return;
     tab.url = event.url;
+    tab.resumeUrl = event.url;
     updateNavigation();
   });
   view.addEventListener("did-navigate-in-page", (event) => {
@@ -128,6 +190,7 @@ function openTab({ url, title = "新标签页", pinned = false }) {
   view.addEventListener("did-start-loading", () => tab.button.classList.add("loading"));
   view.addEventListener("did-stop-loading", () => {
     tab.button.classList.remove("loading");
+    notifyTabActivity(tab, tab.id === activeId);
     syncThemeFromActivePage();
   });
   view.addEventListener("did-fail-load", () => tab.button.classList.remove("loading"));
@@ -141,11 +204,23 @@ function activateTab(id) {
   activeId = id;
   for (const tab of tabs.values()) {
     const active = tab.id === id;
+    clearTabSuspendTimer(tab);
     tab.button.classList.toggle("active", active);
     tab.button.setAttribute("aria-selected", String(active));
     tab.view.classList.toggle("active", active);
+    if (!active) {
+      notifyTabActivity(tab, false);
+      scheduleTabSuspend(tab);
+    }
   }
   const tab = tabs.get(id);
+  if (tab.suspended) {
+    tab.suspended = false;
+    tab.button.classList.remove("suspended");
+    tab.view.src = tab.resumeUrl || tab.url;
+  } else {
+    notifyTabActivity(tab, true);
+  }
   tab.button.scrollIntoView({ block: "nearest", inline: "nearest" });
   brandText.textContent = "首页";
   brandButton.title = "返回首页";
@@ -162,6 +237,9 @@ function isNodeCanvasTab(tab) {
 
 async function saveTabBeforeClose(tab) {
   const base = { tabId: tab?.id || "", tabTitle: tab?.title || "未命名标签" };
+  if (tab?.suspended && tab.lastSaveResult?.success) {
+    return { ...base, ...tab.lastSaveResult };
+  }
   if (!tab?.view) return { ...base, success: true, supported: false };
   if (tab.view.isLoading?.()) {
     return isNodeCanvasTab(tab)
@@ -186,8 +264,8 @@ async function saveTabBeforeClose(tab) {
       timeoutId = setTimeout(() => resolve({
         supported: isNodeCanvasTab(tab),
         success: !isNodeCanvasTab(tab),
-        error: "保存超过 120 秒，已停止关闭或更新"
-      }), 120000);
+        error: "保存超过 300 秒，已停止关闭或更新"
+      }), 300000);
     });
     const result = await Promise.race([saveTask, timeout]);
     clearTimeout(timeoutId);
@@ -221,6 +299,7 @@ async function saveAllOpenWorkflows() {
 async function closeTab(id) {
   const tab = tabs.get(id);
   if (!tab || tab.pinned) return;
+  clearTabSuspendTimer(tab);
   const saveResult = await saveTabBeforeClose(tab);
   if (saveResult.supported && !saveResult.success) {
     showToast(`${tab.title || "当前标签"}保存失败，标签没有关闭`, true);
@@ -390,7 +469,7 @@ async function saveAllAndClose() {
   closeDialogStatus.textContent = "正在逐个保存并核对已打开的节点工作流，大画布可能需要 1–2 分钟，请稍候…";
   const saveReport = await saveAllOpenWorkflows();
   if (!saveReport.success) {
-    const failedNames = saveReport.failures.map((item) => item.tabTitle).join("、") || "当前工作流";
+    const failedNames = saveReport.failures.map((item) => `${item.tabTitle}${item.error ? `（${item.error}）` : ""}`).join("、") || "当前工作流";
     closeInProgress = false;
     closeDialogCancel.disabled = false;
     closeDialogConfirm.disabled = false;
@@ -442,7 +521,7 @@ dialogDownload.addEventListener("click", async () => {
   dialogNotes.textContent = "正在强制保存并校验本地项目和生成记录，请不要关闭软件。";
   const saveReport = await saveAllOpenWorkflows();
   if (!saveReport.success) {
-    const failedNames = saveReport.failures.map((item) => item.tabTitle).join("、") || "当前工作流";
+    const failedNames = saveReport.failures.map((item) => `${item.tabTitle}${item.error ? `（${item.error}）` : ""}`).join("、") || "当前工作流";
     updateStarted = false;
     document.body.classList.remove("update-in-progress");
     dialogCancel.disabled = false;

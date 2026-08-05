@@ -38,5 +38,8 @@ contextBridge.exposeInMainWorld("wandouShell", {
   writeSaveFile: (filename, bytes) => ipcRenderer.invoke("desktop:write-save-file", { filename, bytes }),
   writeCanvasBackup: (payload) => ipcRenderer.invoke("desktop:write-canvas-backup", payload),
   readCanvasBackups: (payload) => ipcRenderer.invoke("desktop:read-canvas-backups", payload),
+  hasCanvasMedia: (payload) => ipcRenderer.invoke("desktop:has-canvas-media", payload),
+  writeCanvasMedia: (payload) => ipcRenderer.invoke("desktop:write-canvas-media", payload),
+  readCanvasMedia: (payload) => ipcRenderer.invoke("desktop:read-canvas-media", payload),
   getCanvasBackupDirectory: () => ipcRenderer.invoke("desktop:get-canvas-backup-directory")
 });
