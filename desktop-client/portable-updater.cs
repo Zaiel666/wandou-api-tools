@@ -72,10 +72,13 @@ internal static class PortableUpdater
             if (String.IsNullOrWhiteSpace(install) || !Directory.Exists(install) || !File.Exists(package)) throw new InvalidOperationException("Invalid update arguments.");
             File.WriteAllText(ready, "ready");
             Log(log, "Native updater accepted update request.");
-            // Kill the tree while the parent PID still exists. Waiting for the parent first
-            // reparents Electron renderer/GPU children and leaves app.asar memory-mapped.
-            Thread.Sleep(1800);
+            // The old desktop client quits itself 900 ms after the ready marker. Kill the
+            // tree before that deadline or Electron renderer/GPU children become orphaned.
+            Thread.Sleep(250);
             try { Process.Start(new ProcessStartInfo("taskkill", "/PID " + parent + " /T /F") { CreateNoWindow = true, UseShellExecute = false }).WaitForExit(15000); } catch { }
+            // Also stop orphaned instances left by an earlier failed update. Chromium .pak
+            // and app.asar files stay memory-mapped while any such process is alive.
+            try { Process.Start(new ProcessStartInfo("taskkill", "/IM \"" + executable + "\" /F") { CreateNoWindow = true, UseShellExecute = false }).WaitForExit(15000); } catch { }
             StopInstallProcesses(install, executable, log);
             Thread.Sleep(1000);
             Directory.CreateDirectory(stage);

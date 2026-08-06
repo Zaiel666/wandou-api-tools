@@ -268,6 +268,24 @@
         <details class="info-card notice-card notice-card-latest">
           <summary>
             <span class="info-meta">
+              <span class="info-kicker">v1.0.50 旧客户端更新修复</span>
+              <time datetime="2026-08">2026 年 8 月</time>
+            </span>
+            <h3>修复更新重启后仍停留旧版本</h3>
+            <p>针对 v1.0.47 的退出时间窗修复资源文件占用，保证新文件真正覆盖后再重启。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>更新器会在旧主程序 0.9 秒退出之前结束完整进程树，同时清理此前失败更新遗留的孤立进程。</p>
+            <p>解决 chrome_100_percent.pak、app.asar 被 Chromium 子进程持续占用，下载成功却反复启动旧版本的问题。</p>
+            <nav class="notice-links" aria-label="v1.0.50 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.50" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.50/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
               <span class="info-kicker">v1.0.49 更新与保存专项修复</span>
               <time datetime="2026-08">2026 年 8 月</time>
             </span>

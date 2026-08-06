@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "专项修复自动更新与多节点保存：更新器在主进程仍存在时结束完整 Electron 进程树，避免渲染/GPU 子进程继续占用 app.asar 导致覆盖失败；桌面备份会自行扫描并抽取任何字段中的大图片，即使页面遗漏字段也不再拒绝保存。"
+            notes = "修复旧客户端更新后仍显示旧版本：更新器在旧主程序 0.9 秒退出前清理完整 Electron 进程树，并按程序名结束此前失败更新遗留的孤立实例，解除 chrome_100_percent.pak、app.asar 等 Chromium 资源文件占用；保留桌面端任意图片字段保存兜底。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

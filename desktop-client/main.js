@@ -514,7 +514,7 @@ async function startPortableUpdate(updateInfo) {
 
     child.unref();
     allowWindowClose = true;
-    setTimeout(() => app.quit(), 900);
+    setTimeout(() => app.quit(), 4000);
     return { started: true };
   } catch (error) {
     updateInProgress = false;
