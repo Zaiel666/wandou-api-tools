@@ -19,8 +19,10 @@ const resultMetaRule =
   styles.match(/(?:^|\n)\s*\.result-meta-line\s*\{([^}]+)\}/)?.[1] || "";
 assert.match(
   resultMetaRule,
-  /margin-top:\s*2px/,
+  /padding-top:\s*2px/,
   "result dimensions and elapsed time must sit exactly 2px below the image",
 );
+assert.match(resultMetaRule, /margin-top:\s*0/, "result footer spacing must not be enlarged by margin collapsing");
+assert.match(resultMetaRule, /height:\s*18px/, "result footer must have a fixed height for exact row spacing");
 
 console.log("PASS: node footer text remains 2px below node media");

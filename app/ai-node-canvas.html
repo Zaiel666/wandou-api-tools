@@ -1406,9 +1406,32 @@
     }
 
     .node.box-selected {
-      border-color: #43d13b;
-      border-width: 1.5px;
-      box-shadow: 0 0 0 2px rgba(67, 209, 59, 0.18), 0 0 22px rgba(67, 209, 59, 0.24), var(--shadow);
+      border-color: #43e75b !important;
+      outline: 2px solid #43e75b;
+      outline-offset: 3px;
+      box-shadow: 0 0 0 6px rgba(67, 231, 91, 0.13), 0 0 24px rgba(67, 231, 91, 0.34), var(--shadow);
+      cursor: move;
+    }
+
+    .node.box-selected::after {
+      content: attr(data-selection-index);
+      position: absolute;
+      top: -13px;
+      right: -13px;
+      z-index: 30;
+      width: 23px;
+      height: 23px;
+      display: grid;
+      place-items: center;
+      border: 2px solid #d9ffe0;
+      border-radius: 50%;
+      color: #fff;
+      background: #1fa348;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, .32);
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+      pointer-events: none;
     }
 
     .node.selection {
@@ -1488,9 +1511,9 @@
       height: 4200px;
       transform-origin: 0 0;
       overflow: visible;
-      text-rendering: geometricPrecision;
+      text-rendering: optimizeLegibility;
       -webkit-font-smoothing: antialiased;
-      backface-visibility: hidden;
+      backface-visibility: visible;
     }
 
     .node,
@@ -1598,8 +1621,72 @@
       width: 240px;
       background: transparent !important;
       border: 0 !important;
-      border-radius: 12px;
+      border-radius: 0;
       box-shadow: none;
+    }
+
+    .node.result .node-header {
+      position: absolute;
+      z-index: 12;
+      top: 0;
+      left: 0;
+      right: 0;
+      min-height: 38px;
+      padding: 4px;
+      border: 0;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .node.result .node-title,
+    .node.result .node-menu [data-duplicate],
+    .node.result .node-menu [data-favorite] {
+      display: none !important;
+    }
+
+    .node.result .node-menu {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      pointer-events: none;
+    }
+
+    .node.result .node-menu [data-delete] {
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      min-height: 30px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      pointer-events: auto;
+      color: rgba(255, 91, 102, .92);
+      background: transparent;
+      border-color: rgba(255, 91, 102, .72);
+      box-shadow: none;
+      opacity: 1;
+    }
+
+    .node.result .node-menu [data-delete]:hover,
+    .node.result .node-menu [data-delete]:focus-visible {
+      color: #ff6b75;
+      background: rgba(93, 17, 25, .9);
+      border-color: rgba(143, 38, 48, .88);
+      opacity: 1;
+    }
+
+    body.dark-theme .node.result .node-menu [data-delete] {
+      color: rgba(255, 99, 110, .94);
+      background: transparent;
+      border-color: rgba(255, 99, 110, .7);
+    }
+
+    body.dark-theme .node.result .node-menu [data-delete]:hover,
+    body.dark-theme .node.result .node-menu [data-delete]:focus-visible {
+      color: #ff7480;
+      background: rgba(93, 17, 25, .9);
+      border-color: rgba(157, 48, 59, .88);
     }
 
     .node.result .node-body {
@@ -1608,13 +1695,13 @@
 
     .node.result .preview {
       border: 0;
-      border-radius: 12px !important;
+      border-radius: 0 !important;
       background: transparent;
       box-shadow: none;
     }
 
     .node.result .preview.loading {
-      border-radius: 8px;
+      border-radius: 0;
       background: #f1f3f5;
     }
 
@@ -1624,11 +1711,11 @@
 
     .node.result .preview img,
     .node.result .preview video {
-      border-radius: 12px !important;
+      border-radius: 0 !important;
     }
 
     .node.result .result-empty-visual {
-      border-radius: 12px !important;
+      border-radius: 0 !important;
     }
 
     body.dark-theme .node.result {
@@ -2388,7 +2475,7 @@
       position: absolute;
       z-index: 8;
       top: 8px;
-      right: 8px;
+      left: 8px;
       width: 30px;
       height: 30px;
       min-width: 30px;
@@ -2396,37 +2483,50 @@
       padding: 0;
       display: grid;
       place-items: center;
-      color: #87928c;
-      background: rgba(255,255,255,.92);
-      border: 1px solid rgba(100,116,139,.3);
-      border-radius: 9px;
-      box-shadow: 0 7px 18px rgba(15,23,42,.1);
-      opacity: .42;
+      color: rgba(51,65,85,.92);
+      background: transparent;
+      border: 1px solid rgba(51,65,85,.62);
+      border-radius: 50%;
+      box-shadow: none;
+      opacity: 1;
       transition: opacity .16s ease, color .16s ease, border-color .16s ease, background .16s ease, transform .16s ease;
     }
-    .preview-favorite:hover { opacity: .92; transform: translateY(-1px); }
+    .preview-favorite:hover,
+    .preview-favorite:focus-visible { color:#475569; background:rgba(255,255,255,.94); border-color:rgba(100,116,139,.34); box-shadow:0 7px 18px rgba(15,23,42,.12); opacity:1; transform:translateY(-1px); }
     .preview-favorite svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
-    .preview-favorite.active { color: #ef4444; border-color: rgba(239,68,68,.58); background: rgba(255,245,245,.96); opacity: 1; }
-    .preview-favorite.active svg { fill: currentColor; stroke: currentColor; }
-    body.dark-theme .preview-favorite { color:#8d9992; background:rgba(35,40,38,.94); border-color:rgba(255,255,255,.16); }
-    body.dark-theme .preview-favorite.active { color:#ff6363; border-color:rgba(255,99,99,.55); background:rgba(61,31,34,.96); }
+    .preview-favorite.active { color:#ef4444; border-color:rgba(239,68,68,.72); background:transparent; opacity:1; }
+    .preview-favorite.active:hover,
+    .preview-favorite.active:focus-visible { color:#ef4444; border-color:rgba(239,68,68,.58); background:rgba(255,245,245,.96); opacity:1; }
+    .preview-favorite.active svg { fill:none; stroke:currentColor; }
+    body.dark-theme .preview-favorite { color:rgba(229,236,232,.92); background:transparent; border-color:rgba(229,236,232,.6); }
+    body.dark-theme .preview-favorite:hover,
+    body.dark-theme .preview-favorite:focus-visible { color:#d5dfda; background:rgba(35,40,38,.94); border-color:rgba(255,255,255,.16); }
+    body.dark-theme .preview-favorite.active { color:#ff6363; border-color:rgba(255,99,99,.7); background:transparent; }
+    body.dark-theme .preview-favorite.active:hover,
+    body.dark-theme .preview-favorite.active:focus-visible { color:#ff6363; border-color:rgba(255,99,99,.55); background:rgba(61,31,34,.96); }
 
     .preview-download {
       position: absolute;
       z-index: 8;
-      top: 46px;
-      right: 8px;
+      top: 8px;
+      left: 40px;
       width: 30px;
+      height: 30px;
       min-height: 30px;
       padding: 0;
       display: grid;
       place-items: center;
-      color: #475569;
-      background: rgba(255,255,255,.92);
-      border: 1px solid rgba(100,116,139,.3);
-      border-radius: 999px;
-      box-shadow: 0 7px 18px rgba(15,23,42,.1);
+      color: rgba(51,65,85,.92);
+      background: transparent;
+      border: 1px solid rgba(51,65,85,.62);
+      border-radius: 50%;
+      box-shadow: none;
+      opacity: 1;
+      transition: opacity .16s ease, color .16s ease, border-color .16s ease, background .16s ease, transform .16s ease, box-shadow .16s ease;
     }
+
+    .preview-download:hover,
+    .preview-download:focus-visible { color:#475569; background:rgba(255,255,255,.94); border-color:rgba(100,116,139,.34); box-shadow:0 7px 18px rgba(15,23,42,.12); opacity:1; transform:translateY(-1px); }
 
     .preview-download svg {
       width: 16px;
@@ -2444,10 +2544,13 @@
     }
 
     body.dark-theme .preview-download {
-      color: #d5dfda;
-      background: rgba(35,40,38,.94);
-      border-color: rgba(255,255,255,.16);
+      color: rgba(229,236,232,.92);
+      background: transparent;
+      border-color: rgba(229,236,232,.6);
     }
+
+    body.dark-theme .preview-download:hover,
+    body.dark-theme .preview-download:focus-visible { color:#d5dfda; background:rgba(35,40,38,.94); border-color:rgba(255,255,255,.16); }
 
     .prompt-refine-panel {
       position: absolute;
@@ -2466,9 +2569,6 @@
     }
     .prompt-refine-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .prompt-refine-head strong { font-size: 14px; }
-    .prompt-refine-models { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
-    .prompt-refine-models button { min-height:31px; padding:4px 6px; font-size:11px; background:#f4f7f5; border-color:#d9e0dc; color:#33413a; }
-    .prompt-refine-models button.active { color:#258d20; background:rgba(67,209,59,.1); border-color:#43d13b; }
     .prompt-refine-output { width:100%; min-height:126px; max-height:240px; overflow:auto; resize:vertical; padding:10px; border:1px solid #d9e0dc; border-radius:9px; background:#f5f7f6; color:#26342d; font-size:12px; line-height:1.65; white-space:pre-wrap; user-select:text; -webkit-user-select:text; cursor:text; outline:none; }
     .prompt-refine-output:focus { border-color:#43d13b; box-shadow:0 0 0 3px rgba(67,209,59,.12); }
     .prompt-refine-actions { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:7px; }
@@ -2478,8 +2578,6 @@
     .prompt-refine-actions [data-prompt-refine-apply]:hover:not(:disabled) { color:#fff; background:#1f7d43; border-color:#1f7d43; }
     .prompt-refine-actions button:disabled { opacity:.48; cursor:not-allowed; }
     body.dark-theme .prompt-refine-panel { color:#f1f5f2; background:#242927; border-color:rgba(255,255,255,.14); box-shadow:0 20px 52px rgba(0,0,0,.48); }
-    body.dark-theme .prompt-refine-models button { color:#e4ebe6; background:#303633; border-color:#4b5550; }
-    body.dark-theme .prompt-refine-models button.active { color:#8fe887; background:rgba(67,209,59,.12); border-color:#43d13b; }
     body.dark-theme .prompt-refine-output { color:#e9efeb; background:#1b1f1d; border-color:#444e49; }
     body.dark-theme .prompt-refine-actions [data-prompt-refine-run] { color:#e9efeb; background:#1b1f1d; border-color:#444e49; }
 
@@ -2879,11 +2977,14 @@
       justify-content: space-between;
       gap: 12px;
       width: 100%;
-      margin-top: 2px;
+      margin-top: 0;
+      height: 18px;
+      padding-top: 2px;
+      box-sizing: border-box;
       color: var(--muted);
       font-size: 11px;
-      font-weight: 600;
-      line-height: 1.4;
+      font-weight: 400;
+      line-height: 16px;
     }
 
     .result-meta-line span:last-child {
@@ -3004,16 +3105,16 @@
 
     .thumb-index {
       position: absolute;
-      left: 5px;
-      top: 5px;
-      width: 20px;
-      height: 20px;
+      left: 4px;
+      top: 4px;
+      width: 16px;
+      height: 16px;
       display: grid;
       place-items: center;
       border-radius: 999px;
       color: #fff;
       background: rgba(15, 23, 42, 0.72);
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 800;
     }
 
@@ -3021,11 +3122,11 @@
       position: absolute;
       right: 4px;
       top: 4px;
-      width: 20px;
-      min-height: 20px;
+      width: 16px;
+      min-height: 16px;
       padding: 0;
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 10px;
       line-height: 1;
       background: rgba(255, 255, 255, 0.86);
       color: var(--danger);
@@ -3043,14 +3144,14 @@
     }
 
     .thumb-order-button {
-      width: 22px;
-      min-height: 20px;
+      width: 17px;
+      min-height: 16px;
       padding: 0;
-      border-radius: 6px;
+      border-radius: 5px;
       color: #fff;
       background: rgba(15, 23, 42, 0.78);
       border: 1px solid rgba(255, 255, 255, 0.45);
-      font-size: 12px;
+      font-size: 9px;
       line-height: 1;
       pointer-events: auto;
     }
@@ -3184,7 +3285,7 @@
       position: fixed;
       z-index: 70;
       display: none;
-      width: 132px;
+      width: 148px;
       padding: 6px;
       border: 1px solid rgba(255, 255, 255, 0.32);
       border-radius: 10px;
@@ -3368,6 +3469,11 @@
       align-items: center;
       gap: 8px;
     }
+
+    .paint-mask-hint { color:rgba(255,255,255,.84); font-size:11px; white-space:nowrap; }
+    .paint-controls .mask-mode-active { color:#fff; background:#258f4e; border-color:#55d486; }
+    .reference-mask-overlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; opacity:.52; }
+    .reference-mask-badge { position:absolute; right:4px; bottom:4px; padding:2px 5px; border-radius:999px; color:#fff; background:rgba(37,143,78,.88); font-size:8px; line-height:1.25; pointer-events:none; }
 
     .paint-controls input[type="color"] {
       width: 42px;
@@ -3646,9 +3752,9 @@
     }
 
     .node [data-generate]:active {
-      color: #17201c;
-      background: #f2f4f3;
-      border-color: rgba(91, 101, 96, 0.72);
+      color: #fff;
+      background: #258f4e;
+      border-color: #258f4e;
     }
 
     body.dark-theme .node [data-generate] {
@@ -3660,16 +3766,18 @@
 
     body.dark-theme .node [data-generate]:active {
       color: #fff;
-      background: #252b28;
-      border-color: rgba(91, 101, 96, 0.7);
+      background: #258f4e;
+      border-color: #46b975;
     }
 
     .node [data-generate].generating,
     body.dark-theme .node [data-generate].generating {
-      color: #43d13b;
-      border-color: #43d13b;
-      background: rgba(67, 209, 59, 0.08);
-      box-shadow: 0 0 0 1px rgba(67, 209, 59, 0.12), 0 0 16px rgba(67, 209, 59, 0.12);
+      color: #fff;
+      border-color: #46b975;
+      background: #258f4e;
+      box-shadow: 0 0 0 1px rgba(67, 209, 59, 0.18), 0 0 16px rgba(67, 209, 59, 0.16);
+      opacity: 1;
+      cursor: wait;
     }
 
     .sidebar .danger {
@@ -3883,19 +3991,26 @@
     }
     .prompt-library-panel.open { display: flex; }
     .prompt-library-head, .prompt-manager-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 12px 8px; }
-    .prompt-library-head h3, .prompt-manager-head h2 { margin:0; }
+    .prompt-library-head h3, .prompt-manager-head h2 { margin:0; font-size:13px; line-height:1.35; font-weight:400; }
     .prompt-library-actions { display:flex; align-items:center; gap:8px; }
+    .prompt-library-actions .mini { min-height:28px; padding:4px 8px; font-size:11px; font-weight:400; }
     .prompt-search { margin:0 12px 8px; width:calc(100% - 24px); height:34px; border:1.5px solid rgba(27,35,31,.72); border-radius:9px; padding:0 10px; background:var(--surface); color:var(--text); font-size:12px; outline:none; }
+    .prompt-search::placeholder { color:#728078; opacity:1; }
     .prompt-search:focus { border-color:#43d13b; box-shadow:0 0 0 2px rgba(67,209,59,.12); }
-    body.dark-theme .prompt-search { border-color:rgba(163,174,168,.52); background:#1b1f1d; }
-    .prompt-library-list { flex:1; min-height:0; overflow-y:auto; padding:0 8px 8px; scrollbar-width:thin; scrollbar-color:rgba(91,101,96,.55) transparent; }
-    .prompt-library-item { width:100%; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--text); text-align:left; padding:5px 7px; display:grid; grid-template-columns:76px 1fr; gap:7px; line-height:1.2; cursor:pointer; transition:background .14s ease,border-color .14s ease,transform .14s ease; }
-    .prompt-library-item:hover, .prompt-library-item:focus-visible { background:rgba(67,209,59,.08); border-color:rgba(67,209,59,.48); transform:translateX(1px); outline:none; }
-    .prompt-library-item b { font-size:12px; }
-    .prompt-library-item span { font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .prompt-bookmark-icon { width:18px; height:18px; }
+    body.dark-theme .prompt-search { color:#eef6f1; border-color:rgba(163,174,168,.52); background:#151917; }
+    body.dark-theme .prompt-search::placeholder { color:#9da9a2; }
+    body.dark-theme #promptLibrarySearch,
+    body.dark-theme #promptManagerSearch { color:#eef6f1 !important; background:#0d1110 !important; border-color:#46504b !important; caret-color:#8fe887; -webkit-text-fill-color:#eef6f1; }
+    body.dark-theme #promptLibrarySearch::placeholder,
+    body.dark-theme #promptManagerSearch::placeholder { color:#839089 !important; -webkit-text-fill-color:#839089; opacity:1; }
+    .prompt-library-list { flex:1; min-height:0; overflow-y:auto; padding:0 8px 6px; display:grid; align-content:start; gap:0; scrollbar-width:thin; scrollbar-color:rgba(91,101,96,.55) transparent; }
+    .prompt-library-item { width:100%; height:28px; min-height:28px; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--text); text-align:left; padding:2px 6px; display:grid; grid-template-columns:66px minmax(0,1fr); align-items:center; gap:6px; line-height:1.15; cursor:pointer; transition:background .14s ease,border-color .14s ease; }
+    .prompt-library-item:hover, .prompt-library-item:focus-visible { height:28px; min-height:28px; padding:2px 6px; background:rgba(67,209,59,.08); border-color:rgba(67,209,59,.48); transform:none; outline:none; }
+    .prompt-library-item b { font-size:10.5px; font-weight:400; }
+    .prompt-library-item span { font-size:10px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .prompt-bookmark-icon { width:14px; height:14px; }
     .prompt-bookmark-icon path { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linejoin:round; }
-    .prompt-bookmark-icon text { fill:currentColor; stroke:none; font-size:8px; font-weight:800; font-family:"Microsoft YaHei",sans-serif; text-anchor:middle; }
+    .prompt-bookmark-icon text { fill:currentColor; stroke:none; font-size:7px; font-weight:400; font-family:var(--wd-font-ui); text-anchor:middle; }
     .prompt-empty { padding:52px 20px; text-align:center; color:var(--muted); }
     .prompt-manager-backdrop { position:fixed; inset:0; z-index:220; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(19,27,23,.46); backdrop-filter:none; }
     .prompt-manager-backdrop.open { display:flex; }
@@ -3903,8 +4018,8 @@
     body.dark-theme .prompt-manager-modal { background:#242826; color:#f2f6f4; border-color:#49514d; }
     .prompt-tags { border-right:1px solid #e1e6e3; padding:22px 14px; overflow:auto; background:#f4f6f5; }
     body.dark-theme .prompt-tags { background:#1d211f; border-right-color:#424944; }
-    .prompt-tags h3 { margin:0 10px 14px; font-size:15px; }
-    .prompt-tag { width:100%; border:1px solid transparent; border-radius:9px; background:transparent; color:inherit; padding:9px 11px; text-align:left; cursor:pointer; transition:background .14s,border-color .14s,color .14s; }
+    .prompt-tags h3 { margin:0 8px 10px; font-size:12px; font-weight:400; }
+    .prompt-tag { width:100%; border:1px solid transparent; border-radius:9px; background:transparent; color:inherit; padding:7px 9px; text-align:left; font-size:10.5px; font-weight:400; cursor:pointer; transition:background .14s,border-color .14s,color .14s; }
     .prompt-tag.active { background:rgba(67,209,59,.12); border-color:rgba(67,209,59,.22); color:#168d25; font-weight:700; }
     .prompt-tag:hover { background:rgba(67,209,59,.07); border-color:rgba(67,209,59,.2); }
     body.dark-theme .prompt-tag.active { color:#76e66e; }
@@ -3916,11 +4031,13 @@
     #newPromptButton { color:#fff; background:#43d13b; border-color:#43d13b; box-shadow:none; }
     #newPromptButton:hover { color:#fff; background:#35c62f; border-color:#35c62f; }
     #closePromptManagerButton { width:34px; min-height:34px; border-radius:9px; }
-    .prompt-manager-main > .prompt-search { margin:0 20px 14px; width:calc(100% - 40px); height:40px; background:#fff; }
-    body.dark-theme .prompt-manager-main > .prompt-search { background:#181c1a; }
+    .prompt-manager-main > .prompt-search { margin:0 20px 14px; width:calc(100% - 40px); height:40px; color:#17201c !important; background:#fff !important; border-color:#a9b6af !important; caret-color:#17201c; }
+    .prompt-manager-main > .prompt-search::placeholder { color:#718078 !important; opacity:1; }
+    body.dark-theme .prompt-manager-main > .prompt-search { color:#f2f6f4 !important; background:#111513 !important; border-color:#56615b !important; caret-color:#8fe887; }
+    body.dark-theme .prompt-manager-main > .prompt-search::placeholder { color:#97a69e !important; }
     .prompt-manager-list { padding:0 20px 22px; overflow:auto; align-content:start; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
     .prompt-manager-list .prompt-library-item { min-height:92px; border:1px solid #dce2df; border-radius:12px; grid-template-columns:1fr; align-content:start; padding:13px 14px; background:#fff; transform:none; }
-    .prompt-manager-list .prompt-library-item b { font-size:14px; }
+    .prompt-manager-list .prompt-library-item b { font-size:12px; font-weight:400; }
     .prompt-manager-list .prompt-library-item span { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.5; }
     .prompt-manager-list .prompt-library-item small { color:#809088; }
     .prompt-manager-list .prompt-library-item:hover { background:#f7faf8; border-color:#a9b6af; transform:none; }
@@ -3934,7 +4051,52 @@
     body.dark-theme .prompt-editor-card { background:#242826; color:#f2f6f4; border-color:#49514d; }
     .prompt-editor-card h2 { margin:0 0 18px; }
     .prompt-editor-card label { display:block; margin:12px 0 6px; color:var(--muted); }
-    .prompt-editor-card input, .prompt-editor-card textarea { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; background:var(--surface); color:var(--text); }
+    .prompt-editor-card input, .prompt-editor-card textarea { width:100%; border:1px solid #a9b6af !important; border-radius:10px; padding:11px 12px; background:#fff !important; color:#17201c !important; caret-color:#17201c; }
+    .prompt-editor-card input::placeholder, .prompt-editor-card textarea::placeholder { color:#728078; opacity:1; }
+    body.dark-theme .prompt-editor-card input, body.dark-theme .prompt-editor-card textarea { color:#f2f6f4 !important; background:#111513 !important; border-color:#56615b !important; caret-color:#8fe887; }
+    body.dark-theme .prompt-editor-card input::placeholder, body.dark-theme .prompt-editor-card textarea::placeholder { color:#97a69e !important; }
+
+    .auto-split-row .auto-split-control { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .auto-split-toggle { min-width:88px; min-height:32px; padding:5px 11px; color:#33413a; background:#f4f7f5; border-color:#d9e0dc; }
+    .auto-split-toggle.active { color:#fff; background:#258f4e; border-color:#258f4e; }
+    body.dark-theme .auto-split-toggle { color:#e4ebe6; background:#303633; border-color:#4b5550; }
+    body.dark-theme .auto-split-toggle.active { color:#fff; background:#258f4e; border-color:#46b975; }
+    .auto-split-hint { color:var(--muted); font-size:11px; line-height:1.45; text-align:right; }
+    .auto-split-consistency-row .choice-options { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .auto-split-consistency-row .choice-option { min-height:32px; padding:5px 8px; font-size:11px; }
+    .auto-split-consistency-row .choice-option small { display:block; margin-top:2px; color:var(--muted); font-size:9px; font-weight:400; line-height:1.25; }
+    .auto-split-consistency-row .choice-option.active small { color:inherit; opacity:.78; }
+    .generator-count-row.auto-locked .count-option { opacity:.34; cursor:not-allowed; filter:grayscale(.55); }
+    .auto-split-plan { margin-top:10px; padding:11px; display:grid; gap:9px; border:1px solid rgba(37,143,78,.32); border-radius:12px; background:rgba(37,143,78,.06); }
+    body.dark-theme .auto-split-plan { border-color:rgba(96,201,132,.38); background:rgba(37,143,78,.1); }
+    .auto-split-plan-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .auto-split-plan-head strong { font-size:13px; }
+    .auto-split-countdown { color:#258f4e; font-size:12px; font-weight:500; white-space:nowrap; }
+    body.dark-theme .auto-split-countdown { color:#8fe887; }
+    .auto-split-plan-list { display:grid; gap:7px; max-height:300px; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-gutter:stable; padding-right:4px; }
+    .auto-split-item { display:grid; grid-template-columns:34px minmax(0,1fr); gap:7px; align-items:start; }
+    .auto-split-index { min-height:32px; display:grid; place-items:center; color:#258f4e; font-size:11px; font-weight:600; }
+    .auto-split-item textarea { width:100%; min-height:58px; max-height:108px; resize:vertical; overflow:auto; padding:8px 9px; border:1px solid #d5ddd8; border-radius:8px; color:#26342d; background:#fff; font-size:11px; line-height:1.55; outline:none; }
+    .auto-split-item textarea:read-only { height:auto; min-height:0; max-height:none; resize:none; overflow:hidden; }
+    .auto-split-prompt-preview { min-width:0; padding:8px 9px; border:1px solid #d5ddd8; border-radius:8px; color:#5c6962; background:#f7faf8; font-size:11px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .auto-split-item textarea:read-only { color:#5c6962; background:#f7faf8; cursor:default; }
+    body.dark-theme .auto-split-item textarea { color:#edf5f0; background:#171b19; border-color:#46504b; }
+    body.dark-theme .auto-split-item textarea:read-only { color:#b4c0b9; background:#202522; }
+    body.dark-theme .auto-split-prompt-preview { color:#b4c0b9; background:#202522; border-color:#46504b; }
+    .auto-split-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .auto-split-actions [data-auto-split-edit],
+    .auto-split-actions [data-auto-split-confirm] { color:#33413a; background:#f4f7f5; border-color:#d2dad5; box-shadow:none; }
+    .auto-split-actions [data-auto-split-edit]:hover,
+    .auto-split-actions [data-auto-split-confirm]:hover { color:#1f6f3d; background:#edf5f0; border-color:#8eb99e; }
+    .auto-split-actions [data-auto-split-edit]:active,
+    .auto-split-actions [data-auto-split-confirm]:active { color:#fff; background:#258f4e; border-color:#258f4e; }
+    body.dark-theme .auto-split-actions [data-auto-split-edit],
+    body.dark-theme .auto-split-actions [data-auto-split-confirm] { color:#e4ebe6; background:#303633; border-color:#4b5550; }
+    body.dark-theme .auto-split-actions [data-auto-split-edit]:hover,
+    body.dark-theme .auto-split-actions [data-auto-split-confirm]:hover { color:#a9efbd; background:#28382f; border-color:#568a68; }
+    body.dark-theme .auto-split-actions [data-auto-split-edit]:active,
+    body.dark-theme .auto-split-actions [data-auto-split-confirm]:active { color:#fff; background:#258f4e; border-color:#46b975; }
+    .auto-split-note { color:var(--muted); font-size:10px; line-height:1.45; }
     .prompt-editor-card textarea { min-height:150px; resize:vertical; }
     .prompt-editor-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
     .prompt-library-trigger { display:grid; place-items:center; }
@@ -3979,8 +4141,28 @@
       --wd-type-control: 12.5px;
       --wd-type-label: 11.5px;
       --wd-type-caption: 11px;
-      --wd-weight-regular: 400;
-      --wd-weight-medium: 450;
+      --wd-weight-regular: 300;
+      --wd-weight-medium: 700;
+    }
+
+    @font-face {
+      font-family: "Wandou Source Han Sans";
+      src: local("Source Han Sans SC Light"), local("Source Han Sans CN Light"), local("Source Han Sans SC");
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "Wandou Source Han Sans";
+      src: local("Source Han Sans SC Bold"), local("Source Han Sans CN Bold"), local("Source Han Sans SC");
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+    }
+
+    :root {
+      --wd-font-ui: "Wandou Source Han Sans", "Source Han Sans SC", "Source Han Sans CN", "Microsoft YaHei", sans-serif;
     }
 
     body,
@@ -4113,6 +4295,25 @@
     .prompt-output-head .mini {
       font-size: 11px;
       font-weight: var(--wd-weight-regular);
+    }
+
+    /* Nodes intentionally use only two real font faces: Light and Bold. */
+    .node,
+    .node * {
+      font-family: var(--wd-font-ui) !important;
+      font-weight: var(--wd-weight-regular) !important;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .node.selected,
+    .node.selected *,
+    .node .active,
+    .node .active *,
+    .node [aria-selected="true"],
+    .node [aria-selected="true"] * {
+      font-weight: var(--wd-weight-medium) !important;
     }
 
     .upscale-ratio-copy {
@@ -4296,6 +4497,7 @@
     <video id="lightboxVideo" class="lightbox-media" controls playsinline hidden></video>
     <div id="lightboxImageMenu" class="lightbox-image-menu">
       <button id="lightboxContextCopy" class="ghost" type="button">复制图片</button>
+      <button id="lightboxContextPrompt" class="ghost" type="button">查看关键词</button>
     </div>
     <canvas id="paintCanvas" class="paint-canvas"></canvas>
     <div id="promptPreviewPanel" class="prompt-preview-panel">
@@ -4332,11 +4534,13 @@
       <button id="lightboxCopy" class="ghost" type="button">复制图片</button>
       <button id="lightboxDownload" class="ghost" type="button">下载</button>
       <div id="paintControls" class="paint-controls">
-            <input id="paintColor" type="color" value="#76b900" title="画笔颜色">
+        <span class="paint-mask-hint">绿色区域允许修改</span>
         <input id="paintSize" type="range" min="2" max="48" value="12" title="画笔大小">
+        <button id="paintErase" class="ghost" type="button">橡皮擦</button>
         <button id="paintUndo" class="ghost" type="button">撤回</button>
         <button id="paintRedo" class="ghost" type="button">前进</button>
-        <button id="paintSave" class="ghost" type="button">保存参考图</button>
+        <button id="paintClear" class="ghost" type="button">清空遮罩</button>
+        <button id="paintSave" class="ghost" type="button">保存遮罩</button>
       </div>
     </div>
   </div>
@@ -4439,15 +4643,17 @@
     const lightboxDownload = document.getElementById("lightboxDownload");
     const lightboxImageMenu = document.getElementById("lightboxImageMenu");
     const lightboxContextCopy = document.getElementById("lightboxContextCopy");
+    const lightboxContextPrompt = document.getElementById("lightboxContextPrompt");
     const promptPreviewPanel = document.getElementById("promptPreviewPanel");
     const promptPreviewZh = document.getElementById("promptPreviewZh");
     const promptPreviewEn = document.getElementById("promptPreviewEn");
     const promptPreviewNegative = document.getElementById("promptPreviewNegative");
     const paintCanvas = document.getElementById("paintCanvas");
-    const paintColor = document.getElementById("paintColor");
     const paintSize = document.getElementById("paintSize");
+    const paintErase = document.getElementById("paintErase");
     const paintUndo = document.getElementById("paintUndo");
     const paintRedo = document.getElementById("paintRedo");
+    const paintClear = document.getElementById("paintClear");
     const paintSave = document.getElementById("paintSave");
     const openGalleryButton = document.getElementById("openGalleryButton");
     const openVideoGalleryButton = document.getElementById("openVideoGalleryButton");
@@ -4516,6 +4722,9 @@
     let paintLastPoint = null;
     let paintUndoStack = [];
     let paintRedoStack = [];
+    let paintOriginalCanvas = document.createElement("canvas");
+    let paintSelectionCanvas = document.createElement("canvas");
+    let paintEraseMode = false;
     let gallerySize = "medium";
     let galleryMode = "image";
     let galleryTab = "canvas";
@@ -4526,6 +4735,7 @@
     let projectDeleteArmed = false;
     let projectHubPinned = false;
     let favoriteMode = "image";
+    const autoSplitCountdownTimers = new Map();
       let saveTimer = null;
       let canvasSaveQueue = Promise.resolve();
       let canvasTransformFrame = null;
@@ -4636,6 +4846,9 @@
     const videoPrimaryModel = "veo3.1-fast";
     const videoModelOptions = [videoPrimaryModel, "omni-flash"];
     const promptModelOptions = ["GPT", "Claude", "Gemini"];
+    const promptModificationModels = ["GPT", "Claude"];
+    const autoSplitMaximum = 99;
+    const autoSplitCountdownSeconds = 45;
     const imageRatioOptions = [
       "Auto自适应",
       "1:1 方图",
@@ -4989,7 +5202,7 @@
     function canvasStateHasMedia(state) {
       return (state?.nodes || []).some((node) =>
         Boolean(node?.mediaUrl || node?.previewUrl || node?.fullUrl || node?.mediaSourceUrl || node?.previewSourceUrl || node?.fullSourceUrl)
-        || (Array.isArray(node?.references) && node.references.some((item) => item?.url))
+        || (Array.isArray(node?.references) && node.references.some((item) => item?.url || item?.maskUrl || item?.maskSelectionUrl))
       );
     }
 
@@ -5301,7 +5514,9 @@
       if (Array.isArray(copy.references)) {
         copy.references = await Promise.all(copy.references.map(async (item) => ({
           ...item,
-          url: await portableProjectMedia(item.url)
+          url: await portableProjectMedia(item.url),
+          maskUrl: await portableProjectMedia(item.maskUrl),
+          maskSelectionUrl: await portableProjectMedia(item.maskSelectionUrl)
         })));
       }
       return copy;
@@ -5440,7 +5655,9 @@
       if (Array.isArray(copy.references)) {
         copy.references = copy.references.map((item) => ({
           ...item,
-          url: compactMediaForSnapshot(item.url)
+          url: compactMediaForSnapshot(item.url),
+          maskUrl: compactMediaForSnapshot(item.maskUrl),
+          maskSelectionUrl: compactMediaForSnapshot(item.maskSelectionUrl)
         }));
       }
       return copy;
@@ -5520,7 +5737,10 @@
     }
 
     function createNode(type, x, y, extra = {}) {
-      pushHistory();
+      const deferRender = Boolean(extra?._deferRender);
+      const nodeExtra = { ...extra };
+      delete nodeExtra._deferRender;
+      if (!deferRender) pushHistory();
       const id = `node-${nodeId++}`;
       const base = {
         id,
@@ -5536,6 +5756,14 @@
         ratio: type === "video" ? "9:16 竖屏" : "Auto自适应",
         resolution: type === "video" ? "720P" : type === "upscale" ? "4K" : type === "outpaint" ? "2K" : "1K",
         count: 1,
+        autoSplit: false,
+        autoSplitPlan: [],
+        autoSplitConsistency: "series",
+        autoSplitSeriesSpec: "",
+        autoSplitLockedSize: "",
+        autoSplitReviewOpen: false,
+        autoSplitEditing: false,
+        autoSplitSeconds: 0,
         duration: type === "video" ? "default" : "5s",
         videoMode: type === "video" ? "text" : "",
         mediaUrl: "",
@@ -5548,10 +5776,10 @@
         outpaintDirection: type === "outpaint" ? "horizontal" : "",
         outpaintAmount: type === "outpaint" ? 50 : 0,
         status: "",
-        ...extra
+        ...nodeExtra
       };
       nodes.push(base);
-      render();
+      if (!deferRender) render();
       return base;
     }
 
@@ -5562,7 +5790,7 @@
       if (type === "png") return "PNG/透明底工作流";
       if (type === "upscale") return "4K放大";
       if (type === "outpaint") return "扩图";
-      if (type === "result") return "效果图";
+      if (type === "result") return "";
       if (type === "selection") return "选区";
       return "参考图";
     }
@@ -5694,6 +5922,8 @@
       const el = document.createElement("section");
       el.className = `node ${node.type}${selectedNodeId === node.id ? " selected" : ""}${boxSelectedIds.includes(node.id) ? " box-selected" : ""}`;
       el.dataset.id = node.id;
+      const boxSelectionIndex = boxSelectedIds.indexOf(node.id);
+      if (boxSelectionIndex >= 0) el.dataset.selectionIndex = String(boxSelectionIndex + 1);
       el.style.left = `${node.x}px`;
       el.style.top = `${node.y}px`;
       if (node.frameWidth) el.style.width = `${node.frameWidth}px`;
@@ -5722,7 +5952,7 @@
             ${isSelection ? "" : `<button class="mini ghost" data-duplicate type="button">复制</button>`}
             <button class="mini danger" data-delete type="button" title="删除">
               <svg class="delete-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2l1 11h4l1-11h2l-1.2 13H8.2L7 9Z"/>
+                <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
           </div>
@@ -5757,7 +5987,8 @@
       }, { capture: true });
 
       el.addEventListener("pointerdown", (event) => {
-        if (isInteractiveTarget(event.target)) return;
+        const selectedGroupDrag = boxSelectedIds.includes(node.id) && !isGroupDragBlockedTarget(event.target);
+        if (isInteractiveTarget(event.target) && !selectedGroupDrag) return;
         startDrag(event, node.id);
       });
 
@@ -5856,6 +6087,10 @@
     function isInteractiveTarget(target) {
       if (target.closest(".reference-empty-visual") && !target.closest("button, input, label")) return false;
       return Boolean(target.closest("button, input, textarea, select, label, .port, video, img, .preview, .thumb, [data-resize-handle]"));
+    }
+
+    function isGroupDragBlockedTarget(target) {
+      return Boolean(target.closest("button, input, textarea, select, label, .port, [data-resize-handle]"));
     }
 
     function renderPromptReverseBody(node) {
@@ -6041,10 +6276,6 @@
         node.promptRefineOpen = false;
         render();
       });
-      wrap.querySelectorAll("[data-prompt-refine-model]").forEach((button) => button.addEventListener("click", () => {
-        node.promptRefineModel = button.dataset.promptRefineModel;
-        render();
-      }));
       wrap.querySelector("[data-prompt-refine-run]")?.addEventListener("click", () => refineNodePrompt(node));
       wrap.querySelector("[data-prompt-refine-apply]")?.addEventListener("click", () => {
         if (!node.promptRefineResult) return;
@@ -6224,10 +6455,238 @@
       </div>`;
     }
 
+    function renderAutoSplitPlanHtml(node) {
+      if (!node.autoSplit || !node.autoSplitReviewOpen || !Array.isArray(node.autoSplitPlan) || !node.autoSplitPlan.length) return "";
+      const editing = Boolean(node.autoSplitEditing);
+      const countdown = editing
+        ? `已暂停（剩余 ${Math.max(0, Number(node.autoSplitSeconds) || 0)} 秒）`
+        : `${Math.max(0, Number(node.autoSplitSeconds) || 0)} 秒后自动生成`;
+      return `<section class="auto-split-plan" data-auto-split-plan>
+        <div class="auto-split-plan-head"><div><strong>已拆分为 ${node.autoSplitPlan.length} 张</strong><div class="auto-split-note">已锁定 ${escapeHtml(node.autoSplitLockedSize || "统一尺寸")} · ${node.autoSplitConsistency === "frame" ? "逐帧强一致" : "系列母图一致"}。</div></div><span class="auto-split-countdown">${countdown}</span></div>
+        <div class="auto-split-plan-list">
+          ${node.autoSplitPlan.map((item, index) => `<label class="auto-split-item"><span class="auto-split-index">${index + 1}</span>${editing
+            ? `<textarea data-auto-split-prompt="${index}">${escapeHtml(item.prompt || "")}</textarea>`
+            : `<div class="auto-split-prompt-preview">${escapeHtml(item.prompt || "")}</div>`}</label>`).join("")}
+        </div>
+        <div class="auto-split-actions">
+          <button class="ghost" data-auto-split-edit type="button">${editing ? "继续修改" : "修改方案"}</button>
+          <button class="primary" data-auto-split-confirm type="button">${editing ? "采用修改并生成" : "立即采用并生成"}</button>
+        </div>
+      </section>`;
+    }
+
+    function stopAutoSplitCountdown(node) {
+      const timer = autoSplitCountdownTimers.get(node?.id);
+      if (timer) clearInterval(timer);
+      if (node?.id) autoSplitCountdownTimers.delete(node.id);
+    }
+
+    function startAutoSplitCountdown(node) {
+      stopAutoSplitCountdown(node);
+      node.autoSplitReviewOpen = true;
+      node.autoSplitEditing = false;
+      node.autoSplitSeconds = autoSplitCountdownSeconds;
+      render();
+      const timer = setInterval(() => {
+        if (!nodes.includes(node) || !node.autoSplitReviewOpen || node.autoSplitEditing) {
+          stopAutoSplitCountdown(node);
+          return;
+        }
+        node.autoSplitSeconds = Math.max(0, Number(node.autoSplitSeconds) - 1);
+        if (node.autoSplitSeconds <= 0) {
+          stopAutoSplitCountdown(node);
+          void confirmAutoSplitGeneration(node);
+          return;
+        }
+        const countdownEl = canvas.querySelector(`[data-id="${node.id}"] .auto-split-countdown`);
+        if (countdownEl) countdownEl.textContent = `${node.autoSplitSeconds} 秒后自动生成`;
+      }, 1000);
+      autoSplitCountdownTimers.set(node.id, timer);
+    }
+
+    function bindAutoSplitPlanControls(wrap, node) {
+      const planList = wrap.querySelector(".auto-split-plan-list");
+      planList?.addEventListener("pointerdown", (event) => event.stopPropagation());
+      planList?.addEventListener("wheel", (event) => event.stopPropagation(), { passive: true });
+      wrap.querySelector("[data-auto-split-edit]")?.addEventListener("click", () => {
+        stopAutoSplitCountdown(node);
+        node.autoSplitEditing = true;
+        render();
+        canvas.querySelector(`[data-id="${node.id}"] [data-auto-split-prompt]`)?.focus();
+      });
+      wrap.querySelectorAll("[data-auto-split-prompt]").forEach((field) => {
+        field.addEventListener("input", () => {
+          const index = Number(field.dataset.autoSplitPrompt);
+          if (!Number.isInteger(index) || !node.autoSplitPlan[index]) return;
+          node.autoSplitPlan[index].prompt = field.value;
+          scheduleCanvasSave();
+        });
+      });
+      wrap.querySelector("[data-auto-split-confirm]")?.addEventListener("click", () => confirmAutoSplitGeneration(node));
+    }
+
+    async function confirmAutoSplitGeneration(node) {
+      stopAutoSplitCountdown(node);
+      const plan = normalizeAutoSplitPlan(node.autoSplitPlan);
+      if (!plan.length) {
+        node.status = "自动拆分方案为空，请修改后再生成。";
+        node.autoSplitEditing = true;
+        render();
+        return;
+      }
+      node.autoSplitPlan = plan;
+      node.autoSplitReviewOpen = false;
+      node.autoSplitEditing = false;
+      node.autoSplitSeconds = 0;
+      render();
+      await generateFromNode(node.id, { autoSplitConfirmed: true });
+    }
+
+    function normalizeAutoSplitPlan(items) {
+      if (!Array.isArray(items)) return [];
+      return items.slice(0, autoSplitMaximum).map((item, index) => {
+        const prompt = String(typeof item === "string" ? item : item?.prompt || item?.description || "").trim();
+        return {
+          title: String(item?.title || `第 ${index + 1} 张`).trim(),
+          prompt
+        };
+      }).filter((item) => item.prompt);
+    }
+
+    function chineseNumberValue(value) {
+      const direct = Number(value);
+      if (Number.isFinite(direct) && direct > 0) return direct;
+      const source = String(value || "").trim();
+      const map = { 一:1, 二:2, 三:3, 四:4, 五:5, 六:6, 七:7, 八:8, 九:9 };
+      if (map[source]) return map[source];
+      if (source === "十") return 10;
+      const tens = source.match(/^([一二三四五六七八九])?十([一二三四五六七八九])?$/);
+      if (!tens) return 0;
+      return (tens[1] ? map[tens[1]] : 1) * 10 + (tens[2] ? map[tens[2]] : 0);
+    }
+
+    function localAutoSplitFallback(prompt) {
+      const source = String(prompt || "").trim();
+      const daySections = [...source.matchAll(/第\s*([一二三四五六七八九十\d]+)\s*天\s*[：:]?\s*([\s\S]*?)(?=第\s*[一二三四五六七八九十\d]+\s*天\s*[：:]?|$)/g)];
+      if (daySections.length > 1) {
+        return daySections.slice(0, autoSplitMaximum).map((match, index) => ({
+          title: `第${match[1]}天`,
+          prompt: `系列旅游攻略第${match[1]}天：${match[2].trim()}。只生成第${match[1]}天这一张独立图片，不要出现其他天数内容，不要拼图、分栏、多宫格或画中画。保持整套攻略的视觉风格、配色、字体和版式一致。`
+        }));
+      }
+      const dayCount = chineseNumberValue(source.match(/([一二三四五六七八九十\d]+)\s*天(?:旅游)?攻略/)?.[1]);
+      if (dayCount > 1) {
+        const splitCount = Math.min(dayCount, autoSplitMaximum);
+        const sharedBrief = source.replace(/[一二三四五六七八九十\d]+\s*天(?:旅游)?攻略/g, "系列旅游攻略");
+        return Array.from({ length: splitCount }, (_, index) => ({
+          title: `第${index + 1}天`,
+          prompt: `系列旅游攻略第${index + 1}天单页：${sharedBrief}。只表现第${index + 1}天的行程，不要出现其他天数内容，不要拼图、分栏、多宫格或画中画。保持全部 ${splitCount} 张图的视觉风格、配色、字体和版式一致。`
+        }));
+      }
+      const elementSource = source.includes("：") || source.includes(":")
+        ? source.slice(Math.max(source.lastIndexOf("："), source.lastIndexOf(":")) + 1)
+        : source;
+      const candidates = elementSource.split(/[、，,；;\n]/).map((item) => item.trim()).filter((item) => item.length >= 2).slice(0, autoSplitMaximum);
+      if (/拆分|分别|逐个|单独|白底/.test(source) && candidates.length > 1) {
+        return candidates.map((item, index) => ({
+          title: `元素${index + 1}`,
+          prompt: `从原海报中只提取并单独呈现“${item}”这一项元素。纯白背景，主体完整居中，边缘清晰，无其他海报元素，无文字说明，不要拼图、分栏、多宫格或画中画。`
+        }));
+      }
+      return [{
+        title: "独立图片",
+        prompt: `${source}\n\n只生成一张独立图片，不要把多个方案拼在同一张图中，不要拼图、分栏、多宫格或画中画。`
+      }];
+    }
+
+    function extractJsonObject(text) {
+      const source = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+      const start = source.indexOf("{");
+      const end = source.lastIndexOf("}");
+      if (start < 0 || end <= start) return null;
+      try { return JSON.parse(source.slice(start, end + 1)); } catch (error) { return null; }
+    }
+
+    async function postPromptModelWithFallback(configuredUrl, headers, body, signal) {
+      let lastError = null;
+      for (const model of promptModificationModels) {
+        try {
+          const response = await postChatCompletion(configuredUrl, headers, { ...body, model: modelToPromptModel(model) }, signal);
+          const text = String(response.text || extractText(response.data) || "").trim();
+          if (!text) throw new Error(`${model} 没有返回文本`);
+          return { ...response, text, provider: model };
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error("GPT 与 Claude 均不可用");
+    }
+
+    async function analyzeAutoSplitPlan(node, references, targetSize, signal) {
+      const configuredUrl = apiUrlInput.value.trim() || defaultApiBaseUrl();
+      const headers = { "Content-Type": "application/json", Authorization: `Bearer ${apiKeyInput.value.trim()}` };
+      const frameRule = node.autoSplitConsistency === "frame"
+        ? "\n7. 这是连续序列帧：items 必须按动作从 0% 到 100% 单调递进；第一张是完全初始状态，最后一张是完全结束状态。每项写明精确动作百分比，镜头、背景、主体身份及所有非动作区域固定，严禁动作回退、重复或跳级。"
+        : "";
+      const instruction = `分析用户的生图任务，决定应拆成几张彼此独立但风格连贯的图片，最多 ${autoSplitMaximum} 张。\n\n规则：\n1. 旅游攻略按天拆分，一天一张。\n2. 海报元素拆分任务按可识别的主要元素拆分，每个元素一张纯白背景独立图。\n3. 每个 prompt 必须只描述当前这一张，明确排除其他项，禁止拼图、分栏、多宫格、画中画。\n4. 先提炼一份整批共享的 seriesSpec，明确固定的美术风格、镜头、构图骨架、色板、光线、字体与信息层级；不要把会随单张变化的内容写进 seriesSpec。\n5. 把共同规范写进每个 prompt，保持系列一致。所有图片必须使用同一画幅 ${targetSize}。\n6. 不要解释，只输出严格 JSON：{"seriesSpec":"整批共享视觉规范","items":[{"title":"简短名称","prompt":"可直接生图的完整提示词"}]}。${frameRule}`;
+      try {
+        const result = await postPromptModelWithFallback(configuredUrl, headers, {
+          messages: [
+            { role: "system", content: instruction },
+            { role: "user", content: messageContentFor(node, references, targetSize) }
+          ],
+          temperature: 0.2
+        }, signal);
+        const parsed = extractJsonObject(result.text);
+        const plan = normalizeAutoSplitPlan(parsed?.items);
+        if (!plan.length) throw new Error("自动分析没有返回有效方案");
+        return {
+          items: plan,
+          seriesSpec: String(parsed?.seriesSpec || parsed?.styleGuide || "").trim()
+        };
+      } catch (error) {
+        const fallback = localAutoSplitFallback(node.prompt);
+        if (!fallback.length) throw error;
+        node.status = `在线分析不可用，已使用本地规则拆分：${friendlyErrorMessage(error)}`;
+        return {
+          items: fallback,
+          seriesSpec: `严格继承用户原始要求的主体设定、美术风格、构图语言、色板、光线、字体和信息层级；整批使用同一画幅 ${targetSize}。`
+        };
+      }
+    }
+
+    function autoSplitGenerationPrompt(node, item, index, total, hasMotherReference) {
+      const mode = node.autoSplitConsistency === "frame" ? "frame" : "series";
+      const shared = String(node.autoSplitSeriesSpec || node.prompt || "").trim();
+      const frameProgress = total <= 1 ? 100 : Math.round(index * 100 / (total - 1));
+      const previousProgress = total <= 1 ? 0 : Math.round(Math.max(0, index - 1) * 100 / (total - 1));
+      const parts = [
+        `本批次统一尺寸：${node.autoSplitLockedSize || node._targetSize || "保持与母图相同"}。`,
+        shared ? `整批共享视觉规范：${shared}` : "",
+        `当前是第 ${index + 1}/${total} 张：${item?.prompt || node.prompt || ""}`,
+        "只生成当前这一张独立图片，不要拼图、分栏、多宫格或画中画。"
+      ];
+      if (mode === "frame" && !hasMotherReference) {
+        parts.push(`这是严格连续序列的第 1/${total} 帧，也是动作进度 0% 的唯一初始帧。必须表现为动作完全没有开始的状态，建立固定镜头、背景、主体位置和比例；后续帧只能在此基础上连续向前推进。`);
+      } else if (!hasMotherReference) {
+        parts.push("这是本批次的系列母图。请建立清晰、可复用的构图骨架、色板、字体、光线和材质规范，后续图片将以此图为参考。");
+      } else if (mode === "frame") {
+        parts.push(`这是严格连续序列的第 ${index + 1}/${total} 帧，动作总进度必须是 ${frameProgress}%（上一帧 ${previousProgress}%）。如果当前单张描述与这个百分比冲突，以这里的动作进度为准。输入参考图顺序：第 1 张是紧邻上一帧（主要编辑底图），第 2 张如存在则是固定母图（只用于校准风格和镜头）。`);
+        parts.push("执行高保真局部编辑：保持母图的画布、镜头、背景、主体身份、位置、比例、边框、装饰、字体、色板、材质、光线和阴影不变；动作只允许向前推进，禁止回退、重复上一幅度或跳过阶段。只改变当前提示词明确要求变化的动作部件，上一帧已发生的变化必须保留。未明确要求变化的像素区域尽量保持不动，不要重绘背景，不要重新设计画面。");
+      } else {
+        parts.push("第一张输入参考图是本批次系列母图，也是不可重新设计的版式模板。必须逐项锁定标题区、符号区、人物区、日期区、说明文字区的坐标、宽高、对齐、字号层级、字体粗细、字距、行距和边距；严格继承镜头、色板、材质与光线。只替换当前图片明确变化的主题、名称和内容，禁止移动、缩放、增删或重新排版固定区域。");
+      }
+      return parts.filter(Boolean).join("\n\n");
+    }
+
     function renderGeneratorBody(node) {
       const wrap = document.createElement("div");
       const actionText = node.type === "keyword" ? "提取提示词" : node.type === "video" ? "生成视频" : "生成图片";
       const isVideoNode = node.type === "video";
+      const autoSplitAnalyzing = !isVideoNode && node.autoSplit && Number(node.autoSplitProgress) > 0;
+      if (typeof node.autoSplit !== "boolean") node.autoSplit = false;
+      if (!Array.isArray(node.autoSplitPlan)) node.autoSplitPlan = [];
+      if (!['series', 'frame'].includes(node.autoSplitConsistency)) node.autoSplitConsistency = "series";
       const models = isVideoNode ? videoModelOptions : imageModelOptions;
       if (!models.includes(node.model)) node.model = models[0];
       const ratios = isVideoNode ? videoRatioOptionsForModel(node.model) : imageRatioOptions;
@@ -6253,7 +6712,7 @@
       const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const durationHtml = `<button class="count-option active model-default" type="button" disabled>默认时长</button>`;
       const countHtml = (isVideoNode ? videoCountOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9]).map((count) => (
-        `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button">${count}</button>`
+        `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button" ${!isVideoNode && node.autoSplit ? "disabled" : ""}>${count}</button>`
       )).join("");
       const resolutionHtml = resolutions.map((resolution) => (
         `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-resolution="${resolution}" type="button" ${resolution === "DEFAULT" ? "disabled" : ""}>${resolutionLabel(resolution)}</button>`
@@ -6274,14 +6733,11 @@
         : "可上传参考图。";
       const promptReferenceCount = generatorReferenceItems(node).length;
 
-      const refineModel = promptModelOptions.includes(node.promptRefineModel) ? node.promptRefineModel : "GPT";
-      node.promptRefineModel = refineModel;
       const promptRefinePanelHtml = !isVideoNode && node.promptRefineOpen ? `
         <aside class="prompt-refine-panel" data-prompt-refine-panel>
           <div class="prompt-refine-head"><strong>AI修改提示词</strong><button class="mini ghost" data-prompt-refine-close type="button">×</button></div>
-          <div class="prompt-refine-models">${promptModelOptions.map((model) => `<button class="${refineModel === model ? "active" : ""}" data-prompt-refine-model="${model}" type="button">${model}</button>`).join("")}</div>
-          <textarea class="prompt-refine-output" data-prompt-refine-output ${node.promptRefineLoading ? "readonly" : ""} placeholder="选择模型后点击“开始修改”，修改结果会显示在这里。">${escapeHtml(node.promptRefineLoading ? "正在修改提示词…" : node.promptRefineResult || "")}</textarea>
-          <div class="prompt-refine-actions"><button class="ghost" data-prompt-refine-run type="button" ${node.promptRefineLoading ? "disabled" : ""}>${node.promptRefineLoading ? "正在修改" : "开始修改"}</button><button class="primary" data-prompt-refine-apply type="button" ${(!node.promptRefineResult || node.promptRefineLoading || /^修改失败：/.test(node.promptRefineResult)) ? "disabled" : ""}>使用关键词</button></div>
+          <textarea class="prompt-refine-output" data-prompt-refine-output ${node.promptRefineLoading ? "readonly" : ""} placeholder="点击“修改”，结果会显示在这里。">${escapeHtml(node.promptRefineLoading ? "正在修改提示词…" : node.promptRefineResult || "")}</textarea>
+          <div class="prompt-refine-actions"><button class="ghost" data-prompt-refine-run type="button" ${node.promptRefineLoading ? "disabled" : ""}>${node.promptRefineLoading ? "正在修改" : "修改"}</button><button class="primary" data-prompt-refine-apply type="button" ${(!node.promptRefineResult || node.promptRefineLoading || /^修改失败：/.test(node.promptRefineResult)) ? "disabled" : ""}>使用关键词</button></div>
         </aside>` : "";
 
       wrap.innerHTML = `
@@ -6336,13 +6792,25 @@
           </div>
         </div>
         ` : `
-        <div class="form-row generator-count-row">
+        <div class="form-row auto-split-row">
+          <label>自动拆分</label>
+          <div class="auto-split-control"><button class="auto-split-toggle ${node.autoSplit ? "active" : ""}" data-auto-split-toggle type="button">${node.autoSplit ? "已打开" : "已关闭"}</button><span class="auto-split-hint">AI按内容决定1–99张，并为每张生成独立提示词</span></div>
+        </div>
+        ${node.autoSplit ? `<div class="form-row auto-split-consistency-row">
+          <label>一致性</label>
+          <div class="choice-options">
+            <button class="choice-option ${node.autoSplitConsistency === "series" ? "active" : ""}" data-auto-split-consistency="series" type="button">系列母图<small>同风格，可变化内容</small></button>
+            <button class="choice-option ${node.autoSplitConsistency === "frame" ? "active" : ""}" data-auto-split-consistency="frame" type="button">逐帧强一致<small>仅改变指定动作</small></button>
+          </div>
+        </div>` : ""}
+        <div class="form-row generator-count-row ${node.autoSplit ? "auto-locked" : ""}">
           <label>数量</label>
           <div class="count-options">
             ${countHtml}
           </div>
-        </div>`}
-        <button data-generate class="wide-button ${/^正在生成/.test(node.status || "") ? "generating" : ""}" type="button">${actionText}</button>
+        </div>
+        ${renderAutoSplitPlanHtml(node)}`}
+        <button data-generate class="wide-button ${autoSplitAnalyzing || /^正在生成|^正在分析/.test(node.status || "") ? "generating" : ""}" type="button" ${autoSplitAnalyzing ? "disabled" : ""}>${autoSplitAnalyzing ? `分析并自动拆分 ${Math.max(1, Math.min(99, Number(node.autoSplitProgress) || 1))}%` : node.autoSplit && !isVideoNode ? "分析并自动拆分" : actionText}</button>
         <div class="status">${node.status || referenceHint}</div>
         ${promptRefinePanelHtml}
       `;
@@ -6383,6 +6851,27 @@
         });
       }
       wrap.querySelector("[data-generate]").addEventListener("click", () => generateFromNode(node.id));
+      wrap.querySelector("[data-auto-split-toggle]")?.addEventListener("click", () => {
+        pushHistory();
+        stopAutoSplitCountdown(node);
+        node.autoSplit = !node.autoSplit;
+        node.autoSplitPlan = [];
+        node.autoSplitReviewOpen = false;
+        node.autoSplitEditing = false;
+        node.autoSplitSeconds = 0;
+        node.status = node.autoSplit ? "自动拆分已打开：生成前会先分析方案。" : "自动拆分已关闭：可手动选择数量。";
+        render();
+      });
+      wrap.querySelectorAll("[data-auto-split-consistency]").forEach((button) => {
+        button.addEventListener("click", () => {
+          pushHistory();
+          node.autoSplitConsistency = button.dataset.autoSplitConsistency === "frame" ? "frame" : "series";
+          node.status = node.autoSplitConsistency === "frame"
+            ? "逐帧强一致：将按顺序生成，并尽量只修改指定动作。"
+            : "系列母图：首张作为母图，后续图片继承同一视觉规范。";
+          render();
+        });
+      });
       wrap.querySelector("[data-prompt-refine-open]")?.addEventListener("click", () => {
         closePromptLibrary();
         node.promptRefineOpen = !node.promptRefineOpen;
@@ -6392,10 +6881,6 @@
         node.promptRefineOpen = false;
         render();
       });
-      wrap.querySelectorAll("[data-prompt-refine-model]").forEach((button) => button.addEventListener("click", () => {
-        node.promptRefineModel = button.dataset.promptRefineModel;
-        render();
-      }));
       wrap.querySelector("[data-prompt-refine-run]")?.addEventListener("click", () => refineNodePrompt(node));
       wrap.querySelector("[data-prompt-refine-output]")?.addEventListener("input", (event) => {
         node.promptRefineResult = event.target.value;
@@ -6459,11 +6944,13 @@
       });
       wrap.querySelectorAll("[data-count]").forEach((button) => {
         button.addEventListener("click", () => {
+          if (node.autoSplit || button.disabled) return;
           pushHistory();
           node.count = Number(button.dataset.count);
           render();
         });
       });
+      bindAutoSplitPlanControls(wrap, node);
       wrap.querySelectorAll("[data-resolution]").forEach((button) => {
         button.addEventListener("click", () => {
           pushHistory();
@@ -6823,7 +7310,7 @@
       const publicStatus = publicNodeStatus(node.status);
       const visibleMediaStatus = node.type === "image" && publicStatus === "参考图已自动转换为 JPG。" ? "" : publicStatus;
       const media = node.pending
-        ? `<div class="loading-state"><span class="spinner"></span><strong>${isVideo ? "效果视频正在生成" : "效果图正在生成"}</strong></div>`
+        ? `<div class="loading-state"><span class="spinner"></span><strong>${isVideo ? "视频正在生成" : "图片正在生成"}</strong></div>`
         : node.type === "image"
         ? renderReferenceGallery(node)
         : node.mediaType === "text"
@@ -6833,7 +7320,7 @@
           ? `<video src="${node.mediaUrl}" controls></video>`
           : `<img src="${node.previewUrl || node.mediaUrl}" alt="${node.title}" loading="lazy" decoding="async">`
         : node.type === "result"
-        ? `<div class="placeholder-art result-empty-visual"><span class="result-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>效果图将在这里显示</strong><span>生成后可放大查看并下载原始尺寸</span></div>`
+        ? `<div class="placeholder-art result-empty-visual"><span class="result-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>图片将在这里显示</strong><span>生成后可放大查看并下载原始尺寸</span></div>`
         : `<div class="placeholder-art"><strong>参考图片</strong><span>可上传素材，也可连接生成节点输出。</span></div>`;
 
       wrap.innerHTML = `
@@ -7077,6 +7564,7 @@
         return `
         <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" title="${node.type === "video" && node.videoMode === "firstLast" ? label : `参考图 ${index + 1}`}">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
+          ${referenceMaskOverlayHtml(item)}
           <span class="thumb-index">${label}</span>
         </div>
       `;
@@ -7095,12 +7583,18 @@
       const ownHtml = ownRefs.map((item, index) => `
         <div class="thumb" draggable="true" data-ref-index="${index}" title="拖动调整顺序，点击放大或涂抹编辑">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
+          ${referenceMaskOverlayHtml(item)}
           <span class="thumb-index">${index + 1}</span>
           <button class="thumb-remove" data-remove-ref="${index}" type="button">×</button>
           ${referenceOrderControls(index, ownRefs.length)}
         </div>
       `).join("");
       return linkedHtml || ownHtml ? `${linkedHtml}${ownHtml}` : "";
+    }
+
+    function referenceMaskOverlayHtml(item) {
+      if (!isRenderableImageUrl(item?.maskSelectionUrl)) return "";
+      return `<img class="reference-mask-overlay" src="${item.maskSelectionUrl}" alt="局部修改遮罩"><span class="reference-mask-badge">遮罩</span>`;
     }
 
     function renderReferenceGallery(node) {
@@ -7122,6 +7616,7 @@
       return `<div class="upload-box">${visibleRefs.map(({ item, index }) => `
         <div class="thumb" draggable="true" data-ref-index="${index}" title="拖动调整顺序">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
+          ${referenceMaskOverlayHtml(item)}
           <span class="thumb-index">${index + 1}</span>
           <button class="thumb-remove" data-remove-ref="${index}" type="button">×</button>
           ${referenceOrderControls(index, visibleRefs.length)}
@@ -8144,10 +8639,16 @@
         if (!boxSelectState) return;
         boxSelectState.previewFrame = null;
         const ids = selectedCandidateIds(boxSelectState);
+        let selectedIndex = 0;
         boxSelectState.candidates.forEach((candidate) => {
           const selected = ids.has(candidate.id);
-          if (boxSelectState.previewIds.has(candidate.id) === selected) return;
           candidate.element.classList.toggle("box-selected", selected);
+          if (selected) {
+            selectedIndex += 1;
+            candidate.element.dataset.selectionIndex = String(selectedIndex);
+          } else {
+            delete candidate.element.dataset.selectionIndex;
+          }
         });
         boxSelectState.previewIds = ids;
       });
@@ -8182,7 +8683,12 @@
         clearBoxSelection();
         return;
       }
-      boxSelectedIds.forEach((id) => canvas.querySelector(`[data-id="${id}"]`)?.classList.add("box-selected"));
+      boxSelectedIds.forEach((id, index) => {
+        const nodeEl = canvas.querySelector(`[data-id="${id}"]`);
+        if (!nodeEl) return;
+        nodeEl.classList.add("box-selected");
+        nodeEl.dataset.selectionIndex = String(index + 1);
+      });
       positionCanvasOverlay(selectionMenu, event.clientX, event.clientY);
       selectionMenu.classList.add("open");
       suppressMenuCloseOnce = true;
@@ -8198,7 +8704,10 @@
 
     function clearBoxSelection() {
       boxSelectedIds = [];
-      canvas.querySelectorAll(".node.box-selected").forEach((nodeEl) => nodeEl.classList.remove("box-selected"));
+      canvas.querySelectorAll(".node.box-selected").forEach((nodeEl) => {
+        nodeEl.classList.remove("box-selected");
+        delete nodeEl.dataset.selectionIndex;
+      });
       selectionMenu.classList.remove("open");
     }
 
@@ -8544,7 +9053,7 @@
       ].filter(Boolean).join("\n\n");
     }
 
-    async function generateFromNode(id) {
+    async function generateFromNode(id, options = {}) {
       const node = nodes.find((item) => item.id === id);
       if (!node) return;
       if (!apiKeyInput.value.trim()) {
@@ -8590,13 +9099,59 @@
         ? { size: sizeFromRatio(fixedVideoRatio, node.resolution, [], { prompt: "" }), source: `视频模型固定 ${fixedVideoRatio}` }
         : sizeDecisionFromRatio(node.ratio, node.resolution, references, autoOptions);
       const targetSize = sizeDecision.size;
+      if (node.type === "generator" && node.autoSplit && !options.autoSplitConfirmed) {
+        stopAutoSplitCountdown(node);
+        node.autoSplitReviewOpen = false;
+        node.autoSplitEditing = false;
+        node.autoSplitPlan = [];
+        node.autoSplitSeriesSpec = "";
+        node.autoSplitLockedSize = targetSize;
+        node.autoSplitProgress = 1;
+        node.status = "正在分析内容并拆分生图方案...";
+        render();
+        const progressTimer = setInterval(() => {
+          if (!nodes.includes(node) || !Number(node.autoSplitProgress)) {
+            clearInterval(progressTimer);
+            return;
+          }
+          node.autoSplitProgress = Math.min(95, Number(node.autoSplitProgress) + 1);
+          refreshRenderedNode(node.id);
+        }, 450);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120000);
+        try {
+          await createAutoSplitBatchDirectory(node);
+          const analysis = await analyzeAutoSplitPlan(node, references, node.autoSplitLockedSize, controller.signal);
+          node.autoSplitPlan = analysis.items;
+          node.autoSplitSeriesSpec = analysis.seriesSpec;
+          node.count = node.autoSplitPlan.length;
+          node.autoSplitProgress = 0;
+          node.status = `已分析出 ${node.count} 张独立图片，请确认或修改方案。`;
+          startAutoSplitCountdown(node);
+        } catch (error) {
+          node.autoSplitProgress = 0;
+          node.status = `自动拆分失败：${friendlyErrorMessage(error)}`;
+          node.autoSplitReviewOpen = false;
+          render();
+        } finally {
+          clearInterval(progressTimer);
+          clearTimeout(timeout);
+        }
+        return;
+      }
+      const confirmedAutoSplitPlan = node.type === "generator" && node.autoSplit && options.autoSplitConfirmed
+        ? normalizeAutoSplitPlan(node.autoSplitPlan)
+        : [];
+      const effectiveTargetSize = confirmedAutoSplitPlan.length
+        ? (node.autoSplitLockedSize || targetSize)
+        : targetSize;
       const count = node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint"
         ? 1
         : node.type === "video"
         ? (videoCountOptions.includes(Number(node.count)) ? Number(node.count) : 1)
-        : Math.max(1, Math.min(9, Number(node.count) || 1));
+        : confirmedAutoSplitPlan.length || Math.max(1, Math.min(9, Number(node.count) || 1));
       const pendingNodes = [];
-      const parsed = parseSize(targetSize);
+      const parsed = parseSize(effectiveTargetSize);
 
       if (node.type === "keyword") {
         if (node.promptReverseMode === "text" && !(node.prompt || "").trim()) {
@@ -8621,17 +9176,22 @@
         const position = layout(index);
         const isLandscapeResult = parsed.width > parsed.height && node.type !== "video";
         const pending = createNode("result", position.x, position.y, {
-          title: node.type === "keyword" ? "反推/生成提示词" : node.type === "video" ? "效果视频" : node.type === "png" ? "透明PNG效果图" : node.type === "upscale" ? "4K效果图" : node.type === "outpaint" ? "扩图效果图" : "效果图",
+          title: node.type === "keyword" ? "反推/生成提示词" : node.type === "video" ? "视频" : node.type === "png" ? "透明PNG" : node.type === "upscale" ? "4K图片" : node.type === "outpaint" ? "扩图" : "",
           ratio: node.type === "outpaint" ? `${parsed.width}:${parsed.height}` : node.ratio,
           width: parsed.width,
           height: parsed.height,
           frameWidth: isLandscapeResult ? 360 : 240,
+          prompt: confirmedAutoSplitPlan[index]?.prompt || String(node.prompt || ""),
+          generationPrompt: "",
+          autoSplitIndex: confirmedAutoSplitPlan.length ? index + 1 : 0,
+          autoSaveBatchFolder: confirmedAutoSplitPlan.length ? String(node.autoSplitBatchFolder || "") : "",
           model: node.model,
           mediaType: node.type === "video" ? "video" : node.type === "keyword" ? "text" : "image",
           transparent: node.type === "png",
           pending: true,
           elapsed: 0,
-          status: node.type === "video" ? "正在生成视频，已等待 0s。" : `正在生成，已等待 0s，最多 ${generationTimeoutSeconds}s。`
+          status: node.type === "video" ? "正在生成视频，已等待 0s。" : `正在生成，已等待 0s，最多 ${generationTimeoutSeconds}s。`,
+          _deferRender: true
         });
         links.push({ from: node.id, to: pending.id });
         pendingNodes.push(pending);
@@ -8657,51 +9217,161 @@
         });
       }, 1000);
 
-      // Freeze the batch parameters, then run a small concurrent queue. Three
-      // selected images start together; larger batches are submitted three at a
-      // time so slow requests do not block every result behind them.
+      // Freeze the batch parameters, then run a deliberately bounded queue.
+      // Large plans use two concurrent requests to avoid locking the renderer
+      // and to reduce provider rate-limit spikes; frame sequences stay serial.
       const batchSource = {
         ...node,
-        prompt: node.type === "outpaint" ? outpaintPromptFor(node, targetSize, references[0]) : String(node.prompt || ""),
-        references: Array.isArray(node.references) ? node.references.map((item) => ({ ...item })) : []
+        prompt: node.type === "outpaint" ? outpaintPromptFor(node, effectiveTargetSize, references[0]) : String(node.prompt || ""),
+        references: references.map((item) => ({ ...item }))
       };
-      const generationConcurrency = 3;
-      for (let offset = 0; offset < pendingNodes.length; offset += generationConcurrency) {
-        const batch = pendingNodes.slice(offset, offset + generationConcurrency);
-        await Promise.all(batch.map((pending, batchIndex) =>
-          generateOneResult(batchSource, pending, offset + batchIndex, targetSize)
-        ));
-        await saveCanvasState();
+      let motherReference = null;
+      let previousFrameReference = null;
+      const consistencyMode = confirmedAutoSplitPlan.length
+        ? (node.autoSplitConsistency === "frame" ? "frame" : "series")
+        : "";
+      const generationConcurrency = consistencyMode === "frame" ? 1 : pendingNodes.length >= 10 ? 2 : 3;
+      for (let offset = 0; offset < pendingNodes.length;) {
+        const activeConcurrency = confirmedAutoSplitPlan.length && !motherReference ? 1 : generationConcurrency;
+        const batch = pendingNodes.slice(offset, offset + activeConcurrency);
+        await Promise.all(batch.map((pending, batchIndex) => {
+          const planIndex = offset + batchIndex;
+          const planItem = confirmedAutoSplitPlan[planIndex];
+          const referenceList = motherReference
+            ? consistencyMode === "frame"
+              ? [previousFrameReference || motherReference, motherReference, ...batchSource.references]
+              : [motherReference, ...batchSource.references]
+            : batchSource.references;
+          const generatedPrompt = planItem
+            ? autoSplitGenerationPrompt(node, planItem, planIndex, confirmedAutoSplitPlan.length, Boolean(motherReference))
+            : batchSource.prompt;
+          pending.prompt = planItem?.prompt || batchSource.prompt;
+          pending.generationPrompt = generatedPrompt;
+          const sourceForResult = planItem
+            ? {
+                ...batchSource,
+                prompt: generatedPrompt,
+                references: referenceList,
+                count: 1,
+                _directReferencesOnly: true,
+                _lockOutputSize: true,
+                _autoSplitConsistency: consistencyMode,
+                _deferCanvasSave: true
+              }
+            : batchSource;
+          return generateOneResult(sourceForResult, pending, planIndex, effectiveTargetSize).then(async () => {
+            if (consistencyMode !== "frame" || !previousFrameReference?.url || !pending.fullUrl) return;
+            const repeated = await imagesAreNearDuplicate(previousFrameReference.url, pending.fullUrl);
+            if (!repeated) return;
+            const progress = confirmedAutoSplitPlan.length <= 1 ? 100 : Math.round(planIndex * 100 / (confirmedAutoSplitPlan.length - 1));
+            pending.pending = true;
+            pending.status = `第 ${planIndex + 1} 帧与上一帧过于相似，正在强化动作进度后重试...`;
+            setNodeStatus(pending.id, pending.status);
+            const retrySource = {
+              ...sourceForResult,
+              prompt: `${generatedPrompt}\n\n检测到上一结果与前一帧近似重复。本次必须产生肉眼可见但连续的动作推进，准确达到 ${progress}%；不得原样返回上一帧，不得重置背景或主体。`
+            };
+            pending.generationPrompt = retrySource.prompt;
+            await generateOneResult(retrySource, pending, planIndex, effectiveTargetSize);
+          });
+        }));
+        const generatedMother = !motherReference ? batch.find((item) => item?.fullUrl && item.mediaType === "image") : null;
+        if (confirmedAutoSplitPlan.length && generatedMother?.fullUrl) {
+          motherReference = {
+            url: generatedMother.fullUrl,
+            mediaType: "image",
+            width: parsed.width,
+            height: parsed.height,
+            name: "本批次系列母图"
+          };
+        }
+        if (consistencyMode === "frame") {
+          const generatedPreviousFrame = [...batch].reverse().find((item) => item?.fullUrl && item.mediaType === "image");
+          if (generatedPreviousFrame?.fullUrl) {
+            previousFrameReference = {
+              url: generatedPreviousFrame.fullUrl,
+              mediaType: "image",
+              width: parsed.width,
+              height: parsed.height,
+              name: `紧邻上一帧-${generatedPreviousFrame.autoSplitIndex || offset + 1}`
+            };
+          }
+        }
+        offset += batch.length;
         batch.forEach((pending) => refreshRenderedNode(pending.id));
+        if (offset >= pendingNodes.length || offset % 4 === 0) {
+          await saveCanvasState();
+        } else {
+          scheduleCanvasSave(1200);
+        }
+        await new Promise((resolve) => requestAnimationFrame(resolve));
       }
       clearInterval(timer);
       const failed = pendingNodes.filter((pending) => !pending.mediaUrl && pending.mediaType !== "text").length;
-      node.status = failed ? `已完成，${failed} 张失败。` : "接口返回成功。";
+      node.status = failed
+        ? `已完成，${failed} 张失败；其余图片已按 ${effectiveTargetSize} 输出。`
+        : confirmedAutoSplitPlan.length
+        ? `批次生成完成：${effectiveTargetSize} · ${consistencyMode === "frame" ? "逐帧强一致" : "系列母图一致"}。`
+        : "接口返回成功。";
+      if (confirmedAutoSplitPlan.length) node.autoSplitPlan = confirmedAutoSplitPlan;
       render();
       await saveCanvasState();
     }
 
     function resultGridPositioner(node, count, parsed = { width: 1024, height: 1024 }) {
-      const columns = count === 4 ? 2 : count >= 5 ? 3 : count;
+      const columns = resultGridColumns(count);
       const isLandscape = parsed.width > parsed.height;
       const resultWidth = isLandscape ? 360 : 240;
-      const resultHeaderHeight = 40;
-      const resultGap = 3;
-      const resultBodyHeight = Math.round(resultWidth * parsed.height / Math.max(1, parsed.width)) + 28;
-      const gapX = resultWidth + 40;
-      const gapY = resultBodyHeight + resultHeaderHeight + resultGap;
+      const resultGap = 2;
+      const resultMetaHeight = 18;
+      const resultBodyHeight = Math.round(resultWidth * parsed.height / Math.max(1, parsed.width)) + resultMetaHeight;
+      const gapX = resultWidth + resultGap;
+      const gapY = resultBodyHeight + resultGap;
       const startX = node.x + nodeWidth(node) + 110;
       const existing = links
         .filter((link) => link.from === node.id)
         .map((link) => nodes.find((item) => item.id === link.to))
         .filter((item) => item?.type === "result");
       const startY = existing.length
-        ? Math.max(...existing.map((item) => item.y + renderedResultBodyHeight(item))) + resultHeaderHeight + resultGap
+        ? Math.max(...existing.map((item) => item.y + renderedResultBodyHeight(item))) + resultGap
         : node.y + 12;
       return (index) => ({
-        x: startX + (index % columns) * Math.max(gapX, resultWidth + 40),
+        x: startX + (index % columns) * gapX,
         y: startY + Math.floor(index / columns) * gapY
       });
+    }
+
+    function resultGridColumns(count) {
+      const total = Math.max(1, Number(count) || 1);
+      if (total === 4) return 2;
+      if (total < 5) return total;
+      if (total <= 12) return 3;
+      if (total <= 20) return 4;
+      if (total <= 30) return 5;
+      if (total <= 48) return 6;
+      return 9;
+    }
+
+    function reflowResultGrid(resultNodes) {
+      const items = (resultNodes || []).filter((item) => item?.type === "result");
+      if (!items.length) return;
+      const columns = resultGridColumns(items.length);
+      const gap = 2;
+      const startX = Math.min(...items.map((item) => item.x));
+      const startY = Math.min(...items.map((item) => item.y));
+      let rowY = startY;
+      for (let offset = 0; offset < items.length; offset += columns) {
+        const row = items.slice(offset, offset + columns);
+        let columnX = startX;
+        let rowHeight = 0;
+        row.forEach((item) => {
+          item.x = columnX;
+          item.y = rowY;
+          columnX += nodeWidth(item) + gap;
+          rowHeight = Math.max(rowHeight, renderedResultBodyHeight(item));
+        });
+        rowY += rowHeight + gap;
+      }
     }
 
     function renderedResultBodyHeight(node) {
@@ -8711,7 +9381,7 @@
       const mediaHeight = node.width && node.height
         ? Math.round(width * node.height / Math.max(1, node.width))
         : 260;
-      return mediaHeight + 28;
+      return mediaHeight + 18;
     }
 
     function estimatedNodeHeight(node) {
@@ -8791,11 +9461,10 @@
             : "透明 PNG 已从原图抠出，未重新绘制主体，可放大预览、收藏和下载。";
           setNodeStatus(pending.id, pending.status);
           await autoSaveGeneratedNodeMedia(pending);
-          await saveCanvasState();
+          if (!sourceNode._deferCanvasSave) await saveCanvasState();
           return;
         }
         const apiStartedAt = Date.now();
-        const normalizeToTargetSize = sourceNode.type === "generator" && modelToApiModel(sourceNode.model) === "gpt-image-2";
         const requestNode = {
           ...sourceNode,
           count: 1,
@@ -8829,21 +9498,31 @@
           : `接口已返回，用时 ${apiSeconds}s，正在处理图片显示...`;
         setNodeStatus(pending.id, pending.status);
         refreshRenderedNode(pending.id);
-        await settleWithin(saveCanvasState(), 8000, null, "生成结果初次保存");
-        // 接口只接受标准方图/横图/竖图尺寸。返回比例与目标画幅不一致时，
-        // 居中铺满并裁切到用户选择的精确尺寸，避免补白和比例失效。
+        if (!sourceNode._deferCanvasSave) {
+          await settleWithin(saveCanvasState(), 8000, null, "生成结果初次保存");
+        }
+        const maskedReference = collectReferenceItems([sourceNode]).find((item) => item?.maskUrl && item?.maskSelectionUrl && item?.url);
+        // 生图接口只接受标准方图/横图/竖图。保留接口返回的完整画面，
+        // 不再为了匹配自定义目标比例而居中放大裁切，避免标题和人物被切掉。
         const url = apiResult.mediaType === "image" && rawUrl
           ? (sourceNode.type === "png"
             ? await normalizeGeneratedImage(rawUrl, targetSize, true)
+            : maskedReference
+            ? await settleWithin(composeMaskedEditImage(rawUrl, maskedReference, targetSize), 24000, rawUrl, "局部遮罩合成")
             : sourceNode.type === "outpaint"
             ? await composeOutpaintImage(rawUrl, collectReferenceItems([
                 ...getInputMediaList(sourceNode.id),
                 sourceNode
               ])[0], targetSize, sourceNode.outpaintDirection, sourceNode.outpaintAmount)
-            : normalizeToTargetSize
-            ? await normalizeGeneratedImage(rawUrl, targetSize, false, true)
+            : sourceNode._lockOutputSize
+            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 18000, rawUrl, "批次统一尺寸处理")
             : rawUrl)
           : rawUrl;
+        const detectedDimensions = apiResult.mediaType === "image" && url
+          ? await settleWithin(getImageDimensions(url), 12000, parsed, "原图尺寸识别")
+          : parsed;
+        const finalWidth = Math.max(1, Number(detectedDimensions?.width) || parsed.width);
+        const finalHeight = Math.max(1, Number(detectedDimensions?.height) || parsed.height);
         const previewUrl = apiResult.mediaType === "image" && url
           ? await settleWithin(createPreviewImageUrl(url, 320, sourceNode.type === "png"), 12000, url, "预览图生成")
           : "";
@@ -8854,10 +9533,10 @@
         pending.mediaType = apiResult.mediaType;
         pending.transparent = sourceNode.type === "png";
         pending.text = apiResult.text || "";
-        pending.width = parsed.width;
-        pending.height = parsed.height;
+        pending.width = finalWidth;
+        pending.height = finalHeight;
         pending.references = apiResult.mediaType === "image" && url
-          ? [{ url, mediaType: "image", width: parsed.width, height: parsed.height, name: pending.title || "效果图" }]
+          ? [{ url, mediaType: "image", width: finalWidth, height: finalHeight, name: pending.title || "效果图" }]
           : [];
         const totalSeconds = Math.max(1, Math.round((Date.now() - totalStartedAt) / 1000));
         pending.totalSeconds = totalSeconds;
@@ -8867,8 +9546,16 @@
         setNodeStatus(pending.id, pending.status);
         refreshRenderedNode(pending.id);
         await settleWithin(autoSaveGeneratedNodeMedia(pending), 18000, null, "图片自动保存");
-        await settleWithin(saveCanvasState(), 10000, null, "生成结果保存");
+        if (!sourceNode._deferCanvasSave) {
+          await settleWithin(saveCanvasState(), 10000, null, "生成结果保存");
+        }
       } catch (error) {
+        if (sourceNode.type === "generator" && !sourceNode._forceStandardApiSize && /size|dimension|resolution|尺寸|分辨率/i.test(String(error?.message || error))) {
+          pending.pending = true;
+          pending.status = `第 ${index + 1} 张的自定义尺寸不被当前接口接受，正在兼容生成并统一输出...`;
+          setNodeStatus(pending.id, pending.status);
+          return generateOneResult({ ...sourceNode, _forceStandardApiSize: true }, pending, index, targetSize, attempt);
+        }
         if ((sourceNode.type === "generator" || sourceNode.type === "outpaint") && attempt < 3 && isRetryableGenerationError(error)) {
           if (timeout) clearTimeout(timeout);
           pending.pending = true;
@@ -8880,7 +9567,7 @@
         pending.pending = false;
         pending.status = `第 ${index + 1} 张生成失败：${friendlyApiError(error)}`;
         setNodeStatus(pending.id, pending.status);
-        await saveCanvasState();
+        if (!sourceNode._deferCanvasSave) await saveCanvasState();
       } finally {
         if (timeout) clearTimeout(timeout);
       }
@@ -8945,9 +9632,7 @@
         const language = /[\u3400-\u9fff]/.test(source) ? "中文" : "英文";
         const configuredUrl = apiUrlInput.value.trim() || defaultApiBaseUrl();
         const headers = { "Content-Type": "application/json", Authorization: `Bearer ${apiKeyInput.value.trim()}` };
-        const model = promptModelOptions.includes(node.promptRefineModel) ? node.promptRefineModel : "GPT";
-        const response = await postChatCompletion(configuredUrl, headers, {
-          model: modelToPromptModel(model),
+        const response = await postPromptModelWithFallback(configuredUrl, headers, {
           messages: [
             { role: "system", content: `你是专业的 AI 绘图提示词编辑器。请优化用户提供的提示词，使画面描述、构图、光线、材质与细节更清晰。必须保持原意，不添加解释，不输出标题，只返回一个修改后的${language}提示词。输入是中文就只输出中文，输入是英文就只输出英文。` },
             { role: "user", content: source }
@@ -8955,6 +9640,7 @@
           temperature: 0.65
         }, controller.signal);
         node.promptRefineResult = String(response.text || "").trim();
+        node.promptRefineProvider = response.provider || "GPT";
         if (!node.promptRefineResult) throw new Error("接口没有返回修改后的提示词");
       } catch (error) {
         node.promptRefineResult = `修改失败：${friendlyErrorMessage(error)}`;
@@ -8972,7 +9658,9 @@
 
       const inputMedia = getInputMedia(node.id);
       const inputMediaList = getInputMediaList(node.id);
-      const referenceSources = node.type === "png"
+      const referenceSources = node._directReferencesOnly
+        ? [node]
+        : node.type === "png"
         ? [node]
         : [
           ...(inputMediaList.length ? inputMediaList : inputMedia ? [inputMedia] : []),
@@ -8981,7 +9669,8 @@
       const references = collectReferenceItems(referenceSources);
       const jsonHeaders = { "Content-Type": "application/json" };
       if (apiKeyInput.value.trim()) jsonHeaders.Authorization = `Bearer ${apiKeyInput.value.trim()}`;
-      if (node.type !== "video" && node.type !== "keyword" && node.type !== "png" && isNanoBananaModel(modelToApiModel(node.model))) {
+      const hasLocalEditMask = references.some((item) => item?.maskUrl && item?.maskSelectionUrl);
+      if (node.type !== "video" && node.type !== "keyword" && node.type !== "png" && !hasLocalEditMask && isNanoBananaModel(modelToApiModel(node.model))) {
         return callNanoBananaApi(node, references, configuredUrl, jsonHeaders, signal);
       }
       const request = await buildApiRequest(node, references);
@@ -9566,11 +10255,28 @@ ${formatInstruction}`;
         "输出透明背景 PNG，主体必须与上传图片保持一致，只把背景变成完全透明；边缘干净自然，不要白底、灰底、纯色底、阴影底或棋盘格底。"
       ].filter(Boolean).join("\n\n");
       const requestResolution = node._forceBaseGeneration ? "1K" : String(node.resolution || "1K").toUpperCase();
+      const maskedReference = references.find((item) => item?.maskUrl && item?.url) || null;
+      const imageModel = maskedReference ? "gpt-image-2" : imageGenerationApiModel(node.model, requestResolution);
+      const orderedImageReferences = maskedReference
+        ? [maskedReference, ...references.filter((item) => item !== maskedReference)]
+        : references;
+      const imagePrompt = node.type === "png"
+        ? transparentEditPrompt
+        : [
+            node.prompt || "",
+            maskedReference
+              ? "严格局部编辑：只允许修改遮罩透明区域。遮罩以外必须逐像素保留原图，不得改变构图、角度、尺寸、纹理、文字、Logo、人物或任何细节。"
+              : ""
+          ].filter(Boolean).join("\n\n");
       const imagePayload = {
-        model: imageGenerationApiModel(node.model, requestResolution),
-        prompt: node.type === "png" ? transparentEditPrompt : promptWithSize(node.prompt, targetSize),
+        model: imageModel,
+        prompt: promptWithSize(imagePrompt, targetSize),
         n: Math.max(1, Math.min(9, Number(node.count) || 1)),
-        size: apiSizeFromTarget(targetSize)
+        size: node._forceStandardApiSize
+          ? apiSizeFromTarget(targetSize)
+          : imageModel === "gpt-image-2"
+          ? apiSafeGenerationSize(targetSize)
+          : apiSizeFromTarget(targetSize)
       };
       if (!node._forceBaseGeneration) {
         imagePayload.quality = "high";
@@ -9595,20 +10301,29 @@ ${formatInstruction}`;
       Object.entries(imagePayload).forEach(([key, value]) => form.append(key, String(value)));
       let fileCount = 0;
       let urlFallbackCount = 0;
-      for (let index = 0; index < references.length; index++) {
-        const file = await referenceToFile(references[index], index);
+      for (let index = 0; index < orderedImageReferences.length; index++) {
+        const reference = orderedImageReferences[index];
+        const file = maskedReference && reference === maskedReference
+          ? await referenceToPngFile(reference, index, maskedReference.maskWidth, maskedReference.maskHeight)
+          : await referenceToFile(reference, index);
         if (file) {
           form.append("image", file, file.name);
           fileCount += 1;
-        } else if (/^https?:\/\//i.test(references[index].url)) {
-          form.append("image", references[index].url);
-          form.append("image_url", references[index].url);
-          form.append("image_urls[]", references[index].url);
+        } else if (/^https?:\/\//i.test(orderedImageReferences[index].url)) {
+          form.append("image", orderedImageReferences[index].url);
+          form.append("image_url", orderedImageReferences[index].url);
+          form.append("image_urls[]", orderedImageReferences[index].url);
           urlFallbackCount += 1;
         }
       }
+      if (maskedReference) {
+        const maskFile = await referenceToFile({ url: maskedReference.maskUrl }, 999);
+        if (!maskFile) throw new Error("局部遮罩无法转换为接口可读取的 PNG，请重新涂抹并保存遮罩。");
+        form.append("mask", maskFile, "mask.png");
+      }
       if (!fileCount && urlFallbackCount) {
-        const imageUrls = references
+        if (maskedReference) throw new Error("带遮罩的局部编辑必须使用可上传的本地原图，不能只使用远程图片地址。");
+        const imageUrls = orderedImageReferences
           .map((item) => item.url)
           .filter((url) => /^https?:\/\//i.test(url));
         return {
@@ -9991,7 +10706,7 @@ ${formatInstruction}`;
       const width = Number(match[1]);
       const height = Number(match[2]);
       if (!Number.isFinite(width) || !Number.isFinite(height) || width < 64 || height < 64) return null;
-      return { width: roundToMultiple(width, 16), height: roundToMultiple(height, 16) };
+      return { width: Math.round(width), height: Math.round(height) };
     }
 
     async function ensureReferenceDimensions(references) {
@@ -10099,9 +10814,7 @@ ${formatInstruction}`;
         const imageMap = imageSizeMap[resolution];
         const activeMap = imageMap || videoMap;
         const promptPixels = extractPromptPixelSize(options.prompt);
-        if (promptPixels) {
-          return ensureMappedImageSize(`${promptPixels.width}x${promptPixels.height}`, resolution, imageMap, promptPixels);
-        }
+        if (promptPixels) return `${promptPixels.width}x${promptPixels.height}`;
         const promptKey = extractPromptSizeKey(options.prompt, activeMap);
         if (promptKey) {
           const [w, h] = activeMap[promptKey] || activeMap["16:9"] || activeMap["1:1"];
@@ -10181,11 +10894,20 @@ ${formatInstruction}`;
       const { width, height } = parseSize(targetSize);
       const maxEdge = 3840;
       const maxPixels = 8294400;
-      if (!width || !height) return targetSize;
-      if (width <= maxEdge && height <= maxEdge && width * height <= maxPixels) return targetSize;
-      const scale = Math.min(maxEdge / width, maxEdge / height, Math.sqrt(maxPixels / (width * height)));
-      let safeWidth = roundToMultiple(width * scale, 16);
-      let safeHeight = roundToMultiple(height * scale, 16);
+      const minPixels = 655360;
+      if (!width || !height) return "1024x1024";
+      const ratio = width / Math.max(1, height);
+      let safeWidth = roundToMultiple(width, 16);
+      let safeHeight = roundToMultiple(height, 16);
+      if (ratio > 3) safeWidth = roundToMultiple(safeHeight * 3, 16);
+      if (ratio < 1 / 3) safeHeight = roundToMultiple(safeWidth * 3, 16);
+      const pixels = safeWidth * safeHeight;
+      if (safeWidth <= maxEdge && safeHeight <= maxEdge && pixels >= minPixels && pixels <= maxPixels) return `${safeWidth}x${safeHeight}`;
+      const scale = pixels < minPixels
+        ? Math.sqrt(minPixels / Math.max(1, pixels))
+        : Math.min(maxEdge / safeWidth, maxEdge / safeHeight, Math.sqrt(maxPixels / Math.max(1, pixels)));
+      safeWidth = roundToMultiple(safeWidth * scale, 16);
+      safeHeight = roundToMultiple(safeHeight * scale, 16);
       while (safeWidth > maxEdge || safeHeight > maxEdge || safeWidth * safeHeight > maxPixels) {
         safeWidth = Math.max(16, safeWidth - 16);
         safeHeight = Math.max(16, safeHeight - 16);
@@ -10282,6 +11004,107 @@ ${formatInstruction}`;
         throw new Error(`图片尺寸校验失败：期望 ${expected.width}×${expected.height}，实际 ${actual.width || 0}×${actual.height || 0}。`);
       }
       return normalized;
+    }
+
+    async function imagesAreNearDuplicate(leftSrc, rightSrc) {
+      if (!leftSrc || !rightSrc) return false;
+      if (leftSrc === rightSrc) return true;
+      let left;
+      let right;
+      try {
+        [left, right] = await Promise.all([loadImageForCanvas(leftSrc), loadImageForCanvas(rightSrc)]);
+        const sample = (image) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 40;
+          canvas.height = 40;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          ctx.drawImage(image, 0, 0, 40, 40);
+          return ctx.getImageData(0, 0, 40, 40).data;
+        };
+        const a = sample(left.image);
+        const b = sample(right.image);
+        let difference = 0;
+        for (let index = 0; index < a.length; index += 4) {
+          difference += Math.abs(a[index] - b[index]);
+          difference += Math.abs(a[index + 1] - b[index + 1]);
+          difference += Math.abs(a[index + 2] - b[index + 2]);
+        }
+        const normalizedDifference = difference / (40 * 40 * 3 * 255);
+        return normalizedDifference < 0.008;
+      } catch (error) {
+        console.warn("Frame duplicate check skipped", error);
+        return false;
+      } finally {
+        left?.revoke?.();
+        right?.revoke?.();
+      }
+    }
+
+    async function referenceToPngFile(reference, index, requestedWidth, requestedHeight) {
+      const sourceFile = await referenceToFile(reference, index);
+      if (!sourceFile) return null;
+      let bitmap;
+      try {
+        bitmap = await createImageBitmap(sourceFile);
+        const width = Math.max(1, Number(requestedWidth) || bitmap.width);
+        const height = Math.max(1, Number(requestedHeight) || bitmap.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+        if (!blob) return null;
+        return new File([blob], `reference-${index + 1}.png`, { type: "image/png" });
+      } catch (error) {
+        console.warn("Reference could not be normalized to PNG for masked editing", error);
+        return null;
+      } finally {
+        bitmap?.close?.();
+      }
+    }
+
+    async function composeMaskedEditImage(generatedSrc, reference, targetSize) {
+      if (!reference?.url || !reference?.maskSelectionUrl) return normalizeGeneratedImage(generatedSrc, targetSize, false, false);
+      const { width, height } = parseSize(targetSize);
+      const [original, generated, selection] = await Promise.all([
+        loadImageForCanvas(reference.url),
+        loadImageForCanvas(generatedSrc),
+        loadImageForCanvas(reference.maskSelectionUrl)
+      ]);
+      try {
+        const makeLayer = (image, transparent = false) => {
+          const layer = document.createElement("canvas");
+          layer.width = width;
+          layer.height = height;
+          drawImageAspectSafe(layer.getContext("2d"), image, width, height, transparent, false);
+          return layer;
+        };
+        const originalLayer = makeLayer(original.image, false);
+        const generatedLayer = makeLayer(generated.image, false);
+        const selectionLayer = makeLayer(selection.image, true);
+        const output = document.createElement("canvas");
+        output.width = width;
+        output.height = height;
+        const outputCtx = output.getContext("2d", { willReadFrequently: true });
+        const originalData = originalLayer.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, width, height);
+        const generatedData = generatedLayer.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, width, height);
+        const selectionData = selectionLayer.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, width, height);
+        for (let index = 0; index < originalData.data.length; index += 4) {
+          const mix = selectionData.data[index + 3] / 255;
+          if (mix <= 0) continue;
+          originalData.data[index] = Math.round(originalData.data[index] * (1 - mix) + generatedData.data[index] * mix);
+          originalData.data[index + 1] = Math.round(originalData.data[index + 1] * (1 - mix) + generatedData.data[index + 1] * mix);
+          originalData.data[index + 2] = Math.round(originalData.data[index + 2] * (1 - mix) + generatedData.data[index + 2] * mix);
+          originalData.data[index + 3] = 255;
+        }
+        outputCtx.putImageData(originalData, 0, 0);
+        return output.toDataURL("image/png");
+      } finally {
+        original.revoke();
+        generated.revoke();
+        selection.revoke();
+      }
     }
 
     function loadCanvasImage(src) {
@@ -10715,6 +11538,25 @@ ${formatInstruction}`;
       }
     }
 
+    function activeLightboxPromptText() {
+      const node = nodes.find((item) => item.id === activeLightbox.nodeId);
+      const directPrompt = String(node?.generationPrompt || node?.prompt || node?.text || "").trim();
+      if (directPrompt) return directPrompt;
+      const sourceId = links.find((link) => link.to === node?.id)?.from;
+      const sourceNode = nodes.find((item) => item.id === sourceId);
+      return String(sourceNode?.prompt || sourceNode?.text || "").trim();
+    }
+
+    function viewActiveLightboxPrompt() {
+      const prompt = activeLightboxPromptText();
+      closeLightboxImageMenu();
+      if (!prompt) {
+        showToast("这张图片没有保存可查看的关键词");
+        return;
+      }
+      openPromptPreview(prompt, "", "");
+    }
+
     function openLightbox(src, options = {}) {
       lightboxScale = 1;
       lightboxPan = { x: 0, y: 0 };
@@ -10735,6 +11577,7 @@ ${formatInstruction}`;
       lightboxImage.src = isVideo ? "" : src;
       lightboxVideo.src = isVideo ? src : "";
       lightboxCopy.hidden = isVideo;
+      lightboxContextPrompt.hidden = isVideo || !activeLightboxPromptText();
       closeLightboxImageMenu();
       lightbox.classList.add("open");
       updateLightboxFavoriteButton();
@@ -10763,6 +11606,9 @@ ${formatInstruction}`;
       paintLastPoint = null;
       paintUndoStack = [];
       paintRedoStack = [];
+      paintEraseMode = false;
+      paintErase.classList.remove("mask-mode-active");
+      paintErase.textContent = "橡皮擦";
     }
 
     function updateLightboxScale() {
@@ -10777,20 +11623,51 @@ ${formatInstruction}`;
       updateLightboxScale();
     }
 
-    function loadPaintCanvas(src) {
-      const img = new Image();
-      img.onload = () => {
-        const maxSide = 1400;
-        const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
-        paintCanvas.width = Math.round(img.naturalWidth * scale);
-        paintCanvas.height = Math.round(img.naturalHeight * scale);
-        const ctx = paintCanvas.getContext("2d");
-        ctx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-        ctx.drawImage(img, 0, 0, paintCanvas.width, paintCanvas.height);
-        paintUndoStack = [ctx.getImageData(0, 0, paintCanvas.width, paintCanvas.height)];
-        paintRedoStack = [];
-      };
-      img.src = src;
+    async function loadPaintCanvas(src) {
+      const node = nodes.find((item) => item.id === activeLightbox.nodeId);
+      const reference = node && activeLightbox.refIndex !== null
+        ? normalizeReferences(node)[activeLightbox.refIndex]
+        : null;
+      const original = await loadImageForCanvas(src);
+      const maxSide = 1400;
+      const scale = Math.min(1, maxSide / Math.max(original.image.naturalWidth, original.image.naturalHeight));
+      const width = Math.max(1, Math.round(original.image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(original.image.naturalHeight * scale));
+      for (const canvasLayer of [paintCanvas, paintOriginalCanvas, paintSelectionCanvas]) {
+        canvasLayer.width = width;
+        canvasLayer.height = height;
+      }
+      const originalCtx = paintOriginalCanvas.getContext("2d");
+      originalCtx.clearRect(0, 0, width, height);
+      originalCtx.drawImage(original.image, 0, 0, width, height);
+      original.revoke();
+      const selectionCtx = paintSelectionCanvas.getContext("2d");
+      selectionCtx.clearRect(0, 0, width, height);
+      if (reference?.maskSelectionUrl) {
+        try {
+          const savedSelection = await loadImageForCanvas(reference.maskSelectionUrl);
+          selectionCtx.drawImage(savedSelection.image, 0, 0, width, height);
+          savedSelection.revoke();
+        } catch (error) {
+          console.warn("Mask preview could not be restored", error);
+        }
+      }
+      paintEraseMode = false;
+      paintErase.classList.remove("mask-mode-active");
+      paintErase.textContent = "橡皮擦";
+      renderPaintComposite();
+      paintUndoStack = [selectionCtx.getImageData(0, 0, width, height)];
+      paintRedoStack = [];
+    }
+
+    function renderPaintComposite() {
+      const ctx = paintCanvas.getContext("2d");
+      ctx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+      ctx.drawImage(paintOriginalCanvas, 0, 0);
+      ctx.save();
+      ctx.globalAlpha = 0.56;
+      ctx.drawImage(paintSelectionCanvas, 0, 0);
+      ctx.restore();
     }
 
     function paintPointFromEvent(event) {
@@ -10803,29 +11680,35 @@ ${formatInstruction}`;
 
     function drawPaintLine(point) {
       if (!paintLastPoint) paintLastPoint = point;
-      const ctx = paintCanvas.getContext("2d");
-      ctx.strokeStyle = paintColor.value;
-      ctx.lineWidth = Number(paintSize.value) * 2;
+      const ctx = paintSelectionCanvas.getContext("2d");
+      const rect = paintCanvas.getBoundingClientRect();
+      const displayScale = paintCanvas.width / Math.max(1, rect.width);
+      ctx.globalCompositeOperation = paintEraseMode ? "destination-out" : "source-over";
+      ctx.strokeStyle = "rgba(34, 197, 94, 1)";
+      ctx.lineWidth = Math.max(2, Number(paintSize.value) * displayScale);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
       ctx.moveTo(paintLastPoint.x, paintLastPoint.y);
       ctx.lineTo(point.x, point.y);
       ctx.stroke();
+      ctx.globalCompositeOperation = "source-over";
+      renderPaintComposite();
       paintLastPoint = point;
     }
 
     function pushPaintHistory() {
-      if (!paintCanvas.width || !paintCanvas.height) return;
-      const ctx = paintCanvas.getContext("2d");
-      paintUndoStack.push(ctx.getImageData(0, 0, paintCanvas.width, paintCanvas.height));
-      if (paintUndoStack.length > 40) paintUndoStack.shift();
+      if (!paintSelectionCanvas.width || !paintSelectionCanvas.height) return;
+      const ctx = paintSelectionCanvas.getContext("2d");
+      paintUndoStack.push(ctx.getImageData(0, 0, paintSelectionCanvas.width, paintSelectionCanvas.height));
+      if (paintUndoStack.length > 12) paintUndoStack.shift();
       paintRedoStack = [];
     }
 
     function restorePaintState(state) {
       if (!state) return;
-      paintCanvas.getContext("2d").putImageData(state, 0, 0);
+      paintSelectionCanvas.getContext("2d").putImageData(state, 0, 0);
+      renderPaintComposite();
     }
 
     function undoPaint() {
@@ -10842,18 +11725,61 @@ ${formatInstruction}`;
       restorePaintState(next);
     }
 
+    function clearPaintMask() {
+      if (!paintSelectionCanvas.width || !paintSelectionCanvas.height) return;
+      paintSelectionCanvas.getContext("2d").clearRect(0, 0, paintSelectionCanvas.width, paintSelectionCanvas.height);
+      renderPaintComposite();
+      pushPaintHistory();
+    }
+
+    function paintSelectionHasPixels() {
+      if (!paintSelectionCanvas.width || !paintSelectionCanvas.height) return false;
+      const data = paintSelectionCanvas.getContext("2d").getImageData(0, 0, paintSelectionCanvas.width, paintSelectionCanvas.height).data;
+      for (let index = 3; index < data.length; index += 4) {
+        if (data[index] > 8) return true;
+      }
+      return false;
+    }
+
+    function createApiMaskDataUrl(width, height) {
+      const mask = document.createElement("canvas");
+      mask.width = Math.max(1, Number(width) || paintSelectionCanvas.width);
+      mask.height = Math.max(1, Number(height) || paintSelectionCanvas.height);
+      const ctx = mask.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, mask.width, mask.height);
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.drawImage(paintSelectionCanvas, 0, 0, mask.width, mask.height);
+      ctx.globalCompositeOperation = "source-over";
+      return mask.toDataURL("image/png");
+    }
+
     function savePaintToReference() {
       const node = nodes.find((item) => item.id === activeLightbox.nodeId);
       if (!node || activeLightbox.refIndex === null) return;
       pushHistory();
       const refs = normalizeReferences(node);
-      if (!refs[activeLightbox.refIndex]) return;
-      refs[activeLightbox.refIndex].url = paintCanvas.toDataURL("image/png");
-      refs[activeLightbox.refIndex].width = paintCanvas.width;
-      refs[activeLightbox.refIndex].height = paintCanvas.height;
-      node.mediaUrl = refs[0]?.url || "";
+      const reference = refs[activeLightbox.refIndex];
+      if (!reference) return;
+      if (!paintSelectionHasPixels()) {
+        delete reference.maskUrl;
+        delete reference.maskSelectionUrl;
+        delete reference.maskWidth;
+        delete reference.maskHeight;
+        node.status = "遮罩已清空，参考原图保持不变。";
+      } else {
+        const maskWidth = Math.max(1, Number(reference.width) || paintCanvas.width);
+        const maskHeight = Math.max(1, Number(reference.height) || paintCanvas.height);
+        reference.maskUrl = createApiMaskDataUrl(maskWidth, maskHeight);
+        reference.maskSelectionUrl = paintSelectionCanvas.toDataURL("image/png");
+        reference.maskWidth = maskWidth;
+        reference.maskHeight = maskHeight;
+        reference.maskUpdatedAt = Date.now();
+        node.status = "局部遮罩已保存：绿色区域允许修改，原图仍单独保留。";
+      }
       render();
-      showToast("参考图已保存");
+      scheduleCanvasSave();
+      showToast(reference.maskUrl ? "遮罩已保存，原图没有被覆盖" : "遮罩已清空");
       closeLightbox();
     }
 
@@ -10982,6 +11908,37 @@ ${formatInstruction}`;
         .slice(0, 48) || "AI节点画布";
     }
 
+    function autoSplitBatchFolderName() {
+      const now = new Date();
+      const stamp = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+        "-",
+        String(now.getHours()).padStart(2, "0"),
+        String(now.getMinutes()).padStart(2, "0"),
+        String(now.getSeconds()).padStart(2, "0")
+      ].join("");
+      const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+      return safeFilePart(`自动拆分-${stamp}-${suffix}-${activeProjectName()}`);
+    }
+
+    async function createAutoSplitBatchDirectory(node) {
+      const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
+      if (!handle) throw new Error("请先设置保存位置");
+      const folderName = autoSplitBatchFolderName();
+      if (window.wandouShell?.createSaveDirectory && nativeAutoSaveDirectory) {
+        const result = await window.wandouShell.createSaveDirectory(folderName);
+        if (!result?.success) throw new Error(result?.error || "批次文件夹创建失败");
+      } else {
+        if (!await hasAutoSaveDirectoryPermission(handle, true)) throw new Error("保存位置没有写入权限");
+        await handle.getDirectoryHandle(folderName, { create: true });
+      }
+      node.autoSplitBatchFolder = folderName;
+      scheduleCanvasSave();
+      return folderName;
+    }
+
     function nextDownloadSequence() {
       const now = new Date();
       const day = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
@@ -11022,10 +11979,14 @@ ${formatInstruction}`;
     }
 
     async function writeBlobToAutoSaveDirectory(blob, filename) {
+      return writeBlobToAutoSaveBatchDirectory(blob, filename, "");
+    }
+
+    async function writeBlobToAutoSaveBatchDirectory(blob, filename, folderName = "") {
       const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
       if (!handle) return false;
       if (window.wandouShell?.writeSaveFile && nativeAutoSaveDirectory) {
-        const result = await window.wandouShell.writeSaveFile(filename, new Uint8Array(await blob.arrayBuffer()));
+        const result = await window.wandouShell.writeSaveFile(filename, new Uint8Array(await blob.arrayBuffer()), folderName);
         if (result?.success) {
           showToast(`已自动保存：${result.filename}`);
           return true;
@@ -11044,8 +12005,11 @@ ${formatInstruction}`;
       const dot = filename.lastIndexOf(".");
       const safeBase = safeFilePart(dot > 0 ? filename.slice(0, dot) : filename);
       const safeExtension = dot > 0 ? filename.slice(dot).replace(/[^.\w-]/g, "") : "";
-      const safeName = await uniqueAutoSaveFileName(handle, `${safeBase}${safeExtension}`);
-      const fileHandle = await handle.getFileHandle(safeName, { create: true });
+      const outputHandle = folderName
+        ? await handle.getDirectoryHandle(safeFilePart(folderName), { create: true })
+        : handle;
+      const safeName = await uniqueAutoSaveFileName(outputHandle, `${safeBase}${safeExtension}`);
+      const fileHandle = await outputHandle.getFileHandle(safeName, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(blob);
       await writable.close();
@@ -11070,7 +12034,7 @@ ${formatInstruction}`;
         }
         if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
         const filename = downloadFileName(node, "png");
-        if (blob && await writeBlobToAutoSaveDirectory(blob, filename)) node.autoSaved = true;
+        if (blob && await writeBlobToAutoSaveBatchDirectory(blob, filename, node.autoSaveBatchFolder || "")) node.autoSaved = true;
       } catch (error) {
         showToast("\u81ea\u52a8\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae");
       }
@@ -11252,15 +12216,20 @@ ${formatInstruction}`;
     }
 
     function autoLayout() {
+      const layoutNodes = nodesWithoutRemovedTypes();
+      if (!layoutNodes.length) {
+        showToast("当前画布没有可排列的节点");
+        return;
+      }
       pushHistory();
-      const columns = [60, 430, 1010, 1400];
-      nodes.forEach((node, index) => {
-        const col = index % columns.length;
-        const row = Math.floor(index / columns.length);
-        node.x = columns[col];
-        node.y = 110 + row * 360;
-      });
+      clearBoxSelection();
+      arrangeWorkflowSelection(layoutNodes);
       render();
+      requestAnimationFrame(() => {
+        fitCanvasToContent(false);
+        drawLinks();
+        showToast(`已自动排列 ${layoutNodes.length} 个节点，并重新定位画布`);
+      });
     }
 
     function clearCanvas() {
@@ -11743,7 +12712,9 @@ ${formatInstruction}`;
       if (Array.isArray(copy.references)) {
         copy.references = await Promise.all(copy.references.map(async (item) => ({
           ...item,
-          url: await persistMediaValue(item.url)
+          url: await persistMediaValue(item.url),
+          maskUrl: await persistMediaValue(item.maskUrl),
+          maskSelectionUrl: await persistMediaValue(item.maskSelectionUrl)
         })));
       }
       return copy;
@@ -11780,9 +12751,11 @@ ${formatInstruction}`;
       if (Array.isArray(node.references)) {
         node.references = (await Promise.all(node.references.map(async (item) => ({
           ...item,
-          url: await getLocalMedia(item.url)
+          url: await getLocalMedia(item.url),
+          maskUrl: await getLocalMedia(item.maskUrl),
+          maskSelectionUrl: await getLocalMedia(item.maskSelectionUrl)
         })))).filter((item) => item?.url);
-        await Promise.all(node.references.map((item) => mirrorLargeLoadedMedia(item.url)));
+        await Promise.all(node.references.flatMap((item) => [item.url, item.maskUrl, item.maskSelectionUrl]).filter(Boolean).map(mirrorLargeLoadedMedia));
       } else {
         node.references = [];
       }
@@ -11986,9 +12959,10 @@ ${formatInstruction}`;
     function resultNodes(mode = galleryMode) {
       return nodes.filter((node) => {
         if (node.type !== "result" || !node.mediaUrl || node.pending) return false;
+        const isVideo = node.mediaType === "video" || node.title === "效果视频";
         return mode === "video"
-          ? node.mediaType === "video" || node.title === "效果视频"
-          : node.mediaType === "image" && node.title !== "效果视频";
+          ? isVideo
+          : !isVideo;
       });
     }
 
@@ -12079,9 +13053,15 @@ ${formatInstruction}`;
     function openGallery(mode = "image") {
       galleryMode = mode;
       galleryTab = "canvas";
-      loadDeletedResults();
-      renderGallery();
       galleryOverlay.classList.add("open");
+      try {
+        loadDeletedResults();
+        renderGallery();
+      } catch (error) {
+        console.error("Gallery could not be opened", error);
+        galleryGrid.innerHTML = '<div class="hint">效果图读取失败，请关闭后重试。</div>';
+        showToast("效果图读取失败，画布内容没有丢失");
+      }
     }
 
     function closeGallery() {
@@ -12114,6 +13094,12 @@ ${formatInstruction}`;
           </article>
         `;
       }).join("") : `<div class="hint">${galleryTab === "deleted" ? "暂无已删除效果图。" : `还没有生成${galleryMode === "video" ? "视频" : "效果图"}。`}</div>`;
+    }
+
+    function resultMetaText(node) {
+      const size = node.width && node.height ? `${node.width} × ${node.height}px` : "尺寸识别中";
+      const seconds = resultElapsedSeconds(node);
+      return `${size} · ${seconds ? `用时 ${seconds}秒` : "用时 --"}`;
     }
 
     function favoriteNodes(mode = favoriteMode) {
@@ -12606,12 +13592,17 @@ ${formatInstruction}`;
       event.stopPropagation();
       await copyActiveLightboxImage();
     });
+    lightboxContextPrompt.addEventListener("click", (event) => {
+      event.stopPropagation();
+      viewActiveLightboxPrompt();
+    });
     lightboxImage.addEventListener("contextmenu", (event) => {
       if (!activeLightbox.src || activeLightbox.mode === "prompt") return;
       event.preventDefault();
       event.stopPropagation();
-      const menuWidth = 132;
-      const menuHeight = 48;
+      lightboxContextPrompt.hidden = !activeLightboxPromptText();
+      const menuWidth = 148;
+      const menuHeight = lightboxContextPrompt.hidden ? 48 : 88;
       lightboxImageMenu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8))}px`;
       lightboxImageMenu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8))}px`;
       lightboxImageMenu.classList.add("open");
@@ -12667,7 +13658,6 @@ ${formatInstruction}`;
     paintCanvas.addEventListener("pointerdown", (event) => {
       event.preventDefault();
       paintDrawing = true;
-      pushPaintHistory();
       paintLastPoint = paintPointFromEvent(event);
       paintCanvas.setPointerCapture(event.pointerId);
       drawPaintLine(paintLastPoint);
@@ -12678,12 +13668,20 @@ ${formatInstruction}`;
       drawPaintLine(paintPointFromEvent(event));
     });
     paintCanvas.addEventListener("pointerup", () => {
+      if (paintDrawing) pushPaintHistory();
       paintDrawing = false;
       paintLastPoint = null;
     });
     paintCanvas.addEventListener("pointercancel", () => {
+      if (paintDrawing) pushPaintHistory();
       paintDrawing = false;
       paintLastPoint = null;
+    });
+    paintErase.addEventListener("click", (event) => {
+      event.stopPropagation();
+      paintEraseMode = !paintEraseMode;
+      paintErase.classList.toggle("mask-mode-active", paintEraseMode);
+      paintErase.textContent = paintEraseMode ? "继续涂抹" : "橡皮擦";
     });
     paintUndo.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -12692,6 +13690,10 @@ ${formatInstruction}`;
     paintRedo.addEventListener("click", (event) => {
       event.stopPropagation();
       redoPaint();
+    });
+    paintClear.addEventListener("click", (event) => {
+      event.stopPropagation();
+      clearPaintMask();
     });
     paintSave.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -12708,6 +13710,11 @@ ${formatInstruction}`;
         clearSnapPreview();
         clearTemporaryLink();
         updatePendingPort();
+        return;
+      }
+      if (event.key === "Delete" && boxSelectedIds.length) {
+        event.preventDefault();
+        deleteSelectionNodes();
         return;
       }
       if ((event.key === "Delete" || event.key === "Enter") && selectedNodeId) {

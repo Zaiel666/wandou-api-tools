@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "修复更新后仍显示旧版本：更新器先清理完整 Electron 进程树，再把完整安装目录整体切换到新版本，避免逐文件覆盖被 Chromium 内存映射占用的 chrome_100_percent.pak、app.asar；安装校验失败时自动恢复旧目录。"
+            notes = "节点画布升级：新增 1–99 张自动拆分、45 秒方案确认、系列母图与逐帧一致性、批次文件夹保存、参考图局部遮罩编辑；修复效果图查看、自动排列、框选节点整体拖动与删除，并优化节点间距、按钮、字体和暗色提示词界面。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

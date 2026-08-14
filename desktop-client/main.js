@@ -66,6 +66,11 @@ function safeOutputName(filename) {
   return cleaned || "output.bin";
 }
 
+function safeOutputFolderName(folderName) {
+  const cleaned = path.basename(String(folderName || "")).replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").replace(/^\.+$/, "").slice(0, 120);
+  return cleaned || "";
+}
+
 function uniqueOutputPath(directory, filename) {
   const parsed = path.parse(safeOutputName(filename));
   let candidate = path.join(directory, `${parsed.name}${parsed.ext}`);
@@ -701,10 +706,26 @@ ipcMain.handle("desktop:choose-save-directory", async () => {
   storeSavedDirectory(directory);
   return { canceled: false, directory, name: path.basename(directory) };
 });
-ipcMain.handle("desktop:write-save-file", async (_event, payload = {}) => {
-  const directory = readSavedDirectory();
-  if (!directory) return { success: false, missingDirectory: true };
+ipcMain.handle("desktop:create-save-directory", async (_event, payload = {}) => {
+  const rootDirectory = readSavedDirectory();
+  if (!rootDirectory) return { success: false, missingDirectory: true };
+  const folderName = safeOutputFolderName(payload.folderName);
+  if (!folderName) return { success: false, error: "无效的文件夹名称" };
   try {
+    const directory = path.join(rootDirectory, folderName);
+    await fs.promises.mkdir(directory, { recursive: true });
+    return { success: true, directory, folderName };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+ipcMain.handle("desktop:write-save-file", async (_event, payload = {}) => {
+  const rootDirectory = readSavedDirectory();
+  if (!rootDirectory) return { success: false, missingDirectory: true };
+  try {
+    const folderName = safeOutputFolderName(payload.folderName);
+    const directory = folderName ? path.join(rootDirectory, folderName) : rootDirectory;
+    if (folderName) await fs.promises.mkdir(directory, { recursive: true });
     const destination = uniqueOutputPath(directory, payload.filename);
     await fs.promises.writeFile(destination, Buffer.from(payload.bytes || []));
     return { success: true, path: destination, filename: path.basename(destination) };
