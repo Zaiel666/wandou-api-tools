@@ -20,6 +20,7 @@ internal static class PortableUpdater
     static void StopInstallProcesses(string install, string executable, string log)
     {
         var name = Path.GetFileNameWithoutExtension(executable);
+        var installRoot = Path.GetFullPath(install).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         for (var round = 0; round < 8; round++)
         {
             var found = false;
@@ -27,9 +28,10 @@ internal static class PortableUpdater
             {
                 try
                 {
-                    var processPath = process.MainModule.FileName;
-                    if (!processPath.StartsWith(install, StringComparison.OrdinalIgnoreCase)) continue;
+                    var processPath = Path.GetFullPath(process.MainModule.FileName);
+                    if (!processPath.StartsWith(installRoot, StringComparison.OrdinalIgnoreCase)) continue;
                     found = true;
+                    Log(log, "Stopping install process " + process.Id + ": " + processPath);
                     process.Kill();
                     process.WaitForExit(5000);
                 }
@@ -40,6 +42,50 @@ internal static class PortableUpdater
             Thread.Sleep(500);
         }
         Log(log, "Warning: some application processes may still be running before copy.");
+    }
+
+    static void StopParentTree(int parent, string log)
+    {
+        if (parent <= 0) return;
+        try
+        {
+            using (var killer = Process.Start(new ProcessStartInfo("taskkill", "/PID " + parent + " /T /F") { CreateNoWindow = true, UseShellExecute = false }))
+            {
+                if (!killer.WaitForExit(15000))
+                {
+                    try { killer.Kill(); } catch { }
+                    Log(log, "Parent process-tree shutdown timed out; continuing with install-scoped cleanup.");
+                }
+                else
+                {
+                    Log(log, "Parent process-tree shutdown finished with exit code " + killer.ExitCode + ".");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(log, "Parent process-tree shutdown warning: " + ex.Message);
+        }
+    }
+
+    static void MoveDirectoryWithRetry(string source, string destination, string log)
+    {
+        Exception lastError = null;
+        for (var attempt = 1; attempt <= 20; attempt++)
+        {
+            try
+            {
+                Directory.Move(source, destination);
+                return;
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                Log(log, "Directory move attempt " + attempt + " failed: " + ex.Message);
+                Thread.Sleep(750);
+            }
+        }
+        throw lastError ?? new IOException("Directory move failed.");
     }
 
     public static int Main(string[] args)
@@ -69,21 +115,22 @@ internal static class PortableUpdater
             // Kill the tree before the old desktop client's delayed quit timer fires, or
             // Electron renderer/GPU children can become orphaned.
             Thread.Sleep(250);
-            try { Process.Start(new ProcessStartInfo("taskkill", "/PID " + parent + " /T /F") { CreateNoWindow = true, UseShellExecute = false }).WaitForExit(15000); } catch { }
-            // Also stop orphaned instances left by an earlier failed update. Chromium .pak
-            // and app.asar files stay memory-mapped while any such process is alive.
-            try { Process.Start(new ProcessStartInfo("taskkill", "/IM \"" + executable + "\" /F") { CreateNoWindow = true, UseShellExecute = false }).WaitForExit(15000); } catch { }
+            // Only stop the process tree that requested this update. Killing every process
+            // with the same image name can hang on protected or unrelated portable copies.
+            StopParentTree(parent, log);
             StopInstallProcesses(install, executable, log);
             Thread.Sleep(1000);
+            Log(log, "Extracting verified release package.");
             Directory.CreateDirectory(stage);
             ZipFile.ExtractToDirectory(package, stage);
             // Never overwrite Chromium resources in place. Windows can keep .pak and
             // app.asar files memory-mapped briefly after Electron exits, which made the
             // former file-by-file update fail repeatedly. A directory swap changes only
             // directory entries and preserves the complete old install for rollback.
-            Directory.Move(install, previous);
+            Log(log, "Activating new installation by directory swap.");
+            MoveDirectoryWithRetry(install, previous, log);
             oldInstallMoved = true;
-            Directory.Move(stage, install);
+            MoveDirectoryWithRetry(stage, install, log);
             newInstallActivated = true;
             if (!String.IsNullOrWhiteSpace(target))
             {

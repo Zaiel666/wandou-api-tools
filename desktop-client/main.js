@@ -395,29 +395,6 @@ async function downloadFileWithFallback(url, destination, fallbackUrl = "") {
   let lastError = new Error("Update download failed");
   for (const source of sources) {
     try {
-      return await check();
-    } catch (error) {
-      errors.push(error?.message || String(error));
-    }
-  }
-  return { available: false, configured: true, currentVersion, error: `三路更新检测均失败：${errors.join("；")}` };
-}
-
-async function downloadFile(url, destination) {
-  const response = await net.fetch(url, {
-    cache: "no-store",
-    headers: { "User-Agent": "WandouAI-Desktop-Updater" }
-  });
-  if (!response.ok) throw new Error(`下载失败：HTTP ${response.status}`);
-  const buffer = Buffer.from(await response.arrayBuffer());
-  await fs.promises.writeFile(destination, buffer);
-}
-
-async function downloadFileWithFallback(url, destination, fallbackUrl = "") {
-  const sources = [...new Set([url, fallbackUrl].filter(isSafeHttpsUrl))];
-  let lastError = new Error("Update download failed");
-  for (const source of sources) {
-    try {
       const response = await net.fetch(source, {
         cache: "no-store",
         redirect: "follow",
