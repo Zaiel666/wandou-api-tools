@@ -44,21 +44,22 @@ internal static class PortableUpdater
         Log(log, "Warning: some application processes may still be running before copy.");
     }
 
-    static void StopParentTree(int parent, string log)
+    static void StopParentProcess(int parent, string log)
     {
         if (parent <= 0) return;
         try
         {
-            using (var killer = Process.Start(new ProcessStartInfo("taskkill", "/PID " + parent + " /T /F") { CreateNoWindow = true, UseShellExecute = false }))
+            using (var process = Process.GetProcessById(parent))
             {
-                if (!killer.WaitForExit(15000))
+                Log(log, "Stopping requesting parent process " + parent + ".");
+                process.Kill();
+                if (!process.WaitForExit(15000))
                 {
-                    try { killer.Kill(); } catch { }
-                    Log(log, "Parent process-tree shutdown timed out; continuing with install-scoped cleanup.");
+                    Log(log, "Parent process shutdown timed out; continuing with install-scoped cleanup.");
                 }
                 else
                 {
-                    Log(log, "Parent process-tree shutdown finished with exit code " + killer.ExitCode + ".");
+                    Log(log, "Requesting parent process stopped.");
                 }
             }
         }
@@ -66,6 +67,33 @@ internal static class PortableUpdater
         {
             Log(log, "Parent process-tree shutdown warning: " + ex.Message);
         }
+    }
+
+    static bool StartApplicationWithRetry(string install, string executable, string log)
+    {
+        var executablePath = Path.Combine(install, executable);
+        for (var attempt = 1; attempt <= 5; attempt++)
+        {
+            try
+            {
+                var process = Process.Start(new ProcessStartInfo(executablePath)
+                {
+                    WorkingDirectory = install,
+                    UseShellExecute = false
+                });
+                if (process == null) throw new InvalidOperationException("Process.Start returned no process.");
+                Log(log, "Application restart launched process " + process.Id + " on attempt " + attempt + ".");
+                Thread.Sleep(1500);
+                if (!process.HasExited) return true;
+                Log(log, "Restarted application exited early with code " + process.ExitCode + ".");
+            }
+            catch (Exception ex)
+            {
+                Log(log, "Application restart attempt " + attempt + " failed: " + ex.Message);
+            }
+            Thread.Sleep(1000);
+        }
+        return false;
     }
 
     static void MoveDirectoryWithRetry(string source, string destination, string log)
@@ -112,12 +140,12 @@ internal static class PortableUpdater
             if (String.IsNullOrWhiteSpace(install) || !Directory.Exists(install) || !File.Exists(package)) throw new InvalidOperationException("Invalid update arguments.");
             File.WriteAllText(ready, "ready");
             Log(log, "Native updater accepted update request.");
-            // Kill the tree before the old desktop client's delayed quit timer fires, or
-            // Electron renderer/GPU children can become orphaned.
+            // Never use taskkill /T here: this updater is launched by the requesting
+            // Electron process, so killing that tree also kills the updater itself.
             Thread.Sleep(250);
-            // Only stop the process tree that requested this update. Killing every process
-            // with the same image name can hang on protected or unrelated portable copies.
-            StopParentTree(parent, log);
+            StopParentProcess(parent, log);
+            // Stop only remaining Electron processes whose executable lives inside this
+            // installation. Unrelated portable copies with the same image name are safe.
             StopInstallProcesses(install, executable, log);
             Thread.Sleep(1000);
             Log(log, "Extracting verified release package.");
@@ -140,8 +168,9 @@ internal static class PortableUpdater
             }
             try { File.Copy(log, Path.Combine(install, "wandou-ai-update.log"), true); } catch { }
             Log(log, "Native update completed. Restarting application.");
-            Process.Start(new ProcessStartInfo(Path.Combine(install, executable)) { WorkingDirectory = install, UseShellExecute = true });
-            return 0;
+            if (StartApplicationWithRetry(install, executable, log)) return 0;
+            Log(log, "Native update completed, but automatic restart failed after all retries.");
+            return 2;
         }
         catch (Exception ex)
         {
@@ -159,7 +188,7 @@ internal static class PortableUpdater
                     Log(log, "Rollback failed: " + rollbackError.Message);
                 }
             }
-            try { Process.Start(new ProcessStartInfo(Path.Combine(install, executable)) { WorkingDirectory = install, UseShellExecute = true }); } catch { }
+            StartApplicationWithRetry(install, executable, log);
             return 1;
         }
         finally { try { Directory.Delete(stage, true); } catch { } }

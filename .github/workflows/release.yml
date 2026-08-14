@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "修复自动更新停留在旧版本：更新器只关闭当前安装目录的进程，不再被其他同名测试版或受保护后台进程阻塞；目录切换增加重试与分阶段日志。包含 v1.0.52 的节点画布、自动拆分、系列母图、逐帧一致性和局部遮罩编辑升级。"
+            notes = "修复自动更新不继续和不自动重启：更新器不再通过进程树误杀自己，只关闭发起更新的旧主进程和当前安装目录内的 Electron 子进程；安装完成后会验证并重试启动。包含节点画布、自动拆分、系列母图、逐帧一致性和局部遮罩编辑升级。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
