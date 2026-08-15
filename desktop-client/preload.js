@@ -4,6 +4,11 @@ contextBridge.exposeInMainWorld("wandouDesktopTabs", {
   open: (url, title) => ipcRenderer.send("desktop:open-tab", { url, title })
 });
 
+// API 请求在主进程中执行，避免 file:// 页面被 Chromium 的 CORS 策略拦截。
+contextBridge.exposeInMainWorld("wandouDesktopApi", {
+  fetch: (url, request) => ipcRenderer.invoke("desktop:api-fetch", { url, request })
+});
+
 contextBridge.exposeInMainWorld("wandouShell", {
   onOpenTab: (callback) => {
     const handler = (_event, payload) => callback(payload);
@@ -24,6 +29,11 @@ contextBridge.exposeInMainWorld("wandouShell", {
     const handler = (_event, payload) => callback(payload);
     ipcRenderer.on("desktop:update-status", handler);
     return () => ipcRenderer.removeListener("desktop:update-status", handler);
+  },
+  onGuestRendererGone: (callback) => {
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on("desktop:guest-renderer-gone", handler);
+    return () => ipcRenderer.removeListener("desktop:guest-renderer-gone", handler);
   },
   confirmClose: (verification) => ipcRenderer.invoke("desktop:confirm-close", verification),
   cancelClose: () => ipcRenderer.send("desktop:cancel-close"),

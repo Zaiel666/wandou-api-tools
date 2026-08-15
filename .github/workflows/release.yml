@@ -82,7 +82,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "效果图支持单张重新生成：放大图右键可选择重新生成，节点下载按钮左侧增加循环按钮；生成时保留原图，并把复用原提示词、模型、尺寸和系列风格参考的新图追加到同组最下方。"
+            notes = "节点画布稳定性修复：上传或生成图片时只更新变化节点，降低多图画布卡顿与白屏风险；页面加载失败、渲染进程退出或窗口无响应时提供自动恢复和关闭选项；桌面端生图请求不再受 file 页面 CORS 限制；AI 绘图节点内的图1、图2等参考图支持点击放大查看。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

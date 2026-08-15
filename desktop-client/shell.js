@@ -100,6 +100,28 @@ function showToast(message, error = false) {
   toastTimer = window.setTimeout(() => { desktopToast.hidden = true; }, 2600);
 }
 
+function recoverTabView(tab, reason = "页面异常") {
+  if (!tab?.view || tab.suspended || tab.recovering) return;
+  tab.recoveryAttempts = (tab.recoveryAttempts || 0) + 1;
+  if (tab.recoveryAttempts > 2) {
+    showToast(`${tab.title}${reason}，已停止自动重试；请关闭该标签后重新打开。`, true);
+    return;
+  }
+  tab.recovering = true;
+  tab.button.classList.add("loading");
+  showToast(`${tab.title}${reason}，正在自动恢复（${tab.recoveryAttempts}/2）…`, true);
+  window.setTimeout(() => {
+    if (!tab.view || tab.suspended) return;
+    try {
+      tab.view.reloadIgnoringCache();
+    } catch (_error) {
+      tab.view.src = tab.resumeUrl || tab.url;
+    } finally {
+      tab.recovering = false;
+    }
+  }, 700);
+}
+
 function createTabButton(tab, closable) {
   const button = document.createElement("button");
   button.className = "tab";
@@ -164,7 +186,9 @@ function openTab({ url, title = "新标签页", pinned = false }) {
     suspended: false,
     suspending: false,
     suspendTimer: 0,
-    lastSaveResult: null
+    lastSaveResult: null,
+    recoveryAttempts: 0,
+    recovering: false
   };
   tab.button = createTabButton(tab, !pinned);
   tabs.set(id, tab);
@@ -193,7 +217,16 @@ function openTab({ url, title = "新标签页", pinned = false }) {
     notifyTabActivity(tab, tab.id === activeId);
     syncThemeFromActivePage();
   });
-  view.addEventListener("did-fail-load", () => tab.button.classList.remove("loading"));
+  view.addEventListener("dom-ready", () => {
+    tab.recoveryAttempts = 0;
+    tab.recovering = false;
+  });
+  view.addEventListener("did-fail-load", (event) => {
+    tab.button.classList.remove("loading");
+    if (event.isMainFrame !== false && event.errorCode !== -3) recoverTabView(tab, "加载失败");
+  });
+  view.addEventListener("render-process-gone", () => recoverTabView(tab, "页面进程已退出"));
+  view.addEventListener("unresponsive", () => recoverTabView(tab, "暂时没有响应"));
 
   activateTab(id);
   return tab;
@@ -577,6 +610,12 @@ window.wandouShell?.onUpdateStatus((payload) => {
     dialogDownload.disabled = false;
     dialogDownload.textContent = "重新更新";
   }
+});
+window.wandouShell?.onGuestRendererGone((payload) => {
+  const tab = [...tabs.values()].find((item) => {
+    try { return item.view?.getWebContentsId?.() === payload?.id; } catch (_error) { return false; }
+  });
+  if (tab) recoverTabView(tab, "页面进程已退出");
 });
 
 openTab({ url: homeUrl, title: "首页", pinned: true });

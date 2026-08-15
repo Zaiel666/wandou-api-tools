@@ -8,6 +8,8 @@ const { pathToFileURL, fileURLToPath } = require("url");
 
 const APP_NAME = "豌豆AI工具";
 const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app"]);
+const CANVAS_API_HOSTS = new Set(["zayapi.top", "www.zayapi.top"]);
+const MAX_DESKTOP_API_RESPONSE_BYTES = 32 * 1024 * 1024;
 
 let mainWindow = null;
 let allowWindowClose = false;
@@ -40,6 +42,61 @@ function compareVersions(left, right) {
 
 function isSafeHttpsUrl(value) {
   try { return new URL(value).protocol === "https:"; } catch (_error) { return false; }
+}
+
+function isAllowedCanvasApiUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && CANVAS_API_HOSTS.has(parsed.hostname.toLowerCase());
+  } catch (_error) {
+    return false;
+  }
+}
+
+function isLocalAppPage(value) {
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "file:") return false;
+    const root = path.resolve(getAppRoot()).toLowerCase();
+    const target = path.resolve(fileURLToPath(parsed)).toLowerCase();
+    return target === root || target.startsWith(`${root}${path.sep}`);
+  } catch (_error) {
+    return false;
+  }
+}
+
+function apiRequestHeaders(input) {
+  const allowed = new Set(["accept", "authorization", "content-type"]);
+  const headers = {};
+  if (!input || typeof input !== "object") return headers;
+  for (const [name, value] of Object.entries(input)) {
+    const normalized = String(name).toLowerCase();
+    if (allowed.has(normalized) && typeof value === "string") headers[normalized] = value;
+  }
+  return headers;
+}
+
+function apiRequestBody(payload) {
+  const body = payload?.body;
+  if (!body) return undefined;
+  if (body.kind === "text") return String(body.value || "");
+  if (body.kind !== "form" || !Array.isArray(body.entries)) throw new Error("不支持的 API 请求内容");
+
+  const form = new FormData();
+  let totalBytes = 0;
+  for (const entry of body.entries) {
+    const name = String(entry?.name || "");
+    if (!name) continue;
+    if (entry.kind === "file") {
+      const data = entry.data instanceof ArrayBuffer ? Buffer.from(entry.data) : Buffer.alloc(0);
+      totalBytes += data.length;
+      if (totalBytes > 64 * 1024 * 1024) throw new Error("上传图片总大小超过 64 MB");
+      form.append(name, new Blob([data], { type: String(entry.type || "application/octet-stream") }), String(entry.filename || "image.png"));
+    } else {
+      form.append(name, String(entry?.value || ""));
+    }
+  }
+  return form;
 }
 
 function saveDirectoryConfigPath() {
@@ -395,14 +452,14 @@ async function downloadFileWithFallback(url, destination, fallbackUrl = "") {
   let lastError = new Error("Update download failed");
   for (const source of sources) {
     try {
-      const response = await net.fetch(source, {
+      const response = await fetchWithTimeout(source, {
         cache: "no-store",
         redirect: "follow",
         headers: {
           Accept: "application/octet-stream, application/vnd.github+json;q=0.9, */*;q=0.8",
           "User-Agent": "WandouAI-Desktop-Updater"
         }
-      });
+      }, 120000);
       if (!response.ok) {
         lastError = new Error(`Update download failed: HTTP ${response.status}`);
         continue;
@@ -563,6 +620,20 @@ function configureWebContents(contents) {
     event.preventDefault();
     if (isSafeHttpsUrl(url)) shell.openExternal(url);
   });
+  // 画布图片很多时，最坏情况下 guest renderer 可能被系统终止。以前这里只会
+  // 留下一张白页，用户只能在任务管理器里结束进程；现在由外层壳通知并恢复。
+  contents.on("render-process-gone", (_event, details) => {
+    const reason = details?.reason || "unknown";
+    if (contents === mainWindow?.webContents) {
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.reloadIgnoringCache();
+      }, 800);
+      return;
+    }
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("desktop:guest-renderer-gone", { id: contents.id, reason });
+    }
+  });
 }
 
 function configureDownloads() {
@@ -630,6 +701,26 @@ function createWindow() {
     closePromptPending = false;
     shellReady = false;
   });
+  mainWindow.on("unresponsive", async () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const choice = await dialog.showMessageBox(mainWindow, {
+      type: "warning",
+      title: APP_NAME,
+      message: "页面暂时没有响应",
+      detail: "通常由大量图片同时加载或保存引起。可等待恢复；若持续无响应，可重新载入当前软件页面。",
+      buttons: ["继续等待", "重新载入", "立即关闭"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true
+    });
+    if (choice.response === 1 && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.reloadIgnoringCache();
+    }
+    if (choice.response === 2 && mainWindow && !mainWindow.isDestroyed()) {
+      allowWindowClose = true;
+      mainWindow.destroy();
+    }
+  });
 
   mainWindow.loadFile(path.join(__dirname, "shell.html"), {
     query: { home: getAppEntryUrl(), version: app.getVersion() }
@@ -643,6 +734,29 @@ ipcMain.on("desktop:open-tab", (_event, payload = {}) => {
     return;
   }
   if (isSafeHttpsUrl(payload.url)) shell.openExternal(payload.url);
+});
+ipcMain.handle("desktop:api-fetch", async (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) throw new Error("仅本地工具页面可以调用 API 请求");
+  const url = String(payload.url || "");
+  if (!isAllowedCanvasApiUrl(url)) throw new Error("接口地址不在允许范围内");
+
+  const request = payload.request || {};
+  const method = String(request.method || "GET").toUpperCase();
+  if (!/^(GET|POST)$/.test(method)) throw new Error("不支持的 API 请求方法");
+  const response = await net.fetch(url, {
+    method,
+    headers: apiRequestHeaders(request.headers),
+    body: apiRequestBody(request)
+  });
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > MAX_DESKTOP_API_RESPONSE_BYTES) throw new Error("接口响应超过 32 MB，无法传回页面");
+  return {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    headers: [...response.headers.entries()],
+    bodyBase64: bytes.toString("base64")
+  };
 });
 ipcMain.on("desktop:set-theme", (_event, theme) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;

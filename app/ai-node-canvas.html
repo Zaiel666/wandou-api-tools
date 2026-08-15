@@ -2399,6 +2399,17 @@
     .generator-reference-field .thumb {
       border-color: color-mix(in srgb, var(--reference-color) 58%, var(--line));
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--reference-color) 11%, transparent);
+      cursor: zoom-in;
+    }
+
+    .generator-reference-field .thumb:hover {
+      border-color: var(--reference-color);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--reference-color) 20%, transparent);
+    }
+
+    .generator-reference-field .thumb:focus-visible {
+      outline: 2px solid var(--reference-color);
+      outline-offset: 3px;
     }
 
     .generator-reference-field .thumb-index {
@@ -5857,17 +5868,39 @@
 
     function render() {
       const renderStartedAt = performance.now();
-      [...canvas.querySelectorAll(".node")].forEach((node) => node.remove());
+      // 保留没有变化的节点 DOM。此前每次都会删掉再创建全部节点：上传一张
+      // 参考图或生成一张结果时，历史图片也会一起重新解码、重排。
+      const mountedNodes = new Map(
+        [...canvas.querySelectorAll(".node")].map((element) => [element.dataset.id, element])
+      );
+      let canvasChanged = false;
       nodes.forEach((node) => {
-        const nodeEl = renderNode(node);
-        canvas.appendChild(nodeEl);
+        const renderKey = nodeRenderKey(node);
+        const current = mountedNodes.get(node.id);
+        if (current && current.dataset.renderKey === renderKey) {
+          current.classList.toggle("selected", selectedNodeId === node.id);
+          current.classList.toggle("box-selected", boxSelectedIds.includes(node.id));
+          current.style.left = `${node.x}px`;
+          current.style.top = `${node.y}px`;
+          mountedNodes.delete(node.id);
+          return;
+        }
+        const nodeEl = renderNode(node, renderKey);
+        if (current) current.replaceWith(nodeEl);
+        else canvas.appendChild(nodeEl);
+        mountedNodes.delete(node.id);
         stabilizeMountedNode(nodeEl, node);
+        canvasChanged = true;
+      });
+      mountedNodes.forEach((element) => {
+        element.remove();
+        canvasChanged = true;
       });
       syncPromptOverlayLayers();
       applyCanvasTransform();
       updatePendingPort();
       scheduleDrawLinks();
-      scheduleCanvasSave();
+      if (canvasChanged) scheduleCanvasSave();
       const renderDuration = performance.now() - renderStartedAt;
       if (nodes.length > 80 || (nodes.length > 20 && renderDuration > 900)) {
         setTimeout(showPerformanceWarning, 0);
@@ -5967,10 +6000,11 @@
       drawLinks();
     }
 
-    function renderNode(node) {
+    function renderNode(node, renderKey = nodeRenderKey(node)) {
       const el = document.createElement("section");
       el.className = `node ${node.type}${selectedNodeId === node.id ? " selected" : ""}${boxSelectedIds.includes(node.id) ? " box-selected" : ""}`;
       el.dataset.id = node.id;
+      el.dataset.renderKey = renderKey;
       const boxSelectionIndex = boxSelectedIds.indexOf(node.id);
       if (boxSelectionIndex >= 0) el.dataset.selectionIndex = String(boxSelectionIndex + 1);
       el.style.left = `${node.x}px`;
@@ -7047,6 +7081,25 @@
         event.target.value = "";
         render();
       });
+      wrap.querySelectorAll("[data-generator-ref-index]").forEach((thumb) => {
+        const openReferencePreview = () => {
+          const index = Number(thumb.dataset.generatorRefIndex);
+          const ref = generatorReferenceItems(node)[index];
+          if (ref?.url) openLightbox(ref.url, { mode: "image", nodeId: node.id, refIndex: index });
+        };
+        thumb.addEventListener("click", (event) => {
+          if (event.target.closest("button, input")) return;
+          event.preventDefault();
+          event.stopPropagation();
+          openReferencePreview();
+        });
+        thumb.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          event.stopPropagation();
+          openReferencePreview();
+        });
+      });
       autoGrowTextareas(wrap);
       syncPromptReferenceTokens();
       return wrap;
@@ -7623,7 +7676,7 @@
           ? index === 0 ? "首帧" : "尾帧"
           : `图${index + 1}`;
         return `
-        <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" title="${node.type === "video" && node.videoMode === "firstLast" ? label : `参考图 ${index + 1}`}">
+        <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" data-generator-ref-index="${index}" role="button" tabindex="0" aria-label="放大查看${label}" title="点击放大查看${label}">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           ${referenceMaskOverlayHtml(item)}
           <span class="thumb-index">${label}</span>
@@ -9909,6 +9962,10 @@
           }
         }
       } catch (error) {
+        if (window.wandouDesktopApi?.fetch && isDesktopApiEndpoint(url)) {
+          const reason = String(error?.message || error || "未知网络错误").replace(/^Error invoking remote method 'desktop:api-fetch':\s*/i, "");
+          throw new Error(`接口请求失败：${reason}`);
+        }
         throw new Error("网络请求被浏览器拦截或接口不可访问。常见原因：接口未开启 CORS、地址填错、HTTPS/HTTP 混用，或本地 file 页面不能直连该接口。");
       }
 
@@ -10680,8 +10737,58 @@ ${formatInstruction}`;
       return shouldProxyExternalRequest(url) ? `/api/proxy?url=${encodeURIComponent(url)}` : url;
     }
 
-    function fetchMaybeProxied(url, options = {}) {
-      return fetch(proxiedUrl(url), options);
+    function isDesktopApiEndpoint(url) {
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === "https:" && (parsed.hostname === "zayapi.top" || parsed.hostname === "www.zayapi.top");
+      } catch (error) {
+        return false;
+      }
+    }
+
+    async function serializeDesktopApiBody(body) {
+      if (!body) return null;
+      if (!(body instanceof FormData)) return { kind: "text", value: String(body) };
+      const entries = [];
+      for (const [name, value] of body.entries()) {
+        if (value instanceof Blob) {
+          entries.push({
+            name,
+            kind: "file",
+            filename: value instanceof File ? value.name : "image.png",
+            type: value.type || "application/octet-stream",
+            data: await value.arrayBuffer()
+          });
+        } else {
+          entries.push({ name, kind: "text", value: String(value) });
+        }
+      }
+      return { kind: "form", entries };
+    }
+
+    function desktopApiResponse(result) {
+      const binary = atob(result.bodyBase64 || "");
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      return new Response(bytes, {
+        status: result.status,
+        statusText: result.statusText,
+        headers: result.headers || []
+      });
+    }
+
+    async function fetchMaybeProxied(url, options = {}) {
+      const targetUrl = proxiedUrl(url);
+      if (window.wandouDesktopApi?.fetch && isDesktopApiEndpoint(targetUrl)) {
+        const headers = Object.fromEntries(new Headers(options.headers || {}).entries());
+        const result = await window.wandouDesktopApi.fetch(targetUrl, {
+          method: options.method || "GET",
+          headers,
+          body: await serializeDesktopApiBody(options.body)
+        });
+        return desktopApiResponse(result);
+      }
+      return fetch(targetUrl, options);
     }
 
     function modelToApiModel(model) {
@@ -11988,6 +12095,38 @@ ${formatInstruction}`;
       scheduleCanvasSave();
       showToast(reference.maskUrl ? "遮罩已保存，原图没有被覆盖" : "遮罩已清空");
       closeLightbox();
+    }
+
+    function compactMediaRenderKey(value) {
+      const source = typeof value === "string" ? value : "";
+      if (!source) return "";
+      // 不让大 base64 原图参与每次渲染比较；仅保留用于识别替换的短指纹。
+      return `${source.length}:${source.slice(0, 24)}:${source.slice(-24)}`;
+    }
+
+    function nodeRenderKey(node) {
+      const {
+        mediaUrl, previewUrl, fullUrl, sourceUrl, outpaintSourceUrl,
+        mediaSourceUrl, previewSourceUrl, fullSourceUrl, references,
+        elapsed, apiSeconds, apiReturned, ...rest
+      } = node;
+      return JSON.stringify({
+        ...rest,
+        mediaUrl: compactMediaRenderKey(mediaUrl),
+        previewUrl: compactMediaRenderKey(previewUrl),
+        fullUrl: compactMediaRenderKey(fullUrl),
+        sourceUrl: compactMediaRenderKey(sourceUrl),
+        outpaintSourceUrl: compactMediaRenderKey(outpaintSourceUrl),
+        mediaSourceUrl: compactMediaRenderKey(mediaSourceUrl),
+        previewSourceUrl: compactMediaRenderKey(previewSourceUrl),
+        fullSourceUrl: compactMediaRenderKey(fullSourceUrl),
+        references: Array.isArray(references) ? references.map((item) => ({
+          ...item,
+          url: compactMediaRenderKey(item?.url),
+          maskUrl: compactMediaRenderKey(item?.maskUrl),
+          maskSelectionUrl: compactMediaRenderKey(item?.maskSelectionUrl)
+        })) : []
+      });
     }
 
     function createDemoResult(node) {
