@@ -53,6 +53,17 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Desktop script syntax check failed: $($_.Name)" }
           }
 
+      - name: Compile and validate portable updater
+        shell: pwsh
+        run: |
+          $compiler = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+          & $compiler /nologo /target:winexe /optimize+ /out:desktop-client\portable-updater.exe /reference:System.IO.Compression.FileSystem.dll desktop-client\portable-updater.cs
+          if ($LASTEXITCODE -ne 0) { throw 'Portable updater compilation failed' }
+          node tests\portable-updater-regression.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Portable updater regression test failed' }
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\portable-updater-live-e2e.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Portable updater live upgrade test failed' }
+
       - name: Build portable folder
         shell: pwsh
         run: |
