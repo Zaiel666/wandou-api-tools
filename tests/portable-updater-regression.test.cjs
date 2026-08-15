@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const updater = fs.readFileSync(path.resolve(__dirname, "..", "desktop-client", "portable-updater.cs"), "utf8");
 const stopParent = updater.indexOf("StopParentProcess(parent, log)");
-const stopInstallProcesses = updater.indexOf("StopInstallProcesses(install, executable, log)");
+const stopInstallProcesses = updater.indexOf("StopInstallProcesses(install, log)");
 const extract = updater.indexOf("ZipFile.ExtractToDirectory(package, stage)");
 
 assert.ok(stopParent > 0, "the updater must terminate the requesting Electron process");
@@ -12,6 +12,9 @@ assert.ok(stopInstallProcesses > stopParent, "remaining processes from the insta
 assert.ok(extract > stopInstallProcesses, "all application processes must stop before extraction and activation");
 assert.doesNotMatch(updater, /ProcessStartInfo\("taskkill"/i, "the updater must not kill its own parent tree");
 assert.match(updater, /StartsWith\(installRoot, StringComparison\.OrdinalIgnoreCase\)/, "orphan cleanup must stay inside the active install directory");
+assert.match(updater, /foreach \(var process in Process\.GetProcesses\(\)\)/, "all helper executables inside the install directory must be considered");
+assert.match(updater, /process\.Id == Process\.GetCurrentProcess\(\)\.Id/, "the detached updater must never terminate itself");
+assert.match(updater, /Environment\.CurrentDirectory = Path\.GetTempPath\(\)/, "the updater must release an inherited install-directory working path");
 assert.match(updater, /MoveDirectoryWithRetry\(install, previous, log\)/, "directory activation must retry transient Windows locks");
 assert.match(updater, /Thread\.Sleep\(250\)/, "the requesting process must be stopped before the old client's quit timer");
 assert.match(updater, /Directory\.Move\(source, destination\)/, "the mapped old install must be moved aside as one directory");

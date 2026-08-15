@@ -525,7 +525,12 @@ async function startPortableUpdate(updateInfo) {
     const child = spawn(updaterPath, args, {
       detached: true,
       stdio: "ignore",
-      windowsHide: true
+      windowsHide: true,
+      // Never let the updater inherit the portable installation as its current
+      // directory. Windows refuses to rename a directory while any process has
+      // that directory as its working directory, which previously caused the
+      // updater to restore and reopen the old version.
+      cwd: workDir
     });
 
     await new Promise((resolve, reject) => {

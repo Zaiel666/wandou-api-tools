@@ -17,17 +17,17 @@ internal static class PortableUpdater
         try { File.AppendAllText(path, DateTime.UtcNow.ToString("u") + " " + message + Environment.NewLine); } catch { }
     }
 
-    static void StopInstallProcesses(string install, string executable, string log)
+    static void StopInstallProcesses(string install, string log)
     {
-        var name = Path.GetFileNameWithoutExtension(executable);
         var installRoot = Path.GetFullPath(install).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         for (var round = 0; round < 8; round++)
         {
             var found = false;
-            foreach (var process in Process.GetProcessesByName(name))
+            foreach (var process in Process.GetProcesses())
             {
                 try
                 {
+                    if (process.Id == Process.GetCurrentProcess().Id) continue;
                     var processPath = Path.GetFullPath(process.MainModule.FileName);
                     if (!processPath.StartsWith(installRoot, StringComparison.OrdinalIgnoreCase)) continue;
                     found = true;
@@ -138,6 +138,10 @@ internal static class PortableUpdater
         try
         {
             if (String.IsNullOrWhiteSpace(install) || !Directory.Exists(install) || !File.Exists(package)) throw new InvalidOperationException("Invalid update arguments.");
+            // A child process inherits its parent's working directory on Windows.
+            // If that directory is the portable installation, the updater itself
+            // prevents Directory.Move from activating the new version.
+            Environment.CurrentDirectory = Path.GetTempPath();
             File.WriteAllText(ready, "ready");
             Log(log, "Native updater accepted update request.");
             // Never use taskkill /T here: this updater is launched by the requesting
@@ -146,7 +150,7 @@ internal static class PortableUpdater
             StopParentProcess(parent, log);
             // Stop only remaining Electron processes whose executable lives inside this
             // installation. Unrelated portable copies with the same image name are safe.
-            StopInstallProcesses(install, executable, log);
+            StopInstallProcesses(install, log);
             Thread.Sleep(1000);
             Log(log, "Extracting verified release package.");
             Directory.CreateDirectory(stage);

@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 
 internal static class UpdaterE2EParent
@@ -11,9 +12,9 @@ internal static class UpdaterE2EParent
 
     public static int Main(string[] args)
     {
-        if (args.Length != 6)
+        if (args.Length < 6 || args.Length > 7)
         {
-            Console.Error.WriteLine("Expected: updater install package executable ready target");
+            Console.Error.WriteLine("Expected: updater install package executable ready target [helper]");
             return 2;
         }
 
@@ -24,10 +25,24 @@ internal static class UpdaterE2EParent
             + " --target " + Quote(args[5])
             + " --parent " + Process.GetCurrentProcess().Id;
 
+        // Reproduce the portable-app launch condition: the requesting app commonly
+        // has the installation folder as its working directory. The updater must
+        // detach from it before attempting a directory swap.
+        Environment.CurrentDirectory = Path.GetFullPath(args[1]);
+        if (args.Length == 7)
+        {
+            Process.Start(new ProcessStartInfo(Path.Combine(args[1], args[6]))
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = Environment.CurrentDirectory
+            });
+        }
         Process.Start(new ProcessStartInfo(args[0], updaterArgs)
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            WorkingDirectory = Environment.CurrentDirectory
         });
 
         // A correct updater terminates this requesting parent while remaining alive itself.
