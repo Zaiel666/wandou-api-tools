@@ -2509,7 +2509,7 @@
       position: absolute;
       z-index: 8;
       top: 8px;
-      left: 40px;
+      left: 72px;
       width: 30px;
       height: 30px;
       min-height: 30px;
@@ -2551,6 +2551,53 @@
 
     body.dark-theme .preview-download:hover,
     body.dark-theme .preview-download:focus-visible { color:#d5dfda; background:rgba(35,40,38,.94); border-color:rgba(255,255,255,.16); }
+
+    .preview-regenerate {
+      position: absolute;
+      z-index: 8;
+      top: 8px;
+      left: 40px;
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      min-height: 30px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      color: rgba(51,65,85,.92);
+      background: transparent;
+      border: 1px solid rgba(51,65,85,.62);
+      border-radius: 50%;
+      box-shadow: none;
+      opacity: 1;
+      transition: color .16s ease, border-color .16s ease, background .16s ease, transform .16s ease, box-shadow .16s ease;
+    }
+    .preview-regenerate:hover,
+    .preview-regenerate:focus-visible { color:#475569; background:rgba(255,255,255,.94); border-color:rgba(100,116,139,.34); box-shadow:0 7px 18px rgba(15,23,42,.12); transform:translateY(-1px); }
+    .preview-regenerate svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .preview-regenerate.generating svg { animation:regenerate-spin .9s linear infinite; }
+    .preview-regenerate:disabled { cursor:wait; opacity:.82; }
+    .preview-regenerate-status {
+      position:absolute;
+      z-index:8;
+      top:14px;
+      left:108px;
+      max-width:116px;
+      overflow:hidden;
+      color:rgba(15,23,42,.86);
+      font-size:10px;
+      line-height:18px;
+      font-weight:400;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      text-shadow:0 1px 2px rgba(255,255,255,.85);
+      pointer-events:none;
+    }
+    body.dark-theme .preview-regenerate { color:rgba(229,236,232,.92); background:transparent; border-color:rgba(229,236,232,.6); }
+    body.dark-theme .preview-regenerate:hover,
+    body.dark-theme .preview-regenerate:focus-visible { color:#d5dfda; background:rgba(35,40,38,.94); border-color:rgba(255,255,255,.16); }
+    body.dark-theme .preview-regenerate-status { color:rgba(245,248,246,.94); text-shadow:0 1px 3px rgba(0,0,0,.9); }
+    @keyframes regenerate-spin { to { transform:rotate(360deg); } }
 
     .prompt-refine-panel {
       position: absolute;
@@ -4498,6 +4545,7 @@
     <div id="lightboxImageMenu" class="lightbox-image-menu">
       <button id="lightboxContextCopy" class="ghost" type="button">复制图片</button>
       <button id="lightboxContextPrompt" class="ghost" type="button">查看关键词</button>
+      <button id="lightboxContextRegenerate" class="ghost" type="button">重新生成</button>
     </div>
     <canvas id="paintCanvas" class="paint-canvas"></canvas>
     <div id="promptPreviewPanel" class="prompt-preview-panel">
@@ -4644,6 +4692,7 @@
     const lightboxImageMenu = document.getElementById("lightboxImageMenu");
     const lightboxContextCopy = document.getElementById("lightboxContextCopy");
     const lightboxContextPrompt = document.getElementById("lightboxContextPrompt");
+    const lightboxContextRegenerate = document.getElementById("lightboxContextRegenerate");
     const promptPreviewPanel = document.getElementById("promptPreviewPanel");
     const promptPreviewZh = document.getElementById("promptPreviewZh");
     const promptPreviewEn = document.getElementById("promptPreviewEn");
@@ -7012,6 +7061,13 @@
       return `<button class="preview-download" data-download type="button" title="下载原图" aria-label="下载原图" ${unavailable ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10"/><path d="m8 10 4 4 4-4"/><path d="M5 19h14"/></svg></button>`;
     }
 
+    function previewRegenerateButton(node) {
+      const unavailable = node.pending || node.mediaType !== "image" || (!node.mediaUrl && !node.fullUrl && !node.previewUrl);
+      const generating = Boolean(node.regenerating);
+      const status = generating ? `<span class="preview-regenerate-status" data-regenerate-status>生成中 ${Math.max(0, Number(node.regenerationElapsed) || 0)}s</span>` : "";
+      return `<button class="preview-regenerate ${generating ? "generating" : ""}" data-regenerate type="button" title="重新生成一张" aria-label="重新生成一张" ${unavailable || generating ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.5-2.6L20 9"/><path d="m4 15 2.4 2.6A7 7 0 0 0 17.9 15"/></svg></button>${status}`;
+    }
+
     function renderUpscaleBody(node) {
       const wrap = document.createElement("div");
       node.model = upscaleModelOptions.includes(node.model) ? node.model : upscaleModelOptions[0];
@@ -7324,7 +7380,7 @@
         : `<div class="placeholder-art"><strong>参考图片</strong><span>可上传素材，也可连接生成节点输出。</span></div>`;
 
       wrap.innerHTML = `
-        <div class="preview ${isVideo ? "wide" : ""}${node.pending ? " loading" : ""}${node.transparent ? " transparent-preview" : ""}" data-preview>${media}${node.type === "result" ? `${previewFavoriteButton(node)}${previewDownloadButton(node)}` : ""}</div>
+        <div class="preview ${isVideo ? "wide" : ""}${node.pending ? " loading" : ""}${node.transparent ? " transparent-preview" : ""}" data-preview>${media}${node.type === "result" ? `${previewFavoriteButton(node)}${previewRegenerateButton(node)}${previewDownloadButton(node)}` : ""}</div>
         ${node.type === "result" ? `<div class="result-meta-line" data-meta>${resultMetaHtml(node)}</div>` : ""}
         ${node.type === "result" ? "" : `<div class="result-actions" style="${node.type === "image" ? "grid-template-columns:1fr;" : ""}">
           ${node.type === "result" || node.type === "image" ? "" : `<label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">上传
@@ -7391,6 +7447,11 @@
         });
       }
       wrap.querySelector("[data-download]")?.addEventListener("click", () => downloadNodeMedia(node));
+      wrap.querySelector("[data-regenerate]")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        regenerateResultNode(node.id);
+      });
       wrap.querySelector("[data-preview]").addEventListener("click", (event) => {
         const media = event.target.closest("img, video");
         if (node.type === "result" && media && !node.pending) openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id });
@@ -9051,6 +9112,151 @@
         "原图内部像素必须保持不变，不得重绘、裁切、拉伸、移动或覆盖原图中的人物、产品、文字、Logo、构图、颜色和细节。",
         "新增区域需要自然延续原图的透视、光线、纹理、景深和环境，边缘无接缝。"
       ].filter(Boolean).join("\n\n");
+    }
+
+    function resultGenerationSource(resultNode) {
+      const sourceId = links.find((link) => link.to === resultNode?.id)?.from;
+      return nodes.find((item) => item.id === sourceId) || null;
+    }
+
+    function canRegenerateResult(resultNode) {
+      if (!resultNode || resultNode.type !== "result" || resultNode.pending || resultNode.regenerating) return false;
+      if (resultNode.mediaType !== "image" || !favoriteMediaUrl(resultNode)) return false;
+      return Boolean(resultGenerationSource(resultNode));
+    }
+
+    function resultSeriesStyleReference(sourceNode, resultNode) {
+      if (!sourceNode || !resultNode || (!resultNode.autoSplitIndex && !resultNode.autoSaveBatchFolder)) return null;
+      const siblings = links
+        .filter((link) => link.from === sourceNode.id)
+        .map((link) => nodes.find((item) => item.id === link.to))
+        .filter((item) => item?.type === "result" && item.id !== resultNode.id && item.mediaType === "image" && !item.pending && favoriteMediaUrl(item))
+        .sort((a, b) => (Number(a.autoSplitIndex) || 999) - (Number(b.autoSplitIndex) || 999));
+      if (!siblings.length) return null;
+      if (sourceNode.autoSplitConsistency === "frame" && Number(resultNode.autoSplitIndex) > 1) {
+        const previousIndex = Number(resultNode.autoSplitIndex) - 1;
+        return siblings.find((item) => Number(item.autoSplitIndex) === previousIndex) || siblings[0];
+      }
+      return siblings.find((item) => Number(item.autoSplitIndex) === 1) || siblings[0];
+    }
+
+    async function regenerateResultNode(resultId) {
+      const original = nodes.find((item) => item.id === resultId);
+      if (!canRegenerateResult(original)) {
+        showToast(original?.regenerating ? "这张图片正在重新生成" : "当前图片暂时不能重新生成");
+        return;
+      }
+      if (!apiKeyInput.value.trim()) {
+        closeLightboxImageMenu();
+        setSettingsOpen(true);
+        apiKeyInput.focus();
+        showToast("重新生成前必须先填写 API 密钥");
+        return;
+      }
+      const saveHandle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
+      const saveReady = nativeAutoSaveDirectory || (saveHandle && await hasAutoSaveDirectoryPermission(saveHandle, true));
+      if (!saveReady) {
+        closeLightboxImageMenu();
+        showToast("重新生成前必须先设置英文名称的强制保存位置");
+        await chooseAutoSaveDirectory();
+        return;
+      }
+
+      const sourceNode = resultGenerationSource(original);
+      if (!sourceNode) {
+        showToast("没有找到这张图片的原始生成节点");
+        return;
+      }
+      closeLightboxImageMenu();
+      pausePerformanceMonitor(30000);
+      pushHistory();
+
+      const targetSize = original.width && original.height
+        ? `${Math.max(1, Number(original.width))}x${Math.max(1, Number(original.height))}`
+        : String(sourceNode.autoSplitLockedSize || sizeDecisionFromRatio(sourceNode.ratio, sourceNode.resolution, [], { prompt: original.prompt || sourceNode.prompt }).size);
+      const parsed = parseSize(targetSize);
+      const position = resultGridPositioner(sourceNode, 1, parsed)(0);
+      const isLandscapeResult = parsed.width > parsed.height;
+      const pending = createNode("result", position.x, position.y, {
+        title: original.title || "",
+        ratio: original.ratio || sourceNode.ratio,
+        width: parsed.width,
+        height: parsed.height,
+        frameWidth: isLandscapeResult ? 360 : 240,
+        prompt: String(original.prompt || sourceNode.prompt || ""),
+        generationPrompt: String(original.generationPrompt || original.prompt || sourceNode.prompt || ""),
+        autoSplitIndex: Number(original.autoSplitIndex) || 0,
+        autoSaveBatchFolder: String(original.autoSaveBatchFolder || ""),
+        regeneratedFromId: original.id,
+        regenerationAttempt: nodes.filter((item) => item?.regeneratedFromId === original.id).length + 1,
+        model: original.model || sourceNode.model,
+        mediaType: "image",
+        transparent: Boolean(original.transparent),
+        pending: true,
+        elapsed: 0,
+        status: `正在重新生成，已等待 0s，最多 ${generationTimeoutSeconds}s。`,
+        _deferRender: true
+      });
+      links.push({ from: sourceNode.id, to: pending.id });
+      original.regenerating = true;
+      original.regenerationElapsed = 0;
+      render();
+      showToast("已在效果图组最下方创建重新生成窗口");
+
+      const timer = setInterval(() => {
+        if (!original.regenerating || !pending.pending) return;
+        original.regenerationElapsed = Math.min(generationTimeoutSeconds, (Number(original.regenerationElapsed) || 0) + 1);
+        pending.elapsed = original.regenerationElapsed;
+        pending.status = `正在重新生成，已等待 ${pending.elapsed}s，最多 ${generationTimeoutSeconds}s。`;
+        const statusEl = canvas.querySelector(`[data-id="${original.id}"] [data-regenerate-status]`);
+        if (statusEl) statusEl.textContent = `生成中 ${original.regenerationElapsed}s`;
+        updatePendingElapsed(pending.id, pending.elapsed);
+      }, 1000);
+
+      try {
+        const sourceReferences = collectReferenceItems([
+          ...getInputMediaList(sourceNode.id),
+          sourceNode
+        ]);
+        const styleNode = resultSeriesStyleReference(sourceNode, original);
+        const styleUrl = styleNode ? favoriteMediaUrl(styleNode) : "";
+        const references = [
+          ...(styleUrl ? [{
+            url: styleUrl,
+            mediaType: "image",
+            width: Number(styleNode.width) || parsed.width,
+            height: Number(styleNode.height) || parsed.height,
+            name: sourceNode.autoSplitConsistency === "frame" ? "紧邻上一帧参考" : "同批次系列风格母图"
+          }] : []),
+          ...sourceReferences
+        ].filter((item, index, list) => item?.url && list.findIndex((other) => other.url === item.url) === index);
+        await ensureReferenceDimensions(references);
+        const regenerationSource = {
+          ...sourceNode,
+          model: original.model || sourceNode.model,
+          prompt: String(original.generationPrompt || original.prompt || sourceNode.prompt || ""),
+          references,
+          count: 1,
+          _directReferencesOnly: true,
+          _lockOutputSize: true,
+          _autoSplitConsistency: sourceNode.autoSplitConsistency === "frame" ? "frame" : "series",
+          _deferCanvasSave: true
+        };
+        await generateOneResult(regenerationSource, pending, 0, targetSize);
+        if (pending.fullUrl || pending.mediaUrl) {
+          original.status = "重新生成完成，新图已追加到效果图组最下方。";
+          showToast("重新生成完成：原图已保留，新图已添加到最下方");
+        } else {
+          original.status = "重新生成失败，原图未受影响。";
+          showToast("重新生成失败，原图仍然保留");
+        }
+      } finally {
+        clearInterval(timer);
+        original.regenerating = false;
+        original.regenerationElapsed = 0;
+        render();
+        await saveCanvasState();
+      }
     }
 
     async function generateFromNode(id, options = {}) {
@@ -11578,6 +11784,7 @@ ${formatInstruction}`;
       lightboxVideo.src = isVideo ? src : "";
       lightboxCopy.hidden = isVideo;
       lightboxContextPrompt.hidden = isVideo || !activeLightboxPromptText();
+      lightboxContextRegenerate.hidden = isVideo || !canRegenerateResult(nodes.find((item) => item.id === activeLightbox.nodeId));
       closeLightboxImageMenu();
       lightbox.classList.add("open");
       updateLightboxFavoriteButton();
@@ -13596,13 +13803,21 @@ ${formatInstruction}`;
       event.stopPropagation();
       viewActiveLightboxPrompt();
     });
+    lightboxContextRegenerate.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const resultId = activeLightbox.nodeId;
+      closeLightboxImageMenu();
+      if (resultId) regenerateResultNode(resultId);
+    });
     lightboxImage.addEventListener("contextmenu", (event) => {
       if (!activeLightbox.src || activeLightbox.mode === "prompt") return;
       event.preventDefault();
       event.stopPropagation();
       lightboxContextPrompt.hidden = !activeLightboxPromptText();
+      lightboxContextRegenerate.hidden = !canRegenerateResult(nodes.find((item) => item.id === activeLightbox.nodeId));
       const menuWidth = 148;
-      const menuHeight = lightboxContextPrompt.hidden ? 48 : 88;
+      const visibleMenuItems = [lightboxContextCopy, lightboxContextPrompt, lightboxContextRegenerate].filter((item) => !item.hidden).length;
+      const menuHeight = 8 + visibleMenuItems * 40;
       lightboxImageMenu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8))}px`;
       lightboxImageMenu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8))}px`;
       lightboxImageMenu.classList.add("open");

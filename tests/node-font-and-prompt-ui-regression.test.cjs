@@ -15,8 +15,10 @@ assert.match(styles, /\.node\.result \.node-menu \[data-delete\][^}]*background:
 assert.match(styles, /body\.dark-theme \.node\.result \.node-menu \[data-delete\][^}]*background:\s*transparent/s);
 assert.match(styles, /\.preview-favorite[^}]*background:\s*transparent/s);
 assert.match(styles, /\.preview-download[^}]*background:\s*transparent/s);
+assert.match(styles, /\.preview-regenerate[^}]*background:\s*transparent/s);
 assert.match(styles, /\.preview-favorite[^}]*border-radius:\s*50%/s);
-assert.match(styles, /\.preview-download[^}]*left:\s*40px/s);
+assert.match(styles, /\.preview-regenerate[^}]*left:\s*40px/s);
+assert.match(styles, /\.preview-download[^}]*left:\s*72px/s);
 assert.match(styles, /\.prompt-library-item[^}]*height:\s*28px[^}]*min-height:\s*28px/s);
 
 console.log("PASS: node typography uses two Source Han Sans weights and prompt/result controls stay legible");
