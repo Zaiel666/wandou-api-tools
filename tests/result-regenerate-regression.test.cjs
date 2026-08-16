@@ -8,6 +8,7 @@ const source = fs.readFileSync(pagePath, "utf8");
 assert.match(source, /id="lightboxContextRegenerate"[^>]*>重新生成<\/button>/, "enlarged image menu must expose regenerate");
 assert.match(source, /class="preview-regenerate[^"`]*\$\{generating/, "result node must render the circular regenerate control");
 assert.match(source, /previewFavoriteButton\(node\)\}\$\{previewRegenerateButton\(node\)\}\$\{previewDownloadButton\(node\)/, "regenerate must sit immediately left of download");
+assert.match(source, /<path d="M3 12a9 9 0 1 0 3-6\.7L3 8"\/><path d="M3 3v5h5"\/>/, "regenerate must use the compact linear refresh icon");
 
 const start = source.indexOf("async function regenerateResultNode(");
 const end = source.indexOf("async function generateFromNode(", start);

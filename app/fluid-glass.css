@@ -1496,3 +1496,338 @@ body.project-hub-page.dark-theme .card {
     border-radius: var(--fg-radius-md) !important;
   }
 }
+
+/*
+ * 2026 neutral UI calibration
+ * Keeps the established layout and component structure while bringing every
+ * page onto one restrained desktop-product palette and type scale.
+ */
+:root {
+  --wd-ui-font: "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei UI", "PingFang SC", "Segoe UI", sans-serif;
+  --wd-neutral-page: #f5f7f6;
+  --wd-neutral-surface: #ffffff;
+  --wd-neutral-surface-2: #f9faf9;
+  --wd-neutral-border: rgba(25, 34, 29, .11);
+  --wd-neutral-text: #19201c;
+  --wd-neutral-muted: #68716b;
+  --wd-neutral-faint: #929a95;
+  --wd-accent: #2eae61;
+  --wd-accent-strong: #238d50;
+  --wd-accent-soft: rgba(46, 174, 97, .10);
+  --wd-accent-line: rgba(46, 174, 97, .28);
+  --wd-shadow-card: 0 6px 20px rgba(24, 32, 27, .055);
+}
+
+[data-theme="dark"],
+body.dark-theme,
+body.project-hub-page:not(.light-theme) {
+  --wd-neutral-page: #101211;
+  --wd-neutral-surface: #171a18;
+  --wd-neutral-surface-2: #1c1f1d;
+  --wd-neutral-border: rgba(255, 255, 255, .085);
+  --wd-neutral-text: #f1f3f2;
+  --wd-neutral-muted: #9da5a0;
+  --wd-neutral-faint: #737a76;
+  --wd-accent: #38b96c;
+  --wd-accent-strong: #4bc77c;
+  --wd-accent-soft: rgba(56, 185, 108, .12);
+  --wd-accent-line: rgba(56, 185, 108, .30);
+  --wd-shadow-card: 0 7px 24px rgba(0, 0, 0, .22);
+}
+
+html,
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--wd-ui-font) !important;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  color: var(--wd-neutral-text);
+}
+
+/* Home: preserve the existing sections and cards, remove the neon/black cast. */
+body.home-page {
+  color: var(--wd-neutral-text) !important;
+  background: var(--wd-neutral-page) !important;
+}
+
+[data-theme="dark"] body.home-page {
+  background: #101211 !important;
+}
+
+body.home-page .home-redesign {
+  padding-top: 32px;
+}
+
+body.home-page .home-topbar,
+body.home-page .home-nav,
+body.home-page .module-card {
+  color: var(--wd-neutral-text) !important;
+  border-color: var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface) !important;
+  box-shadow: var(--wd-shadow-card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-theme="dark"] body.home-page .home-topbar,
+[data-theme="dark"] body.home-page .home-nav,
+[data-theme="dark"] body.home-page .module-card {
+  background: var(--wd-neutral-surface) !important;
+}
+
+body.home-page .home-brand-name {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+body.home-page .home-nav-item {
+  color: var(--wd-neutral-muted) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+body.home-page .home-nav-item.active {
+  color: var(--wd-accent-strong) !important;
+  border-color: transparent !important;
+  background: var(--wd-accent-soft) !important;
+  box-shadow: none !important;
+}
+
+body.home-page .home-nav-item:hover {
+  color: var(--wd-neutral-text) !important;
+  border-color: transparent !important;
+  background: rgba(127, 136, 130, .09) !important;
+}
+
+body.home-page .contact-button,
+body.home-page .api-settings-button,
+body.home-page .cache-clear-button,
+body.home-page .theme-toggle {
+  color: var(--wd-neutral-muted) !important;
+  border-color: var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface-2) !important;
+  box-shadow: none !important;
+}
+
+body.home-page .contact-button:hover,
+body.home-page .api-settings-button:hover,
+body.home-page .cache-clear-button:hover,
+body.home-page .theme-toggle:hover {
+  color: var(--wd-neutral-text) !important;
+  border-color: rgba(127, 136, 130, .25) !important;
+  background: rgba(127, 136, 130, .09) !important;
+}
+
+body.home-page .tool-section[data-home-section] > h2 {
+  min-height: 34px !important;
+  margin-bottom: 16px !important;
+  padding: 6px 20px !important;
+  color: var(--wd-neutral-text) !important;
+  border: 1px solid var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface) !important;
+  box-shadow: none !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+body.home-page .tool-section[data-home-section] .tool-label {
+  color: var(--wd-neutral-text) !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 1.18 !important;
+}
+
+body.home-page .tool-section[data-home-section] .tool-desc {
+  color: var(--wd-neutral-muted) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.55 !important;
+}
+
+body.home-page .module-enter {
+  color: var(--wd-neutral-muted) !important;
+  border: 1px solid var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface-2) !important;
+}
+
+body.home-page .module-card:hover,
+body.home-page .module-card:focus-visible {
+  border-color: var(--wd-accent-line) !important;
+  outline-color: transparent !important;
+  box-shadow: 0 10px 28px rgba(24, 32, 27, .09) !important;
+}
+
+/* Project folders: same neutral hierarchy in both themes. */
+body.project-hub-page {
+  --bg: var(--wd-neutral-page);
+  --bg-soft: var(--wd-neutral-surface-2);
+  --panel: var(--wd-neutral-surface);
+  --panel-strong: var(--wd-neutral-surface);
+  --line: var(--wd-neutral-border);
+  --line-strong: var(--wd-accent-line);
+  --text: var(--wd-neutral-text);
+  --muted: var(--wd-neutral-muted);
+  --green: var(--wd-accent);
+  --green-soft: var(--wd-accent-soft);
+  color: var(--wd-neutral-text) !important;
+  background: var(--wd-neutral-page) !important;
+  font-size: 14px;
+}
+
+body.project-hub-page .topbar,
+body.project-hub-page .toolbar,
+body.project-hub-page .card {
+  border-color: var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface) !important;
+  box-shadow: var(--wd-shadow-card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.project-hub-page :is(.button, .icon-button, .search, select) {
+  color: var(--wd-neutral-text) !important;
+  border-color: var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface-2) !important;
+  box-shadow: none !important;
+}
+
+body.project-hub-page.dark-theme :is(.button, .icon-button, .search, select) {
+  color: #f1f3f2 !important;
+  border-color: rgba(255, 255, 255, .09) !important;
+  background: #1c1f1d !important;
+}
+
+body.project-hub-page :is(.button, .icon-button, select):hover {
+  color: var(--wd-neutral-text) !important;
+  border-color: rgba(127, 136, 130, .26) !important;
+  background: rgba(127, 136, 130, .10) !important;
+}
+
+body.project-hub-page h1 {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+}
+
+body.project-hub-page .subtitle,
+body.project-hub-page .meta {
+  color: var(--wd-neutral-muted) !important;
+  font-weight: 400 !important;
+}
+
+body.project-hub-page .button.primary,
+body.project-hub-page .folder-filter.active,
+body.project-hub-page .icon-button.active {
+  color: #fff !important;
+  border-color: var(--wd-accent) !important;
+  background: var(--wd-accent) !important;
+}
+
+body.project-hub-page .name-input {
+  font-weight: 600 !important;
+}
+
+body.project-hub-page .card:hover {
+  border-color: var(--wd-accent-line) !important;
+  box-shadow: 0 9px 26px rgba(24, 32, 27, .08) !important;
+}
+
+/* Node canvas: quiet canvas and panels; green is reserved for actions/selection. */
+body.node-canvas-page {
+  --bg: var(--wd-neutral-page);
+  --surface: var(--wd-neutral-surface);
+  --panel: var(--wd-neutral-surface);
+  --panel-soft: var(--wd-neutral-surface-2);
+  --border: var(--wd-neutral-border);
+  --text: var(--wd-neutral-text);
+  --muted: var(--wd-neutral-muted);
+  --blue: var(--wd-accent);
+  --blue-dark: var(--wd-accent-strong);
+  --blue-soft: var(--wd-accent-soft);
+  font-size: 13px;
+}
+
+body.node-canvas-page .canvas-wrap {
+  background-color: var(--wd-neutral-page) !important;
+  background-image: radial-gradient(circle, rgba(111, 121, 115, .18) 1px, transparent 1.1px) !important;
+}
+
+body.node-canvas-page.dark-theme .canvas-wrap {
+  background-color: #101211 !important;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, .10) 1px, transparent 1.1px) !important;
+}
+
+body.node-canvas-page :is(.sidebar, .top-controls, .project-hub-button, .project-hub-menu, .gallery-panel, .favorite-panel, .prompt-library-panel, .prompt-refine-panel),
+body.node-canvas-page.dark-theme :is(.sidebar, .top-controls, .project-hub-button, .project-hub-menu, .gallery-panel, .favorite-panel, .prompt-library-panel, .prompt-refine-panel) {
+  color: var(--wd-neutral-text) !important;
+  border-color: var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface) !important;
+  box-shadow: var(--wd-shadow-card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.node-canvas-page .tool-group,
+body.node-canvas-page.dark-theme .tool-group,
+body.node-canvas-page .node,
+body.node-canvas-page.dark-theme .node {
+  color: var(--wd-neutral-text) !important;
+  border-color: var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface) !important;
+  box-shadow: var(--wd-shadow-card) !important;
+}
+
+body.node-canvas-page .node:hover {
+  border-color: rgba(127, 136, 130, .28) !important;
+  box-shadow: 0 7px 22px rgba(24, 32, 27, .08) !important;
+}
+
+body.node-canvas-page .node.selected {
+  border-color: var(--wd-accent) !important;
+  box-shadow: 0 0 0 2px var(--wd-accent-soft), var(--wd-shadow-card) !important;
+}
+
+body.node-canvas-page :is(.sidebar .tool-group button, .sidebar .wide-button, .project-hub-button, .node-select-trigger, .choice-option, .count-option, .output-option, .folder-name-pill, .ghost),
+body.node-canvas-page.dark-theme :is(.sidebar .tool-group button, .sidebar .wide-button, .project-hub-button, .node-select-trigger, .choice-option, .count-option, .output-option, .folder-name-pill, .ghost) {
+  color: var(--wd-neutral-text) !important;
+  border-color: var(--wd-neutral-border) !important;
+  background: var(--wd-neutral-surface-2) !important;
+  box-shadow: none !important;
+}
+
+body.node-canvas-page :is(.choice-option.active, .count-option.active, .output-option.active, .node-select-option.active, .gallery-tab.active, .project-filter.active),
+body.node-canvas-page.dark-theme :is(.choice-option.active, .count-option.active, .output-option.active, .node-select-option.active, .gallery-tab.active, .project-filter.active) {
+  color: var(--wd-accent-strong) !important;
+  border-color: var(--wd-accent-line) !important;
+  background: var(--wd-accent-soft) !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+body.node-canvas-page .node [data-generate],
+body.node-canvas-page #newProjectButton {
+  color: #fff !important;
+  border-color: var(--wd-accent) !important;
+  background: var(--wd-accent) !important;
+  box-shadow: none !important;
+}
+
+body.node-canvas-page .node-title,
+body.node-canvas-page .brand h1 {
+  color: var(--wd-neutral-text) !important;
+  font-weight: 600 !important;
+}
+
+body.node-canvas-page :is(.brand-subtitle, .status, .ratio-readout, .auto-split-hint, .auto-split-note) {
+  color: var(--wd-neutral-muted) !important;
+}

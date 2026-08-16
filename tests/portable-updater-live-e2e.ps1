@@ -43,11 +43,11 @@ try {
 
     Copy-Item -LiteralPath $testApp -Destination (Join-Path $packageSource '豌豆AI工具.exe')
     Copy-Item -LiteralPath $testApp -Destination (Join-Path $packageSource 'crashpad_handler.exe')
-    Set-Content -LiteralPath (Join-Path $packageSource 'resources\app\VERSION.txt') -Value 'v1.0.55' -Encoding ASCII
+    Set-Content -LiteralPath (Join-Path $packageSource 'resources\app\VERSION.txt') -Value 'v1.0.56' -Encoding ASCII
     Set-Content -LiteralPath (Join-Path $packageSource 'new-marker.txt') -Value 'new' -Encoding ASCII
     Compress-Archive -Path (Join-Path $packageSource '*') -DestinationPath $package -CompressionLevel Optimal
 
-    $arguments = @($updater, $install, $package, '豌豆AI工具.exe', $ready, '1.0.55', 'crashpad_handler.exe')
+    $arguments = @($updater, $install, $package, '豌豆AI工具.exe', $ready, '1.0.56', 'crashpad_handler.exe')
     Start-Process -FilePath $parentExe -ArgumentList $arguments -WorkingDirectory $install -WindowStyle Hidden | Out-Null
 
     $deadline = [DateTime]::UtcNow.AddSeconds(50)
@@ -55,10 +55,10 @@ try {
         Start-Sleep -Milliseconds 300
         $versionFile = Join-Path $install 'resources\app\VERSION.txt'
         $installedVersion = if (Test-Path -LiteralPath $versionFile) { (Get-Content -LiteralPath $versionFile -TotalCount 1).Trim() } else { '' }
-        if ($installedVersion -eq 'v1.0.55' -and (Test-Path -LiteralPath (Join-Path $install 'new-marker.txt'))) { break }
+        if ($installedVersion -eq 'v1.0.56' -and (Test-Path -LiteralPath (Join-Path $install 'new-marker.txt'))) { break }
     } while ([DateTime]::UtcNow -lt $deadline)
 
-    if ($installedVersion -ne 'v1.0.55') { throw "Live updater test timed out; installed version is '$installedVersion'." }
+    if ($installedVersion -ne 'v1.0.56') { throw "Live updater test timed out; installed version is '$installedVersion'." }
     if (Test-Path -LiteralPath (Join-Path $install 'old-marker.txt')) { throw 'Old installation marker survived the directory swap.' }
     $previous = @(Get-ChildItem -LiteralPath $testRoot -Directory -Filter '豌豆AI工具.previous-*')
     if ($previous.Count -ne 1) { throw "Expected one previous installation, found $($previous.Count)." }
@@ -66,7 +66,7 @@ try {
     if ($logText -notmatch 'crashpad_handler\.exe') { throw 'The install-scoped helper process was not stopped.' }
     if ($logText -notmatch 'Native update completed') { throw 'The updater did not report completion.' }
 
-    Write-Output 'PASS: live updater moved an install used as the parent working directory, stopped a differently named helper, installed v1.0.55, and restarted it.'
+    Write-Output 'PASS: live updater moved an install used as the parent working directory, stopped a differently named helper, installed v1.0.56, and restarted it.'
 }
 finally {
     Stop-TestProcesses

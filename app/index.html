@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4faee">
-  <meta name="description" content="AI 创作工具综合入口，集中打开 AI 节点画布、AI 生图、图片放大、抠图 PNG 工作流和关建词生成/反推。">
+  <meta name="description" content="AI 创作工具综合入口，集中打开 AI 节点画布、AI 生图、抠图 PNG 工作流和关键词生成/反推。">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./logo.png" type="image/png">
   <link rel="stylesheet" href="./styles.css">
@@ -27,6 +27,10 @@
         <a class="home-nav-item" href="https://www.zayapi.top" rel="noopener noreferrer" data-tab-title="商品中心">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6H4z"/><path d="M14 14h6v6h-6z"/></svg>
           <span>商品中心</span>
+        </a>
+        <a class="home-nav-item" href="./asset-library.html" rel="noopener noreferrer" data-tab-title="资产">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.8-2H20v13H4z"/><path d="M4 9h16"/></svg>
+          <span>资产</span>
         </a>
         <button class="home-nav-item" type="button" data-home-nav="blog" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h10l2 2v14H6z"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
@@ -130,18 +134,6 @@
     <section class="tool-section" id="image-tools" data-home-section>
       <h2>图片工具箱</h2>
       <div class="tool-grid module-grid image-tool-grid" aria-label="图片工具箱">
-        <a class="tool-card module-card module-upscale" href="./upscale-4k.html" rel="noopener noreferrer" data-tab-title="图片放大4K">
-          <span class="module-copy">
-            <span class="tool-label">AI图片变清晰<br>4K图片放大</span>
-            <span class="tool-desc">图片增强、比例调整、2K/4K 输出下载。</span>
-            <span class="module-enter" aria-hidden="true">→</span>
-          </span>
-          <span class="module-art" aria-hidden="true">
-            <span class="resolution-tile">4K</span>
-            <span class="zoom-ring"></span>
-          </span>
-        </a>
-
         <a class="tool-card module-card module-cutout" href="./png-workflow.html" rel="noopener noreferrer" data-tab-title="抠图PNG工作流">
           <span class="module-copy">
             <span class="tool-label">AI抠图</span>
@@ -268,18 +260,18 @@
         <details class="info-card notice-card notice-card-latest">
           <summary>
             <span class="info-meta">
-              <span class="info-kicker">v1.0.55 节点画布与自动更新修复</span>
+              <span class="info-kicker">v1.0.56 资产与节点操作优化</span>
               <time datetime="2026-08-16">2026 年 8 月 16 日</time>
             </span>
-            <h3>多图画布更流畅，白屏与灰屏支持恢复</h3>
-            <p>上传或生成图片时只更新发生变化的节点，避免全部效果图反复重载。</p>
+            <h3>资产与 Skill 集中管理，节点按钮更加规整</h3>
+            <p>新增资产页面统一查看已安装 Skill、生成图片和视频，并优化参考图与效果图操作。</p>
           </summary>
           <div class="notice-detail">
-            <p>页面加载失败、渲染进程退出或窗口无响应时会自动恢复，并提供重新载入或立即关闭选项。</p>
-            <p>AI 绘图节点里的图1、图2等参考图现在可以直接点击放大查看；桌面端生图请求也增加了本地转发，避免 file 页面被 CORS 拦截。</p>
-            <nav class="notice-links" aria-label="v1.0.55 下载链接">
-              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.55" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
-              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.55/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            <p>绘图 Skill 已收进提示词输入框右上角的工具入口，可直接选择规则或进入资产页管理。</p>
+            <p>修复参考图拖入、效果图按钮越界与图标不居中问题；发布前增加 UTF-8、生成链路、页面像素、性能和自动更新回归检查。</p>
+            <nav class="notice-links" aria-label="v1.0.56 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.56" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.56/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
             </nav>
           </div>
         </details>

@@ -53,6 +53,17 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Desktop script syntax check failed: $($_.Name)" }
           }
 
+      - name: Validate release regressions
+        shell: pwsh
+        run: |
+          $env:NODE_PATH = (Resolve-Path "desktop-client\node_modules").Path
+          $tests = Get-ChildItem -LiteralPath "tests" -Filter "*.test.cjs" |
+            Where-Object { $_.Name -ne "real-api-image-ratios.test.cjs" }
+          foreach ($test in $tests) {
+            node $test.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Regression test failed: $($test.Name)" }
+          }
+
       - name: Compile and validate portable updater
         shell: pwsh
         run: |
@@ -93,7 +104,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "节点画布稳定性修复：上传或生成图片时只更新变化节点，降低多图画布卡顿与白屏风险；页面加载失败、渲染进程退出或窗口无响应时提供自动恢复和关闭选项；桌面端生图请求不再受 file 页面 CORS 限制；AI 绘图节点内的图1、图2等参考图支持点击放大查看；修复安装目录被 Electron 辅助进程占用时更新回滚到旧版本的问题。"
+            notes = "v1.0.56：新增资产页面集中管理 Skill、生成图片和视频；绘图 Skill 移入提示词输入框右上角工具入口；优化参考图拖入与效果图按钮、图标和间距；发布流程新增 UTF-8、生成链路、页面像素、性能与自动更新回归验证。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

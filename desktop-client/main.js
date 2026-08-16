@@ -10,6 +10,7 @@ const APP_NAME = "豌豆AI工具";
 const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app"]);
 const CANVAS_API_HOSTS = new Set(["zayapi.top", "www.zayapi.top"]);
 const MAX_DESKTOP_API_RESPONSE_BYTES = 32 * 1024 * 1024;
+const MAX_SKILL_INSTRUCTIONS_BYTES = 256 * 1024;
 
 let mainWindow = null;
 let allowWindowClose = false;
@@ -17,6 +18,7 @@ let closePromptPending = false;
 let shellReady = false;
 let downloadListenerReady = false;
 let updateInProgress = false;
+let installedSkillsCache = { savedAt: 0, items: [] };
 
 // 与旧安装版共用数据目录，改成便携文件夹后用户原有的本地数据仍然可用。
 app.setPath("userData", process.env.WANDOU_TEST_USER_DATA_DIR || path.join(app.getPath("appData"), "豌豆AI"));
@@ -152,6 +154,85 @@ function canvasMediaRootDirectory() {
 
 function canvasMediaPath(id) {
   return path.join(canvasMediaRootDirectory(), `${safeCanvasBackupId(id, "invalid-media")}.data`);
+}
+
+function skillRoots() {
+  const codexRoot = process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
+  return [path.join(codexRoot, "skills"), path.join(codexRoot, "plugins", "cache")];
+}
+
+function skillFrontmatter(markdown, fallbackName) {
+  const header = String(markdown || "").match(/^---\s*\r?\n([\s\S]*?)\r?\n---/);
+  const fields = {};
+  if (header) {
+    for (const line of header[1].split(/\r?\n/)) {
+      const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+      if (!match) continue;
+      fields[match[1]] = match[2].trim().replace(/^(["'])(.*)\1$/, "$2");
+    }
+  }
+  return {
+    name: fields.name || fallbackName,
+    description: fields.description || "已安装的本地 Skill"
+  };
+}
+
+function collectInstalledSkills() {
+  if (Date.now() - installedSkillsCache.savedAt < 10000 && installedSkillsCache.items.length) {
+    return installedSkillsCache.items;
+  }
+  const found = [];
+  const seen = new Set();
+  const visit = (directory, depth = 0) => {
+    if (depth > 7 || !fs.existsSync(directory)) return;
+    let entries = [];
+    try { entries = fs.readdirSync(directory, { withFileTypes: true }); } catch (_error) { return; }
+    const skillFile = path.join(directory, "SKILL.md");
+    if (fs.existsSync(skillFile)) {
+      const resolved = path.resolve(skillFile);
+      if (!seen.has(resolved)) {
+        seen.add(resolved);
+        try {
+          const markdown = fs.readFileSync(resolved, "utf8");
+          const meta = skillFrontmatter(markdown, path.basename(directory));
+          found.push({
+            id: crypto.createHash("sha256").update(resolved).digest("hex").slice(0, 20),
+            name: meta.name,
+            description: meta.description,
+            directoryName: path.basename(directory),
+            instructionPath: resolved
+          });
+        } catch (_error) {}
+      }
+      return;
+    }
+    entries.filter((entry) => entry.isDirectory()).forEach((entry) => visit(path.join(directory, entry.name), depth + 1));
+  };
+  skillRoots().forEach((root) => visit(root));
+  const items = found.sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+  installedSkillsCache = { savedAt: Date.now(), items };
+  return items;
+}
+
+function publicInstalledSkills() {
+  return collectInstalledSkills().map(({ instructionPath, ...skill }) => skill);
+}
+
+function readInstalledSkill(payload = {}) {
+  const id = String(payload.id || "");
+  const skill = collectInstalledSkills().find((item) => item.id === id);
+  if (!skill) return { success: false, error: "Skill 不存在或已卸载" };
+  try {
+    const stat = fs.statSync(skill.instructionPath);
+    if (stat.size > MAX_SKILL_INSTRUCTIONS_BYTES) return { success: false, error: "Skill 规则文件过大" };
+    return {
+      success: true,
+      skill: { id: skill.id, name: skill.name, description: skill.description, directoryName: skill.directoryName },
+      instructions: fs.readFileSync(skill.instructionPath, "utf8")
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }
 
 async function hasCanvasMedia(payload = {}) {
@@ -597,6 +678,7 @@ function titleForUrl(rawUrl) {
       "index.html": "首页",
       "project-hub.html": "项目文件夹",
       "ai-node-canvas.html": "节点画布",
+      "asset-library.html": "资产",
       "upscale-4k.html": "图片放大4K",
       "png-workflow.html": "抠图PNG工作流",
       "watermark-remove.html": "AI消除水印",
@@ -834,6 +916,14 @@ ipcMain.handle("desktop:read-canvas-backups", (_event, payload = {}) => readCanv
 ipcMain.handle("desktop:has-canvas-media", (_event, payload = {}) => hasCanvasMedia(payload));
 ipcMain.handle("desktop:write-canvas-media", (_event, payload = {}) => writeCanvasMedia(payload));
 ipcMain.handle("desktop:read-canvas-media", (_event, payload = {}) => readCanvasMedia(payload));
+ipcMain.handle("desktop:list-skills", (event) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return [];
+  return publicInstalledSkills();
+});
+ipcMain.handle("desktop:read-skill", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取 Skill" };
+  return readInstalledSkill(payload);
+});
 ipcMain.handle("desktop:get-canvas-backup-directory", () => ({
   directory: canvasBackupRootDirectory()
 }));

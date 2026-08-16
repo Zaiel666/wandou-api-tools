@@ -52,20 +52,6 @@ const { chromium } = require("playwright");
     assert.ok(outpaintBox.height > outpaintBox.width, "portrait outpaint preview should be taller than wide");
     assert.equal(await outpaintPreview.locator('img').evaluate((element) => getComputedStyle(element).objectFit), "contain");
 
-    await page.locator('[data-add-node="upscale"]').click();
-    await page.evaluate((url) => {
-      const node = nodes.filter((item) => item.type === "upscale").at(-1);
-      node.references = [{ url, mediaType: "image", width: 540, height: 720 }];
-      node.mediaUrl = url;
-      node.width = 540;
-      node.height = 720;
-      render();
-    }, portraitUrl);
-    const upscalePreview = page.locator('.node.upscale').last().locator('.workflow-source-preview');
-    const upscaleBox = await upscalePreview.boundingBox();
-    assert.ok(upscaleBox.height > upscaleBox.width, "portrait upscale preview should be taller than wide");
-    assert.equal(await upscalePreview.locator('img').evaluate((element) => getComputedStyle(element).objectFit), "contain");
-
     const result = await page.evaluate(async () => {
       const makeImage = (width, height, color) => {
         const canvas = document.createElement("canvas");

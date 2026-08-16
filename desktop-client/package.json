@@ -1,6 +1,6 @@
 {
   "name": "wandou-ai-desktop",
-  "version": "1.0.55",
+  "version": "1.0.56",
   "description": "豌豆AI Windows 客户端",
   "main": "main.js",
   "author": "PeaFour",
@@ -12,7 +12,9 @@
   },
   "devDependencies": {
     "electron": "^37.2.6",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "playwright": "^1.62.1",
+    "sharp": "^0.35.3"
   },
   "build": {
     "appId": "com.peafour.wandouai",
