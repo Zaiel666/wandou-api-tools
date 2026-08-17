@@ -161,6 +161,27 @@ function skillRoots() {
   return [path.join(codexRoot, "skills"), path.join(codexRoot, "plugins", "cache")];
 }
 
+function personalSkillRoot() {
+  const codexRoot = process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
+  return path.join(codexRoot, "skills");
+}
+
+function isPersonalSkillDirectory(instructionPath) {
+  const root = path.resolve(personalSkillRoot());
+  const directory = path.dirname(path.resolve(instructionPath));
+  return path.dirname(directory) === root && path.basename(directory) !== ".system";
+}
+
+function isDrawingSkill(skill) {
+  const name = String(skill?.name || "").trim().toLowerCase();
+  const exact = new Set(["imagegen", "banner-design", "design", "brand", "prompt-optimizer"]);
+  if (exact.has(name)) return true;
+  if (!isPersonalSkillDirectory(skill?.instructionPath || "")) return false;
+  const searchable = `${name} ${skill?.description || ""}`;
+  if (/(clone|website|browser|chrome|skyvern|context7|theme|brutalist|apple|fluid glass|codedrobe|security|vetter|ui-styling|ui-ux|design-system)/i.test(searchable)) return false;
+  return /(image|photo|visual|design|banner|brand|poster|prompt|illustrat|drawing|绘图|生图|图像|图片|海报|设计|视觉|摄影|修图|提示词|关键词)/i.test(searchable);
+}
+
 function skillFrontmatter(markdown, fallbackName) {
   const header = String(markdown || "").match(/^---\s*\r?\n([\s\S]*?)\r?\n---/);
   const fields = {};
@@ -215,12 +236,27 @@ function collectInstalledSkills() {
 }
 
 function publicInstalledSkills() {
-  return collectInstalledSkills().map(({ instructionPath, ...skill }) => skill);
+  const unique = new Map();
+  for (const skill of collectInstalledSkills().filter(isDrawingSkill)) {
+    const key = String(skill.name || skill.directoryName || "").trim().toLowerCase();
+    if (!key || unique.has(key)) continue;
+    const personal = isPersonalSkillDirectory(skill.instructionPath);
+    unique.set(key, {
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      directoryName: skill.directoryName,
+      source: personal ? "个人" : "系统",
+      canDelete: personal
+    });
+  }
+  return [...unique.values()];
 }
 
 function readInstalledSkill(payload = {}) {
   const id = String(payload.id || "");
-  const skill = collectInstalledSkills().find((item) => item.id === id);
+  const visibleIds = new Set(publicInstalledSkills().map((item) => item.id));
+  const skill = visibleIds.has(id) ? collectInstalledSkills().find((item) => item.id === id) : null;
   if (!skill) return { success: false, error: "Skill 不存在或已卸载" };
   try {
     const stat = fs.statSync(skill.instructionPath);
@@ -230,6 +266,82 @@ function readInstalledSkill(payload = {}) {
       skill: { id: skill.id, name: skill.name, description: skill.description, directoryName: skill.directoryName },
       instructions: fs.readFileSync(skill.instructionPath, "utf8")
     };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+function validateSkillDirectory(directory) {
+  const source = path.resolve(directory || "");
+  const instructions = path.join(source, "SKILL.md");
+  if (!source || !fs.existsSync(instructions) || !fs.statSync(instructions).isFile()) {
+    throw new Error("所选文件夹不是有效 Skill：缺少 SKILL.md");
+  }
+  let files = 0;
+  let bytes = 0;
+  const visit = (current, depth = 0) => {
+    if (depth > 8) throw new Error("Skill 文件夹层级过深");
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const target = path.join(current, entry.name);
+      if (entry.isSymbolicLink()) throw new Error("Skill 不能包含符号链接");
+      if (entry.isDirectory()) {
+        if ([".git", "node_modules"].includes(entry.name)) continue;
+        visit(target, depth + 1);
+      } else if (entry.isFile()) {
+        files += 1;
+        bytes += fs.statSync(target).size;
+        if (files > 500 || bytes > 24 * 1024 * 1024) throw new Error("Skill 文件过多或总体积超过 24MB");
+      }
+    }
+  };
+  visit(source);
+  const markdown = fs.readFileSync(instructions, "utf8");
+  if (Buffer.byteLength(markdown, "utf8") > MAX_SKILL_INSTRUCTIONS_BYTES) throw new Error("SKILL.md 超过 256KB");
+  return { source, meta: skillFrontmatter(markdown, path.basename(source)) };
+}
+
+async function importPersonalSkill() {
+  const choice = await dialog.showOpenDialog(mainWindow, {
+    title: "选择包含 SKILL.md 的 Skill 文件夹",
+    properties: ["openDirectory"]
+  });
+  if (choice.canceled || !choice.filePaths[0]) return { success: false, canceled: true };
+  try {
+    const { source, meta } = validateSkillDirectory(choice.filePaths[0]);
+    const folderName = path.basename(source).replace(/[^A-Za-z0-9._\-\u4e00-\u9fff]/g, "-").replace(/-+/g, "-").slice(0, 64);
+    if (!folderName) throw new Error("Skill 文件夹名称无效");
+    const destination = path.join(personalSkillRoot(), folderName);
+    if (path.resolve(source) === path.resolve(destination)) throw new Error("该 Skill 已经位于个人 Skill 目录中");
+    if (fs.existsSync(destination)) throw new Error(`已存在同名 Skill：${folderName}`);
+    fs.mkdirSync(personalSkillRoot(), { recursive: true });
+    fs.cpSync(source, destination, {
+      recursive: true,
+      errorOnExist: true,
+      filter: (entry) => ![".git", "node_modules"].includes(path.basename(entry))
+    });
+    fs.writeFileSync(path.join(destination, ".wandou-skill.json"), JSON.stringify({ importedAt: Date.now(), name: meta.name }, null, 2), "utf8");
+    installedSkillsCache = { savedAt: 0, items: [] };
+    const imported = publicInstalledSkills().find((item) => item.directoryName === folderName);
+    if (!imported) {
+      await shell.trashItem(destination);
+      installedSkillsCache = { savedAt: 0, items: [] };
+      throw new Error("该 Skill 与绘图无关，因此没有导入");
+    }
+    return { success: true, skill: imported };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function deletePersonalSkill(payload = {}) {
+  const id = String(payload.id || "");
+  const skill = collectInstalledSkills().find((item) => item.id === id);
+  if (!skill || !isDrawingSkill(skill)) return { success: false, error: "Skill 不存在或已隐藏" };
+  if (!isPersonalSkillDirectory(skill.instructionPath)) return { success: false, error: "系统 Skill 不能删除" };
+  try {
+    await shell.trashItem(path.dirname(skill.instructionPath));
+    installedSkillsCache = { savedAt: 0, items: [] };
+    return { success: true, movedToTrash: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -923,6 +1035,14 @@ ipcMain.handle("desktop:list-skills", (event) => {
 ipcMain.handle("desktop:read-skill", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取 Skill" };
   return readInstalledSkill(payload);
+});
+ipcMain.handle("desktop:import-skill", (event) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以导入 Skill" };
+  return importPersonalSkill();
+});
+ipcMain.handle("desktop:delete-skill", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以删除 Skill" };
+  return deletePersonalSkill(payload);
 });
 ipcMain.handle("desktop:get-canvas-backup-directory", () => ({
   directory: canvasBackupRootDirectory()

@@ -537,6 +537,36 @@ body.node-canvas-page .button-like {
   background-image: none !important;
 }
 
+/* Skill 下拉属于紧凑菜单，不跟随画布通用的胶囊按钮。 */
+body.node-canvas-page .generator-skill-popover .generator-skill-chip {
+  min-height: 27px !important;
+  padding: 4px 7px !important;
+  border-radius: 6px !important;
+}
+
+body.node-canvas-page .generator-skill-popover .generator-skill-manage {
+  min-height: 24px !important;
+  height: 24px !important;
+  padding: 0 7px !important;
+  border-radius: 6px !important;
+}
+
+body.node-canvas-page .generator-skill-popover .generator-skill-description {
+  font-size: 8.5px !important;
+  line-height: 1.3 !important;
+}
+
+body.node-canvas-page .generator-skill-popover .generator-skill-chip:hover .generator-skill-description,
+body.node-canvas-page .generator-skill-popover .generator-skill-chip:focus-visible .generator-skill-description,
+body.node-canvas-page .generator-skill-popover .generator-skill-chip.active .generator-skill-description {
+  max-height: 28px !important;
+  margin-top: 2px !important;
+}
+
+body.node-canvas-page .generator-skill-popover .generator-skill-options {
+  gap: 2px !important;
+}
+
 body.node-canvas-page :is(
   .sidebar .tool-group button,
   .sidebar .wide-button,

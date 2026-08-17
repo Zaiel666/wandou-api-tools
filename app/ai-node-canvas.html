@@ -1772,6 +1772,13 @@
       filter: none;
     }
 
+    .node.result.selected,
+    .node.result.box-selected {
+      outline: 1px solid #43d13b !important;
+      outline-offset: 0 !important;
+      box-shadow: none !important;
+    }
+
     .node.generator:focus-within,
     .node.prompt-overlay-owner {
       z-index: 190;
@@ -2311,7 +2318,7 @@
     .result-empty-visual {
       justify-items: center;
       text-align: center;
-      gap: 9px;
+      gap: 8px;
       background: #f8fafc;
     }
 
@@ -2334,6 +2341,13 @@
     .result-empty-visual strong {
       color: #334155;
       font-size: 18px;
+    }
+
+    .result-empty-visual > span:not(.result-empty-icon) {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: var(--wd-weight-regular);
+      line-height: 1.45;
     }
 
     .prompt-field-wrap {
@@ -2462,7 +2476,7 @@
       box-shadow: 0 7px 16px rgba(67,209,59,.18);
     }
 
-    .prompt-corner-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .prompt-corner-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
     .prompt-corner-button::after {
       content: attr(data-tooltip);
       position: absolute;
@@ -2480,6 +2494,15 @@
       transition: .14s ease;
     }
     .prompt-corner-button:hover::after { opacity: 1; transform: translate(0,-50%); }
+    body.node-canvas-page .node.generator .prompt-corner-button {
+      color: #fff !important;
+      background: #2aad5f !important;
+      border-color: #239b53 !important;
+      box-shadow: 0 7px 16px rgba(42,173,95,.2) !important;
+    }
+    body.node-canvas-page .node.generator .prompt-corner-button:hover { color:#fff !important; background:#239b53 !important; }
+    body.node-canvas-page .node.generator .prompt-corner-button.skill-active { box-shadow:0 0 0 3px rgba(42,173,95,.2),0 7px 16px rgba(42,173,95,.2) !important; }
+    .prompt-corner-button.skill-active::before { content:"✓"; position:absolute; top:-5px; right:-5px; width:13px; height:13px; display:grid; place-items:center; border:2px solid var(--panel,#fff); border-radius:50%; color:#fff; background:#176f3b; font-size:8px; font-weight:700; line-height:1; }
 
     .preview-favorite {
       position: absolute;
@@ -4035,10 +4058,10 @@
     }
     .prompt-library-panel {
       position: fixed; top: 86px; right: auto; z-index: 260;
-      width: min(310px, calc(100vw - 24px)); height:min(430px, calc(100vh - 24px)); max-height:calc(100vh - 24px);
+      width: min(310px, calc(100vw - 24px)); height:min(390px, calc(100vh - 24px)); max-height:calc(100vh - 24px);
       display: none; flex-direction: column; overflow: hidden;
-      color: #10211d; background: #ffffff; border: 1px solid #d7dfda; border-radius: 18px;
-      box-shadow: 0 18px 48px rgba(30, 45, 36, .18);
+      color: #10211d; background: #ffffff; border: 1px solid #d7dfda; border-radius: 10px;
+      box-shadow: 0 14px 36px rgba(30, 45, 36, .16);
     }
     body.dark-theme .prompt-library-panel {
       color: #eefcf8;
@@ -4047,11 +4070,11 @@
       box-shadow: 0 20px 52px rgba(0, 0, 0, .48);
     }
     .prompt-library-panel.open { display: flex; }
-    .prompt-library-head, .prompt-manager-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 12px 8px; }
+    .prompt-library-head, .prompt-manager-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px 6px; }
     .prompt-library-head h3, .prompt-manager-head h2 { margin:0; font-size:13px; line-height:1.35; font-weight:400; }
-    .prompt-library-actions { display:flex; align-items:center; gap:8px; }
-    .prompt-library-actions .mini { min-height:28px; padding:4px 8px; font-size:11px; font-weight:400; }
-    .prompt-search { margin:0 12px 8px; width:calc(100% - 24px); height:34px; border:1.5px solid rgba(27,35,31,.72); border-radius:9px; padding:0 10px; background:var(--surface); color:var(--text); font-size:12px; outline:none; }
+    .prompt-library-actions { display:flex; align-items:center; gap:6px; }
+    .prompt-library-actions .mini { min-height:26px; padding:3px 7px; border-radius:6px; font-size:10.5px; font-weight:400; }
+    .prompt-search { margin:0 10px 6px; width:calc(100% - 20px); height:32px; border:1px solid rgba(27,35,31,.58); border-radius:6px; padding:0 9px; background:var(--surface); color:var(--text); font-size:11px; outline:none; }
     .prompt-search::placeholder { color:#728078; opacity:1; }
     .prompt-search:focus { border-color:#43d13b; box-shadow:0 0 0 2px rgba(67,209,59,.12); }
     body.dark-theme .prompt-search { color:#eef6f1; border-color:rgba(163,174,168,.52); background:#151917; }
@@ -4060,8 +4083,8 @@
     body.dark-theme #promptManagerSearch { color:#eef6f1 !important; background:#0d1110 !important; border-color:#46504b !important; caret-color:#8fe887; -webkit-text-fill-color:#eef6f1; }
     body.dark-theme #promptLibrarySearch::placeholder,
     body.dark-theme #promptManagerSearch::placeholder { color:#839089 !important; -webkit-text-fill-color:#839089; opacity:1; }
-    .prompt-library-list { flex:1; min-height:0; overflow-y:auto; padding:0 8px 6px; display:grid; align-content:start; gap:0; scrollbar-width:thin; scrollbar-color:rgba(91,101,96,.55) transparent; }
-    .prompt-library-item { width:100%; height:28px; min-height:28px; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--text); text-align:left; padding:2px 6px; display:grid; grid-template-columns:66px minmax(0,1fr); align-items:center; gap:6px; line-height:1.15; cursor:pointer; transition:background .14s ease,border-color .14s ease; }
+    .prompt-library-list { flex:1; min-height:0; overflow-y:auto; padding:0 6px 6px; display:grid; align-content:start; gap:2px; scrollbar-width:thin; scrollbar-color:rgba(91,101,96,.55) transparent; }
+    .prompt-library-item { width:100%; height:28px; min-height:28px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--text); text-align:left; padding:2px 6px; display:grid; grid-template-columns:66px minmax(0,1fr); align-items:center; gap:6px; line-height:1.15; cursor:pointer; transition:background .14s ease,border-color .14s ease; }
     .prompt-library-item:hover, .prompt-library-item:focus-visible { height:28px; min-height:28px; padding:2px 6px; background:rgba(67,209,59,.08); border-color:rgba(67,209,59,.48); transform:none; outline:none; }
     .prompt-library-item b { font-size:10.5px; font-weight:400; }
     .prompt-library-item span { font-size:10px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -4069,33 +4092,36 @@
     .prompt-bookmark-icon path { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linejoin:round; }
     .prompt-bookmark-icon text { fill:currentColor; stroke:none; font-size:7px; font-weight:400; font-family:var(--wd-font-ui); text-anchor:middle; }
     .prompt-empty { padding:52px 20px; text-align:center; color:var(--muted); }
-    .prompt-manager-backdrop { position:fixed; inset:0; z-index:220; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(19,27,23,.46); backdrop-filter:none; }
+    .prompt-manager-backdrop { position:fixed; inset:0; z-index:220; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(19,27,23,.46); backdrop-filter:none; }
     .prompt-manager-backdrop.open { display:flex; }
-    .prompt-manager-modal { width:min(1080px, 94vw); height:min(720px, 88vh); border:1px solid #d8dedb; border-radius:20px; overflow:hidden; background:#fff; color:#17201c; display:grid; grid-template-columns:220px 1fr; box-shadow:0 24px 64px rgba(20,31,25,.22); }
+    .prompt-manager-modal { width:min(980px, 94vw); height:min(610px, 82vh); border:1px solid #d8dedb; border-radius:10px; overflow:hidden; background:#fff; color:#17201c; display:grid; grid-template-columns:184px 1fr; box-shadow:0 20px 52px rgba(20,31,25,.2); }
     body.dark-theme .prompt-manager-modal { background:#242826; color:#f2f6f4; border-color:#49514d; }
-    .prompt-tags { border-right:1px solid #e1e6e3; padding:22px 14px; overflow:auto; background:#f4f6f5; }
+    .prompt-tags { border-right:1px solid #e1e6e3; padding:14px 10px; overflow:auto; background:#f4f6f5; }
     body.dark-theme .prompt-tags { background:#1d211f; border-right-color:#424944; }
-    .prompt-tags h3 { margin:0 8px 10px; font-size:12px; font-weight:400; }
-    .prompt-tag { width:100%; border:1px solid transparent; border-radius:9px; background:transparent; color:inherit; padding:7px 9px; text-align:left; font-size:10.5px; font-weight:400; cursor:pointer; transition:background .14s,border-color .14s,color .14s; }
+    .prompt-tags h3 { margin:0 6px 8px; font-size:11.5px; font-weight:500; }
+    .prompt-tag { width:100%; min-height:30px; border:1px solid transparent; border-radius:6px; background:transparent; color:inherit; padding:5px 7px; text-align:left; font-size:10.5px; font-weight:400; cursor:pointer; transition:background .14s,border-color .14s,color .14s; }
     .prompt-tag.active { background:rgba(67,209,59,.12); border-color:rgba(67,209,59,.22); color:#168d25; font-weight:700; }
     .prompt-tag:hover { background:rgba(67,209,59,.07); border-color:rgba(67,209,59,.2); }
     body.dark-theme .prompt-tag.active { color:#76e66e; }
     .prompt-manager-main { min-width:0; display:flex; flex-direction:column; background:#fff; }
     body.dark-theme .prompt-manager-main { background:#242826; }
-    .prompt-manager-head { min-height:68px; padding:18px 20px 10px; border-bottom:0; }
-    .prompt-manager-title p { margin:4px 0 0; color:#718078; font-size:11px; }
+    .prompt-manager-head { min-height:54px; padding:10px 14px 6px; border-bottom:0; }
+    .prompt-manager-title p { margin:2px 0 0; color:#718078; font-size:10px; }
     body.dark-theme .prompt-manager-title p { color:#a4b0aa; }
     #newPromptButton { color:#fff; background:#43d13b; border-color:#43d13b; box-shadow:none; }
     #newPromptButton:hover { color:#fff; background:#35c62f; border-color:#35c62f; }
-    #closePromptManagerButton { width:34px; min-height:34px; border-radius:9px; }
-    .prompt-manager-main > .prompt-search { margin:0 20px 14px; width:calc(100% - 40px); height:40px; color:#17201c !important; background:#fff !important; border-color:#a9b6af !important; caret-color:#17201c; }
+    #closePromptManagerButton { width:28px; min-height:28px; border-radius:6px; }
+    .prompt-manager-main > .prompt-search { margin:0 14px 8px; width:calc(100% - 28px); height:34px; color:#17201c !important; background:#fff !important; border-color:#a9b6af !important; caret-color:#17201c; }
     .prompt-manager-main > .prompt-search::placeholder { color:#718078 !important; opacity:1; }
     body.dark-theme .prompt-manager-main > .prompt-search { color:#f2f6f4 !important; background:#111513 !important; border-color:#56615b !important; caret-color:#8fe887; }
     body.dark-theme .prompt-manager-main > .prompt-search::placeholder { color:#97a69e !important; }
-    .prompt-manager-list { padding:0 20px 22px; overflow:auto; align-content:start; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-    .prompt-manager-list .prompt-library-item { min-height:92px; border:1px solid #dce2df; border-radius:12px; grid-template-columns:1fr; align-content:start; padding:13px 14px; background:#fff; transform:none; }
-    .prompt-manager-list .prompt-library-item b { font-size:12px; font-weight:400; }
-    .prompt-manager-list .prompt-library-item span { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.5; }
+    .prompt-manager-list { padding:0 14px 14px; overflow:auto; align-content:start; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .prompt-manager-list .prompt-library-item { height:auto; min-height:68px; border:1px solid #dce2df; border-radius:6px; grid-template-columns:1fr; align-content:start; padding:9px 10px; background:#fff; transform:none; }
+    .prompt-manager-list .prompt-library-item:hover,
+    .prompt-manager-list .prompt-library-item:focus-visible { height:auto; min-height:68px; padding:9px 10px; }
+    .prompt-manager-list .prompt-library-item b { font-size:11px; font-weight:500; }
+    .prompt-manager-list .prompt-library-item span { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-size:9.5px; line-height:1.4; }
+    .prompt-manager-list .prompt-library-item small { font-size:9px; line-height:1.25; }
     .prompt-manager-list .prompt-library-item small { color:#809088; }
     .prompt-manager-list .prompt-library-item:hover { background:#f7faf8; border-color:#a9b6af; transform:none; }
     .prompt-manager-list .prompt-library-item.selected { background:rgba(67,209,59,.08); border-color:#43d13b; box-shadow:0 0 0 2px rgba(67,209,59,.1); }
@@ -4432,19 +4458,40 @@
     .node.generator .auto-split-toggle { min-height:28px; height:28px; padding:2px 8px; }
     .node.generator .generator-reference-field { margin-top:7px; }
     .node.generator .generator-reference-field .upload-box { padding:6px; }
-    .generator-skill-popover { position:absolute; top:8px; right:47px; z-index:16; width:248px; max-height:300px; padding:8px; display:none; border:1px solid rgba(127,143,134,.28); border-radius:11px; background:rgba(255,255,255,.96); box-shadow:0 14px 36px rgba(33,45,38,.16); backdrop-filter:blur(18px); }
+    .generator-skill-popover { position:absolute; top:8px; right:47px; z-index:16; width:292px; max-height:360px; padding:8px; display:none; border:1px solid rgba(127,143,134,.28); border-radius:11px; background:rgba(255,255,255,.96); box-shadow:0 14px 36px rgba(33,45,38,.16); backdrop-filter:blur(18px); }
     .generator-skill-popover.open { display:block; }
     .generator-skill-head { min-height:26px; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .generator-skill-head strong { font-size:11px; font-weight:600; color:var(--text); }
     .generator-skill-manage { min-height:24px; height:24px; padding:0 7px; border-radius:6px; font-size:10px; color:var(--muted); background:transparent; border-color:var(--line); }
     .generator-skill-manage:hover { color:#176f3b; border-color:#54bd7a; background:#edf8f0; }
-    .generator-skill-options { min-width:0; max-height:240px; display:grid; grid-template-columns:1fr; gap:3px; overflow-y:auto; padding:1px; scrollbar-width:thin; }
-    .generator-skill-chip { width:100%; height:28px; min-height:28px; padding:0 8px; overflow:hidden; border:1px solid transparent; border-radius:7px; color:var(--muted); background:transparent; font-size:10px; text-align:left; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+    .generator-skill-options { min-width:0; max-height:300px; display:grid; grid-template-columns:1fr; gap:3px; overflow-y:auto; padding:1px; scrollbar-width:thin; }
+    .generator-skill-chip { width:100%; min-height:32px; padding:6px 8px; overflow:hidden; display:grid; gap:0; border:1px solid transparent; border-radius:7px; color:var(--muted); background:transparent; font-size:10px; text-align:left; cursor:pointer; transition:background .15s ease,border-color .15s ease; }
+    .generator-skill-name { overflow:hidden; color:inherit; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+    .generator-skill-description { max-height:0; margin-top:0; overflow:hidden; color:var(--muted); font-size:9px; font-weight:400; line-height:1.45; opacity:0; transition:max-height .18s ease,opacity .15s ease,margin-top .15s ease; }
+    .generator-skill-chip:hover .generator-skill-description,
+    .generator-skill-chip:focus-visible .generator-skill-description,
+    .generator-skill-chip.active .generator-skill-description { max-height:64px; margin-top:4px; opacity:1; }
     .generator-skill-chip:hover { color:var(--text); border-color:var(--line); background:rgba(127,143,134,.08); }
     .generator-skill-chip.active { color:#176f3b; border-color:#54bd7a; background:#e8f7ec; box-shadow:0 0 0 2px rgba(40,173,95,.1); }
     body.dark-theme .generator-skill-popover { background:rgba(24,29,27,.97); border-color:rgba(255,255,255,.12); box-shadow:0 16px 40px rgba(0,0,0,.38); }
     body.dark-theme .generator-skill-chip.active { color:#c9f5d7; border-color:#4ba66c; background:#234332; }
     .generator-skill-empty { color:var(--muted); font-size:10px; }
+    .skill-active-strip { min-height:34px; margin-top:6px; padding:5px 8px; display:flex; align-items:center; gap:7px; border:1px solid rgba(42,173,95,.32); border-radius:8px; color:var(--text); background:rgba(42,173,95,.08); }
+    .skill-active-dot { width:7px; height:7px; flex:0 0 auto; border-radius:50%; background:#2aad5f; box-shadow:0 0 0 3px rgba(42,173,95,.13); }
+    .skill-active-text { min-width:0; flex:1; overflow:hidden; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+    .skill-active-text strong { color:#176f3b; font-weight:600; }
+    .skill-active-action { min-height:24px; height:24px; padding:0 7px; border:1px solid rgba(42,173,95,.34); border-radius:6px; color:#176f3b; background:transparent; font-size:9px; white-space:nowrap; }
+    .skill-active-action:hover { background:rgba(42,173,95,.12); }
+    .skill-compare-panel { margin-top:5px; padding:7px; display:grid; grid-template-columns:1fr 1fr; gap:6px; border:1px solid var(--line); border-radius:8px; background:rgba(127,143,134,.06); }
+    .skill-compare-column { min-width:0; padding:7px; border:1px solid var(--line); border-radius:7px; background:var(--panel,#fff); }
+    .skill-compare-column > span { display:block; margin-bottom:4px; color:var(--muted); font-size:9px; font-weight:600; }
+    .skill-compare-column.optimized > span { color:#176f3b; }
+    .skill-compare-column p { max-height:96px; margin:0; overflow:auto; color:var(--text); font-size:10px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .skill-compare-actions { grid-column:1 / -1; display:flex; justify-content:flex-end; gap:6px; }
+    body.dark-theme .skill-active-text strong,
+    body.dark-theme .skill-active-action,
+    body.dark-theme .skill-compare-column.optimized > span { color:#a9e6bd; }
+    body.dark-theme .skill-compare-column { background:rgba(255,255,255,.035); }
     @media (max-width:760px) { .prompt-manager-modal { grid-template-columns:1fr; } .prompt-tags { display:none; } .prompt-manager-list { grid-template-columns:1fr; } }
   </style>
   <link rel="stylesheet" href="./fluid-glass.css">
@@ -5880,6 +5927,9 @@
         skillId: type === "generator" ? (selectedSkill?.id || "") : "",
         skillName: type === "generator" ? (selectedSkill?.name || "") : "",
         skillLastAppliedPrompt: "",
+        skillOriginalPrompt: "",
+        skillOptimizedPrompt: "",
+        skillCompareOpen: false,
         duration: type === "video" ? "default" : "5s",
         videoMode: type === "video" ? "text" : "",
         mediaUrl: "",
@@ -6143,7 +6193,7 @@
         }));
       el.querySelectorAll("[data-prompt-library]").forEach((button) => button.addEventListener("click", (event) => {
           event.stopPropagation();
-          openPromptLibrary(node.id);
+          togglePromptLibrary(node.id);
         }));
       const titleEl = el.querySelector(".node-title");
       if (node.type === "selection" && titleEl) {
@@ -6191,7 +6241,10 @@
           negativePrompt: node.negativePrompt,
           skillId: node.skillId || "",
           skillName: node.skillName || "",
-          skillLastAppliedPrompt: node.skillLastAppliedPrompt || ""
+          skillLastAppliedPrompt: node.skillLastAppliedPrompt || "",
+          skillOriginalPrompt: node.skillOriginalPrompt || "",
+          skillOptimizedPrompt: node.skillOptimizedPrompt || "",
+          skillCompareOpen: Boolean(node.skillCompareOpen)
         });
       });
 
@@ -6501,6 +6554,11 @@
       }
       canvas.querySelectorAll(".node").forEach((nodeEl) => {
         nodeEl.classList.toggle("prompt-overlay-owner", ownerIds.has(nodeEl.dataset.id));
+        nodeEl.querySelectorAll("[data-prompt-library]").forEach((button) => {
+          const expanded = promptLibraryPanel.classList.contains("open")
+            && activePromptLibraryNodeId === nodeEl.dataset.id;
+          button.setAttribute("aria-expanded", String(expanded));
+        });
       });
     }
 
@@ -6538,6 +6596,16 @@
       updatePromptLibraryPosition();
       syncPromptOverlayLayers();
       promptLibrarySearch.focus();
+    }
+
+    function togglePromptLibrary(nodeId) {
+      const isCurrentPanelOpen = promptLibraryPanel.classList.contains("open")
+        && activePromptLibraryNodeId === nodeId;
+      if (isCurrentPanelOpen) {
+        closePromptLibrary();
+        return;
+      }
+      openPromptLibrary(nodeId);
     }
 
     function renderPromptManager() {
@@ -6766,8 +6834,15 @@
     }
 
     function drawingSkillOptions() {
-      const relevant = installedDrawingSkills.filter((skill) => /prompt|image|design|banner|brand|绘图|图像|海报/i.test(`${skill.name || ""} ${skill.directoryName || ""} ${skill.description || ""}`));
-      return (relevant.length ? relevant : installedDrawingSkills).slice(0, 12);
+      const builtInDrawingSkills = new Set(["imagegen", "banner-design", "brand", "design", "prompt-optimizer"]);
+      const unique = new Map();
+      installedDrawingSkills.forEach((skill) => {
+        const name = String(skill.directoryName || skill.name || "").trim().toLowerCase();
+        const isImportedDrawingSkill = Boolean(skill.canDelete) && /prompt|image|design|banner|brand|绘图|图像|海报/i.test(`${skill.name || ""} ${skill.directoryName || ""} ${skill.description || ""}`);
+        if (!builtInDrawingSkills.has(name) && !isImportedDrawingSkill) return;
+        if (!unique.has(name)) unique.set(name, skill);
+      });
+      return [...unique.values()].slice(0, 12);
     }
 
     function generatorSkillOptionsHtml(node) {
@@ -6775,9 +6850,10 @@
       const selectedMissing = node.skillId && !skills.some((skill) => skill.id === node.skillId);
       const buttons = skills.map((skill) => {
         const label = skill.directoryName && skill.directoryName !== skill.name ? skill.directoryName : skill.name;
-        return `<button class="generator-skill-chip ${node.skillId === skill.id ? "active" : ""}" data-generator-skill="${escapeHtml(skill.id)}" type="button" title="${escapeHtml(skill.description || skill.name)}">${escapeHtml(label)}</button>`;
+        const description = skill.description || `${label} 绘图提示词规则`;
+        return `<button class="generator-skill-chip ${node.skillId === skill.id ? "active" : ""}" data-generator-skill="${escapeHtml(skill.id)}" type="button"><span class="generator-skill-name">${escapeHtml(label)}</span><span class="generator-skill-description">${escapeHtml(description)}</span></button>`;
       }).join("");
-      return `<div class="generator-skill-popover" data-generator-skill-popover role="dialog" aria-label="绘图 Skill"><div class="generator-skill-head"><strong>绘图 Skill</strong><button class="generator-skill-manage" data-skill-manage type="button">管理 Skill</button></div><div class="generator-skill-options"><button class="generator-skill-chip ${!node.skillId ? "active" : ""}" data-generator-skill="" type="button">默认绘图规则</button>${selectedMissing ? `<button class="generator-skill-chip active" type="button" disabled>${escapeHtml(node.skillName || "已选 Skill")}</button>` : ""}${buttons || '<span class="generator-skill-empty">未发现已安装 Skill</span>'}</div></div>`;
+      return `<div class="generator-skill-popover" data-generator-skill-popover role="dialog" aria-label="绘图 Skill"><div class="generator-skill-head"><strong>绘图 Skill</strong><button class="generator-skill-manage" data-skill-manage type="button">管理 Skill</button></div><div class="generator-skill-options"><button class="generator-skill-chip ${!node.skillId ? "active" : ""}" data-generator-skill="" type="button"><span class="generator-skill-name">默认绘图规则</span><span class="generator-skill-description">不额外改写，直接使用当前提示词生成。</span></button>${selectedMissing ? `<button class="generator-skill-chip active" type="button" disabled><span class="generator-skill-name">${escapeHtml(node.skillName || "已选 Skill")}</span><span class="generator-skill-description">当前已启用此 Skill。</span></button>` : ""}${buttons || '<span class="generator-skill-empty">未发现已安装 Skill</span>'}</div></div>`;
     }
 
     async function refreshInstalledDrawingSkills(options = {}) {
@@ -6792,6 +6868,8 @@
       if (node.type !== "generator" || !node.skillId) return;
       const source = String(node.prompt || "").trim();
       if (!source || source === node.skillLastAppliedPrompt) return;
+      node.skillOriginalPrompt = source;
+      node.skillOptimizedPrompt = "";
       const result = await window.WandouSkills?.read?.(node.skillId);
       if (!result?.success || !result.instructions) throw new Error(result?.error || "所选 Skill 无法读取");
       node.status = `正在使用 ${node.skillName || result.skill?.name || "Skill"} 优化提示词...`;
@@ -6813,6 +6891,8 @@
         if (!optimized) throw new Error("Skill 没有返回优化后的提示词");
         node.prompt = optimized;
         node.skillLastAppliedPrompt = optimized;
+        node.skillOptimizedPrompt = optimized;
+        node.skillCompareOpen = true;
         node.status = `${node.skillName || result.skill?.name || "Skill"} 已同步，正在继续生成。`;
       } finally {
         clearTimeout(timeout);
@@ -6929,6 +7009,21 @@
         ? "多图参考模式可上传多张参考图。"
         : "可上传参考图。";
       const promptReferenceCount = generatorReferenceItems(node).length;
+      const selectedSkill = installedDrawingSkills.find((skill) => skill.id === node.skillId) || null;
+      const selectedSkillName = node.skillName || selectedSkill?.name || "已选 Skill";
+      const hasSkillComparison = Boolean(node.skillOriginalPrompt && node.skillOptimizedPrompt);
+      const skillUsageHtml = !isVideoNode && node.skillId ? `
+        <div class="skill-active-strip" data-skill-active-strip>
+          <span class="skill-active-dot" aria-hidden="true"></span>
+          <span class="skill-active-text">正在使用 <strong>${escapeHtml(selectedSkillName)}</strong></span>
+          <button class="skill-active-action" data-skill-preview type="button">${hasSkillComparison ? "重新优化" : "预览优化"}</button>
+          ${hasSkillComparison ? `<button class="skill-active-action" data-skill-compare-toggle type="button">${node.skillCompareOpen ? "收起对比" : "查看对比"}</button>` : ""}
+        </div>
+        ${hasSkillComparison && node.skillCompareOpen ? `<div class="skill-compare-panel" data-skill-compare-panel>
+          <div class="skill-compare-column"><span>使用前</span><p>${escapeHtml(node.skillOriginalPrompt)}</p></div>
+          <div class="skill-compare-column optimized"><span>Skill 优化后</span><p>${escapeHtml(node.skillOptimizedPrompt)}</p></div>
+          <div class="skill-compare-actions"><button class="skill-active-action" data-skill-restore type="button">恢复原文</button><button class="skill-active-action" data-skill-use-optimized type="button">使用优化后</button></div>
+        </div>` : ""}` : "";
 
       const promptRefinePanelHtml = !isVideoNode && node.promptRefineOpen ? `
         <aside class="prompt-refine-panel" data-prompt-refine-panel>
@@ -6940,11 +7035,12 @@
       wrap.innerHTML = `
         <div class="field">
           <div class="prompt-field-wrap">
-            ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button" data-skill-picker-toggle type="button" data-tooltip="Skill 工具" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div>${generatorSkillOptionsHtml(node)}` : ""}
+            ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button ${node.skillId ? "skill-active" : ""}" data-skill-picker-toggle type="button" data-tooltip="${node.skillId ? `正在使用：${escapeHtml(selectedSkillName)}` : "Skill 工具"}" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div>${generatorSkillOptionsHtml(node)}` : ""}
             ${promptReferenceCount ? `<div class="prompt-token-overlay" data-prompt-token-overlay aria-hidden="true">${renderPromptReferenceTokens(node.prompt, promptReferenceCount)}</div>` : ""}
             <textarea class="prompt-textarea${promptReferenceCount ? " prompt-token-input" : ""}" data-field="prompt" data-autogrow style="${node.promptHeight ? `height:${node.promptHeight}px;` : ""}" placeholder="输入提示词">${escapeHtml(node.prompt)}</textarea>
           </div>
         </div>
+        ${skillUsageHtml}
         <div class="field generator-reference-field" ${node.type === "keyword" ? "hidden" : ""}>
           <div class="upload-box">
             ${renderGeneratorRefs(node)}
@@ -7022,6 +7118,9 @@
         promptOverlay.scrollLeft = promptField.scrollLeft;
       };
       promptField?.addEventListener("input", syncPromptReferenceTokens);
+      promptField?.addEventListener("input", () => {
+        if (promptField.value !== node.skillOptimizedPrompt) node.skillLastAppliedPrompt = "";
+      });
       promptField?.addEventListener("scroll", syncPromptReferenceTokens);
       const keywordToggle = wrap.querySelector("[data-keyword-toggle]");
       const keywordMenu = wrap.querySelector("[data-keyword-menu]");
@@ -7070,10 +7169,56 @@
           node.skillId = id;
           node.skillName = skill?.name || "";
           node.skillLastAppliedPrompt = "";
+          node.skillOriginalPrompt = "";
+          node.skillOptimizedPrompt = "";
+          node.skillCompareOpen = false;
           window.WandouSkills?.setSelected?.(skill);
           node.status = skill ? `已选择 Skill：${skill.name}。生成时会先按该规则优化提示词。` : "已使用默认绘图规则。";
           render();
         });
+      });
+      wrap.querySelector("[data-skill-preview]")?.addEventListener("click", async () => {
+        if (!apiKeyInput.value.trim()) {
+          setSettingsOpen(true);
+          apiKeyInput.focus();
+          showToast("预览 Skill 优化前必须先填写 API 密钥");
+          return;
+        }
+        pushHistory();
+        node.skillLastAppliedPrompt = "";
+        try {
+          await applySelectedSkillForGeneration(node);
+          node.skillCompareOpen = true;
+          node.status = `${node.skillName || "Skill"} 已完成提示词优化，可查看使用前后对比。`;
+          render();
+          scheduleCanvasSave();
+        } catch (error) {
+          node.status = `Skill 预览失败：${friendlyErrorMessage(error)}`;
+          render();
+          showToast(node.status);
+        }
+      });
+      wrap.querySelector("[data-skill-compare-toggle]")?.addEventListener("click", () => {
+        node.skillCompareOpen = !node.skillCompareOpen;
+        render();
+      });
+      wrap.querySelector("[data-skill-restore]")?.addEventListener("click", () => {
+        pushHistory();
+        node.prompt = node.skillOriginalPrompt || node.prompt;
+        node.skillLastAppliedPrompt = "";
+        node.skillCompareOpen = false;
+        node.status = "已恢复 Skill 优化前的提示词。";
+        render();
+        scheduleCanvasSave();
+      });
+      wrap.querySelector("[data-skill-use-optimized]")?.addEventListener("click", () => {
+        pushHistory();
+        node.prompt = node.skillOptimizedPrompt || node.prompt;
+        node.skillLastAppliedPrompt = node.prompt;
+        node.skillCompareOpen = false;
+        node.status = `正在使用 ${node.skillName || "Skill"} 优化后的提示词。`;
+        render();
+        scheduleCanvasSave();
       });
       wrap.querySelector("[data-auto-split-toggle]")?.addEventListener("click", () => {
         pushHistory();
@@ -7570,7 +7715,7 @@
           ? `<video src="${node.mediaUrl}" controls></video>`
           : `<img src="${node.previewUrl || node.mediaUrl}" alt="${node.title}" loading="lazy" decoding="async" ${node.type === "result" ? 'draggable="false"' : ""}>`
         : node.type === "result"
-        ? `<div class="placeholder-art result-empty-visual"><span class="result-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>图片将在这里显示</strong><span>生成后可放大查看并下载原始尺寸</span></div>`
+        ? `<div class="placeholder-art result-empty-visual"><span class="result-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>生成后可放大查看并下载原始尺寸</span></div>`
         : `<div class="placeholder-art"><strong>参考图片</strong><span>可上传素材，也可连接生成节点输出。</span></div>`;
 
       wrap.innerHTML = `

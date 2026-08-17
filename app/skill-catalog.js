@@ -1,10 +1,10 @@
 (function () {
   const selectedKey = "wandouSelectedSkillV1";
   const fallbacks = [
-    { id: "builtin-imagegen", name: "imagegen", description: "根据场景、构图、光线、材质与文字要求整理绘图提示词。", builtin: true },
-    { id: "builtin-design", name: "design", description: "为海报、品牌与视觉系统补充规范化的设计语言。", builtin: true },
-    { id: "builtin-banner", name: "banner-design", description: "针对海报、横幅和社交媒体画面优化构图与排版。", builtin: true },
-    { id: "builtin-prompt", name: "prompt-optimizer", description: "把零散需求整理成明确、完整且可执行的生成提示词。", builtin: true }
+    { id: "builtin-imagegen", name: "imagegen", description: "根据场景、构图、光线、材质与文字要求整理绘图提示词。", builtin: true, source: "系统", canDelete: false },
+    { id: "builtin-design", name: "design", description: "为海报、品牌与视觉系统补充规范化的设计语言。", builtin: true, source: "个人", canDelete: true },
+    { id: "builtin-banner", name: "banner-design", description: "针对海报、横幅和社交媒体画面优化构图与排版。", builtin: true, source: "个人", canDelete: true },
+    { id: "builtin-prompt", name: "prompt-optimizer", description: "把零散需求整理成明确、完整且可执行的生成提示词。", builtin: true, source: "个人", canDelete: true }
   ];
   const builtinInstructions = {
     "builtin-imagegen": "把用户内容优化为可直接用于图片生成的提示词。保持原意和语言，明确主体、环境、构图、镜头、光线、材质、色彩、风格、画幅以及必须保留的文字。只返回优化后的提示词。",
