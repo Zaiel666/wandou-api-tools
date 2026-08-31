@@ -6341,7 +6341,10 @@
       const node = nodes.find((item) => item.id === id);
       const current = canvas.querySelector(`[data-id="${id}"]`);
       if (!node || !current) return;
-      current.replaceWith(renderNode(node));
+      const replacement = renderNode(node);
+      canvasMediaObserver?.unobserve(current);
+      current.replaceWith(replacement);
+      stabilizeMountedNode(replacement, node);
       scheduleDrawLinks();
     }
 
