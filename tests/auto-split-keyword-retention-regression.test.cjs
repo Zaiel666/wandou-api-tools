@@ -16,5 +16,8 @@ assert.match(confirmSource, /finally\s*\{[\s\S]*node\.autoSplitGenerating = fals
 assert.match(source, /生成失败/);
 assert.match(source, /关键词仍保留/);
 assert.match(source, /data-auto-split-copy/);
+assert.match(source, /data-auto-split-regenerate/, "a failed keyword row must expose a single-item regenerate button");
+assert.match(source, /regenerateResultNode\(button\.dataset\.autoSplitRegenerate\)/, "the failed-row button must regenerate only its mapped result");
+assert.match(source, /failedAutoSplitResult/, "failed auto-split results must be eligible for regeneration even without an image URL");
 
-console.log("PASS: automatic split keywords remain visible and mapped after generation failures");
+console.log("PASS: automatic split keywords remain visible, mapped, and individually retryable after failures");

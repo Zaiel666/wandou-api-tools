@@ -4166,6 +4166,11 @@
     .auto-split-result-state.generating { color:#176f3b; background:#dff4e7; }
     .auto-split-result-state.success { color:#176f3b; background:#d8f2e1; }
     .auto-split-result-state.failed { color:#b42318; background:#fde6e3; }
+    .auto-split-regenerate { flex:none; width:22px; min-height:22px; padding:0; display:grid; place-items:center; border:1px solid #efb4ad; border-radius:999px; color:#b42318; background:#fff5f3; cursor:pointer; }
+    .auto-split-regenerate:hover,
+    .auto-split-regenerate:focus-visible { color:#fff; border-color:#c43226; background:#c43226; outline:none; }
+    .auto-split-regenerate svg { width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .auto-split-regenerate:disabled { opacity:.46; cursor:wait; }
     .auto-split-copy { flex:none; min-height:22px; padding:2px 7px; border:1px solid #d5ddd8; border-radius:6px; color:#506058; background:#fff; font-size:9px; cursor:pointer; }
     .auto-split-copy:hover { color:#176f3b; border-color:#8eb99e; background:#f2f8f4; }
     .auto-split-item textarea { width:100%; min-height:58px; max-height:108px; resize:vertical; overflow:auto; padding:8px 9px; border:1px solid #d5ddd8; border-radius:8px; color:#26342d; background:#fff; font-size:11px; line-height:1.55; outline:none; }
@@ -4179,6 +4184,9 @@
     body.dark-theme .auto-split-result-state.generating,
     body.dark-theme .auto-split-result-state.success { color:#a9efbd; background:#23452f; }
     body.dark-theme .auto-split-result-state.failed { color:#ffb4aa; background:#542b28; }
+    body.dark-theme .auto-split-regenerate { color:#ffb4aa; border-color:#86504a; background:#3f2927; }
+    body.dark-theme .auto-split-regenerate:hover,
+    body.dark-theme .auto-split-regenerate:focus-visible { color:#fff; border-color:#cf5549; background:#b83d33; }
     body.dark-theme .auto-split-copy { color:#dce6e0; background:#262c29; border-color:#46504b; }
     .auto-split-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
     .auto-split-actions [data-auto-split-edit],
@@ -6735,11 +6743,11 @@
           && linkedIds.has(item.id)
           && (!node.autoSplitBatchFolder || item.autoSaveBatchFolder === node.autoSplitBatchFolder));
         const result = matches[matches.length - 1];
-        if (!result) return { key: "waiting", label: node.autoSplitPlanConfirmed ? "等待生成" : "待确认" };
-        if (result.pending) return { key: "generating", label: "生成中" };
-        if (result.mediaUrl) return { key: "success", label: "已成功" };
-        if (/失败|错误|超时|中断/.test(result.status || "")) return { key: "failed", label: "生成失败" };
-        return { key: "waiting", label: "等待生成" };
+        if (!result) return { key: "waiting", label: node.autoSplitPlanConfirmed ? "等待生成" : "待确认", resultId: "" };
+        if (result.pending) return { key: "generating", label: "生成中", resultId: result.id };
+        if (result.mediaUrl) return { key: "success", label: "已成功", resultId: result.id };
+        if (/失败|错误|超时|中断/.test(result.status || "")) return { key: "failed", label: "生成失败", resultId: result.id };
+        return { key: "waiting", label: "等待生成", resultId: result.id };
       };
       const resultStates = node.autoSplitPlan.map((_item, index) => resultStateFor(index));
       const failedCount = resultStates.filter((state) => state.key === "failed").length;
@@ -6760,7 +6768,10 @@
         <div class="auto-split-plan-list">
           ${node.autoSplitPlan.map((item, index) => {
             const resultState = resultStates[index];
-            return `<label class="auto-split-item"><span class="auto-split-index">${index + 1}</span><span class="auto-split-prompt-card"><span class="auto-split-item-meta"><span class="auto-split-item-title">${escapeHtml(item.title || `第 ${index + 1} 张`)}</span><span class="auto-split-result-state ${resultState.key}">${resultState.label}</span><button class="auto-split-copy" data-auto-split-copy="${index}" type="button">复制</button></span>${editing
+            const retryButton = resultState.key === "failed" && resultState.resultId
+              ? `<button class="auto-split-regenerate" data-auto-split-regenerate="${escapeHtml(resultState.resultId)}" type="button" title="重新生成这一张" aria-label="重新生成第 ${index + 1} 张"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>`
+              : "";
+            return `<label class="auto-split-item"><span class="auto-split-index">${index + 1}</span><span class="auto-split-prompt-card"><span class="auto-split-item-meta"><span class="auto-split-item-title">${escapeHtml(item.title || `第 ${index + 1} 张`)}</span>${retryButton}<span class="auto-split-result-state ${resultState.key}">${resultState.label}</span><button class="auto-split-copy" data-auto-split-copy="${index}" type="button">复制</button></span>${editing
               ? `<textarea data-auto-split-prompt="${index}">${escapeHtml(item.prompt || "")}</textarea>`
               : `<span class="auto-split-prompt-preview">${escapeHtml(item.prompt || "")}</span>`}</span></label>`;
           }).join("")}
@@ -6827,6 +6838,13 @@
           event.stopPropagation();
           const index = Number(button.dataset.autoSplitCopy);
           void copyPromptText(String(node.autoSplitPlan[index]?.prompt || ""));
+        });
+      });
+      wrap.querySelectorAll("[data-auto-split-regenerate]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void regenerateResultNode(button.dataset.autoSplitRegenerate);
         });
       });
       wrap.querySelector("[data-auto-split-confirm]")?.addEventListener("click", () => confirmAutoSplitGeneration(node));
@@ -9606,7 +9624,8 @@
 
     function canRegenerateResult(resultNode) {
       if (!resultNode || resultNode.type !== "result" || resultNode.pending || resultNode.regenerating) return false;
-      if (resultNode.mediaType !== "image" || !favoriteMediaUrl(resultNode)) return false;
+      const failedAutoSplitResult = Number(resultNode.autoSplitIndex) > 0 && /失败|错误|超时|中断/.test(resultNode.status || "");
+      if (resultNode.mediaType !== "image" || (!favoriteMediaUrl(resultNode) && !failedAutoSplitResult)) return false;
       return Boolean(resultGenerationSource(resultNode));
     }
 
@@ -9686,6 +9705,7 @@
       original.regenerating = true;
       original.regenerationElapsed = 0;
       render();
+      refreshRenderedNode(sourceNode.id);
       showToast("已在效果图组最下方创建重新生成窗口");
 
       const timer = setInterval(() => {
@@ -9740,6 +9760,7 @@
         original.regenerating = false;
         original.regenerationElapsed = 0;
         render();
+        refreshRenderedNode(sourceNode.id);
         await saveCanvasState();
       }
     }
@@ -12817,12 +12838,8 @@ ${formatInstruction}`;
       try {
         let blob = null;
         let objectUrl = "";
-        if (node.width && node.height) {
-          objectUrl = await imageToSizedBlobUrl(src, node.width, node.height);
-          blob = await sourceToBlob(objectUrl || src, "image/png");
-        } else {
-          blob = await sourceToBlob(src, "image/png");
-        }
+        objectUrl = await imageToSizedBlobUrl(src, node.width, node.height, Boolean(node.transparent));
+        blob = await sourceToBlob(objectUrl || src, "image/png");
         if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
         const filename = downloadFileName(node, "png");
         if (blob && await writeBlobToAutoSaveBatchDirectory(blob, filename, node.autoSaveBatchFolder || "")) node.autoSaved = true;
@@ -12900,8 +12917,8 @@ ${formatInstruction}`;
         return;
       }
       let objectUrl = "";
-      if (node.mediaType === "image" && node.width && node.height) {
-        objectUrl = await imageToSizedBlobUrl(downloadUrl, node.width, node.height);
+      if (node.mediaType === "image") {
+        objectUrl = await imageToSizedBlobUrl(downloadUrl, node.width, node.height, Boolean(node.transparent));
       }
       if (node.transparent) {
         const transparentOk = await imageHasTransparentPixels(objectUrl || downloadUrl);
@@ -12962,7 +12979,7 @@ ${formatInstruction}`;
       });
     }
 
-    async function imageToSizedBlobUrl(src, width, height) {
+    async function imageToSizedBlobUrl(src, width, height, keepTransparent = false) {
       return new Promise(async (resolve) => {
         let objectUrl = "";
         const img = new Image();
@@ -12970,10 +12987,12 @@ ${formatInstruction}`;
         img.onload = () => {
           try {
             const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
+            const outputWidth = Math.max(1, Number(width) || Number(img.naturalWidth) || 1);
+            const outputHeight = Math.max(1, Number(height) || Number(img.naturalHeight) || 1);
+            canvas.width = outputWidth;
+            canvas.height = outputHeight;
             const ctx = canvas.getContext("2d");
-            drawImageAspectSafe(ctx, img, width, height, false);
+            drawImageAspectSafe(ctx, img, outputWidth, outputHeight, keepTransparent);
             canvas.toBlob((blob) => {
               if (!blob) {
                 resolve("");
@@ -14420,8 +14439,8 @@ ${formatInstruction}`;
       const extension = activeLightbox.mode === "video" ? "mp4" : "png";
       let sizedDownloadUrl = "";
       try {
-        if (activeLightbox.mode !== "video" && node.width && node.height) {
-          sizedDownloadUrl = await imageToSizedBlobUrl(src, node.width, node.height);
+        if (activeLightbox.mode !== "video") {
+          sizedDownloadUrl = await imageToSizedBlobUrl(src, node.width, node.height, Boolean(node.transparent));
         }
         await triggerDownload(
           sizedDownloadUrl || src,

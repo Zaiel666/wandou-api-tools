@@ -4,8 +4,10 @@ desktop-client/dist/
 desktop-client/dist-*/
 backups/
 desktop-client/node_modules/
+.pnpm-store/
 release/
 豌豆AI工具_v*/
+v*-update-e2e*/
 *.lnk
 *.exe
 *.log
