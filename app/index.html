@@ -55,9 +55,7 @@
             <span>联系</span>
           </button>
           <div class="contact-card">
-            <strong>充值请联系我</strong>
             <span>微信：peafour1111</span>
-            <span>邮箱：zl779584477@outlook.com</span>
             <div class="qr-placeholder">
               <img class="qr-image" src="./assets/wechat-qr.png" alt="微信二维码" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
               <span hidden>二维码待替换</span>
@@ -68,15 +66,6 @@
           <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/>
             <path d="M19.25 12a7.58 7.58 0 0 0-.08-1.1l2.03-1.56-1.9-3.28-2.42.98a7.36 7.36 0 0 0-1.92-1.1L14.58 3h-5.16l-.38 2.94a7.36 7.36 0 0 0-1.92 1.1L4.7 6.06 2.8 9.34l2.03 1.56a7.58 7.58 0 0 0 0 2.2L2.8 14.66l1.9 3.28 2.42-.98c.58.46 1.23.83 1.92 1.1l.38 2.94h5.16l.38-2.94a7.36 7.36 0 0 0 1.92-1.1l2.42.98 1.9-3.28-2.03-1.56c.05-.36.08-.73.08-1.1Z"/>
-          </svg>
-        </button>
-        <button class="cache-clear-button" type="button" aria-label="清理缓存" title="清理缓存" data-cache-clear>
-          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 7h14"/>
-            <path d="M9 7V4h6v3"/>
-            <path d="m7 7 1 13h8l1-13"/>
-            <path d="M10.5 11v5"/>
-            <path d="M13.5 11v5"/>
           </svg>
         </button>
         <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
@@ -104,7 +93,7 @@
       <div class="tool-grid module-grid common-tool-grid">
       <a class="tool-card module-card module-canvas" href="./project-hub.html" rel="noopener noreferrer" data-tab-title="项目文件夹">
         <span class="module-copy">
-          <span class="tool-label">节点无线画布<br>工作流</span>
+          <span class="tool-label">节点无线画布<br>AI绘图工作流</span>
           <span class="tool-desc">灵感、文本、图片、视频节点统一整理。</span>
           <span class="module-enter" aria-hidden="true">→</span>
         </span>
@@ -260,18 +249,18 @@
         <details class="info-card notice-card notice-card-latest">
           <summary>
             <span class="info-meta">
-              <span class="info-kicker">v1.0.57 资产、Skill 与节点细节优化</span>
-              <time datetime="2026-08-16">2026 年 8 月 16 日</time>
+              <span class="info-kicker">v1.0.58 自动拆分关键词持续保留</span>
+              <time datetime="2026-08-31">2026 年 8 月 31 日</time>
             </span>
-            <h3>资产与 Skill 集中管理，节点按钮更加规整</h3>
-            <p>新增资产页面统一查看已安装 Skill、生成图片和视频，并优化参考图与效果图操作。</p>
+            <h3>图片失败后仍能找到对应的自动拆分关键词</h3>
+            <p>自动拆分确认并开始生图后，关键词列表会继续保留在原节点下方，不再自动关闭。</p>
           </summary>
           <div class="notice-detail">
-            <p>绘图 Skill 已收进提示词输入框右上角的工具入口，可直接选择规则或进入资产页管理。</p>
-            <p>修复参考图拖入、效果图按钮越界与图标不居中问题；发布前增加 UTF-8、生成链路、页面像素、性能和自动更新回归检查。</p>
-            <nav class="notice-links" aria-label="v1.0.57 下载链接">
-              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.57" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
-              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.57/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            <p>每条关键词会显示等待、生成中、成功或失败状态，并可单独复制；失败图片可以直接按序号找到原关键词并重新生成。</p>
+            <p>同时优化项目与资产页面的全屏布局、通用界面中性色、离屏效果图加载和超大历史备份恢复性能。</p>
+            <nav class="notice-links" aria-label="v1.0.58 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.58" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.58/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
             </nav>
           </div>
         </details>

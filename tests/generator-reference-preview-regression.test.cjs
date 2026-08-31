@@ -18,6 +18,7 @@ assert.match(source, /event\.key !== "Enter" && event\.key !== " "/);
   try {
     const page = await browser.newPage();
     await page.goto(`${pathToFileURL(path.resolve(__dirname, "../app/ai-node-canvas.html")).href}?project=generator-reference-preview-test`);
+    await page.locator('body[data-canvas-ready="true"]').waitFor();
     const image = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Crect width='12' height='8' fill='%2343d13b'/%3E%3C/svg%3E";
     await page.evaluate((src) => {
       nodes = [];

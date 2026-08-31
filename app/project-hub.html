@@ -7,14 +7,14 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg: #071006;
-      --bg-soft: #0b150b;
-      --panel: rgba(17, 23, 19, .88);
-      --panel-strong: rgba(20, 28, 23, .96);
-      --line: rgba(214, 233, 212, .20);
+      --bg: #0c0e0d;
+      --bg-soft: #111412;
+      --panel: rgba(21, 24, 22, .94);
+      --panel-strong: rgba(25, 28, 26, .98);
+      --line: rgba(255, 255, 255, .11);
       --line-strong: rgba(118, 185, 0, .78);
-      --text: #f4fff1;
-      --muted: #a8b6a5;
+      --text: #f2f4f2;
+      --muted: #a3aaa4;
       --green: #76b900;
       --green-soft: rgba(118, 185, 0, .18);
       --red: #ff4d4f;
@@ -24,14 +24,14 @@
 
     body.light-theme {
       color-scheme: light;
-      --bg: #ffffff;
-      --bg-soft: #ffffff;
+      --bg: #f5f6f5;
+      --bg-soft: #f0f2f0;
       --panel: rgba(255, 255, 255, .90);
       --panel-strong: rgba(255, 255, 255, .98);
-      --line: rgba(33, 48, 32, .16);
+      --line: #dfe3df;
       --line-strong: rgba(84, 145, 0, .72);
-      --text: #172015;
-      --muted: #60705d;
+      --text: #171917;
+      --muted: #697069;
       --green-soft: rgba(99, 160, 0, .15);
       --shadow: 0 18px 52px rgba(22, 34, 20, .12);
       --focus: 0 0 0 2px rgba(99, 160, 0, .24), 0 18px 46px rgba(99, 160, 0, .10);
@@ -55,9 +55,10 @@
     button { cursor: pointer; }
 
     .shell {
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 28px;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: clamp(18px, 1.6vw, 32px);
     }
 
     .topbar {

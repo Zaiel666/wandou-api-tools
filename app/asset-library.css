@@ -109,7 +109,7 @@ button, input, select { font: inherit; }
   --green-soft: rgba(39,174,96,.13);
   --shadow: 0 10px 30px rgba(0,0,0,.22);
 }
-.asset-shell { width:min(1540px,100%); margin:0 auto; padding:18px 22px 40px; }
+.asset-shell { width:100%; max-width:none; min-height:100dvh; margin:0; padding:clamp(14px,1.35vw,24px) clamp(16px,1.7vw,32px) 40px; }
 .asset-topbar { height:58px; padding:0 16px; border-radius:12px; background:var(--panel) !important; }
 .asset-brand { gap:10px; }
 .asset-brand img { width:28px; height:28px; }

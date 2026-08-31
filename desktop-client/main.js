@@ -535,9 +535,22 @@ async function readCanvasBackups(payload = {}) {
       .sort((left, right) => Number(right.split("-")[0]) - Number(left.split("-")[0]))
       .slice(0, 12);
     const states = [];
+    let skippedLarge = 0;
     for (const name of snapshots) {
+      if (states.length >= 3) break;
       try {
-        const backup = JSON.parse(await fs.promises.readFile(path.join(directory, name), "utf8"));
+        const backupPath = path.join(directory, name);
+        const stats = await fs.promises.stat(backupPath);
+        // Old builds could embed every base64 image in every JSON snapshot. Reading
+        // twelve 100+ MB snapshots during project startup blocks Electron's main
+        // process and makes every tab appear frozen. Current saves keep media in
+        // canvas-media, so oversized legacy snapshots remain on disk for manual
+        // recovery but are not parsed during normal startup.
+        if (stats.size > 12 * 1024 * 1024) {
+          skippedLarge += 1;
+          continue;
+        }
+        const backup = JSON.parse(await fs.promises.readFile(backupPath, "utf8"));
         if (backup?.format === "wandou-canvas-backup" && Array.isArray(backup.state?.nodes)) {
           states.push(backup.state);
         }
@@ -545,7 +558,7 @@ async function readCanvasBackups(payload = {}) {
         // A damaged snapshot must not prevent older snapshots from being read.
       }
     }
-    return { success: true, states };
+    return { success: true, states, skippedLarge };
   } catch (error) {
     if (error.code === "ENOENT") return { success: true, states: [] };
     return { success: false, states: [], error: error.message };

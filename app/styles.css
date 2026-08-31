@@ -521,18 +521,20 @@ h1 {
 
 .contact-card {
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 8px);
   right: 0;
-  width: 254px;
+  width: 204px;
   z-index: 10;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 14px 16px 16px;
   color: var(--text);
   background: linear-gradient(180deg, var(--panel), rgba(8, 12, 7, 0.98));
   box-shadow: var(--shadow);
   display: grid;
-  gap: 9px;
+  justify-items: center;
+  text-align: center;
+  gap: 8px;
   opacity: 0;
   pointer-events: none;
   transform: translateY(-4px);
@@ -556,16 +558,17 @@ h1 {
 }
 
 .contact-card span {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .qr-placeholder {
-  width: 128px;
-  height: 128px;
-  margin-top: 4px;
-  border-radius: 10px;
+  width: 108px;
+  height: 108px;
+  margin: 2px auto 0;
+  border-radius: 8px;
   place-self: center;
   display: grid;
   place-items: center;
@@ -4053,6 +4056,124 @@ body.home-page .tool-section[data-home-section] > .tool-grid {
   max-width: 760px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+/* Neutral application surfaces: green is reserved for actions and selection. */
+:root {
+  --neutral-page: #f5f6f5;
+  --neutral-surface: #ffffff;
+  --neutral-surface-raised: #fafbfa;
+  --neutral-border: #dfe3df;
+  --neutral-text: #171917;
+  --neutral-muted: #697069;
+}
+
+:root[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  --neutral-page: #0c0e0d;
+  --neutral-surface: #151816;
+  --neutral-surface-raised: #1a1d1b;
+  --neutral-border: rgba(255, 255, 255, 0.11);
+  --neutral-text: #f2f4f2;
+  --neutral-muted: #a3aaa4;
+}
+
+.api-modal {
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(6px);
+}
+
+.api-dialog,
+[data-theme="light"] .api-dialog {
+  color: var(--neutral-text);
+  border-color: var(--neutral-border);
+  border-radius: 14px;
+  background: var(--neutral-surface);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.api-dialog-header p:last-child,
+.api-note { color: var(--neutral-muted); }
+
+.api-field input,
+[data-theme="light"] .api-field input {
+  color: var(--neutral-text);
+  border-color: var(--neutral-border);
+  background: var(--neutral-surface-raised);
+}
+
+.info-card,
+[data-theme="dark"] .info-card,
+:root:not([data-theme="light"]) .info-card,
+.announcement-intro-card,
+[data-theme="dark"] .announcement-intro-card,
+:root:not([data-theme="light"]) .announcement-intro-card {
+  color: var(--neutral-text);
+  border-color: var(--neutral-border);
+  background: var(--neutral-surface);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.12);
+}
+
+.info-card h3,
+.announcement-intro-section h4 { color: var(--neutral-text); }
+.info-card p,
+.announcement-intro-section ol { color: var(--neutral-muted); }
+.info-kicker { color: #23864a; font-weight: 650; }
+
+.service-card,
+[data-theme="dark"] .service-card,
+:root:not([data-theme="light"]) .service-card {
+  color: var(--neutral-text);
+  border-color: var(--neutral-border);
+  background: var(--neutral-surface);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.12);
+}
+
+.service-card:hover { border-color: rgba(39, 174, 96, 0.46); }
+.service-card strong { color: var(--neutral-text); }
+.service-card-description { color: var(--neutral-muted); }
+
+.service-dialog,
+.notice-dialog { background: transparent; }
+
+.service-dialog::backdrop,
+.notice-dialog::backdrop { background: rgba(0, 0, 0, 0.58); }
+
+.service-dialog-card,
+[data-theme="dark"] .service-dialog-card,
+:root:not([data-theme="light"]) .service-dialog-card,
+.notice-dialog-card,
+[data-theme="dark"] .notice-dialog-card,
+:root:not([data-theme="light"]) .notice-dialog-card {
+  color: var(--neutral-text);
+  border-color: var(--neutral-border);
+  background: var(--neutral-surface);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.34);
+}
+
+.service-dialog-section {
+  border-color: var(--neutral-border);
+  background: var(--neutral-surface-raised);
+}
+
+.service-dialog-content,
+[data-theme="dark"] .service-dialog-content,
+:root:not([data-theme="light"]) .service-dialog-content,
+.notice-dialog-intro { color: var(--neutral-muted); }
+
+.service-dialog-card h2,
+.service-dialog-section h3,
+.notice-dialog-card h2 { color: var(--neutral-text); }
+
+.service-dialog-close,
+[data-theme="dark"] .service-dialog-close,
+:root:not([data-theme="light"]) .service-dialog-close,
+.notice-dialog-close,
+[data-theme="dark"] .notice-dialog-close,
+:root:not([data-theme="light"]) .notice-dialog-close {
+  color: var(--neutral-text);
+  border-color: var(--neutral-border);
+  background: var(--neutral-surface-raised);
 }
 
 .copy-tool-grid {

@@ -4159,6 +4159,15 @@
     .auto-split-plan-list { display:grid; gap:7px; max-height:300px; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-gutter:stable; padding-right:4px; }
     .auto-split-item { display:grid; grid-template-columns:34px minmax(0,1fr); gap:7px; align-items:start; }
     .auto-split-index { min-height:32px; display:grid; place-items:center; color:#258f4e; font-size:11px; font-weight:600; }
+    .auto-split-prompt-card { min-width:0; display:grid; gap:5px; }
+    .auto-split-item-meta { min-width:0; display:flex; align-items:center; gap:6px; }
+    .auto-split-item-title { min-width:0; flex:1; overflow:hidden; color:var(--muted); font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+    .auto-split-result-state { flex:none; padding:2px 6px; border-radius:999px; color:#617067; background:#edf1ef; font-size:9px; line-height:1.4; }
+    .auto-split-result-state.generating { color:#176f3b; background:#dff4e7; }
+    .auto-split-result-state.success { color:#176f3b; background:#d8f2e1; }
+    .auto-split-result-state.failed { color:#b42318; background:#fde6e3; }
+    .auto-split-copy { flex:none; min-height:22px; padding:2px 7px; border:1px solid #d5ddd8; border-radius:6px; color:#506058; background:#fff; font-size:9px; cursor:pointer; }
+    .auto-split-copy:hover { color:#176f3b; border-color:#8eb99e; background:#f2f8f4; }
     .auto-split-item textarea { width:100%; min-height:58px; max-height:108px; resize:vertical; overflow:auto; padding:8px 9px; border:1px solid #d5ddd8; border-radius:8px; color:#26342d; background:#fff; font-size:11px; line-height:1.55; outline:none; }
     .auto-split-item textarea:read-only { height:auto; min-height:0; max-height:none; resize:none; overflow:hidden; }
     .auto-split-prompt-preview { min-width:0; padding:8px 9px; border:1px solid #d5ddd8; border-radius:8px; color:#5c6962; background:#f7faf8; font-size:11px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
@@ -4166,6 +4175,11 @@
     body.dark-theme .auto-split-item textarea { color:#edf5f0; background:#171b19; border-color:#46504b; }
     body.dark-theme .auto-split-item textarea:read-only { color:#b4c0b9; background:#202522; }
     body.dark-theme .auto-split-prompt-preview { color:#b4c0b9; background:#202522; border-color:#46504b; }
+    body.dark-theme .auto-split-result-state { color:#b8c3bd; background:#343a37; }
+    body.dark-theme .auto-split-result-state.generating,
+    body.dark-theme .auto-split-result-state.success { color:#a9efbd; background:#23452f; }
+    body.dark-theme .auto-split-result-state.failed { color:#ffb4aa; background:#542b28; }
+    body.dark-theme .auto-split-copy { color:#dce6e0; background:#262c29; border-color:#46504b; }
     .auto-split-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
     .auto-split-actions [data-auto-split-edit],
     .auto-split-actions [data-auto-split-confirm] { color:#33413a; background:#f4f7f5; border-color:#d2dad5; box-shadow:none; }
@@ -5923,6 +5937,8 @@
         autoSplitLockedSize: "",
         autoSplitReviewOpen: false,
         autoSplitEditing: false,
+        autoSplitPlanConfirmed: false,
+        autoSplitGenerating: false,
         autoSplitSeconds: 0,
         skillId: type === "generator" ? (selectedSkill?.id || "") : "",
         skillName: type === "generator" ? (selectedSkill?.name || "") : "",
@@ -5972,6 +5988,46 @@
       return "▣";
     }
 
+    let canvasMediaObserver = null;
+
+    function canvasMediaSourceFor(element) {
+      const owner = nodes.find((item) => item.id === element.dataset.canvasMedia);
+      if (!owner || owner.pending || owner.mediaType === "text") return "";
+      return owner.previewUrl || owner.mediaUrl || "";
+    }
+
+    function setDeferredNodeMedia(nodeElement, active) {
+      nodeElement.querySelectorAll("[data-canvas-media]").forEach((media) => {
+        const source = active ? canvasMediaSourceFor(media) : "";
+        if (active && source) {
+          if (media.getAttribute("src") !== source) media.setAttribute("src", source);
+          return;
+        }
+        if (media.tagName === "VIDEO") media.pause?.();
+        media.removeAttribute("src");
+        if (media.tagName === "VIDEO") media.load?.();
+      });
+      nodeElement.classList.toggle("media-deferred", !active);
+    }
+
+    function ensureCanvasMediaObserver() {
+      if (canvasMediaObserver || typeof IntersectionObserver !== "function") return canvasMediaObserver;
+      canvasMediaObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => setDeferredNodeMedia(entry.target, entry.isIntersecting));
+      }, { root: canvasWrap, rootMargin: "360px", threshold: 0 });
+      return canvasMediaObserver;
+    }
+
+    function observeDeferredNodeMedia(nodeElement) {
+      if (!nodeElement.querySelector("[data-canvas-media]")) return;
+      const observer = ensureCanvasMediaObserver();
+      if (!observer) {
+        setDeferredNodeMedia(nodeElement, true);
+        return;
+      }
+      observer.observe(nodeElement);
+    }
+
     function render() {
       const renderStartedAt = performance.now();
       // 保留没有变化的节点 DOM。此前每次都会删掉再创建全部节点：上传一张
@@ -5999,6 +6055,7 @@
         canvasChanged = true;
       });
       mountedNodes.forEach((element) => {
+        canvasMediaObserver?.unobserve(element);
         element.remove();
         canvasChanged = true;
       });
@@ -6014,6 +6071,7 @@
     }
 
     function stabilizeMountedNode(nodeEl, node) {
+      observeDeferredNodeMedia(nodeEl);
       requestAnimationFrame(() => {
         nodeEl.querySelectorAll("textarea[data-autogrow]").forEach((field) => {
           autoGrowTextarea(field);
@@ -6669,19 +6727,47 @@
     function renderAutoSplitPlanHtml(node) {
       if (!node.autoSplit || !node.autoSplitReviewOpen || !Array.isArray(node.autoSplitPlan) || !node.autoSplitPlan.length) return "";
       const editing = Boolean(node.autoSplitEditing);
-      const countdown = editing
+      const generating = Boolean(node.autoSplitGenerating);
+      const resultStateFor = (index) => {
+        const linkedIds = new Set(links.filter((link) => link.from === node.id).map((link) => link.to));
+        const matches = nodes.filter((item) => item.type === "result"
+          && item.autoSplitIndex === index + 1
+          && linkedIds.has(item.id)
+          && (!node.autoSplitBatchFolder || item.autoSaveBatchFolder === node.autoSplitBatchFolder));
+        const result = matches[matches.length - 1];
+        if (!result) return { key: "waiting", label: node.autoSplitPlanConfirmed ? "等待生成" : "待确认" };
+        if (result.pending) return { key: "generating", label: "生成中" };
+        if (result.mediaUrl) return { key: "success", label: "已成功" };
+        if (/失败|错误|超时|中断/.test(result.status || "")) return { key: "failed", label: "生成失败" };
+        return { key: "waiting", label: "等待生成" };
+      };
+      const resultStates = node.autoSplitPlan.map((_item, index) => resultStateFor(index));
+      const failedCount = resultStates.filter((state) => state.key === "failed").length;
+      const successCount = resultStates.filter((state) => state.key === "success").length;
+      const countdown = generating
+        ? "正在生成 · 关键词已保留"
+        : editing
         ? `已暂停（剩余 ${Math.max(0, Number(node.autoSplitSeconds) || 0)} 秒）`
+        : node.autoSplitPlanConfirmed
+        ? failedCount
+          ? `${failedCount} 张失败 · 关键词仍保留`
+          : successCount === node.autoSplitPlan.length
+          ? "全部完成 · 关键词已保留"
+          : "关键词已保留"
         : `${Math.max(0, Number(node.autoSplitSeconds) || 0)} 秒后自动生成`;
       return `<section class="auto-split-plan" data-auto-split-plan>
-        <div class="auto-split-plan-head"><div><strong>已拆分为 ${node.autoSplitPlan.length} 张</strong><div class="auto-split-note">已锁定 ${escapeHtml(node.autoSplitLockedSize || "统一尺寸")} · ${node.autoSplitConsistency === "frame" ? "逐帧强一致" : "系列母图一致"}。</div></div><span class="auto-split-countdown">${countdown}</span></div>
+        <div class="auto-split-plan-head"><div><strong>已保留 ${node.autoSplitPlan.length} 条生成关键词</strong><div class="auto-split-note">已锁定 ${escapeHtml(node.autoSplitLockedSize || "统一尺寸")} · ${node.autoSplitConsistency === "frame" ? "逐帧强一致" : "系列母图一致"}。即使图片失败，关键词也会继续显示，可按序号核对。</div></div><span class="auto-split-countdown" aria-live="polite">${countdown}</span></div>
         <div class="auto-split-plan-list">
-          ${node.autoSplitPlan.map((item, index) => `<label class="auto-split-item"><span class="auto-split-index">${index + 1}</span>${editing
-            ? `<textarea data-auto-split-prompt="${index}">${escapeHtml(item.prompt || "")}</textarea>`
-            : `<div class="auto-split-prompt-preview">${escapeHtml(item.prompt || "")}</div>`}</label>`).join("")}
+          ${node.autoSplitPlan.map((item, index) => {
+            const resultState = resultStates[index];
+            return `<label class="auto-split-item"><span class="auto-split-index">${index + 1}</span><span class="auto-split-prompt-card"><span class="auto-split-item-meta"><span class="auto-split-item-title">${escapeHtml(item.title || `第 ${index + 1} 张`)}</span><span class="auto-split-result-state ${resultState.key}">${resultState.label}</span><button class="auto-split-copy" data-auto-split-copy="${index}" type="button">复制</button></span>${editing
+              ? `<textarea data-auto-split-prompt="${index}">${escapeHtml(item.prompt || "")}</textarea>`
+              : `<span class="auto-split-prompt-preview">${escapeHtml(item.prompt || "")}</span>`}</span></label>`;
+          }).join("")}
         </div>
         <div class="auto-split-actions">
-          <button class="ghost" data-auto-split-edit type="button">${editing ? "继续修改" : "修改方案"}</button>
-          <button class="primary" data-auto-split-confirm type="button">${editing ? "采用修改并生成" : "立即采用并生成"}</button>
+          <button class="ghost" data-auto-split-edit type="button" ${generating ? "disabled" : ""}>${editing ? "继续修改" : "修改关键词"}</button>
+          <button class="primary" data-auto-split-confirm type="button" ${generating ? "disabled" : ""}>${generating ? "正在生成" : editing ? "采用修改并生成" : node.autoSplitPlanConfirmed ? "按这些关键词重新生成" : "立即采用并生成"}</button>
         </div>
       </section>`;
     }
@@ -6696,6 +6782,8 @@
       stopAutoSplitCountdown(node);
       node.autoSplitReviewOpen = true;
       node.autoSplitEditing = false;
+      node.autoSplitPlanConfirmed = false;
+      node.autoSplitGenerating = false;
       node.autoSplitSeconds = autoSplitCountdownSeconds;
       render();
       const timer = setInterval(() => {
@@ -6733,6 +6821,14 @@
           scheduleCanvasSave();
         });
       });
+      wrap.querySelectorAll("[data-auto-split-copy]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const index = Number(button.dataset.autoSplitCopy);
+          void copyPromptText(String(node.autoSplitPlan[index]?.prompt || ""));
+        });
+      });
       wrap.querySelector("[data-auto-split-confirm]")?.addEventListener("click", () => confirmAutoSplitGeneration(node));
     }
 
@@ -6746,11 +6842,21 @@
         return;
       }
       node.autoSplitPlan = plan;
-      node.autoSplitReviewOpen = false;
+      node.autoSplitReviewOpen = true;
       node.autoSplitEditing = false;
+      node.autoSplitPlanConfirmed = true;
+      node.autoSplitGenerating = true;
       node.autoSplitSeconds = 0;
       render();
-      await generateFromNode(node.id, { autoSplitConfirmed: true });
+      scheduleCanvasSave();
+      try {
+        await generateFromNode(node.id, { autoSplitConfirmed: true });
+      } finally {
+        node.autoSplitGenerating = false;
+        node.autoSplitReviewOpen = true;
+        render();
+        scheduleCanvasSave();
+      }
     }
 
     function normalizeAutoSplitPlan(items) {
@@ -7227,6 +7333,8 @@
         node.autoSplitPlan = [];
         node.autoSplitReviewOpen = false;
         node.autoSplitEditing = false;
+        node.autoSplitPlanConfirmed = false;
+        node.autoSplitGenerating = false;
         node.autoSplitSeconds = 0;
         node.status = node.autoSplit ? "自动拆分已打开：生成前会先分析方案。" : "自动拆分已关闭：可手动选择数量。";
         render();
@@ -7712,8 +7820,12 @@
         ? `<div class="text-result">${escapeHtml(node.text || "提示词结果会显示在这里。")}</div>`
         : node.mediaUrl
         ? isVideo
-          ? `<video src="${node.mediaUrl}" controls></video>`
-          : `<img src="${node.previewUrl || node.mediaUrl}" alt="${node.title}" loading="lazy" decoding="async" ${node.type === "result" ? 'draggable="false"' : ""}>`
+          ? node.type === "result"
+            ? `<video data-canvas-media="${escapeHtml(node.id)}" controls preload="none" draggable="false"></video>`
+            : `<video src="${node.mediaUrl}" controls preload="metadata"></video>`
+          : node.type === "result"
+          ? `<img data-canvas-media="${escapeHtml(node.id)}" alt="${escapeHtml(node.title)}" loading="lazy" decoding="async" draggable="false">`
+          : `<img src="${node.previewUrl || node.mediaUrl}" alt="${node.title}" loading="lazy" decoding="async">`
         : node.type === "result"
         ? `<div class="placeholder-art result-empty-visual"><span class="result-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke-width="1.7"/><path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>生成后可放大查看并下载原始尺寸</span></div>`
         : `<div class="placeholder-art"><strong>参考图片</strong><span>可上传素材，也可连接生成节点输出。</span></div>`;
@@ -9693,6 +9805,8 @@
         node.autoSplitReviewOpen = false;
         node.autoSplitEditing = false;
         node.autoSplitPlan = [];
+        node.autoSplitPlanConfirmed = false;
+        node.autoSplitGenerating = false;
         node.autoSplitSeriesSpec = "";
         node.autoSplitLockedSize = targetSize;
         node.autoSplitProgress = 1;
@@ -9713,6 +9827,7 @@
           const analysis = await analyzeAutoSplitPlan(node, references, node.autoSplitLockedSize, controller.signal);
           node.autoSplitPlan = analysis.items;
           node.autoSplitSeriesSpec = analysis.seriesSpec;
+          node.autoSplitPlanConfirmed = false;
           node.count = node.autoSplitPlan.length;
           node.autoSplitProgress = 0;
           node.status = `已分析出 ${node.count} 张独立图片，请确认或修改方案。`;
@@ -14440,6 +14555,7 @@ ${formatInstruction}`;
       applyGlobalTheme(readGlobalTheme());
       await restoreOrSeedCanvas();
       renderProjects();
+      document.body.dataset.canvasReady = "true";
       if (startupRecoveredProjectName) {
         showToast(`已恢复到 ${startupRecoveredProjectName}`);
       }
