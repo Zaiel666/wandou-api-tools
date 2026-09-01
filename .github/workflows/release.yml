@@ -104,7 +104,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v$env:VERSION：修复生图接口成功返回后结果节点图片空白的问题；生成图片会立即显示，同时继续保持大量结果图的离屏加载优化。"
+            notes = "v$env:VERSION：修复节点参考图遮罩的橡皮擦偶发无响应；画笔和橡皮擦改为独立按钮；工具栏文字保持横向并缩小整体高度，同时扩大画笔尺寸范围与拖动滑杆。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

@@ -20,5 +20,15 @@ assert.match(source, /composeMaskedEditImage\(rawUrl, maskedReference, targetSiz
 assert.match(source, /const mix = selectionData\.data\[index \+ 3\] \/ 255/);
 assert.match(source, /maskUrl: await persistMediaValue\(item\.maskUrl\)/);
 assert.match(source, /maskSelectionUrl: await getLocalMedia\(item\.maskSelectionUrl\)/);
+assert.match(source, /touch-action:\s*none/, "touch gestures must not interrupt mask painting");
+assert.match(source, /id="paintBrush"[\s\S]*?>画笔<\/button>/, "brush should have its own tool button");
+assert.match(source, /id="paintErase"[\s\S]*?>橡皮擦<\/button>/, "eraser should have its own tool button");
+assert.match(source, /paintBrush\.addEventListener\("click"[\s\S]*?setPaintEraseMode\(false\)/, "brush button should explicitly select paint mode");
+assert.match(source, /paintErase\.addEventListener\("click"[\s\S]*?setPaintEraseMode\(true\)/, "eraser button should explicitly select erase mode");
+assert.match(source, /id="paintSize"[^>]*max="160"[^>]*value="24"/, "brush slider should support a visibly larger brush");
+assert.match(source, /\.lightbox-tools button[\s\S]*?white-space:\s*nowrap/, "toolbar labels should stay horizontal");
+assert.match(source, /function drawPaintDot\(point\)/, "a tap must create or erase a visible dot");
+assert.match(source, /paintCanvas\.addEventListener\("lostpointercapture", finishPaintStroke\)/, "interrupted pointers must finish cleanly");
+assert.match(source, /const loadToken = \+\+paintLoadToken/, "stale asynchronous image loads must not replace the active reference");
 
 console.log("PASS: reference painting is stored as a separate API mask and composited only inside the selection");

@@ -3348,17 +3348,28 @@
       transform: translateX(-50%);
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px;
+      gap: 6px;
+      max-width: calc(100vw - 28px);
+      padding: 6px;
       border: 1px solid rgba(255, 255, 255, 0.28);
       border-radius: 12px;
       background: rgba(255, 255, 255, 0.16);
       backdrop-filter: blur(18px);
     }
 
+    .lightbox-tools > * {
+      flex: 0 0 auto;
+    }
+
     .lightbox-tools button {
-      min-width: 42px;
-      padding: 8px 10px;
+      min-width: 34px;
+      min-height: 34px;
+      padding: 6px 8px;
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+      word-break: keep-all;
+      writing-mode: horizontal-tb;
     }
 
     .lightbox-image-menu {
@@ -3536,7 +3547,14 @@
       box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
       background: #fff;
       cursor: crosshair;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      overscroll-behavior: contain;
     }
+
+    .paint-canvas.is-loading { cursor: wait; opacity: .72; }
+    .paint-canvas.eraser-mode { cursor: cell; }
 
     .lightbox-close {
       position: absolute;
@@ -3547,10 +3565,13 @@
     .paint-controls {
       display: none;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      min-width: 0;
     }
 
     .paint-mask-hint { color:rgba(255,255,255,.84); font-size:11px; white-space:nowrap; }
+    .paint-tool-group { display:flex; align-items:center; gap:3px; padding:2px; border:1px solid rgba(255,255,255,.18); border-radius:9px; background:rgba(0,0,0,.12); }
+    .paint-tool-group .paint-tool-button { min-width:50px; }
     .paint-controls .mask-mode-active { color:#fff; background:#258f4e; border-color:#55d486; }
     .reference-mask-overlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; opacity:.52; }
     .reference-mask-badge { position:absolute; right:4px; bottom:4px; padding:2px 5px; border-radius:999px; color:#fff; background:rgba(37,143,78,.88); font-size:8px; line-height:1.25; pointer-events:none; }
@@ -3563,8 +3584,46 @@
     }
 
     .paint-controls input[type="range"] {
-      width: 90px;
+      width: 136px;
+      height: 28px;
       padding: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      cursor: ew-resize;
+    }
+
+    .paint-controls input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.38);
+    }
+
+    .paint-controls input[type="range"]::-webkit-slider-thumb {
+      width: 20px;
+      height: 20px;
+      margin-top: -7px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #45bd72;
+      box-shadow: 0 2px 8px rgba(0,0,0,.28);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .paint-controls input[type="range"]::-moz-range-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.38);
+    }
+
+    .paint-controls input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #45bd72;
+      box-shadow: 0 2px 8px rgba(0,0,0,.28);
     }
 
     .gallery-overlay {
@@ -4034,6 +4093,21 @@
 
     .lightbox.paint-mode .paint-controls {
       display: flex;
+    }
+
+    @media (max-width: 1180px) {
+      .lightbox.paint-mode .lightbox-tools {
+        width: min(920px, calc(100vw - 20px));
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .lightbox.paint-mode .paint-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
     }
 
     @media (max-width: 920px) {
@@ -4713,8 +4787,11 @@
       <button id="lightboxDownload" class="ghost" type="button">下载</button>
       <div id="paintControls" class="paint-controls">
         <span class="paint-mask-hint">绿色区域允许修改</span>
-        <input id="paintSize" type="range" min="2" max="48" value="12" title="画笔大小">
-        <button id="paintErase" class="ghost" type="button">橡皮擦</button>
+        <input id="paintSize" type="range" min="2" max="160" value="24" title="拖动调整画笔大小" aria-label="画笔大小">
+        <div class="paint-tool-group" role="group" aria-label="遮罩工具">
+          <button id="paintBrush" class="ghost paint-tool-button mask-mode-active" type="button" aria-pressed="true">画笔</button>
+          <button id="paintErase" class="ghost paint-tool-button" type="button" aria-pressed="false">橡皮擦</button>
+        </div>
         <button id="paintUndo" class="ghost" type="button">撤回</button>
         <button id="paintRedo" class="ghost" type="button">前进</button>
         <button id="paintClear" class="ghost" type="button">清空遮罩</button>
@@ -4830,6 +4907,7 @@
     const promptPreviewNegative = document.getElementById("promptPreviewNegative");
     const paintCanvas = document.getElementById("paintCanvas");
     const paintSize = document.getElementById("paintSize");
+    const paintBrush = document.getElementById("paintBrush");
     const paintErase = document.getElementById("paintErase");
     const paintUndo = document.getElementById("paintUndo");
     const paintRedo = document.getElementById("paintRedo");
@@ -4905,6 +4983,9 @@
     let paintOriginalCanvas = document.createElement("canvas");
     let paintSelectionCanvas = document.createElement("canvas");
     let paintEraseMode = false;
+    let paintReady = false;
+    let paintPointerId = null;
+    let paintLoadToken = 0;
     let gallerySize = "medium";
     let galleryMode = "image";
     let galleryTab = "canvas";
@@ -12364,7 +12445,16 @@ ${formatInstruction}`;
       closeLightboxImageMenu();
       lightbox.classList.add("open");
       updateLightboxFavoriteButton();
-      if (activeLightbox.mode === "paint") loadPaintCanvas(src);
+      if (activeLightbox.mode === "paint") {
+        loadPaintCanvas(src).catch((error) => {
+          console.warn("Reference mask editor could not load", error);
+          if (activeLightbox.mode === "paint" && activeLightbox.src === src) {
+            paintReady = false;
+            paintCanvas.classList.remove("is-loading");
+            showToast("参考图加载失败，请关闭后重试");
+          }
+        });
+      }
     }
 
     function closeLightbox() {
@@ -12389,9 +12479,11 @@ ${formatInstruction}`;
       paintLastPoint = null;
       paintUndoStack = [];
       paintRedoStack = [];
-      paintEraseMode = false;
-      paintErase.classList.remove("mask-mode-active");
-      paintErase.textContent = "橡皮擦";
+      paintReady = false;
+      paintPointerId = null;
+      paintLoadToken += 1;
+      paintCanvas.classList.remove("is-loading");
+      setPaintEraseMode(false);
     }
 
     function updateLightboxScale() {
@@ -12407,11 +12499,22 @@ ${formatInstruction}`;
     }
 
     async function loadPaintCanvas(src) {
+      const loadToken = ++paintLoadToken;
+      paintReady = false;
+      paintDrawing = false;
+      paintPointerId = null;
+      paintLastPoint = null;
+      paintCanvas.classList.add("is-loading");
+      setPaintEraseMode(false);
       const node = nodes.find((item) => item.id === activeLightbox.nodeId);
       const reference = node && activeLightbox.refIndex !== null
         ? normalizeReferences(node)[activeLightbox.refIndex]
         : null;
       const original = await loadImageForCanvas(src);
+      if (loadToken !== paintLoadToken || activeLightbox.mode !== "paint" || activeLightbox.src !== src) {
+        original.revoke();
+        return;
+      }
       const maxSide = 1400;
       const scale = Math.min(1, maxSide / Math.max(original.image.naturalWidth, original.image.naturalHeight));
       const width = Math.max(1, Math.round(original.image.naturalWidth * scale));
@@ -12429,18 +12532,29 @@ ${formatInstruction}`;
       if (reference?.maskSelectionUrl) {
         try {
           const savedSelection = await loadImageForCanvas(reference.maskSelectionUrl);
-          selectionCtx.drawImage(savedSelection.image, 0, 0, width, height);
+          if (loadToken === paintLoadToken && activeLightbox.mode === "paint" && activeLightbox.src === src) {
+            selectionCtx.drawImage(savedSelection.image, 0, 0, width, height);
+          }
           savedSelection.revoke();
         } catch (error) {
           console.warn("Mask preview could not be restored", error);
         }
       }
-      paintEraseMode = false;
-      paintErase.classList.remove("mask-mode-active");
-      paintErase.textContent = "橡皮擦";
+      if (loadToken !== paintLoadToken || activeLightbox.mode !== "paint" || activeLightbox.src !== src) return;
       renderPaintComposite();
       paintUndoStack = [selectionCtx.getImageData(0, 0, width, height)];
       paintRedoStack = [];
+      paintReady = true;
+      paintCanvas.classList.remove("is-loading");
+    }
+
+    function setPaintEraseMode(enabled) {
+      paintEraseMode = Boolean(enabled);
+      paintBrush.classList.toggle("mask-mode-active", !paintEraseMode);
+      paintBrush.setAttribute("aria-pressed", String(!paintEraseMode));
+      paintErase.classList.toggle("mask-mode-active", paintEraseMode);
+      paintErase.setAttribute("aria-pressed", String(paintEraseMode));
+      paintCanvas.classList.toggle("eraser-mode", paintEraseMode);
     }
 
     function renderPaintComposite() {
@@ -12461,16 +12575,35 @@ ${formatInstruction}`;
       };
     }
 
+    function paintBrushWidth() {
+      const rect = paintCanvas.getBoundingClientRect();
+      const displayScale = paintCanvas.width / Math.max(1, rect.width);
+      return Math.max(2, Number(paintSize.value) * displayScale);
+    }
+
+    function configurePaintContext(ctx) {
+      ctx.globalCompositeOperation = paintEraseMode ? "destination-out" : "source-over";
+      ctx.strokeStyle = "rgba(34, 197, 94, 1)";
+      ctx.fillStyle = "rgba(34, 197, 94, 1)";
+      ctx.lineWidth = paintBrushWidth();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+    }
+
+    function drawPaintDot(point) {
+      const ctx = paintSelectionCanvas.getContext("2d");
+      configurePaintContext(ctx);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      renderPaintComposite();
+    }
+
     function drawPaintLine(point) {
       if (!paintLastPoint) paintLastPoint = point;
       const ctx = paintSelectionCanvas.getContext("2d");
-      const rect = paintCanvas.getBoundingClientRect();
-      const displayScale = paintCanvas.width / Math.max(1, rect.width);
-      ctx.globalCompositeOperation = paintEraseMode ? "destination-out" : "source-over";
-      ctx.strokeStyle = "rgba(34, 197, 94, 1)";
-      ctx.lineWidth = Math.max(2, Number(paintSize.value) * displayScale);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+      configurePaintContext(ctx);
       ctx.beginPath();
       ctx.moveTo(paintLastPoint.x, paintLastPoint.y);
       ctx.lineTo(point.x, point.y);
@@ -12478,6 +12611,23 @@ ${formatInstruction}`;
       ctx.globalCompositeOperation = "source-over";
       renderPaintComposite();
       paintLastPoint = point;
+    }
+
+    function finishPaintStroke(event) {
+      if (!paintDrawing) return;
+      if (event && paintPointerId !== null && event.pointerId !== paintPointerId) return;
+      const pointerId = paintPointerId;
+      paintDrawing = false;
+      paintPointerId = null;
+      paintLastPoint = null;
+      pushPaintHistory();
+      if (pointerId !== null && paintCanvas.hasPointerCapture?.(pointerId)) {
+        try {
+          paintCanvas.releasePointerCapture(pointerId);
+        } catch (error) {
+          console.debug("Paint pointer capture was already released", error);
+        }
+      }
     }
 
     function pushPaintHistory() {
@@ -14477,32 +14627,39 @@ ${formatInstruction}`;
       lightboxImage.classList.remove("is-dragging");
     });
     paintCanvas.addEventListener("pointerdown", (event) => {
+      if (!paintReady || paintDrawing || event.isPrimary === false || event.button !== 0) return;
       event.preventDefault();
+      event.stopPropagation();
       paintDrawing = true;
-      paintLastPoint = paintPointFromEvent(event);
-      paintCanvas.setPointerCapture(event.pointerId);
-      drawPaintLine(paintLastPoint);
+      paintPointerId = event.pointerId;
+      const point = paintPointFromEvent(event);
+      paintLastPoint = point;
+      try {
+        paintCanvas.setPointerCapture(event.pointerId);
+      } catch (error) {
+        console.debug("Paint pointer capture is unavailable", error);
+      }
+      drawPaintDot(point);
     });
     paintCanvas.addEventListener("pointermove", (event) => {
-      if (!paintDrawing) return;
+      if (!paintDrawing || event.pointerId !== paintPointerId) return;
       event.preventDefault();
-      drawPaintLine(paintPointFromEvent(event));
+      event.stopPropagation();
+      const samples = typeof event.getCoalescedEvents === "function" ? event.getCoalescedEvents() : [];
+      const pointerSamples = samples.length ? samples : [event];
+      pointerSamples.forEach((sample) => drawPaintLine(paintPointFromEvent(sample)));
     });
-    paintCanvas.addEventListener("pointerup", () => {
-      if (paintDrawing) pushPaintHistory();
-      paintDrawing = false;
-      paintLastPoint = null;
-    });
-    paintCanvas.addEventListener("pointercancel", () => {
-      if (paintDrawing) pushPaintHistory();
-      paintDrawing = false;
-      paintLastPoint = null;
+    paintCanvas.addEventListener("pointerup", finishPaintStroke);
+    paintCanvas.addEventListener("pointercancel", finishPaintStroke);
+    paintCanvas.addEventListener("lostpointercapture", finishPaintStroke);
+    window.addEventListener("blur", () => finishPaintStroke());
+    paintBrush.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setPaintEraseMode(false);
     });
     paintErase.addEventListener("click", (event) => {
       event.stopPropagation();
-      paintEraseMode = !paintEraseMode;
-      paintErase.classList.toggle("mask-mode-active", paintEraseMode);
-      paintErase.textContent = paintEraseMode ? "继续涂抹" : "橡皮擦";
+      setPaintEraseMode(true);
     });
     paintUndo.addEventListener("click", (event) => {
       event.stopPropagation();
