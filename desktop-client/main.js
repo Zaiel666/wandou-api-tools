@@ -8,7 +8,12 @@ const { pathToFileURL, fileURLToPath } = require("url");
 
 const APP_NAME = "豌豆AI工具";
 const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app"]);
-const CANVAS_API_HOSTS = new Set(["zayapi.top", "www.zayapi.top"]);
+const CANVAS_API_HOSTS = new Set([
+  "zayapi.top",
+  "www.zayapi.top",
+  "zexitongxue.com",
+  "www.zexitongxue.com"
+]);
 const MAX_DESKTOP_API_RESPONSE_BYTES = 32 * 1024 * 1024;
 const MAX_SKILL_INSTRUCTIONS_BYTES = 256 * 1024;
 const MAX_CLIPBOARD_IMAGE_BYTES = 64 * 1024 * 1024;
@@ -525,20 +530,17 @@ async function writeCanvasBackup(payload = {}) {
   }
 }
 
-async function readCanvasBackups(payload = {}) {
-  const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
-  const projectId = safeCanvasBackupId(payload.projectId, "default-project");
-  const directory = canvasBackupDirectory(folderId, projectId);
+async function readCanvasBackupDirectory(directory, stateLimit = 3) {
+  const states = [];
+  let skippedLarge = 0;
   try {
     const snapshots = (await fs.promises.readdir(directory, { withFileTypes: true }))
       .filter((entry) => entry.isFile() && /^\d+-[0-9a-f]+\.json$/i.test(entry.name))
       .map((entry) => entry.name)
       .sort((left, right) => Number(right.split("-")[0]) - Number(left.split("-")[0]))
       .slice(0, 12);
-    const states = [];
-    let skippedLarge = 0;
     for (const name of snapshots) {
-      if (states.length >= 3) break;
+      if (states.length >= stateLimit) break;
       try {
         const backupPath = path.join(directory, name);
         const stats = await fs.promises.stat(backupPath);
@@ -559,10 +561,37 @@ async function readCanvasBackups(payload = {}) {
         // A damaged snapshot must not prevent older snapshots from being read.
       }
     }
-    return { success: true, states, skippedLarge };
+    return { states, skippedLarge };
   } catch (error) {
-    if (error.code === "ENOENT") return { success: true, states: [] };
-    return { success: false, states: [], error: error.message };
+    if (error.code === "ENOENT") return { states: [], skippedLarge };
+    throw error;
+  }
+}
+
+async function readCanvasBackups(payload = {}) {
+  const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
+  try {
+    if (payload.allProjects) {
+      const folderDirectory = path.join(canvasBackupRootDirectory(), folderId);
+      const projectDirectories = (await fs.promises.readdir(folderDirectory, { withFileTypes: true }))
+        .filter((entry) => entry.isDirectory())
+        .slice(0, 100);
+      const states = [];
+      let skippedLarge = 0;
+      for (const entry of projectDirectories) {
+        const result = await readCanvasBackupDirectory(path.join(folderDirectory, entry.name), 1);
+        states.push(...result.states);
+        skippedLarge += result.skippedLarge;
+      }
+      states.sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
+      return { success: true, states, skippedLarge };
+    }
+    const projectId = safeCanvasBackupId(payload.projectId, "default-project");
+    const result = await readCanvasBackupDirectory(canvasBackupDirectory(folderId, projectId), 3);
+    return { success: true, ...result };
+  } catch (error) {
+    if (error.code === "ENOENT") return { success: true, states: [], skippedLarge: 0 };
+    return { success: false, states: [], skippedLarge: 0, error: error.message };
   }
 }
 

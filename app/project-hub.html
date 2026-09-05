@@ -614,8 +614,14 @@
 
     async function resolveProjectMedia(value) {
       if (typeof value !== "string" || !value.startsWith(localMediaPrefix)) return value || "";
-      const db = await openLocalMediaDb();
       const id = value.slice(localMediaPrefix.length);
+      if (window.wandouShell?.readCanvasMedia) {
+        try {
+          const desktopResult = await window.wandouShell.readCanvasMedia({ id });
+          if (desktopResult?.success && desktopResult.value) return desktopResult.value;
+        } catch (_error) {}
+      }
+      const db = await openLocalMediaDb();
       let localValue = "";
       if (db) {
         localValue = await new Promise((resolve) => {
@@ -630,12 +636,6 @@
         });
       }
       if (localValue) return localValue;
-      if (window.wandouShell?.readCanvasMedia) {
-        try {
-          const desktopResult = await window.wandouShell.readCanvasMedia({ id });
-          return desktopResult?.success ? (desktopResult.value || "") : "";
-        } catch (_error) {}
-      }
       return "";
     }
 
@@ -649,11 +649,48 @@
         .slice(0, 3);
     }
 
+    async function readDesktopFolderState(folderId) {
+      if (!window.wandouShell?.readCanvasBackups) return null;
+      try {
+        const result = await window.wandouShell.readCanvasBackups({ folderId, allProjects: true });
+        let states = result?.success && Array.isArray(result.states) ? result.states : [];
+        // Older desktop bridges do not understand allProjects yet. Use the saved
+        // inner-project list to read each two-level backup directory explicitly.
+        if (!states.length) {
+          let innerProjects = [];
+          try {
+            innerProjects = JSON.parse(localStorage.getItem(`${canvasStorageKey}:project-collection:${folderId}`) || "[]");
+          } catch (_error) {}
+          const results = await Promise.all((Array.isArray(innerProjects) ? innerProjects : []).map((project) =>
+            window.wandouShell.readCanvasBackups({ folderId, projectId: project?.id }).catch(() => null)
+          ));
+          states = results.flatMap((item) => item?.success && Array.isArray(item.states) ? item.states.slice(0, 1) : []);
+        }
+        if (!states.length) return null;
+        states = states.slice().sort((left, right) => Number(left?.savedAt || 0) - Number(right?.savedAt || 0));
+        return {
+          savedAt: Math.max(...states.map((state) => Number(state?.savedAt || 0))),
+          nodes: states.flatMap((state) => Array.isArray(state?.nodes) ? state.nodes : []),
+          links: []
+        };
+      } catch (error) {
+        console.warn("Project folder backup summary could not be read", error);
+        return null;
+      }
+    }
+
     async function hydrateProjectCovers(projectList, renderToken) {
       await Promise.all(projectList.map(async (project) => {
         const cover = grid.querySelector(`[data-cover="${project.id}"]`);
         if (!cover) return;
-        const sources = projectResultPreviewSources(readState(project.id));
+        const state = await readDesktopFolderState(project.id) || readState(project.id);
+        if (renderToken !== coverRenderToken || !cover.isConnected) return;
+        if (state?.nodes?.length) cover.innerHTML = previewSvg(project, state);
+        const nodeCount = grid.querySelector(`[data-node-count="${project.id}"]`);
+        const savedAt = grid.querySelector(`[data-saved-at="${project.id}"]`);
+        if (nodeCount && Array.isArray(state?.nodes)) nodeCount.textContent = `${state.nodes.length} 个节点`;
+        if (savedAt && state?.savedAt) savedAt.textContent = `操作 ${formatTime(state.savedAt)}`;
+        const sources = projectResultPreviewSources(state);
         if (!sources.length) return;
         const resolved = (await Promise.all(sources.map(resolveProjectMedia))).filter(Boolean);
         if (renderToken !== coverRenderToken || !resolved.length || !cover.isConnected) return;
@@ -840,8 +877,8 @@
             </div>
             <div class="meta">
               <span>创建 ${formatTime(project.createdAt)}</span>
-              <span>操作 ${formatTime(savedAt)}</span>
-              <span>${nodeCount} 个节点</span>
+              <span data-saved-at="${project.id}">操作 ${formatTime(savedAt)}</span>
+              <span data-node-count="${project.id}">${nodeCount} 个节点</span>
               <span>${project.favorite ? "已收藏" : "未收藏"}</span>
             </div>
           </div>

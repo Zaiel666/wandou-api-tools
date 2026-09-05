@@ -104,7 +104,7 @@ const { chromium } = require("playwright");
       return { ok, text: toast.textContent, tone: toast.dataset.tone };
     });
     assert.equal(saveSuccess.ok, true);
-    assert.equal(saveSuccess.text, "已保存到本地：test.png");
+    assert.equal(saveSuccess.text, "已保存到：test.png");
     assert.equal(saveSuccess.tone, "success");
 
     const downloadPromise = page.waitForEvent("download");

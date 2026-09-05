@@ -11,13 +11,32 @@ const { chromium } = require("playwright");
   try {
     const context = await browser.newContext();
     const page = await context.newPage();
+    await page.addInitScript(() => {
+      window.wandouShell = {
+        readCanvasBackups: async ({ folderId, allProjects }) => folderId === "disk-test" && allProjects ? {
+          success: true,
+          states: [{
+            savedAt: Date.now() + 1000,
+            nodes: Array.from({ length: 21 }, (_, index) => index === 20 ? {
+              id: index,
+              type: "result",
+              mediaType: "image",
+              pending: false,
+              previewUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='9'%3E%3Crect width='16' height='9' fill='blue'/%3E%3C/svg%3E"
+            } : { id: index, type: "image" })
+          }]
+        } : { success: true, states: [] }
+      };
+    });
     const projectHubUrl = pathToFileURL(path.resolve(__dirname, "../app/project-hub.html")).href;
     await page.goto(projectHubUrl);
     await page.evaluate(() => {
       const now = Date.now();
       localStorage.setItem("aiCanvasProjectsV1", JSON.stringify([
         { id: "cover-test", name: "封面测试", color: "#76b900", createdAt: now, updatedAt: now, favorite: false },
+        { id: "disk-test", name: "磁盘封面测试", color: "#76b900", createdAt: now, updatedAt: now, favorite: false },
       ]));
+      localStorage.setItem("aiCanvasStateV1:project-collection:disk-test", JSON.stringify([{ id: "inner-disk-test" }]));
       localStorage.setItem("aiCanvasStateV1:cover-test", JSON.stringify({
         savedAt: now,
         nodes: [
@@ -36,6 +55,10 @@ const { chromium } = require("playwright");
     const coverImage = page.locator('[data-cover="cover-test"] .cover-media-cell img');
     await coverImage.waitFor({ state: "visible" });
     assert.match(await coverImage.getAttribute("src"), /^data:image\/svg\+xml/);
+    const diskCover = page.locator('[data-cover="disk-test"] .cover-media-cell img');
+    await diskCover.waitFor({ state: "visible" });
+    assert.match(await diskCover.getAttribute("src"), /fill='blue'/);
+    assert.equal(await page.locator('[data-node-count="disk-test"]').textContent(), "21 个节点");
 
     const canvasPage = await context.newPage();
     const canvasUrl = `${pathToFileURL(path.resolve(__dirname, "../app/ai-node-canvas.html")).href}?project=compact-test`;

@@ -5311,14 +5311,15 @@
         return;
       }
       const directoryName = selectedDirectory?.name?.trim() || "";
+      const directoryPath = selectedDirectory?.directory?.trim() || directoryName;
       button.textContent = directoryName || (selectedDirectory ? "已设置保存位置" : "⚠ 必须设置保存位置");
       button.setAttribute(
         "aria-label",
         directoryName ? `当前保存位置：${directoryName}，点击更改` : "必须设置保存位置"
       );
       button.disabled = false;
-      button.title = directoryName
-        ? `当前保存位置：${directoryName}\n点击可更改保存位置`
+      button.title = directoryPath
+        ? `当前保存位置：${directoryPath}\n点击可更改保存位置`
         : "选择生成图片自动保存的本地文件夹";
     }
 
@@ -5335,7 +5336,8 @@
           nativeAutoSaveDirectory = selected;
           autoSaveDirectoryHandle = null;
           updateAutoSaveDirectoryButton();
-          showToast(`已选择保存位置：${selected.name || selected.directory}`, "success");
+          showToast(`已选择保存位置：${selected.directory || selected.name}`, "success");
+          await saveUnsavedGeneratedImagesToSelectedDirectory();
           return;
         }
         const handle = await window.showDirectoryPicker({ mode: "readwrite" });
@@ -5347,6 +5349,7 @@
         await storeAutoSaveDirectoryHandle(handle);
         updateAutoSaveDirectoryButton();
         showToast(`\u5df2\u9009\u62e9\u4fdd\u5b58\u4f4d\u7f6e\uff1a${handle.name}`, "success");
+        await saveUnsavedGeneratedImagesToSelectedDirectory();
       } catch (error) {
         if (error?.name !== "AbortError") showToast(`选择保存位置失败：${error?.message || "未知错误"}`, "error", 4000);
       }
@@ -5559,7 +5562,7 @@
       activeProjectId = localStorage.getItem(activeProjectStorageKey) || projects[0].id;
       if (!projects.some((project) => project.id === activeProjectId)) activeProjectId = projects[0].id;
       recoverStaleActiveProjectSelection();
-      saveProjects();
+      try { saveProjects(); } catch (error) { warnCanvasStorageSkipped(error); }
       renderProjects();
     }
 
@@ -5575,7 +5578,8 @@
       pinProjectHubButton.classList.toggle("active", projectHubPinned);
       pinProjectHubButton.title = projectHubPinned ? "取消固定项目合集" : "固定项目合集";
       pinProjectHubButton.setAttribute("aria-label", pinProjectHubButton.title);
-      localStorage.setItem(projectHubPinStorageKey, projectHubPinned ? "1" : "0");
+      try { localStorage.setItem(projectHubPinStorageKey, projectHubPinned ? "1" : "0"); }
+      catch (error) { warnCanvasStorageSkipped(error); }
     }
 
     function renderProjects() {
@@ -10372,7 +10376,12 @@
         pending.fullUrl = url;
         pending.sourceUrl = rawUrl;
         pending.mediaType = apiResult.mediaType;
-        pending.transparent = sourceNode.type === "png";
+        pending.transparent = sourceNode.type === "png" || await settleWithin(
+          imageHasTransparentPixels(url),
+          8000,
+          false,
+          "透明通道检测"
+        );
         pending.text = apiResult.text || "";
         pending.width = finalWidth;
         pending.height = finalHeight;
@@ -10518,8 +10527,17 @@
       const headers = request.isFormData ? {} : { ...jsonHeaders };
       if (request.isFormData && apiKeyInput.value.trim()) headers.Authorization = `Bearer ${apiKeyInput.value.trim()}`;
 
-      let url = normalizeApiEndpoint(configuredUrl, node, references.length > 0 && !request.forceGenerationEndpoint);
-      if (request.forceGenerationEndpoint) {
+      const useOfficialAsyncImageApi = node.type !== "video"
+        && node.type !== "keyword"
+        && !request.isFormData
+        && isOfficialImageApiEndpoint(configuredUrl);
+      let requestBody = useOfficialAsyncImageApi
+        ? officialAsyncImageRequestBody(request.body)
+        : request.body;
+      let url = useOfficialAsyncImageApi
+        ? officialAsyncImageSubmitEndpoint(configuredUrl)
+        : normalizeApiEndpoint(configuredUrl, node, references.length > 0 && !request.forceGenerationEndpoint);
+      if (!useOfficialAsyncImageApi && request.forceGenerationEndpoint) {
         url = url.replace(/\/v1\/images\/edits\/?$/i, "/v1/images/generations");
       }
 
@@ -10528,9 +10546,22 @@
         response = await fetchMaybeProxied(url, {
           method: "POST",
           headers,
-          body: request.body,
+          body: requestBody,
           signal
         });
+        if (useOfficialAsyncImageApi && !response.ok && [404, 405, 501].includes(response.status)) {
+          url = normalizeApiEndpoint(configuredUrl, node, references.length > 0 && !request.forceGenerationEndpoint);
+          if (request.forceGenerationEndpoint) {
+            url = url.replace(/\/v1\/images\/edits\/?$/i, "/v1/images/generations");
+          }
+          requestBody = request.body;
+          response = await fetchMaybeProxied(url, {
+            method: "POST",
+            headers,
+            body: requestBody,
+            signal
+          });
+        }
         if (!response.ok && node.type === "video" && response.status === 404) {
           const retryUrl = alternateVideoGenerationEndpoint(url);
           if (retryUrl !== url) {
@@ -10600,6 +10631,26 @@
       }
       const returnedError = extractApiErrorMessage(data);
       if (returnedError) throw new Error(`接口返回错误：${returnedError}`);
+      if (useOfficialAsyncImageApi && /\/v1\/images\/generations\/async\/?$/i.test(new URL(url).pathname)) {
+        const taskId = extractImageTaskId(data);
+        if (taskId && !extractMediaUrl(data)) {
+          data = await pollImageResult(imagePollEndpoint(url, taskId), headers, signal, taskId);
+        }
+        const returnedMedia = extractMediaUrl(data)
+          || (taskId ? imageContentEndpoint(url, taskId) : "");
+        if (!returnedMedia) {
+          throw new Error(`图片任务已返回，但没有找到结果地址（返回结构：${describeApiResponseShape(data)}）`);
+        }
+        const resultUrl = absoluteApiResultUrl(returnedMedia, url);
+        const imageDataUrl = await fetchAuthenticatedImageResult(resultUrl, headers, signal);
+        return {
+          url: imageDataUrl,
+          urls: [imageDataUrl],
+          mediaType: "image",
+          fromApi: true,
+          sourceUrl: resultUrl
+        };
+      }
       if (node.type === "keyword") {
         return {
           text: extractText(data) || extractMediaUrl(data) || "接口已返回，但没有找到文本字段。",
@@ -10713,6 +10764,108 @@ ${formatInstruction}`;
         await wait(5000, signal);
       }
       throw new DOMException(`生成超过 ${generationTimeoutSeconds}s`, "AbortError");
+    }
+
+    function extractImageTaskId(data) {
+      if (!data || typeof data !== "object") return "";
+      const direct = data.task_id || (String(data.id || "").startsWith("aiimg_") ? data.id : "");
+      return direct || extractImageTaskId(data.data) || extractImageTaskId(data.result);
+    }
+
+    function imageStatusFromData(data) {
+      if (!data || typeof data !== "object") return "";
+      return String(
+        data.data?.status
+        || data.data?.state
+        || data.status
+        || data.state
+        || data.result?.status
+        || data.result?.state
+        || ""
+      ).toLowerCase();
+    }
+
+    function imageFailureReason(data) {
+      if (!data || typeof data !== "object") return "";
+      return data.error?.message
+        || data.error
+        || data.message
+        || data.fail_reason
+        || data.data?.error?.message
+        || data.data?.error
+        || data.data?.message
+        || data.data?.fail_reason
+        || "";
+    }
+
+    async function pollImageResult(url, headers, signal, taskId) {
+      const started = Date.now();
+      while (Date.now() - started < generationTimeoutMs) {
+        const response = await fetchMaybeProxied(url, { headers, signal });
+        const raw = await response.text();
+        if (!response.ok) {
+          throw new Error(`图片任务查询失败 HTTP ${response.status}${raw ? `：${raw.slice(0, 180)}` : ""}`);
+        }
+        let data = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch (error) {
+          throw new Error(`图片任务查询返回不是 JSON：${raw.slice(0, 180)}`);
+        }
+        const returnedError = extractApiErrorMessage(data);
+        if (returnedError) throw new Error(`图片任务失败：${returnedError}`);
+        const status = imageStatusFromData(data);
+        const media = extractMediaUrl(data);
+        if (["done", "completed", "succeeded", "success"].includes(status) || media) {
+          if (media) return data;
+          return { ...data, result_url: imageContentEndpoint(url, taskId) };
+        }
+        if (["failed", "failure", "expired", "canceled", "cancelled", "error"].includes(status)) {
+          const reason = imageFailureReason(data) || JSON.stringify(data).slice(0, 180);
+          throw new Error(`图片生成${status === "expired" ? "已过期" : "失败"}：${reason}`);
+        }
+        await wait(3000, signal);
+      }
+      throw new DOMException(`图片生成超过 ${generationTimeoutSeconds}s`, "AbortError");
+    }
+
+    function imagePollEndpoint(submitUrl, taskId) {
+      const parsed = new URL(submitUrl);
+      parsed.pathname = `/v1/images/tasks/${encodeURIComponent(taskId)}`;
+      parsed.search = "";
+      return parsed.toString();
+    }
+
+    function imageContentEndpoint(submitOrPollUrl, taskId) {
+      const parsed = new URL(submitOrPollUrl);
+      parsed.pathname = `/v1/images/tasks/${encodeURIComponent(taskId)}/content`;
+      parsed.search = "?index=0";
+      return parsed.toString();
+    }
+
+    function absoluteApiResultUrl(value, baseUrl) {
+      try {
+        return new URL(String(value || ""), baseUrl).toString();
+      } catch (error) {
+        return String(value || "");
+      }
+    }
+
+    async function fetchAuthenticatedImageResult(url, headers, signal) {
+      if (/^data:image\//i.test(url)) return url;
+      const response = await fetchMaybeProxied(url, { headers, signal });
+      if (!response.ok) {
+        const raw = await response.text();
+        throw new Error(`图片结果下载失败 HTTP ${response.status}${raw ? `：${raw.slice(0, 180)}` : ""}`);
+      }
+      const blob = await response.blob();
+      if (!blob.size) throw new Error("图片结果为空");
+      const contentType = String(blob.type || response.headers.get("content-type") || "").toLowerCase();
+      if (contentType && !contentType.startsWith("image/") && contentType !== "application/octet-stream") {
+        const raw = await blob.text();
+        throw new Error(`图片结果格式不正确：${raw.slice(0, 180)}`);
+      }
+      return blobToDataUrl(blob);
     }
 
     function wait(ms, signal) {
@@ -11295,6 +11448,36 @@ ${formatInstruction}`;
       }
     }
 
+    function isOfficialImageApiEndpoint(url) {
+      try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        return ["zayapi.top", "www.zayapi.top", "zexitongxue.com", "www.zexitongxue.com"].includes(hostname);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function officialAsyncImageSubmitEndpoint(url) {
+      const parsed = new URL(url);
+      if (["zayapi.top", "www.zayapi.top"].includes(parsed.hostname.toLowerCase())) {
+        parsed.hostname = "www.zexitongxue.com";
+      }
+      parsed.pathname = "/v1/images/generations/async";
+      parsed.search = "";
+      parsed.hash = "";
+      return parsed.toString();
+    }
+
+    function officialAsyncImageRequestBody(body) {
+      const payload = JSON.parse(String(body || "{}"));
+      delete payload.resolution;
+      delete payload.output_format;
+      delete payload.response_format;
+      delete payload.aspect_ratio;
+      if (isGrokImageModel(payload.model)) delete payload.quality;
+      return JSON.stringify(payload);
+    }
+
     function videoPollEndpoint(generationUrl, requestId) {
       try {
         const parsed = new URL(generationUrl);
@@ -11330,7 +11513,12 @@ ${formatInstruction}`;
     function isDesktopApiEndpoint(url) {
       try {
         const parsed = new URL(url);
-        return parsed.protocol === "https:" && (parsed.hostname === "zayapi.top" || parsed.hostname === "www.zayapi.top");
+        return parsed.protocol === "https:" && [
+          "zayapi.top",
+          "www.zayapi.top",
+          "zexitongxue.com",
+          "www.zexitongxue.com"
+        ].includes(parsed.hostname.toLowerCase());
       } catch (error) {
         return false;
       }
@@ -12960,13 +13148,24 @@ ${formatInstruction}`;
       return folderName;
     }
 
+    const volatileDownloadSequences = new Map();
+
     function nextDownloadSequence() {
       const now = new Date();
       const day = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
       const time = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
       const key = `${canvasStorageKey}:download-seq:${currentFolderId || "default"}:${activeProjectId || "default"}:${day}`;
-      const next = Number(localStorage.getItem(key) || "0") + 1;
-      localStorage.setItem(key, String(next));
+      let stored = 0;
+      try { stored = Number(localStorage.getItem(key) || "0"); }
+      catch (error) { warnCanvasStorageSkipped(error); }
+      const next = Math.max(stored, Number(volatileDownloadSequences.get(key) || 0)) + 1;
+      volatileDownloadSequences.set(key, next);
+      try { localStorage.setItem(key, String(next)); }
+      catch (error) {
+        // A filename counter is optional metadata. Storage quota exhaustion must
+        // never prevent the actual PNG/video/text file from being saved.
+        warnCanvasStorageSkipped(error);
+      }
       return { day, time, sequence: String(next).padStart(3, "0") };
     }
 
@@ -12999,6 +13198,30 @@ ${formatInstruction}`;
       return blob.type ? blob : new Blob([blob], { type: fallbackType });
     }
 
+    async function blobIsPng(blob) {
+      if (!blob || blob.size < 8) return false;
+      const signature = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+      return signature[0] === 137 && signature[1] === 80 && signature[2] === 78 && signature[3] === 71
+        && signature[4] === 13 && signature[5] === 10 && signature[6] === 26 && signature[7] === 10;
+    }
+
+    async function sourceToLosslessPngBlob(src, width, height) {
+      const original = await sourceToBlob(src, "image/png");
+      if (await blobIsPng(original)) return original;
+      const pngUrl = await imageToSizedBlobUrl(src, width, height, true);
+      if (!pngUrl) return null;
+      try {
+        return await sourceToBlob(pngUrl, "image/png");
+      } finally {
+        URL.revokeObjectURL(pngUrl);
+      }
+    }
+
+    async function sourceToLosslessPngUrl(src, width, height) {
+      const blob = await sourceToLosslessPngBlob(src, width, height);
+      return blob ? URL.createObjectURL(blob) : "";
+    }
+
     async function writeBlobToAutoSaveDirectory(blob, filename) {
       return writeBlobToAutoSaveBatchDirectory(blob, filename, "");
     }
@@ -13014,7 +13237,7 @@ ${formatInstruction}`;
         if (window.wandouShell?.writeSaveFile && nativeAutoSaveDirectory) {
           const result = await window.wandouShell.writeSaveFile(filename, new Uint8Array(await blob.arrayBuffer()), folderName);
           if (result?.success) {
-            showToast(`已保存到本地：${result.filename}`, "success");
+            showToast(`已保存到：${result.path || result.filename}`, "success");
             return true;
           }
           if (result?.missingDirectory) {
@@ -13049,22 +13272,43 @@ ${formatInstruction}`;
     }
 
     async function autoSaveGeneratedNodeMedia(node) {
-      if (!node || node.type !== "result" || node.pending || node.mediaType !== "image" || node.autoSaved) return;
+      if (!node || node.type !== "result" || node.pending || node.mediaType !== "image" || node.autoSaved) return false;
       const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-      if (!handle) return;
+      if (!handle) return false;
       const src = favoriteMediaUrl(node);
-      if (!src) return;
+      if (!src) return false;
       try {
-        let blob = null;
-        let objectUrl = "";
-        objectUrl = await imageToSizedBlobUrl(src, node.width, node.height, Boolean(node.transparent));
-        blob = await sourceToBlob(objectUrl || src, "image/png");
-        if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
+        const blob = await sourceToLosslessPngBlob(src, node.width, node.height);
         const filename = downloadFileName(node, "png");
-        if (blob && await writeBlobToAutoSaveBatchDirectory(blob, filename, node.autoSaveBatchFolder || "")) node.autoSaved = true;
+        if (blob && await writeBlobToAutoSaveBatchDirectory(blob, filename, node.autoSaveBatchFolder || "")) {
+          node.autoSaved = true;
+          return true;
+        }
       } catch (error) {
-        showToast("\u81ea\u52a8\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae");
+        showToast(`自动保存失败：${error?.message || "请使用下载按钮"}`, "error", 4800);
       }
+      return false;
+    }
+
+    async function saveUnsavedGeneratedImagesToSelectedDirectory() {
+      const pendingFiles = nodes.filter((node) =>
+        node?.type === "result" && !node.pending && node.mediaType === "image" && !node.autoSaved && favoriteMediaUrl(node)
+      );
+      if (!pendingFiles.length) return { saved: 0, failed: 0 };
+      showToast(`正在把 ${pendingFiles.length} 张已有图片补存到新位置…`);
+      let saved = 0;
+      for (const node of pendingFiles) {
+        if (await autoSaveGeneratedNodeMedia(node)) saved += 1;
+      }
+      scheduleCanvasSave();
+      const failed = pendingFiles.length - saved;
+      const directory = nativeAutoSaveDirectory?.directory || nativeAutoSaveDirectory?.name || autoSaveDirectoryHandle?.name || "所选文件夹";
+      showToast(
+        failed ? `已保存 ${saved} 张到 ${directory}，${failed} 张失败` : `已保存 ${saved} 张到 ${directory}`,
+        failed ? "error" : "success",
+        6000
+      );
+      return { saved, failed };
     }
 
     async function sourceToBlobUrl(src, fallbackType = "application/octet-stream") {
@@ -13140,7 +13384,7 @@ ${formatInstruction}`;
         }
         showToast("正在准备下载…", "loading");
         if (node.mediaType === "image") {
-          objectUrl = await imageToSizedBlobUrl(downloadUrl, node.width, node.height, Boolean(node.transparent));
+          objectUrl = await sourceToLosslessPngUrl(downloadUrl, node.width, node.height);
         }
         if (node.transparent) {
           const transparentOk = await imageHasTransparentPixels(objectUrl || downloadUrl);
@@ -13622,11 +13866,28 @@ ${formatInstruction}`;
         } catch (storageError) {
           warnCanvasStorageSkipped(storageError);
         }
-        await writeCanvasStateBackup(storedState, context);
+        // Desktop backup is authoritative; browser cache failures must not
+        // invalidate an independently verified disk backup.
+        try {
+          context.browserBackupSaved = await Promise.race([
+            writeCanvasStateBackup(storedState, context),
+            new Promise((resolve) => setTimeout(() => resolve(false), 3000))
+          ]);
+        } catch (storageError) {
+          context.browserBackupSaved = false;
+          warnCanvasStorageSkipped(storageError);
+          if (!window.wandouShell?.writeCanvasBackup) throw storageError;
+        }
         if (!options.skipDesktopBackup) queueDesktopCanvasBackup(context);
-        if (activeProject) saveProjects();
+        if (activeProject) {
+          try { saveProjects(); } catch (storageError) {
+            warnCanvasStorageSkipped(storageError);
+            if (!window.wandouShell?.writeCanvasBackup) throw storageError;
+          }
+        }
         return true;
       } catch (error) {
+        context.saveError = `${error?.name || "Error"}: ${error?.message || String(error)}`;
         console.warn("Canvas save skipped", error);
         warnCanvasStorageSkipped(error);
         return false;
@@ -13672,7 +13933,12 @@ ${formatInstruction}`;
           error: "历史记录读取异常，程序已停止覆盖原数据"
         };
       }
-      await canvasSaveQueue.catch(() => false);
+      // A stalled IndexedDB transaction from an earlier autosave must not prevent
+      // the current state from reaching the independent desktop backup forever.
+      await Promise.race([
+        canvasSaveQueue.catch(() => false),
+        new Promise((resolve) => setTimeout(() => resolve(false), 1500))
+      ]);
       const context = createCanvasSaveContext();
       const immediateSaved = saveCanvasStateImmediate(context);
       const durableSaved = await saveCanvasStateNow(context, { skipDesktopBackup: true });
@@ -13690,7 +13956,7 @@ ${formatInstruction}`;
       const error = success
         ? ""
         : !durableSaved
-        ? "图片或画布状态未能写入本地存储"
+        ? `图片或画布状态未能写入本地存储${context.saveError ? `：${context.saveError}` : ""}`
         : desktopBackupRequired && !desktopBackup?.success
         ? (desktopBackup?.error || "桌面备份写入失败")
         : !immediateSaved || !localVerified
@@ -13877,16 +14143,22 @@ ${formatInstruction}`;
         return false;
       }
       try {
-        const result = await window.wandouShell.writeCanvasBackup({
-          folderId: currentFolderId,
-          projectId: context.projectId,
-          state: context.state
-        });
+        const result = await Promise.race([
+          window.wandouShell.writeCanvasBackup({
+            folderId: currentFolderId,
+            projectId: context.projectId,
+            state: context.state
+          }),
+          new Promise((resolve) => setTimeout(() => resolve({
+            success: false,
+            error: "桌面备份超过 60 秒"
+          }), 60000))
+        ]);
         if (result?.success) lastDesktopBackupAt.set(projectId, Date.now());
-        return result?.success ? result : false;
+        return result?.success ? result : { success: false, error: result?.error || "桌面备份写入失败" };
       } catch (error) {
         console.warn("Desktop canvas backup could not be written", error);
-        return false;
+        return { success: false, error: `${error?.name || "Error"}: ${error?.message || String(error)}` };
       }
     }
 
@@ -13931,7 +14203,10 @@ ${formatInstruction}`;
           || (activeProjectId === projects[0]?.id ? (localStorage.getItem(folderCanvasStorageKey()) || localStorage.getItem(canvasStorageKey)) : "");
         let compactState = null;
         try { compactState = raw ? JSON.parse(raw) : null; } catch (error) { console.warn("Compact canvas state is invalid", error); }
-        const backupState = await readCanvasStateBackup();
+        // Browser database failures must not prevent reading independent disk backups.
+        let backupState = null;
+        try { backupState = await readCanvasStateBackup(); }
+        catch (error) { console.warn("Browser backup unavailable; trying desktop backup", error); }
         const desktopStates = await readDesktopCanvasBackups();
         const localState = mergeCanvasRecoveryState(compactState, backupState);
         const state = chooseCanvasRecoveryState([localState, compactState, backupState, ...desktopStates]);
@@ -14669,7 +14944,7 @@ ${formatInstruction}`;
           ? paintCanvas.toDataURL("image/png")
           : activeLightbox.downloadSrc || activeLightbox.src;
         if (activeLightbox.mode !== "video") {
-          sizedDownloadUrl = await imageToSizedBlobUrl(src, node.width, node.height, Boolean(node.transparent));
+          sizedDownloadUrl = await sourceToLosslessPngUrl(src, node.width, node.height);
         }
         await triggerDownload(
           sizedDownloadUrl || src,

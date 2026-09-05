@@ -106,7 +106,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：修复软件目录被占用导致更新失败并重启旧版的问题；增加文件替换及失败回滚，解压到同一磁盘后安装。保留节点图片操作修复与 Grok 1K/2K。"
+            notes = "v${env:VERSION}：修复 GPT Image 2 调用旧同步接口导致 openai_error，改为图片异步任务提交、轮询和鉴权取图；同时修复生成图自动保存、PNG 透明通道、项目封面和本地缓存额度异常。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
