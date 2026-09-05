@@ -10530,7 +10530,7 @@
       const useOfficialAsyncImageApi = node.type !== "video"
         && node.type !== "keyword"
         && !request.isFormData
-        && isOfficialImageApiEndpoint(configuredUrl);
+        && isZexiAsyncImageApiEndpoint(configuredUrl);
       let requestBody = useOfficialAsyncImageApi
         ? officialAsyncImageRequestBody(request.body)
         : request.body;
@@ -11448,10 +11448,10 @@ ${formatInstruction}`;
       }
     }
 
-    function isOfficialImageApiEndpoint(url) {
+    function isZexiAsyncImageApiEndpoint(url) {
       try {
         const hostname = new URL(url).hostname.toLowerCase();
-        return ["zayapi.top", "www.zayapi.top", "zexitongxue.com", "www.zexitongxue.com"].includes(hostname);
+        return ["zexitongxue.com", "www.zexitongxue.com"].includes(hostname);
       } catch (error) {
         return false;
       }
@@ -11459,9 +11459,6 @@ ${formatInstruction}`;
 
     function officialAsyncImageSubmitEndpoint(url) {
       const parsed = new URL(url);
-      if (["zayapi.top", "www.zayapi.top"].includes(parsed.hostname.toLowerCase())) {
-        parsed.hostname = "www.zexitongxue.com";
-      }
       parsed.pathname = "/v1/images/generations/async";
       parsed.search = "";
       parsed.hash = "";

@@ -26,10 +26,11 @@ const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
     await page.waitForFunction(() => document.body.dataset.canvasReady === "true");
 
     const result = await page.evaluate(async () => {
-      document.getElementById("apiUrl").value = "https://www.zayapi.top/v1/images/generations";
+      document.getElementById("apiUrl").value = "https://www.zexitongxue.com/v1/images/generations";
       document.getElementById("apiKey").value = "sk-test-only";
       const calls = [];
-      const png = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="), (char) => char.charCodeAt(0));
+      const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+      const png = Uint8Array.from(atob(pngBase64), (char) => char.charCodeAt(0));
       const originalFetch = window.fetchMaybeProxied;
       window.fetchMaybeProxied = async (url, options = {}) => {
         const headers = new Headers(options.headers || {});
@@ -53,10 +54,16 @@ const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
             }
           }), { status: 200, headers: { "Content-Type": "application/json" } });
         }
+        if (url === "https://www.zayapi.top/v1/images/generations") {
+          return new Response(JSON.stringify({ data: [{ b64_json: pngBase64 }] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
         throw new Error(`unexpected URL: ${url}`);
       };
       try {
-        const apiResult = await callApi({
+        const node = {
           id: "node-test",
           type: "generator",
           model: "GPT-image-2",
@@ -64,14 +71,17 @@ const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
           ratio: "1:1",
           resolution: "1K",
           count: 1
-        }, new AbortController().signal);
-        return { apiResult, calls };
+        };
+        const asyncResult = await callApi(node, new AbortController().signal);
+        document.getElementById("apiUrl").value = "https://www.zayapi.top";
+        const syncResult = await callApi(node, new AbortController().signal);
+        return { asyncResult, syncResult, calls };
       } finally {
         window.fetchMaybeProxied = originalFetch;
       }
     });
 
-    assert.equal(result.calls.length, 3);
+    assert.equal(result.calls.length, 4);
     assert.equal(result.calls[0].url, "https://www.zexitongxue.com/v1/images/generations/async");
     assert.equal(result.calls[1].url, "https://www.zexitongxue.com/v1/images/tasks/aiimg_test");
     assert.equal(result.calls[2].url, "https://www.zexitongxue.com/v1/images/tasks/aiimg_test/content?index=0");
@@ -82,14 +92,19 @@ const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
     assert.ok(!("resolution" in submitBody));
     assert.ok(!("output_format" in submitBody));
     assert.ok(!("response_format" in submitBody));
-    assert.match(result.apiResult.url, /^data:image\/png;base64,/);
-    assert.equal(result.apiResult.mediaType, "image");
-    assert.equal(result.apiResult.fromApi, true);
+    assert.equal(result.calls[3].url, "https://www.zayapi.top/v1/images/generations");
+    assert.equal(result.calls[3].authorization, "Bearer sk-test-only");
+    assert.match(result.asyncResult.url, /^data:image\/png;base64,/);
+    assert.equal(result.asyncResult.mediaType, "image");
+    assert.equal(result.asyncResult.fromApi, true);
+    assert.match(result.syncResult.url, /^data:image\/png;base64,/);
+    assert.equal(result.syncResult.mediaType, "image");
+    assert.equal(result.syncResult.fromApi, true);
   } finally {
     await browser.close();
   }
 
-  console.log("PASS: official image generation submits asynchronously, polls the task, and downloads the authenticated PNG result");
+  console.log("PASS: Zexi uses async image tasks while zayapi keeps its own synchronous text-to-image route");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;
