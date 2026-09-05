@@ -3266,25 +3266,41 @@
     }
 
     .toast {
-      position: absolute;
+      position: fixed;
       left: 50%;
-      bottom: 22px;
+      bottom: max(86px, calc(env(safe-area-inset-bottom) + 86px));
       transform: translateX(-50%);
       padding: 10px 14px;
       border-radius: 999px;
       color: #fff;
       background: rgba(17, 24, 39, 0.88);
       box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
-      z-index: 8;
+      z-index: 500;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 180ms ease;
+      transition: opacity 180ms ease, transform 180ms ease;
       font-size: 13px;
       font-weight: 700;
+      max-width: min(520px, calc(100vw - 32px));
+      text-align: center;
+      white-space: normal;
     }
 
     .toast.show {
       opacity: 1;
+      transform: translate(-50%, -4px);
+    }
+
+    .toast[data-tone="success"] {
+      background: rgba(20, 112, 61, .96);
+    }
+
+    .toast[data-tone="error"] {
+      background: rgba(180, 35, 24, .96);
+    }
+
+    .toast[data-tone="loading"] {
+      background: rgba(30, 41, 59, .96);
     }
 
     .performance-warning {
@@ -4739,9 +4755,9 @@
         <button type="button" data-link-create="outpaint">连接到扩图</button>
         <button type="button" data-link-cancel>取消连接</button>
       </div>
-      <div id="toast" class="toast">已完成</div>
     </main>
   </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">已完成</div>
   <div id="lightbox" class="lightbox">
     <button id="lightboxClose" class="ghost lightbox-close" type="button">关闭</button>
     <img id="lightboxImage" class="lightbox-media" alt="效果图预览">
@@ -5085,7 +5101,7 @@
 
       const defaultPrompt = "把参考图优化成适合社交平台传播的高级质感海报，画面干净，文字清晰，现代商业视觉。";
     const defaultKeywordPrompt = "";
-    const imageModelOptions = ["GPT-image-2", "Nano Banana2", "Nano BananaPro"];
+    const imageModelOptions = ["GPT-image-2", "grok-imagine-image-2.0", "Nano Banana2", "Nano BananaPro"];
     const upscaleModelOptions = ["GPT-image-2", "Nano Banana2", "Nano BananaPro"];
     const outpaintDirectionOptions = [
       { value: "horizontal", label: "左右扩图" },
@@ -5154,11 +5170,29 @@
     let autoSaveDirectoryHandle = null;
     let nativeAutoSaveDirectory = null;
     let autoSaveDirectoryLoaded = false;
+    let toastTimer = 0;
 
-    function showToast(text) {
+    function showToast(text, tone = "info", duration = 2400) {
+      clearTimeout(toastTimer);
       toast.textContent = text;
+      toast.dataset.tone = tone;
       toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 1600);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), duration);
+    }
+
+    function setActionButtonBusy(button, busy, busyText = "处理中…") {
+      if (!button) return;
+      if (busy) {
+        if (!button.dataset.idleText) button.dataset.idleText = button.textContent;
+        button.textContent = busyText;
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        return;
+      }
+      button.textContent = button.dataset.idleText || button.textContent;
+      delete button.dataset.idleText;
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
     }
 
     function showPerformanceWarning() {
@@ -5290,7 +5324,7 @@
 
     async function chooseAutoSaveDirectory() {
       if (!autoSaveSupported()) {
-        showToast("\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u81ea\u52a8\u4fdd\u5b58\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae");
+        showToast("\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u81ea\u52a8\u4fdd\u5b58\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae", "error");
         updateAutoSaveDirectoryButton();
         return;
       }
@@ -5301,28 +5335,25 @@
           nativeAutoSaveDirectory = selected;
           autoSaveDirectoryHandle = null;
           updateAutoSaveDirectoryButton();
-          showToast(`已选择保存位置：${selected.name || selected.directory}`);
+          showToast(`已选择保存位置：${selected.name || selected.directory}`, "success");
           return;
         }
         const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-        if (!/^[A-Za-z0-9._ -]+$/.test(handle.name || "")) {
-          showToast("保存文件夹名称只能使用英文字母、数字、空格、横线或下划线");
-          return;
-        }
         if (!await hasAutoSaveDirectoryPermission(handle, true)) {
-          showToast("\u672a\u83b7\u5f97\u5199\u5165\u6743\u9650\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u6587\u4ef6\u5939");
+          showToast("\u672a\u83b7\u5f97\u5199\u5165\u6743\u9650\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u6587\u4ef6\u5939", "error");
           return;
         }
         autoSaveDirectoryHandle = handle;
         await storeAutoSaveDirectoryHandle(handle);
         updateAutoSaveDirectoryButton();
-        showToast(`\u5df2\u9009\u62e9\u4fdd\u5b58\u4f4d\u7f6e\uff1a${handle.name}`);
+        showToast(`\u5df2\u9009\u62e9\u4fdd\u5b58\u4f4d\u7f6e\uff1a${handle.name}`, "success");
       } catch (error) {
-        if (error?.name !== "AbortError") showToast("\u9009\u62e9\u4fdd\u5b58\u4f4d\u7f6e\u5931\u8d25");
+        if (error?.name !== "AbortError") showToast(`选择保存位置失败：${error?.message || "未知错误"}`, "error", 4000);
       }
     }
 
     function imageResolutionOptionsForModel(model) {
+      if (model === "grok-imagine-image-2.0") return ["1K", "2K"];
       return model === "Nano Banana2" || model === "Nano BananaPro" ? ["4K"] : imageResolutionOptions;
     }
 
@@ -8529,10 +8560,11 @@
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 3000);
+        showToast(`下载已开始：${filename}`, "success");
         return true;
       } catch (error) {
         console.warn("Text download failed", error);
-        showToast("下载失败");
+        showToast(`下载失败：${error?.message || "无法创建文件"}`, "error", 4000);
         return false;
       }
     }
@@ -9745,7 +9777,7 @@
       const saveReady = nativeAutoSaveDirectory || (saveHandle && await hasAutoSaveDirectoryPermission(saveHandle, true));
       if (!saveReady) {
         closeLightboxImageMenu();
-        showToast("重新生成前必须先设置英文名称的强制保存位置");
+        showToast("重新生成前必须先设置保存位置");
         await chooseAutoSaveDirectory();
         return;
       }
@@ -9861,7 +9893,7 @@
       const saveHandle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
       const saveReady = nativeAutoSaveDirectory || (saveHandle && await hasAutoSaveDirectoryPermission(saveHandle, true));
       if (!saveReady) {
-        showToast("生成前必须先设置英文名称的强制保存位置");
+        showToast("生成前必须先设置保存位置");
         await chooseAutoSaveDirectory();
         return;
       }
@@ -10899,6 +10931,10 @@ ${formatInstruction}`;
       return /^gemini-.*image-preview$/i.test(String(model || ""));
     }
 
+    function isGrokImageModel(model) {
+      return /^grok-imagine-image(?:-|$)/i.test(String(model || ""));
+    }
+
     function normalizeGeminiGenerateEndpoint(url, model) {
       let clean = String(url || defaultApiBaseUrl()).replace(/\/+$/, "");
       clean = clean.replace(/\/v1(?:beta)?\/?$/i, "");
@@ -11070,6 +11106,7 @@ ${formatInstruction}`;
       const requestResolution = node._forceBaseGeneration ? "1K" : String(node.resolution || "1K").toUpperCase();
       const maskedReference = references.find((item) => item?.maskUrl && item?.url) || null;
       const imageModel = maskedReference ? "gpt-image-2" : imageGenerationApiModel(node.model, requestResolution);
+      const grokImageModel = isGrokImageModel(imageModel);
       const orderedImageReferences = maskedReference
         ? [maskedReference, ...references.filter((item) => item !== maskedReference)]
         : references;
@@ -11087,15 +11124,18 @@ ${formatInstruction}`;
         n: Math.max(1, Math.min(9, Number(node.count) || 1)),
         size: node._forceStandardApiSize
           ? apiSizeFromTarget(targetSize)
+          : grokImageModel
+          ? ratioLabelFromSize(parseSize(targetSize).width, parseSize(targetSize).height)
           : imageModel === "gpt-image-2"
           ? apiSafeGenerationSize(targetSize)
           : apiSizeFromTarget(targetSize)
       };
       if (!node._forceBaseGeneration) {
-        imagePayload.quality = "high";
+        imagePayload.quality = grokImageModel ? "auto" : "high";
         imagePayload.resolution = requestResolution.toLowerCase();
-        imagePayload.output_format = "png";
+        if (!grokImageModel) imagePayload.output_format = "png";
       }
+      if (grokImageModel) imagePayload.aspect_ratio = imagePayload.size;
       if (node.type === "png") {
         imagePayload.background = "transparent";
         imagePayload.n = 1;
@@ -11344,6 +11384,7 @@ ${formatInstruction}`;
     function modelToApiModel(model) {
       const map = {
         "GPT-image-2": "gpt-image-2",
+        "grok-imagine-image-2.0": "grok-imagine-image-2.0",
         "Nano Banana2": "gemini-3.1-flash-image-preview",
         "Nano BananaPro": "gemini-3-pro-image-preview",
         "grok-imagine-image-pro": "grok-imagine-image-pro",
@@ -12354,8 +12395,8 @@ ${formatInstruction}`;
       return key.includes(":") ? key.replace(":", " / ") : "3 / 4";
     }
 
-    async function imageSourceToClipboardBlob(src) {
-      if (activeLightbox.mode === "paint") {
+    async function imageSourceToClipboardBlob(src, usePaintCanvas = activeLightbox.mode === "paint") {
+      if (usePaintCanvas) {
         return new Promise((resolve, reject) => {
           paintCanvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("图片转换失败")), "image/png");
         });
@@ -12377,27 +12418,42 @@ ${formatInstruction}`;
       }
     }
 
+    async function writeImageToClipboard(blobPromise) {
+      // 图片读取可能先于权限检查失败，始终接住这个 Promise 的拒绝。
+      blobPromise = Promise.resolve(blobPromise);
+      blobPromise.catch(() => {});
+      if (window.wandouShell?.copyImage) {
+        const blob = await blobPromise;
+        const result = await window.wandouShell.copyImage(new Uint8Array(await blob.arrayBuffer()));
+        if (!result?.success) throw new Error(result?.error || "桌面剪贴板写入失败");
+        return;
+      }
+      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+        throw new Error("当前环境不支持复制图片，请使用下载按钮");
+      }
+      // 立即发起写入，避免等待图片读取和 PNG 转码后丢失本次点击的剪贴板授权。
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blobPromise })]);
+    }
+
     function closeLightboxImageMenu() {
       lightboxImageMenu.classList.remove("open");
     }
 
-    async function copyActiveLightboxImage() {
+    async function copyActiveLightboxImage(button = lightboxCopy) {
       closeLightboxImageMenu();
       if (!activeLightbox.src || activeLightbox.mode === "video" || activeLightbox.mode === "prompt") return;
-      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
-        showToast("当前环境不支持复制图片，请使用下载按钮");
-        return;
-      }
+      setActionButtonBusy(button, true, "复制中…");
+      showToast("正在复制图片…", "loading");
       try {
-        const src = activeLightbox.mode === "paint"
-          ? paintCanvas.toDataURL("image/png")
-          : activeLightbox.downloadSrc || activeLightbox.src;
-        const blob = await imageSourceToClipboardBlob(src);
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        showToast("图片已复制，可直接粘贴使用");
+        const usePaintCanvas = activeLightbox.mode === "paint";
+        const src = usePaintCanvas ? "" : activeLightbox.downloadSrc || activeLightbox.src;
+        await writeImageToClipboard(imageSourceToClipboardBlob(src, usePaintCanvas));
+        showToast("图片已复制，可直接粘贴使用", "success");
       } catch (error) {
         console.warn("Copy image failed", error);
-        showToast("复制图片失败，请使用下载按钮保存");
+        showToast(`复制图片失败：${error?.message || "请使用下载按钮保存"}`, "error", 4200);
+      } finally {
+        setActionButtonBusy(button, false);
       }
     }
 
@@ -12948,38 +13004,48 @@ ${formatInstruction}`;
     }
 
     async function writeBlobToAutoSaveBatchDirectory(blob, filename, folderName = "") {
-      const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-      if (!handle) return false;
-      if (window.wandouShell?.writeSaveFile && nativeAutoSaveDirectory) {
-        const result = await window.wandouShell.writeSaveFile(filename, new Uint8Array(await blob.arrayBuffer()), folderName);
-        if (result?.success) {
-          showToast(`已自动保存：${result.filename}`);
-          return true;
+      try {
+        if (!blob || !blob.size) throw new Error("图片内容为空");
+        const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
+        if (!handle) {
+          showToast("保存失败：请先设置保存位置", "error", 4000);
+          return false;
         }
-        if (result?.missingDirectory) {
-          nativeAutoSaveDirectory = null;
-          updateAutoSaveDirectoryButton();
-          showToast("原保存文件夹已不存在，请重新选择保存位置");
+        if (window.wandouShell?.writeSaveFile && nativeAutoSaveDirectory) {
+          const result = await window.wandouShell.writeSaveFile(filename, new Uint8Array(await blob.arrayBuffer()), folderName);
+          if (result?.success) {
+            showToast(`已保存到本地：${result.filename}`, "success");
+            return true;
+          }
+          if (result?.missingDirectory) {
+            nativeAutoSaveDirectory = null;
+            updateAutoSaveDirectoryButton();
+          }
+          showToast(`保存失败：${result?.error || "无法写入所选文件夹"}`, "error", 4800);
+          return false;
         }
+        if (!await hasAutoSaveDirectoryPermission(handle, false)) {
+          showToast("保存失败：保存位置需要重新授权，请点击更改保存位置", "error", 4800);
+          return false;
+        }
+        const dot = filename.lastIndexOf(".");
+        const safeBase = safeFilePart(dot > 0 ? filename.slice(0, dot) : filename);
+        const safeExtension = dot > 0 ? filename.slice(dot).replace(/[^.\w-]/g, "") : "";
+        const outputHandle = folderName
+          ? await handle.getDirectoryHandle(safeFilePart(folderName), { create: true })
+          : handle;
+        const safeName = await uniqueAutoSaveFileName(outputHandle, `${safeBase}${safeExtension}`);
+        const fileHandle = await outputHandle.getFileHandle(safeName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        showToast(`已保存到本地：${safeName}`, "success");
+        return true;
+      } catch (error) {
+        console.warn("Local save failed", error);
+        showToast(`保存失败：${error?.message || "无法写入所选文件夹"}`, "error", 4800);
         return false;
       }
-      if (!await hasAutoSaveDirectoryPermission(handle, false)) {
-        showToast("\u4fdd\u5b58\u4f4d\u7f6e\u9700\u8981\u91cd\u65b0\u6388\u6743\uff0c\u8bf7\u70b9\u51fb\u66f4\u6539\u4fdd\u5b58\u4f4d\u7f6e");
-        return false;
-      }
-      const dot = filename.lastIndexOf(".");
-      const safeBase = safeFilePart(dot > 0 ? filename.slice(0, dot) : filename);
-      const safeExtension = dot > 0 ? filename.slice(dot).replace(/[^.\w-]/g, "") : "";
-      const outputHandle = folderName
-        ? await handle.getDirectoryHandle(safeFilePart(folderName), { create: true })
-        : handle;
-      const safeName = await uniqueAutoSaveFileName(outputHandle, `${safeBase}${safeExtension}`);
-      const fileHandle = await outputHandle.getFileHandle(safeName, { create: true });
-      const writable = await fileHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      showToast(`\u5df2\u81ea\u52a8\u4fdd\u5b58\uff1a${safeName}`);
-      return true;
     }
 
     async function autoSaveGeneratedNodeMedia(node) {
@@ -13049,39 +13115,47 @@ ${formatInstruction}`;
         a.click();
         a.remove();
         if (objectUrl && objectUrl !== src) setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
+        showToast(`下载已开始：${filename}`, "success");
         return true;
       } catch (error) {
         console.warn("Media download failed", error);
-        showToast("下载失败");
+        showToast(`下载失败：${error?.message || "无法创建文件"}`, "error", 4000);
         return false;
       }
     }
 
     async function downloadNodeMedia(node) {
-      if (node.mediaType === "text" && node.text) {
-        const texts = favoritePromptTexts(node);
-        downloadTextFile(promptBundleContent(texts.zh, texts.en), downloadFileName(node, "txt"));
-        return;
-      }
-
-      const downloadUrl = favoriteMediaUrl(node);
-      if (!downloadUrl) {
-        showToast("下载失败：这个节点还没有可下载内容");
-        return;
-      }
       let objectUrl = "";
-      if (node.mediaType === "image") {
-        objectUrl = await imageToSizedBlobUrl(downloadUrl, node.width, node.height, Boolean(node.transparent));
+      try {
+        if (node.mediaType === "text" && node.text) {
+          const texts = favoritePromptTexts(node);
+          downloadTextFile(promptBundleContent(texts.zh, texts.en), downloadFileName(node, "txt"));
+          return;
+        }
+
+        const downloadUrl = favoriteMediaUrl(node);
+        if (!downloadUrl) {
+          showToast("下载失败：这个节点还没有可下载内容", "error");
+          return;
+        }
+        showToast("正在准备下载…", "loading");
+        if (node.mediaType === "image") {
+          objectUrl = await imageToSizedBlobUrl(downloadUrl, node.width, node.height, Boolean(node.transparent));
+        }
+        if (node.transparent) {
+          const transparentOk = await imageHasTransparentPixels(objectUrl || downloadUrl);
+          if (!transparentOk) showToast("未检测到透明通道，请检查接口是否返回透明 PNG", "error", 4200);
+        }
+        const extension = node.mediaType === "video" ? "mp4" : "png";
+        const filename = downloadFileName(node, extension);
+        const ok = await triggerDownload(objectUrl || downloadUrl, filename, node.mediaType === "video" ? "video/mp4" : "image/png");
+        if (!ok && /^https?:\/\//i.test(downloadUrl)) showToast("浏览器限制跨域下载，请稍后重试", "error", 4000);
+      } catch (error) {
+        console.warn("Node media download failed", error);
+        showToast(`下载失败：${error?.message || "无法处理图片"}`, "error", 4200);
+      } finally {
+        if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
       }
-      if (node.transparent) {
-        const transparentOk = await imageHasTransparentPixels(objectUrl || downloadUrl);
-        showToast(transparentOk ? "已检测到透明通道，正在下载 PNG" : "未检测到透明通道，请检查接口是否返回透明 PNG");
-      }
-      const extension = node.mediaType === "video" ? "mp4" : "png";
-      const filename = downloadFileName(node, extension);
-      const ok = await triggerDownload(objectUrl || downloadUrl, filename, node.mediaType === "video" ? "video/mp4" : "image/png");
-      if (!ok && /^https?:\/\//i.test(downloadUrl)) showToast("浏览器限制跨域下载，请稍后重试");
-      if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
     }
 
     async function imageHasTransparentPixels(src) {
@@ -14184,14 +14258,14 @@ ${formatInstruction}`;
     }
 
     async function copyImageToClipboard(node) {
+      showToast("正在复制图片…", "loading");
       try {
-        const response = await fetch(favoriteMediaUrl(node));
-        const blob = await response.blob();
-        await navigator.clipboard.write([new ClipboardItem({ [blob.type || "image/png"]: blob })]);
-        showToast("图片已复制");
+        const src = favoriteMediaUrl(node);
+        await writeImageToClipboard(imageSourceToClipboardBlob(src, false));
+        showToast("图片已复制，可直接粘贴使用", "success");
       } catch (error) {
-        await navigator.clipboard.writeText(favoriteMediaUrl(node));
-        showToast("图片地址已复制");
+        console.warn("Favorite image copy failed", error);
+        showToast(`复制图片失败：${error?.message || "请使用下载按钮保存"}`, "error", 4200);
       }
     }
 
@@ -14549,11 +14623,11 @@ ${formatInstruction}`;
     });
     lightboxCopy.addEventListener("click", async (event) => {
       event.stopPropagation();
-      await copyActiveLightboxImage();
+      await copyActiveLightboxImage(lightboxCopy);
     });
     lightboxContextCopy.addEventListener("click", async (event) => {
       event.stopPropagation();
-      await copyActiveLightboxImage();
+      await copyActiveLightboxImage(lightboxContextCopy);
     });
     lightboxContextPrompt.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -14585,13 +14659,15 @@ ${formatInstruction}`;
     lightboxDownload.addEventListener("click", async (event) => {
       event.stopPropagation();
       if (!activeLightbox.src) return;
+      setActionButtonBusy(lightboxDownload, true, "下载中…");
+      showToast("正在准备下载…", "loading");
       const node = nodes.find((item) => item.id === activeLightbox.nodeId) || { mediaType: activeLightbox.mode === "video" ? "video" : "image" };
-      const src = activeLightbox.mode === "paint"
-        ? paintCanvas.toDataURL("image/png")
-        : activeLightbox.downloadSrc || activeLightbox.src;
       const extension = activeLightbox.mode === "video" ? "mp4" : "png";
       let sizedDownloadUrl = "";
       try {
+        const src = activeLightbox.mode === "paint"
+          ? paintCanvas.toDataURL("image/png")
+          : activeLightbox.downloadSrc || activeLightbox.src;
         if (activeLightbox.mode !== "video") {
           sizedDownloadUrl = await imageToSizedBlobUrl(src, node.width, node.height, Boolean(node.transparent));
         }
@@ -14600,8 +14676,12 @@ ${formatInstruction}`;
           downloadFileName(node, extension),
           activeLightbox.mode === "video" ? "video/mp4" : "image/png"
         );
+      } catch (error) {
+        console.warn("Lightbox download failed", error);
+        showToast(`下载失败：${error?.message || "无法处理图片"}`, "error", 4200);
       } finally {
-        if (sizedDownloadUrl) URL.revokeObjectURL(sizedDownloadUrl);
+        if (sizedDownloadUrl) setTimeout(() => URL.revokeObjectURL(sizedDownloadUrl), 30000);
+        setActionButtonBusy(lightboxDownload, false);
       }
     });
     lightboxImage.addEventListener("pointerdown", (event) => {

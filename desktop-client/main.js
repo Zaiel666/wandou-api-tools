@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, shell, net, session, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, shell, net, session, dialog, clipboard, nativeImage } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -11,6 +11,7 @@ const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app"]);
 const CANVAS_API_HOSTS = new Set(["zayapi.top", "www.zayapi.top"]);
 const MAX_DESKTOP_API_RESPONSE_BYTES = 32 * 1024 * 1024;
 const MAX_SKILL_INSTRUCTIONS_BYTES = 256 * 1024;
+const MAX_CLIPBOARD_IMAGE_BYTES = 64 * 1024 * 1024;
 
 let mainWindow = null;
 let allowWindowClose = false;
@@ -1024,14 +1025,32 @@ ipcMain.handle("desktop:create-save-directory", async (_event, payload = {}) => 
 });
 ipcMain.handle("desktop:write-save-file", async (_event, payload = {}) => {
   const rootDirectory = readSavedDirectory();
-  if (!rootDirectory) return { success: false, missingDirectory: true };
+  if (!rootDirectory) return { success: false, missingDirectory: true, error: "保存文件夹不存在，请重新选择保存位置" };
   try {
+    const bytes = Buffer.from(payload.bytes || []);
+    if (!bytes.length) return { success: false, error: "文件内容为空，未执行保存" };
     const folderName = safeOutputFolderName(payload.folderName);
     const directory = folderName ? path.join(rootDirectory, folderName) : rootDirectory;
     if (folderName) await fs.promises.mkdir(directory, { recursive: true });
     const destination = uniqueOutputPath(directory, payload.filename);
-    await fs.promises.writeFile(destination, Buffer.from(payload.bytes || []));
+    await fs.promises.writeFile(destination, bytes);
     return { success: true, path: destination, filename: path.basename(destination) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+ipcMain.handle("desktop:copy-image", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) {
+    return { success: false, error: "仅本地工具页面可以复制图片" };
+  }
+  try {
+    const bytes = Buffer.from(payload.bytes || []);
+    if (!bytes.length) return { success: false, error: "图片内容为空" };
+    if (bytes.length > MAX_CLIPBOARD_IMAGE_BYTES) return { success: false, error: "图片过大，无法复制" };
+    const image = nativeImage.createFromBuffer(bytes);
+    if (image.isEmpty()) return { success: false, error: "图片格式无法识别" };
+    clipboard.writeImage(image);
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
