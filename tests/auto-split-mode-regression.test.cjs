@@ -54,7 +54,7 @@ assert.doesNotMatch(html, /node\.autoSplitSeconds = 0;\s*\n\s*render\(\);\s*\n\s
 assert.match(html, /data-auto-split-toggle/);
 assert.match(html, /node\.autoSplit \? "disabled"/);
 assert.match(html, /postPromptModelWithFallback/);
-assert.match(html, /const promptModificationModels = \["GPT", "Claude"\]/);
+assert.match(html, /const promptModificationModels = \["GPT", "Claude", "glm-5\.2", "deepseek-v3\.2", "kimi-k2\.6"\]/);
 assert.doesNotMatch(html, /class="prompt-refine-models"/);
 assert.doesNotMatch(html, /修改时默认使用 GPT/);
 assert.match(html, /const resultGap = 2/);

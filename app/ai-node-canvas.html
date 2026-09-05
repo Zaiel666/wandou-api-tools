@@ -5124,7 +5124,8 @@
     const videoPrimaryModel = "veo3.1-fast";
     const videoModelOptions = [videoPrimaryModel, "omni-flash"];
     const promptModelOptions = ["GPT", "Claude", "Gemini"];
-    const promptModificationModels = ["GPT", "Claude"];
+    const promptModificationModels = ["GPT", "Claude", "glm-5.2", "deepseek-v3.2", "kimi-k2.6"];
+    const promptModelAttemptTimeoutMs = 30000;
     const autoSplitMaximum = 99;
     const autoSplitCountdownSeconds = 45;
     const imageRatioOptions = [
@@ -7061,19 +7062,48 @@
       try { return JSON.parse(source.slice(start, end + 1)); } catch (error) { return null; }
     }
 
+    function promptModelCandidates(configuredUrl) {
+      try {
+        const hostname = new URL(configuredUrl).hostname.toLowerCase();
+        if (["zexitongxue.com", "www.zexitongxue.com"].includes(hostname)) {
+          return ["glm-5.2", "deepseek-v3.2", "kimi-k2.6", "GPT", "Claude"];
+        }
+      } catch (_error) {}
+      return [...promptModificationModels];
+    }
+
+    function shouldStopPromptModelFallback(error) {
+      const message = String(error?.message || error || "").toLowerCase();
+      return /http\s*(401|403)|invalid\s*token|unauthorized|forbidden|余额不足|insufficient[_\s-]*(quota|balance|credit)/i.test(message);
+    }
+
     async function postPromptModelWithFallback(configuredUrl, headers, body, signal) {
       let lastError = null;
-      for (const model of promptModificationModels) {
+      for (const model of promptModelCandidates(configuredUrl)) {
+        if (signal?.aborted) throw signal.reason || new DOMException("请求已取消", "AbortError");
+        const attemptController = new AbortController();
+        const forwardAbort = () => attemptController.abort(signal?.reason);
+        signal?.addEventListener("abort", forwardAbort, { once: true });
+        let attemptTimedOut = false;
+        const attemptTimeout = setTimeout(() => {
+          attemptTimedOut = true;
+          attemptController.abort();
+        }, promptModelAttemptTimeoutMs);
         try {
-          const response = await postChatCompletion(configuredUrl, headers, { ...body, model: modelToPromptModel(model) }, signal);
+          const response = await postChatCompletion(configuredUrl, headers, { ...body, model: modelToPromptModel(model) }, attemptController.signal);
           const text = String(response.text || extractText(response.data) || "").trim();
           if (!text) throw new Error(`${model} 没有返回文本`);
           return { ...response, text, provider: model };
         } catch (error) {
-          lastError = error;
+          if (signal?.aborted) throw error;
+          lastError = attemptTimedOut ? new Error(`${modelToPromptModel(model)} 响应超时`) : error;
+          if (shouldStopPromptModelFallback(lastError)) throw lastError;
+        } finally {
+          clearTimeout(attemptTimeout);
+          signal?.removeEventListener("abort", forwardAbort);
         }
       }
-      throw lastError || new Error("GPT 与 Claude 均不可用");
+      throw lastError || new Error("当前文字模型均不可用");
     }
 
     function drawingSkillOptions() {
@@ -10678,7 +10708,7 @@
       const response = await fetchMaybeProxied(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ ...body, stream: true }),
+        body: JSON.stringify({ ...body, stream: body.stream === true }),
         signal
       });
       const raw = await response.text();
@@ -11188,7 +11218,7 @@ ${formatInstruction}`;
               { role: "system", content: "你是提示词生成助手。只输出用户要求的中英文提示词，不要使用工具，不要输出分析过程。" },
               { role: "user", content: messageContentFor({ ...node, prompt: promptText }, isTextReverse ? [] : references, targetSize) }
             ],
-            stream: true
+            stream: false
           }),
           isFormData: false
         };
@@ -11439,10 +11469,18 @@ ${formatInstruction}`;
       try {
         const parsed = new URL(clean);
         const isRoot = parsed.pathname === "" || parsed.pathname === "/";
-        if (!isRoot) return clean;
-        if (node.type === "video") return `${clean}/v1/video/generations`;
-        if (node.type === "keyword") return `${clean}/v1/chat/completions`;
-        return `${clean}/v1/images/${hasReferences ? "edits" : "generations"}`;
+        const route = node.type === "video"
+          ? "video/generations"
+          : node.type === "keyword"
+          ? "chat/completions"
+          : `images/${hasReferences ? "edits" : "generations"}`;
+        if (isRoot) return `${clean}/v1/${route}`;
+        const knownApiPath = parsed.pathname.match(/^(.*\/v1)(?:\/(?:chat\/completions|images\/(?:generations(?:\/async)?|edits)|videos?(?:\/generations)?))?\/?$/i);
+        if (!knownApiPath) return clean;
+        parsed.pathname = `${knownApiPath[1]}/${route}`;
+        parsed.search = "";
+        parsed.hash = "";
+        return parsed.toString();
       } catch (error) {
         return clean;
       }
@@ -11602,7 +11640,7 @@ ${formatInstruction}`;
         Claude: "claude-sonnet-4-6",
         Gemini: "gemini-3.1-pro-preview"
       };
-      return map[model] || "gpt-5.4";
+      return map[model] || String(model || "gpt-5.4");
     }
 
     function apiImageSizeValue(ratio, resolution) {
@@ -14026,6 +14064,21 @@ ${formatInstruction}`;
 
     async function cleanLoadedNode(node) {
       if (!node) return;
+      const interruptedPromptRefine = Boolean(node.promptRefineLoading);
+      node.promptRefineLoading = false;
+      if (interruptedPromptRefine) {
+        node.promptRefineOpen = true;
+        node.promptRefineResult = "修改失败：上次修改被关闭或中断，请重新点击修改。";
+      }
+      if (node.autoSplitProgress || node.autoSplitGenerating) {
+        node.autoSplitProgress = 0;
+        node.autoSplitGenerating = false;
+        node.autoSplitReviewOpen = Boolean(node.autoSplitPlan?.length);
+      }
+      if (node.type === "result" && node.pending) {
+        node.pending = false;
+        node.status = "上次生成已中断，可点击重新生成。";
+      }
       node.status = publicNodeStatus(node.status);
       if (node.type === "image" && node.status === "可上传参考图。") node.status = "";
       if (node.type === "result" && node.status === "生成结果会显示在这里。") node.status = "";

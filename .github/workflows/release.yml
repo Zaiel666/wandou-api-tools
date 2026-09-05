@@ -106,7 +106,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：修复纯文字生图错误地把 zayapi 请求转发到另一域名，导致 HTTP 401 Invalid token；现在 zayapi Key 留在 zayapi 同步接口，泽西同学本站 Key 才使用本站异步任务接口。"
+            notes = "v${env:VERSION}：修复 AI 修改提示词、关键词生成、自动拆分分析和 Skill 优化可能长期停在处理中；文字工具现在固定使用聊天接口和非流式返回，真正切换备用文字模型，并在重启后解除遗留的正在处理状态。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
