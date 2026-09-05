@@ -74,6 +74,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Portable updater regression test failed' }
           & powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\portable-updater-live-e2e.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Portable updater live upgrade test failed' }
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\portable-updater-live-e2e.ps1 -LockInstallDirectory
+          if ($LASTEXITCODE -ne 0) { throw 'Locked-directory upgrade test failed' }
 
       - name: Build portable folder
         shell: pwsh
@@ -104,7 +106,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：改善节点图片复制、保存与下载反馈，支持中文保存文件夹；新增 Grok Imagine Image 2.0 的 1K/2K 模型选项。Grok 真实 API 出图尚未实测。"
+            notes = "v${env:VERSION}：修复软件目录被占用导致更新失败并重启旧版的问题；增加文件替换及失败回滚，解压到同一磁盘后安装。保留节点图片操作修复与 Grok 1K/2K。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

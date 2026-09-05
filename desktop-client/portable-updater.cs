@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
+using System.Collections.Generic;
 
 internal static class PortableUpdater
 {
@@ -116,6 +117,46 @@ internal static class PortableUpdater
         throw lastError ?? new IOException("Directory move failed.");
     }
 
+    // A browser or Explorer can hold the install directory open even after all
+    // application processes exit. Replace files without renaming that directory.
+    // Journal each replacement so a failure restores all already changed files.
+    static void ReplaceFilesWithRollback(string stage, string install, string previous, string log)
+    {
+        var replaced = new List<string>();
+        var backedUp = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        Directory.CreateDirectory(previous);
+        try
+        {
+            foreach (var source in Directory.GetFiles(stage, "*", SearchOption.AllDirectories))
+            {
+                var relative = source.Substring(stage.Length).TrimStart(Path.DirectorySeparatorChar);
+                var destination = Path.Combine(install, relative);
+                var backup = Path.Combine(previous, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                if (File.Exists(destination))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(backup));
+                    File.Move(destination, backup);
+                    backedUp.Add(relative);
+                }
+                replaced.Add(relative);
+                File.Copy(source, destination, false);
+            }
+        }
+        catch
+        {
+            for (int i = replaced.Count - 1; i >= 0; i--)
+            {
+                var relative = replaced[i];
+                var destination = Path.Combine(install, relative);
+                if (File.Exists(destination)) File.Delete(destination);
+                if (backedUp.Contains(relative)) File.Move(Path.Combine(previous, relative), destination);
+            }
+            Log(log, "File replacements rolled back after failure.");
+            throw;
+        }
+    }
+
     public static int Main(string[] args)
     {
         var install = Arg(args, "--install");
@@ -127,7 +168,7 @@ internal static class PortableUpdater
         int.TryParse(Arg(args, "--parent"), out parent);
         var installParent = Path.GetDirectoryName(install.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         var log = Path.Combine(installParent, "wandou-ai-update.log");
-        var stage = Path.Combine(Path.GetTempPath(), "wandou-ai-stage-" + Guid.NewGuid().ToString("N"));
+        var stage = Path.Combine(installParent, "wandou-ai-stage-" + Guid.NewGuid().ToString("N"));
         var previous = install.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             + ".previous-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
         var failed = install.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
@@ -155,15 +196,34 @@ internal static class PortableUpdater
             Log(log, "Extracting verified release package.");
             Directory.CreateDirectory(stage);
             ZipFile.ExtractToDirectory(package, stage);
-            // Never overwrite Chromium resources in place. Windows can keep .pak and
-            // app.asar files memory-mapped briefly after Electron exits, which made the
-            // former file-by-file update fail repeatedly. A directory swap changes only
-            // directory entries and preserves the complete old install for rollback.
+            var stagedVersion = Path.Combine(stage, "resources", "app", "VERSION.txt");
+            if (!File.Exists(Path.Combine(stage, executable)) || !File.Exists(stagedVersion)
+                || (!String.IsNullOrWhiteSpace(target) && File.ReadAllText(stagedVersion).Trim().Split('\n')[0].Trim().TrimStart('v') != target))
+                throw new InvalidOperationException("Package version or executable verification failed.");
+            // Prefer a directory swap. If a directory handle blocks renaming, move
+            // each old file to backup before copying its replacement (never overwrite
+            // memory-mapped resources in place).
             Log(log, "Activating new installation by directory swap.");
-            MoveDirectoryWithRetry(install, previous, log);
-            oldInstallMoved = true;
-            MoveDirectoryWithRetry(stage, install, log);
-            newInstallActivated = true;
+            try
+            {
+                MoveDirectoryWithRetry(install, previous, log);
+                oldInstallMoved = true;
+            }
+            catch (IOException)
+            {
+                Log(log, "Install directory is locked; using journaled file replacement.");
+                ReplaceFilesWithRollback(stage, install, previous, log);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Log(log, "Install directory is locked; using journaled file replacement.");
+                ReplaceFilesWithRollback(stage, install, previous, log);
+            }
+            if (oldInstallMoved)
+            {
+                MoveDirectoryWithRetry(stage, install, log);
+                newInstallActivated = true;
+            }
             if (!String.IsNullOrWhiteSpace(target))
             {
                 var versionFile = Path.Combine(install, "resources", "app", "VERSION.txt");

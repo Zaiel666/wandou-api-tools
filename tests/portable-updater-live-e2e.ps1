@@ -1,5 +1,6 @@
 param(
-    [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot),
+    [switch]$LockInstallDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,6 +16,7 @@ $parentSource = Join-Path $RepositoryRoot 'tests\updater-e2e-parent.cs'
 $appSource = Join-Path $RepositoryRoot 'tests\updater-test-app.cs'
 $parentExe = Join-Path $testRoot 'updater-e2e-parent.exe'
 $testApp = Join-Path $testRoot 'test-app.exe'
+$directoryLock = $null
 
 function Stop-TestProcesses {
     Get-Process -ErrorAction SilentlyContinue | ForEach-Object {
@@ -47,6 +49,20 @@ try {
     Set-Content -LiteralPath (Join-Path $packageSource 'new-marker.txt') -Value 'new' -Encoding ASCII
     Compress-Archive -Path (Join-Path $packageSource '*') -DestinationPath $package -CompressionLevel Optimal
 
+    if ($LockInstallDirectory) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+public static class UpdateDirectoryLock {
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    public static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint mode, uint flags, IntPtr template);
+}
+'@
+        $directoryLock = [UpdateDirectoryLock]::CreateFile($install, 2147483648, 3, [IntPtr]::Zero, 3, 0x02000000, [IntPtr]::Zero)
+        if ($directoryLock.IsInvalid) { throw 'Cannot acquire test directory lock.' }
+    }
+
     $arguments = @($updater, $install, $package, '豌豆AI工具.exe', $ready, '1.0.57', 'crashpad_handler.exe')
     Start-Process -FilePath $parentExe -ArgumentList $arguments -WorkingDirectory $install -WindowStyle Hidden | Out-Null
 
@@ -59,16 +75,26 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
 
     if ($installedVersion -ne 'v1.0.57') { throw "Live updater test timed out; installed version is '$installedVersion'." }
-    if (Test-Path -LiteralPath (Join-Path $install 'old-marker.txt')) { throw 'Old installation marker survived the directory swap.' }
+    if (-not $LockInstallDirectory -and (Test-Path -LiteralPath (Join-Path $install 'old-marker.txt'))) { throw 'Old installation marker survived the directory swap.' }
     $previous = @(Get-ChildItem -LiteralPath $testRoot -Directory -Filter '豌豆AI工具.previous-*')
     if ($previous.Count -ne 1) { throw "Expected one previous installation, found $($previous.Count)." }
     $logText = Get-Content -LiteralPath $log -Raw
     if ($logText -notmatch 'crashpad_handler\.exe') { throw 'The install-scoped helper process was not stopped.' }
     if ($logText -notmatch 'Native update completed') { throw 'The updater did not report completion.' }
+    if ($LockInstallDirectory -and $logText -notmatch 'using journaled file replacement') { throw 'Locked directory fallback was not tested.' }
 
-    Write-Output 'PASS: live updater moved an install used as the parent working directory, stopped a differently named helper, installed v1.0.57, and restarted it.'
+    $restartDeadline = [DateTime]::UtcNow.AddSeconds(10)
+    do {
+        Start-Sleep -Milliseconds 300
+        $logText = Get-Content -LiteralPath $log -Raw
+    } while ($logText -notmatch 'Application restart launched process (\d+)' -and [DateTime]::UtcNow -lt $restartDeadline)
+    if ($logText -notmatch 'Application restart launched process (\d+)') { throw 'Application was not restarted.' }
+    $restarted = Get-Process -Id ([int]$Matches[1]) -ErrorAction Stop
+    if ($restarted.Path -ne (Join-Path $install '豌豆AI工具.exe')) { throw 'Restarted the wrong executable.' }
+    Write-Output "PASS: installed v1.0.57 and verified restarted process; locked directory: $LockInstallDirectory."
 }
 finally {
+    if ($directoryLock) { $directoryLock.Dispose() }
     Stop-TestProcesses
     Start-Sleep -Milliseconds 300
     if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
