@@ -42,6 +42,9 @@ try {
     Copy-Item -LiteralPath $testApp -Destination (Join-Path $install 'crashpad_handler.exe')
     Set-Content -LiteralPath (Join-Path $install 'resources\app\VERSION.txt') -Value 'v1.0.54' -Encoding ASCII
     Set-Content -LiteralPath (Join-Path $install 'old-marker.txt') -Value 'old' -Encoding ASCII
+    $stalePrevious = Join-Path $testRoot '豌豆AI工具.previous-20200101-000000'
+    New-Item -ItemType Directory -Path $stalePrevious -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $stalePrevious 'stale-marker.txt') -Value 'stale' -Encoding ASCII
 
     Copy-Item -LiteralPath $testApp -Destination (Join-Path $packageSource '豌豆AI工具.exe')
     Copy-Item -LiteralPath $testApp -Destination (Join-Path $packageSource 'crashpad_handler.exe')
@@ -76,8 +79,6 @@ public static class UpdateDirectoryLock {
 
     if ($installedVersion -ne 'v1.0.57') { throw "Live updater test timed out; installed version is '$installedVersion'." }
     if (-not $LockInstallDirectory -and (Test-Path -LiteralPath (Join-Path $install 'old-marker.txt'))) { throw 'Old installation marker survived the directory swap.' }
-    $previous = @(Get-ChildItem -LiteralPath $testRoot -Directory -Filter '豌豆AI工具.previous-*')
-    if ($previous.Count -ne 1) { throw "Expected one previous installation, found $($previous.Count)." }
     $logText = Get-Content -LiteralPath $log -Raw
     if ($logText -notmatch 'crashpad_handler\.exe') { throw 'The install-scoped helper process was not stopped.' }
     if ($logText -notmatch 'Native update completed') { throw 'The updater did not report completion.' }
@@ -91,6 +92,14 @@ public static class UpdateDirectoryLock {
     if ($logText -notmatch 'Application restart launched process (\d+)') { throw 'Application was not restarted.' }
     $restarted = Get-Process -Id ([int]$Matches[1]) -ErrorAction Stop
     if ($restarted.Path -ne (Join-Path $install '豌豆AI工具.exe')) { throw 'Restarted the wrong executable.' }
+    $cleanupDeadline = [DateTime]::UtcNow.AddSeconds(15)
+    do {
+        Start-Sleep -Milliseconds 300
+        $previous = @(Get-ChildItem -LiteralPath $testRoot -Directory -Filter '豌豆AI工具.previous-*')
+    } while ($previous.Count -ne 0 -and [DateTime]::UtcNow -lt $cleanupDeadline)
+    if ($previous.Count -ne 0) { throw "Expected previous installations to be cleaned, found $($previous.Count)." }
+    $logText = Get-Content -LiteralPath $log -Raw
+    if ($logText -match 'Warning: previous installation remains') { throw 'The updater left a previous installation behind.' }
     Write-Output "PASS: installed v1.0.57 and verified restarted process; locked directory: $LockInstallDirectory."
 }
 finally {

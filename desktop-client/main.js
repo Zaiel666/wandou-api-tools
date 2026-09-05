@@ -29,6 +29,29 @@ let installedSkillsCache = { savedAt: 0, items: [] };
 // 与旧安装版共用数据目录，改成便携文件夹后用户原有的本地数据仍然可用。
 app.setPath("userData", process.env.WANDOU_TEST_USER_DATA_DIR || path.join(app.getPath("appData"), "豌豆AI"));
 
+async function cleanupStalePortableInstallBackups() {
+  if (!app.isPackaged) return;
+  const installDirectory = path.dirname(process.execPath);
+  const installName = path.basename(installDirectory);
+  if (!installName || installName.includes(".previous-")) return;
+  const installParent = path.dirname(installDirectory);
+  const backupPrefix = `${installName}.previous-`;
+  try {
+    const entries = await fs.promises.readdir(installParent, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !entry.name.startsWith(backupPrefix)) continue;
+      const backupDirectory = path.join(installParent, entry.name);
+      try {
+        await fs.promises.rm(backupDirectory, { recursive: true, force: true, maxRetries: 12, retryDelay: 500 });
+      } catch (error) {
+        console.warn("Unable to remove stale portable update backup:", backupDirectory, error.message);
+      }
+    }
+  } catch (error) {
+    console.warn("Unable to inspect portable update backups:", error.message);
+  }
+}
+
 function readClientConfig() {
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, "client-config.json"), "utf8"));
@@ -1109,6 +1132,10 @@ ipcMain.handle("desktop:get-canvas-backup-directory", () => ({
   directory: canvasBackupRootDirectory()
 }));
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  const cleanupTimer = setTimeout(() => { cleanupStalePortableInstallBackups(); }, 2500);
+  cleanupTimer.unref?.();
+});
 app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
 app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

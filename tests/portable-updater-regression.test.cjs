@@ -23,5 +23,11 @@ assert.match(updater, /Directory\.Move\(previous, install\)/, "a failed activati
 assert.doesNotMatch(updater, /File\.Copy\(file, destination, true\)/, "Chromium resources must not be overwritten in place");
 assert.match(updater, /StartApplicationWithRetry\(install, executable, log\)/, "automatic restart must use the retry path");
 assert.match(updater, /Application restart launched process/, "restart attempts must be observable in the updater log");
+assert.match(updater, /CleanupPreviousInstallations\(install, log\)/, "successful updates must remove old installation directories");
+assert.match(updater, /DeleteDirectoryWithRetry\(directory, log\)/, "old installation cleanup must retry transient Windows locks");
 
-console.log("PASS: portable updater survives parent shutdown, swaps the complete install, and retries restart");
+const main = fs.readFileSync(path.resolve(__dirname, "..", "desktop-client", "main.js"), "utf8");
+assert.match(main, /cleanupStalePortableInstallBackups/, "the restarted app must clean backups left by older updater versions");
+assert.match(main, /entry\.name\.startsWith\(backupPrefix\)/, "startup cleanup must stay scoped to this portable install name");
+
+console.log("PASS: portable updater survives parent shutdown, restarts, and removes stale installation backups");

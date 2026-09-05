@@ -106,7 +106,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：修复 GPT Image 2 调用旧同步接口导致 openai_error，改为图片异步任务提交、轮询和鉴权取图；同时修复生成图自动保存、PNG 透明通道、项目封面和本地缓存额度异常。"
+            notes = "v${env:VERSION}：修复便携版更新后在桌面留下多个 .previous 旧版本文件夹的问题；更新成功重启后自动清理回滚备份，新版启动时也会清理旧更新器遗留目录。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

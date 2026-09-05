@@ -117,6 +117,43 @@ internal static class PortableUpdater
         throw lastError ?? new IOException("Directory move failed.");
     }
 
+    static bool DeleteDirectoryWithRetry(string directory, string log)
+    {
+        if (String.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) return true;
+        for (var attempt = 1; attempt <= 20; attempt++)
+        {
+            try
+            {
+                Directory.Delete(directory, true);
+                if (!Directory.Exists(directory)) return true;
+            }
+            catch (Exception ex)
+            {
+                Log(log, "Previous installation cleanup attempt " + attempt + " failed for " + directory + ": " + ex.Message);
+            }
+            Thread.Sleep(500);
+        }
+        Log(log, "Warning: previous installation remains after cleanup retries: " + directory);
+        return false;
+    }
+
+    static void CleanupPreviousInstallations(string install, string log)
+    {
+        try
+        {
+            var normalized = install.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var parent = Path.GetDirectoryName(normalized);
+            var prefix = Path.GetFileName(normalized) + ".previous-";
+            if (String.IsNullOrWhiteSpace(parent) || String.IsNullOrWhiteSpace(prefix)) return;
+            foreach (var directory in Directory.GetDirectories(parent, prefix + "*", SearchOption.TopDirectoryOnly))
+                DeleteDirectoryWithRetry(directory, log);
+        }
+        catch (Exception ex)
+        {
+            Log(log, "Previous installation cleanup warning: " + ex.Message);
+        }
+    }
+
     // A browser or Explorer can hold the install directory open even after all
     // application processes exit. Replace files without renaming that directory.
     // Journal each replacement so a failure restores all already changed files.
@@ -232,7 +269,11 @@ internal static class PortableUpdater
             }
             try { File.Copy(log, Path.Combine(install, "wandou-ai-update.log"), true); } catch { }
             Log(log, "Native update completed. Restarting application.");
-            if (StartApplicationWithRetry(install, executable, log)) return 0;
+            if (StartApplicationWithRetry(install, executable, log))
+            {
+                CleanupPreviousInstallations(install, log);
+                return 0;
+            }
             Log(log, "Native update completed, but automatic restart failed after all retries.");
             return 2;
         }
