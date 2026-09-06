@@ -106,7 +106,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：修复项目文件夹较多时新建文件夹卡顿或无反应；画布预览改为后台分批读取，并限制磁盘备份并发。同时包含 AI 修改提示词、关键词生成、自动拆分分析和 Skill 优化修复。"
+            notes = "v${env:VERSION}：修复项目文件夹较多时新建文件夹卡顿或无反应；优化大图画布内存，撤回记录不再复制完整 2K/4K 图片，同一原图恢复时只读取一次并限制并发。同时包含 AI 修改提示词、关键词生成、自动拆分分析和 Skill 优化修复。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

@@ -900,6 +900,29 @@
       return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 14h10l1-14"/><path d="M9 7V4h6v3"/></svg>`;
     }
 
+    function projectCardHtml(project) {
+      const summary = projectSummaryCache.get(project.id);
+      const savedAt = summary?.savedAt || project.updatedAt;
+      const nodeCount = summary?.nodeCount ?? project.nodeCount ?? 0;
+      const coverHtml = summary?.coverHtml || `<div class="empty-cover">正在读取预览…</div>`;
+      return `<article class="card ${project.id === selectedProjectId ? "selected" : ""} ${project.favorite ? "favorite" : ""}" data-project="${project.id}">
+        <div class="cover" data-cover="${project.id}">${coverHtml}</div>
+        <div class="card-body">
+          <div class="name-row">
+            <input class="name-input" data-name="${project.id}" value="${escapeHtml(project.name)}" aria-label="文件夹名称" readonly>
+            <button class="icon-button mini-icon star ${project.favorite ? "active" : ""}" data-star="${project.id}" type="button" title="收藏文件夹">${starIcon()}</button>
+            <button class="icon-button mini-icon trash" data-delete="${project.id}" type="button" title="删除文件夹">${trashIcon()}</button>
+          </div>
+          <div class="meta">
+            <span>创建 ${formatTime(project.createdAt)}</span>
+            <span data-saved-at="${project.id}">操作 ${formatTime(savedAt)}</span>
+            <span data-node-count="${project.id}">${nodeCount} 个节点</span>
+            <span>${project.favorite ? "已收藏" : "未收藏"}</span>
+          </div>
+        </div>
+      </article>`;
+    }
+
     function render() {
       const renderToken = ++coverRenderToken;
       document.querySelectorAll("[data-size]").forEach((button) => {
@@ -913,44 +936,22 @@
         grid.innerHTML = `<div class="empty-state">没有符合条件的项目文件夹</div>`;
         return;
       }
-      grid.innerHTML = list.map((project) => {
-        const summary = projectSummaryCache.get(project.id);
-        const savedAt = summary?.savedAt || project.updatedAt;
-        const nodeCount = summary?.nodeCount ?? project.nodeCount ?? 0;
-        const coverHtml = summary?.coverHtml || `<div class="empty-cover">正在读取预览…</div>`;
-        return `<article class="card ${project.id === selectedProjectId ? "selected" : ""} ${project.favorite ? "favorite" : ""}" data-project="${project.id}">
-          <div class="cover" data-cover="${project.id}">${coverHtml}</div>
-          <div class="card-body">
-            <div class="name-row">
-              <input class="name-input" data-name="${project.id}" value="${escapeHtml(project.name)}" aria-label="文件夹名称" readonly>
-              <button class="icon-button mini-icon star ${project.favorite ? "active" : ""}" data-star="${project.id}" type="button" title="收藏文件夹">${starIcon()}</button>
-              <button class="icon-button mini-icon trash" data-delete="${project.id}" type="button" title="删除文件夹">${trashIcon()}</button>
-            </div>
-            <div class="meta">
-              <span>创建 ${formatTime(project.createdAt)}</span>
-              <span data-saved-at="${project.id}">操作 ${formatTime(savedAt)}</span>
-              <span data-node-count="${project.id}">${nodeCount} 个节点</span>
-              <span>${project.favorite ? "已收藏" : "未收藏"}</span>
-            </div>
-          </div>
-        </article>`;
-      }).join("");
+      grid.innerHTML = list.map(projectCardHtml).join("");
       bindCards();
       hydrateProjectCovers(list, renderToken);
     }
 
-    function bindCards() {
-      grid.querySelectorAll("[data-project]").forEach((card) => {
-        card.addEventListener("click", (event) => {
-          if (event.target.closest("button, input")) return;
-          selectProject(card.dataset.project);
-        });
-        card.addEventListener("dblclick", (event) => {
-          if (event.target.closest("button, input")) return;
-          openProject(card.dataset.project);
-        });
+    function bindCard(card) {
+      card.addEventListener("click", (event) => {
+        if (event.target.closest("button, input")) return;
+        selectProject(card.dataset.project);
       });
-      grid.querySelectorAll("[data-name]").forEach((input) => {
+      card.addEventListener("dblclick", (event) => {
+        if (event.target.closest("button, input")) return;
+        openProject(card.dataset.project);
+      });
+      const input = card.querySelector("[data-name]");
+      if (input) {
         input.addEventListener("dblclick", (event) => {
           event.stopPropagation();
           editName(input.dataset.name);
@@ -974,11 +975,12 @@
         input.addEventListener("blur", () => {
           input.readOnly = true;
         });
-      });
-      grid.querySelectorAll("[data-star]").forEach((button) => {
-        button.addEventListener("click", (event) => {
+      }
+      const starButton = card.querySelector("[data-star]");
+      if (starButton) {
+        starButton.addEventListener("click", (event) => {
           event.stopPropagation();
-          const project = projects.find((item) => item.id === button.dataset.star);
+          const project = projects.find((item) => item.id === starButton.dataset.star);
           if (!project) return;
           selectedProjectId = project.id;
           project.favorite = !project.favorite;
@@ -986,15 +988,16 @@
           saveProjects();
           render();
         });
-      });
-      grid.querySelectorAll("[data-delete]").forEach((button) => {
-        button.addEventListener("click", (event) => {
+      }
+      const deleteButton = card.querySelector("[data-delete]");
+      if (deleteButton) {
+        deleteButton.addEventListener("click", (event) => {
           event.stopPropagation();
           if (projects.length <= 1) {
             alert("至少保留一个项目文件夹。");
             return;
           }
-          const project = projects.find((item) => item.id === button.dataset.delete);
+          const project = projects.find((item) => item.id === deleteButton.dataset.delete);
           if (!project || !confirm(`删除“${project.name}”？这个项目的本地画布记录也会删除。`)) return;
           projects = projects.filter((item) => item.id !== project.id);
           projectSummaryCache.delete(project.id);
@@ -1006,7 +1009,29 @@
           saveProjects();
           render();
         });
-      });
+      }
+    }
+
+    function bindCards() {
+      grid.querySelectorAll("[data-project]").forEach(bindCard);
+    }
+
+    function insertProjectCard(project) {
+      searchInput.value = "";
+      showFavoritesOnly = false;
+      favoriteFilter.classList.remove("active");
+      favoriteFilter.title = "收藏文件夹";
+      grid.querySelector(".empty-state")?.remove();
+      grid.querySelectorAll("[data-project]").forEach((card) => card.classList.remove("selected"));
+      const template = document.createElement("template");
+      template.innerHTML = projectCardHtml(project).trim();
+      const card = template.content.firstElementChild;
+      const list = sortedProjects();
+      const projectIndex = list.findIndex((item) => item.id === project.id);
+      const nextProject = list[projectIndex + 1];
+      const nextCard = nextProject ? grid.querySelector(`[data-project="${nextProject.id}"]`) : null;
+      grid.insertBefore(card, nextCard);
+      bindCard(card);
     }
 
     document.getElementById("newProject").addEventListener("click", () => {
@@ -1020,10 +1045,15 @@
         favorite: false
       };
       projects.push(project);
+      projectSummaryCache.set(project.id, {
+        savedAt: now,
+        nodeCount: 0,
+        coverHtml: `<div class="empty-cover">空画布</div>`
+      });
       selectedProjectId = project.id;
       localStorage.setItem(activeProjectStorageKey, project.id);
       saveProjects();
-      render();
+      insertProjectCard(project);
       requestAnimationFrame(() => editName(project.id));
     });
 

@@ -10,6 +10,7 @@ const sandbox = {
   readDesktopCanvasBackups: async () => [saved],
   mergeCanvasRecoveryState: () => null, chooseCanvasRecoveryState: states => states.find(Boolean),
   removeDeprecatedSelectionNodes() {}, cleanLoadedNode: async node => { node.mediaUrl = 'data:image/png;base64,recovered'; },
+  cleanLoadedNodes: async nodes => { for (const node of nodes) await sandbox.cleanLoadedNode(node); },
   pruneBrokenLinks() {}, view: {}, document: {body: {classList: {toggle() {}}}, querySelector: () => ({classList: {toggle() {}}})},
   readGlobalTheme: () => 'dark', updateThemeLabel() {}, render() {}, syncDeletedResultsWithCanvas() {}, showToast() {}, console: {warn() {}}
 };

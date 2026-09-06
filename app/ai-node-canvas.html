@@ -5899,7 +5899,7 @@
         historyStack = [];
         redoStack = [];
         removeDeprecatedSelectionNodes();
-        await Promise.all(nodes.map(cleanLoadedNode));
+        await cleanLoadedNodes(nodes);
         pruneBrokenLinks();
         saveProjects();
         await saveCanvasState();
@@ -5919,21 +5919,41 @@
     function getCanvasSnapshot() {
       const cleanNodes = nodesWithoutRemovedTypes();
       const cleanIds = new Set(cleanNodes.map((node) => node.id));
+      const mediaReferences = new Map();
       return JSON.stringify({
-        nodes: cleanNodes.map(serializeNodeForHistory),
+        nodes: cleanNodes.map((node) => serializeNodeForHistory(node, mediaReferences)),
         links: links.filter((link) => cleanIds.has(link.from) && cleanIds.has(link.to)),
         nodeId,
         view
       });
     }
 
-    function serializeNodeForHistory(node) {
-      const copy = JSON.parse(JSON.stringify(node));
-      return compactNodeMediaForSnapshot(copy);
+    function cloneCompactHistoryValue(value, mediaReferences) {
+      if (typeof value === "string") {
+        if (!isLargeDataUrl(value, largeMediaDataUrlLimit)) return value;
+        const id = mediaStorageId(value);
+        if (!mediaReferences.has(id)) {
+          mediaReferences.set(id, `${localMediaPrefix}${id}`);
+          queueLargeMediaPersist(value, id);
+        }
+        return mediaReferences.get(id);
+      }
+      if (Array.isArray(value)) return value.map((item) => cloneCompactHistoryValue(item, mediaReferences));
+      if (!value || typeof value !== "object") return value;
+      return Object.fromEntries(
+        Object.entries(value).map(([key, nested]) => [key, cloneCompactHistoryValue(nested, mediaReferences)])
+      );
     }
 
-    function queueLargeMediaPersist(value) {
-      const id = mediaStorageId(value);
+    function serializeNodeForHistory(node, mediaReferences = new Map()) {
+      // Compact large media while cloning. Deep-cloning the node first used to
+      // create several temporary copies of every 2K/4K base64 image on each undo
+      // checkpoint, causing long pauses and large heap spikes after ~10 images.
+      return cloneCompactHistoryValue(node, mediaReferences);
+    }
+
+    function queueLargeMediaPersist(value, knownId = "") {
+      const id = knownId || mediaStorageId(value);
       if (!pendingHistoryMediaPersistIds.has(id)) {
         pendingHistoryMediaPersistIds.add(id);
         putLocalMedia(value).finally(() => pendingHistoryMediaPersistIds.delete(id));
@@ -5985,7 +6005,7 @@
       try {
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
         removeDeprecatedSelectionNodes();
-        await Promise.all(nodes.map(cleanLoadedNode));
+        await cleanLoadedNodes(nodes);
         links = Array.isArray(state.links) ? state.links : [];
         pruneBrokenLinks();
         nodeId = Number(state.nodeId) || 1;
@@ -13702,6 +13722,10 @@ ${formatInstruction}`;
     async function getLocalMedia(value) {
       if (typeof value !== "string" || !value.startsWith(localMediaPrefix)) return value;
       const id = value.slice(localMediaPrefix.length);
+      if (pendingLocalMediaWrites.has(id)) {
+        try { await pendingLocalMediaWrites.get(id); }
+        catch (_error) {}
+      }
       if (window.wandouShell?.readCanvasMedia) {
         try {
           const desktopResult = await window.wandouShell.readCanvasMedia({ id });
@@ -14062,7 +14086,14 @@ ${formatInstruction}`;
       return typeof value === "string" && value.startsWith("data:") && value.length > limit;
     }
 
-    async function cleanLoadedNode(node) {
+    function resolveLoadedMedia(value, mediaCache) {
+      if (typeof value !== "string" || !value.startsWith(localMediaPrefix)) return Promise.resolve(value || "");
+      if (!mediaCache) return getLocalMedia(value);
+      if (!mediaCache.has(value)) mediaCache.set(value, getLocalMedia(value));
+      return mediaCache.get(value);
+    }
+
+    async function cleanLoadedNode(node, mediaCache = new Map()) {
       if (!node) return;
       const interruptedPromptRefine = Boolean(node.promptRefineLoading);
       node.promptRefineLoading = false;
@@ -14089,11 +14120,18 @@ ${formatInstruction}`;
         node.references = [];
         node.status = node.type === "result" ? "" : "可上传参考图。";
       }
-      node.mediaUrl = await getLocalMedia(node.mediaUrl) || node.mediaSourceUrl || "";
-      node.previewUrl = await getLocalMedia(node.previewUrl) || node.previewSourceUrl || node.mediaUrl || "";
-      node.fullUrl = await getLocalMedia(node.fullUrl) || node.fullSourceUrl || node.mediaUrl || "";
-      node.sourceUrl = await getLocalMedia(node.sourceUrl) || "";
-      node.outpaintSourceUrl = await getLocalMedia(node.outpaintSourceUrl) || "";
+      const [mediaUrl, previewUrl, fullUrl, sourceUrl, outpaintSourceUrl] = await Promise.all([
+        resolveLoadedMedia(node.mediaUrl, mediaCache),
+        resolveLoadedMedia(node.previewUrl, mediaCache),
+        resolveLoadedMedia(node.fullUrl, mediaCache),
+        resolveLoadedMedia(node.sourceUrl, mediaCache),
+        resolveLoadedMedia(node.outpaintSourceUrl, mediaCache)
+      ]);
+      node.mediaUrl = mediaUrl || node.mediaSourceUrl || "";
+      node.previewUrl = previewUrl || node.previewSourceUrl || node.mediaUrl || "";
+      node.fullUrl = fullUrl || node.fullSourceUrl || node.mediaUrl || "";
+      node.sourceUrl = sourceUrl || "";
+      node.outpaintSourceUrl = outpaintSourceUrl || "";
       await Promise.all([
         mirrorLargeLoadedMedia(node.mediaUrl),
         mirrorLargeLoadedMedia(node.previewUrl),
@@ -14104,14 +14142,29 @@ ${formatInstruction}`;
       if (Array.isArray(node.references)) {
         node.references = (await Promise.all(node.references.map(async (item) => ({
           ...item,
-          url: await getLocalMedia(item.url),
-          maskUrl: await getLocalMedia(item.maskUrl),
-          maskSelectionUrl: await getLocalMedia(item.maskSelectionUrl)
+          url: await resolveLoadedMedia(item.url, mediaCache),
+          maskUrl: await resolveLoadedMedia(item.maskUrl, mediaCache),
+          maskSelectionUrl: await resolveLoadedMedia(item.maskSelectionUrl, mediaCache)
         })))).filter((item) => item?.url);
         await Promise.all(node.references.flatMap((item) => [item.url, item.maskUrl, item.maskSelectionUrl]).filter(Boolean).map(mirrorLargeLoadedMedia));
       } else {
         node.references = [];
       }
+    }
+
+    async function cleanLoadedNodes(nodeList) {
+      const list = Array.isArray(nodeList) ? nodeList : [];
+      if (!list.length) return;
+      const mediaCache = new Map();
+      let nextIndex = 0;
+      const worker = async () => {
+        while (nextIndex < list.length) {
+          const node = list[nextIndex++];
+          await cleanLoadedNode(node, mediaCache);
+        }
+      };
+      const workerCount = Math.min(3, list.length);
+      await Promise.all(Array.from({ length: workerCount }, worker));
     }
 
     function mergeCanvasRecoveryState(compactState, backupState) {
@@ -14266,7 +14319,7 @@ ${formatInstruction}`;
         }
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
         removeDeprecatedSelectionNodes();
-        await Promise.all(nodes.map(cleanLoadedNode));
+        await cleanLoadedNodes(nodes);
         links = Array.isArray(state.links) ? state.links : [];
         pruneBrokenLinks();
         nodeId = Number(state.nodeId) || 1;

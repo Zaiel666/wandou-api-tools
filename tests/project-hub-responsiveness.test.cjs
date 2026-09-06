@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { chromium } = require("playwright");
+const projectCount = Math.max(1, Number(process.env.PROJECT_COUNT || 30));
 
 (async () => {
   const htmlPath = path.resolve(__dirname, "../app/project-hub.html");
@@ -20,9 +21,9 @@ const { chromium } = require("playwright");
   try {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await page.addInitScript(() => {
+    await page.addInitScript((seedProjectCount) => {
       const now = Date.now();
-      const projects = Array.from({ length: 30 }, (_, index) => ({
+      const projects = Array.from({ length: seedProjectCount }, (_, index) => ({
         id: `busy-${index}`,
         name: `历史文件夹${index + 1}`,
         color: "#76b900",
@@ -57,11 +58,15 @@ const { chromium } = require("playwright");
           return { success: true, states: [] };
         },
       };
-    });
+    }, projectCount);
 
     await page.goto(pathToFileURL(htmlPath).href);
     await page.locator('[data-node-count="busy-0"]').waitFor({ state: "visible" });
     await page.waitForFunction(() => document.querySelector('[data-node-count="busy-0"]')?.textContent === "120 个节点");
+    await page.waitForFunction(
+      (lastProjectId) => document.querySelector(`[data-node-count="${lastProjectId}"]`)?.textContent === "120 个节点",
+      `busy-${projectCount - 1}`
+    );
 
     const created = await page.evaluate(() => {
       const before = performance.now();
@@ -82,7 +87,7 @@ const { chromium } = require("playwright");
     await page.waitForFunction(() => window.__backupReads.calls >= 2);
     const backupReads = await page.evaluate(() => window.__backupReads);
     assert.ok(backupReads.maxActive <= 2, `backup concurrency reached ${backupReads.maxActive}`);
-    console.log(`PASS: project creation stayed responsive (${created.elapsed.toFixed(1)}ms) and backup concurrency was ${backupReads.maxActive}`);
+    console.log(`PASS: ${projectCount} folders x 120 nodes; creation took ${created.elapsed.toFixed(1)}ms and backup concurrency was ${backupReads.maxActive}`);
   } finally {
     await browser.close();
   }

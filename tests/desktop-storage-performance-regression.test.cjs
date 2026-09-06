@@ -23,7 +23,8 @@ assert.doesNotMatch(
   "desktop disk persistence must still run when IndexedDB is unavailable",
 );
 assert.match(canvas, /if \(!db\) openLocalMediaDb\.promise = null/);
-assert.match(canvas, /node\.sourceUrl = await getLocalMedia\(node\.sourceUrl\)/);
+assert.match(canvas, /resolveLoadedMedia\(node\.sourceUrl, mediaCache\)/);
+assert.match(canvas, /if \(!mediaCache\.has\(value\)\) mediaCache\.set\(value, getLocalMedia\(value\)\)/);
 assert.match(canvas, /wandouPrepareTabSuspend[\s\S]*nodes\.some\(\(node\) => node\.pending\)/);
 
 assert.match(shell, /inactiveCanvasSuspendDelayMs = 120000/);

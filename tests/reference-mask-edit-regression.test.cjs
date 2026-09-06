@@ -19,7 +19,7 @@ assert.match(source, /只允许修改遮罩透明区域/);
 assert.match(source, /composeMaskedEditImage\(rawUrl, maskedReference, targetSize\)/);
 assert.match(source, /const mix = selectionData\.data\[index \+ 3\] \/ 255/);
 assert.match(source, /maskUrl: await persistMediaValue\(item\.maskUrl\)/);
-assert.match(source, /maskSelectionUrl: await getLocalMedia\(item\.maskSelectionUrl\)/);
+assert.match(source, /maskSelectionUrl: await resolveLoadedMedia\(item\.maskSelectionUrl, mediaCache\)/);
 assert.match(source, /touch-action:\s*none/, "touch gestures must not interrupt mask painting");
 assert.match(source, /id="paintBrush"[\s\S]*?>画笔<\/button>/, "brush should have its own tool button");
 assert.match(source, /id="paintErase"[\s\S]*?>橡皮擦<\/button>/, "eraser should have its own tool button");
