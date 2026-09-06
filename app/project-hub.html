@@ -519,6 +519,8 @@
     let selectedProjectId = localStorage.getItem(selectedProjectStorageKey) || "";
     let showFavoritesOnly = false;
     let coverRenderToken = 0;
+    const projectSummaryCache = new Map();
+    let desktopCoverHydrationPromise = Promise.resolve();
 
     function projectCanvasStorageKey(projectId) {
       return `${canvasStorageKey}:${projectId || "default"}`;
@@ -679,40 +681,86 @@
       }
     }
 
+    function nextProjectHubTask() {
+      return new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    async function applyProjectStateToCard(project, state, renderToken) {
+      if (!state || renderToken !== coverRenderToken) return;
+      const stateSavedAt = Number(state.savedAt || 0);
+      const cached = projectSummaryCache.get(project.id);
+      if (cached && stateSavedAt && Number(cached.savedAt || 0) > stateSavedAt) return;
+      const summary = {
+        savedAt: stateSavedAt || Number(project.updatedAt || 0),
+        nodeCount: Array.isArray(state.nodes) ? state.nodes.length : Number(project.nodeCount || 0),
+        coverHtml: previewSvg(project, state)
+      };
+      projectSummaryCache.set(project.id, summary);
+      const cover = grid.querySelector(`[data-cover="${project.id}"]`);
+      if (!cover || !cover.isConnected) return;
+      cover.innerHTML = summary.coverHtml;
+      const nodeCount = grid.querySelector(`[data-node-count="${project.id}"]`);
+      const savedAt = grid.querySelector(`[data-saved-at="${project.id}"]`);
+      if (nodeCount) nodeCount.textContent = `${summary.nodeCount} 个节点`;
+      if (savedAt && summary.savedAt) savedAt.textContent = `操作 ${formatTime(summary.savedAt)}`;
+      const sources = projectResultPreviewSources(state);
+      if (!sources.length) return;
+      const resolved = (await Promise.all(sources.map(resolveProjectMedia))).filter(Boolean);
+      if (renderToken !== coverRenderToken || !resolved.length || !cover.isConnected) return;
+      if (projectSummaryCache.get(project.id) !== summary) return;
+      const mediaGrid = document.createElement("div");
+      mediaGrid.className = `cover-media-grid count-${resolved.length}`;
+      resolved.forEach((source, index) => {
+        const cell = document.createElement("div");
+        cell.className = "cover-media-cell";
+        const image = document.createElement("img");
+        image.src = source;
+        image.alt = `${project.name} 最近效果图 ${index + 1}`;
+        image.loading = "lazy";
+        image.decoding = "async";
+        cell.append(image);
+        mediaGrid.append(cell);
+      });
+      const label = document.createElement("span");
+      label.className = "cover-media-label";
+      label.textContent = resolved.length > 1 ? `最近 ${resolved.length} 张效果图` : "最近效果图";
+      mediaGrid.append(label);
+      cover.replaceChildren(mediaGrid);
+      summary.coverHtml = cover.innerHTML;
+    }
+
     async function hydrateProjectCovers(projectList, renderToken) {
-      await Promise.all(projectList.map(async (project) => {
-        const cover = grid.querySelector(`[data-cover="${project.id}"]`);
-        if (!cover) return;
-        const state = await readDesktopFolderState(project.id) || readState(project.id);
-        if (renderToken !== coverRenderToken || !cover.isConnected) return;
-        if (state?.nodes?.length) cover.innerHTML = previewSvg(project, state);
-        const nodeCount = grid.querySelector(`[data-node-count="${project.id}"]`);
-        const savedAt = grid.querySelector(`[data-saved-at="${project.id}"]`);
-        if (nodeCount && Array.isArray(state?.nodes)) nodeCount.textContent = `${state.nodes.length} 个节点`;
-        if (savedAt && state?.savedAt) savedAt.textContent = `操作 ${formatTime(state.savedAt)}`;
-        const sources = projectResultPreviewSources(state);
-        if (!sources.length) return;
-        const resolved = (await Promise.all(sources.map(resolveProjectMedia))).filter(Boolean);
-        if (renderToken !== coverRenderToken || !resolved.length || !cover.isConnected) return;
-        const mediaGrid = document.createElement("div");
-        mediaGrid.className = `cover-media-grid count-${resolved.length}`;
-        resolved.forEach((source, index) => {
-          const cell = document.createElement("div");
-          cell.className = "cover-media-cell";
-          const image = document.createElement("img");
-          image.src = source;
-          image.alt = `${project.name} 最近效果图 ${index + 1}`;
-          image.loading = "lazy";
-          image.decoding = "async";
-          cell.append(image);
-          mediaGrid.append(cell);
-        });
-        const label = document.createElement("span");
-        label.className = "cover-media-label";
-        label.textContent = resolved.length > 1 ? `最近 ${resolved.length} 张效果图` : "最近效果图";
-        mediaGrid.append(label);
-        cover.replaceChildren(mediaGrid);
-      }));
+      // Let the click/typing event finish first. Parsing every saved canvas in the
+      // button handler made large project libraries appear completely frozen.
+      await nextProjectHubTask();
+      for (let index = 0; index < projectList.length; index += 1) {
+        if (renderToken !== coverRenderToken) return;
+        const project = projectList[index];
+        await applyProjectStateToCard(project, readState(project.id), renderToken);
+        if (index % 2 === 1) await nextProjectHubTask();
+      }
+
+      // Desktop backup scans can involve many folders and large media files. Keep
+      // only two reads in flight so creating/renaming a folder stays responsive.
+      const runDesktopHydration = async () => {
+        let nextIndex = 0;
+        const worker = async () => {
+          while (renderToken === coverRenderToken) {
+            const index = nextIndex++;
+            if (index >= projectList.length) return;
+            const project = projectList[index];
+            const desktopState = await readDesktopFolderState(project.id);
+            await applyProjectStateToCard(project, desktopState, renderToken);
+            await nextProjectHubTask();
+          }
+        };
+        await Promise.all([worker(), worker()]);
+      };
+      const queuedDesktopHydration = desktopCoverHydrationPromise
+        .catch(() => {})
+        .then(runDesktopHydration);
+      desktopCoverHydrationPromise = queuedDesktopHydration;
+      await queuedDesktopHydration;
     }
 
     function formatTime(value) {
@@ -767,7 +815,9 @@
     function selectProject(projectId) {
       selectedProjectId = projectId;
       localStorage.setItem(selectedProjectStorageKey, projectId);
-      render();
+      grid.querySelectorAll("[data-project]").forEach((card) => {
+        card.classList.toggle("selected", card.dataset.project === projectId);
+      });
     }
 
     function previewSvg(project, state) {
@@ -864,11 +914,12 @@
         return;
       }
       grid.innerHTML = list.map((project) => {
-        const state = readState(project.id);
-        const savedAt = state?.savedAt || project.updatedAt;
-        const nodeCount = Array.isArray(state?.nodes) ? state.nodes.length : project.nodeCount || 0;
+        const summary = projectSummaryCache.get(project.id);
+        const savedAt = summary?.savedAt || project.updatedAt;
+        const nodeCount = summary?.nodeCount ?? project.nodeCount ?? 0;
+        const coverHtml = summary?.coverHtml || `<div class="empty-cover">正在读取预览…</div>`;
         return `<article class="card ${project.id === selectedProjectId ? "selected" : ""} ${project.favorite ? "favorite" : ""}" data-project="${project.id}">
-          <div class="cover" data-cover="${project.id}">${previewSvg(project, state)}</div>
+          <div class="cover" data-cover="${project.id}">${coverHtml}</div>
           <div class="card-body">
             <div class="name-row">
               <input class="name-input" data-name="${project.id}" value="${escapeHtml(project.name)}" aria-label="文件夹名称" readonly>
@@ -946,6 +997,7 @@
           const project = projects.find((item) => item.id === button.dataset.delete);
           if (!project || !confirm(`删除“${project.name}”？这个项目的本地画布记录也会删除。`)) return;
           projects = projects.filter((item) => item.id !== project.id);
+          projectSummaryCache.delete(project.id);
           localStorage.removeItem(projectCanvasStorageKey(project.id));
           if (selectedProjectId === project.id) selectedProjectId = projects[0]?.id || "";
           if (localStorage.getItem(activeProjectStorageKey) === project.id && projects[0]) {
