@@ -181,6 +181,51 @@ function canvasMediaRootDirectory() {
   return path.join(app.getPath("userData"), "canvas-media");
 }
 
+function projectHubStatePath() {
+  return path.join(app.getPath("userData"), "project-hub-state.json");
+}
+
+async function readProjectHubState() {
+  try {
+    const state = JSON.parse(await fs.promises.readFile(projectHubStatePath(), "utf8"));
+    if (!state || !Array.isArray(state.projects)) throw new Error("Invalid project hub state");
+    return { success: true, state, path: projectHubStatePath() };
+  } catch (error) {
+    if (error?.code === "ENOENT") return { success: true, missing: true, state: null, path: projectHubStatePath() };
+    return { success: false, error: error.message, path: projectHubStatePath() };
+  }
+}
+
+async function writeProjectHubState(payload = {}) {
+  const state = payload.state;
+  if (!state || !Array.isArray(state.projects)) return { success: false, error: "Invalid project hub state" };
+  const serialized = JSON.stringify({
+    format: "wandou-project-hub",
+    version: 1,
+    savedAt: Number(state.savedAt) || Date.now(),
+    projects: state.projects,
+    selectedProjectId: String(state.selectedProjectId || ""),
+    activeProjectId: String(state.activeProjectId || "")
+  }, null, 2);
+  if (Buffer.byteLength(serialized, "utf8") > 4 * 1024 * 1024) {
+    return { success: false, error: "项目文件夹清单异常，超过 4 MB" };
+  }
+  try {
+    await fs.promises.mkdir(app.getPath("userData"), { recursive: true });
+    const destination = projectHubStatePath();
+    const temporary = `${destination}.${process.pid}-${Date.now()}-${crypto.randomBytes(3).toString("hex")}.tmp`;
+    await fs.promises.writeFile(temporary, serialized, "utf8");
+    await fs.promises.rename(temporary, destination).catch(async (error) => {
+      if (!fs.existsSync(destination)) throw error;
+      await fs.promises.copyFile(temporary, destination);
+      await fs.promises.unlink(temporary).catch(() => {});
+    });
+    return { success: true, path: destination, savedAt: state.savedAt };
+  } catch (error) {
+    return { success: false, error: error.message, path: projectHubStatePath() };
+  }
+}
+
 function canvasMediaPath(id) {
   return path.join(canvasMediaRootDirectory(), `${safeCanvasBackupId(id, "invalid-media")}.data`);
 }
@@ -1112,6 +1157,14 @@ ipcMain.handle("desktop:read-canvas-backups", (_event, payload = {}) => readCanv
 ipcMain.handle("desktop:has-canvas-media", (_event, payload = {}) => hasCanvasMedia(payload));
 ipcMain.handle("desktop:write-canvas-media", (_event, payload = {}) => writeCanvasMedia(payload));
 ipcMain.handle("desktop:read-canvas-media", (_event, payload = {}) => readCanvasMedia(payload));
+ipcMain.handle("desktop:read-project-hub-state", (event) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取项目文件夹" };
+  return readProjectHubState();
+});
+ipcMain.handle("desktop:write-project-hub-state", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以保存项目文件夹" };
+  return writeProjectHubState(payload);
+});
 ipcMain.handle("desktop:list-skills", (event) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return [];
   return publicInstalledSkills();

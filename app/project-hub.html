@@ -442,6 +442,30 @@
       background: var(--panel);
     }
 
+    .project-notice {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      z-index: 50;
+      max-width: min(620px, calc(100vw - 32px));
+      padding: 11px 16px;
+      border: 1px solid rgba(40, 199, 111, .42);
+      border-radius: 999px;
+      color: var(--text);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, .22);
+      backdrop-filter: blur(18px);
+      font-size: 13px;
+      text-align: center;
+      opacity: 0;
+      transform: translate(-50%, 16px);
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .project-notice.visible { opacity: 1; transform: translate(-50%, 0); }
+    .project-notice.error { border-color: rgba(255, 77, 79, .6); }
+
     @media (max-width: 820px) {
       .shell { padding: 16px; }
       .topbar { grid-template-columns: 1fr; }
@@ -494,6 +518,8 @@
     <main id="projectGrid" class="grid medium"></main>
   </div>
 
+  <div id="projectNotice" class="project-notice" role="status" aria-live="polite"></div>
+
   <script src="./local-cache.js"></script>
   <script>
     const canvasStorageKey = "aiCanvasStateV1";
@@ -514,13 +540,41 @@
     const favoriteFilter = document.getElementById("favoriteFilter");
     const themeToggle = document.getElementById("themeToggle");
     const themeText = document.getElementById("themeText");
+    const projectNotice = document.getElementById("projectNotice");
     let projects = [];
-    let sizeMode = localStorage.getItem(viewSizeStorageKey) || "medium";
-    let selectedProjectId = localStorage.getItem(selectedProjectStorageKey) || "";
+    let sizeMode = safeLocalGet(viewSizeStorageKey, "medium");
+    let selectedProjectId = safeLocalGet(selectedProjectStorageKey);
+    let activeProjectId = safeLocalGet(activeProjectStorageKey);
     let showFavoritesOnly = false;
     let coverRenderToken = 0;
     const projectSummaryCache = new Map();
     let desktopCoverHydrationPromise = Promise.resolve();
+    let projectNoticeTimer = 0;
+    let projectSaveQueue = Promise.resolve();
+
+    function showProjectNotice(message, isError = false) {
+      if (!projectNotice) return;
+      clearTimeout(projectNoticeTimer);
+      projectNotice.textContent = message;
+      projectNotice.classList.toggle("error", isError);
+      projectNotice.classList.add("visible");
+      projectNoticeTimer = setTimeout(() => projectNotice.classList.remove("visible"), 4200);
+    }
+
+    function safeLocalGet(key, fallback = "") {
+      try { return localStorage.getItem(key) ?? fallback; }
+      catch (_error) { return fallback; }
+    }
+
+    function safeLocalSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (error) {
+        console.warn("Project hub local cache is full; durable storage remains active", error);
+        return false;
+      }
+    }
 
     function projectCanvasStorageKey(projectId) {
       return `${canvasStorageKey}:${projectId || "default"}`;
@@ -541,12 +595,7 @@
       return current;
     }
 
-    function loadProjects() {
-      try {
-        projects = JSON.parse(localStorage.getItem(projectListStorageKey) || "[]");
-      } catch {
-        projects = [];
-      }
+    function normalizeProjects() {
       if (!Array.isArray(projects) || !projects.length) projects = [defaultProject()];
       const now = Date.now();
       projects.forEach((project, index) => {
@@ -558,19 +607,98 @@
         if (typeof project.favorite !== "boolean") project.favorite = false;
       });
       if (!selectedProjectId || !projects.some((project) => project.id === selectedProjectId)) selectedProjectId = projects[0].id;
-      saveProjects();
+      if (!activeProjectId || !projects.some((project) => project.id === activeProjectId)) activeProjectId = selectedProjectId;
     }
 
-    function saveProjects() {
-      localStorage.setItem(projectListStorageKey, JSON.stringify(projects));
-      localStorage.setItem(selectedProjectStorageKey, selectedProjectId);
-      if (!localStorage.getItem(activeProjectStorageKey) && projects[0]) {
-        localStorage.setItem(activeProjectStorageKey, projects[0].id);
+    function loadProjects() {
+      try {
+        projects = JSON.parse(safeLocalGet(projectListStorageKey, "[]"));
+      } catch {
+        projects = [];
       }
+      normalizeProjects();
+    }
+
+    function projectHubState() {
+      return {
+        savedAt: Date.now(),
+        projects,
+        selectedProjectId,
+        activeProjectId
+      };
+    }
+
+    function writeDurableProjectState(state) {
+      if (window.wandouShell?.writeProjectHubState) return window.wandouShell.writeProjectHubState(state);
+      if (window.WandouLocalCache?.writeJson) return window.WandouLocalCache.writeJson("project-hub-state-v1", state);
+      return Promise.resolve({ ok: false, error: "当前环境没有可用的持久存储" });
+    }
+
+    function readDurableProjectState() {
+      if (window.wandouShell?.readProjectHubState) return window.wandouShell.readProjectHubState();
+      if (window.WandouLocalCache?.readJson) return window.WandouLocalCache.readJson("project-hub-state-v1").then((state) => ({ success: true, state }));
+      return Promise.resolve({ success: true, state: null });
+    }
+
+    function saveProjects(options = {}) {
+      const state = projectHubState();
+      const cacheSaved = [
+        safeLocalSet(projectListStorageKey, JSON.stringify(projects)),
+        safeLocalSet(selectedProjectStorageKey, selectedProjectId),
+        safeLocalGet(activeProjectStorageKey) ? true : safeLocalSet(activeProjectStorageKey, projects[0]?.id || "")
+      ].every(Boolean);
+      projectSaveQueue = projectSaveQueue
+        .catch(() => null)
+        .then(() => writeDurableProjectState(state))
+        .then((result) => {
+          const saved = result?.success === true || result?.ok === true;
+          if (!saved) {
+            if (!options.silent) showProjectNotice(`项目文件夹保存失败：${result?.error || "磁盘不可写"}`, true);
+            return false;
+          }
+          if (!cacheSaved && !options.silent) showProjectNotice("网页缓存已满，已自动改用磁盘保存，不影响继续使用。");
+          return true;
+        });
+      return projectSaveQueue;
+    }
+
+    function mergeDurableProjects(durableState) {
+      if (!durableState || !Array.isArray(durableState.projects)) return;
+      const merged = new Map();
+      durableState.projects.forEach((project) => merged.set(project.id, project));
+      const durableSavedAt = Number(durableState.savedAt || 0);
+      projects.forEach((project) => {
+        const durable = merged.get(project.id);
+        const currentUpdatedAt = Number(project.updatedAt || 0);
+        if (
+          (durable && currentUpdatedAt > Number(durable.updatedAt || 0))
+          || (!durable && currentUpdatedAt > durableSavedAt)
+        ) merged.set(project.id, project);
+      });
+      projects = Array.from(merged.values());
+      if (durableState.selectedProjectId && projects.some((project) => project.id === durableState.selectedProjectId)) {
+        selectedProjectId = durableState.selectedProjectId;
+      }
+      if (durableState.activeProjectId && projects.some((project) => project.id === durableState.activeProjectId)) {
+        activeProjectId = durableState.activeProjectId;
+        safeLocalSet(activeProjectStorageKey, activeProjectId);
+      }
+      normalizeProjects();
+    }
+
+    async function initializeProjectState() {
+      try {
+        const result = await readDurableProjectState();
+        if (result?.success !== false && result?.state) mergeDurableProjects(result.state);
+      } catch (error) {
+        console.warn("Durable project folder state could not be read", error);
+      }
+      render();
+      await saveProjects({ silent: true });
     }
 
     function readState(projectId) {
-      const raw = localStorage.getItem(projectCanvasStorageKey(projectId));
+      const raw = safeLocalGet(projectCanvasStorageKey(projectId));
       if (!raw) return null;
       try {
         return JSON.parse(raw);
@@ -661,7 +789,7 @@
         if (!states.length) {
           let innerProjects = [];
           try {
-            innerProjects = JSON.parse(localStorage.getItem(`${canvasStorageKey}:project-collection:${folderId}`) || "[]");
+            innerProjects = JSON.parse(safeLocalGet(`${canvasStorageKey}:project-collection:${folderId}`, "[]"));
           } catch (_error) {}
           const results = await Promise.all((Array.isArray(innerProjects) ? innerProjects : []).map((project) =>
             window.wandouShell.readCanvasBackups({ folderId, projectId: project?.id }).catch(() => null)
@@ -800,7 +928,9 @@
     }
 
     function openProject(projectId) {
-      localStorage.setItem(activeProjectStorageKey, projectId);
+      activeProjectId = projectId;
+      safeLocalSet(activeProjectStorageKey, projectId);
+      void saveProjects({ silent: true });
       openNamedTab(canvasUrl(projectId), "豌豆AI节点画布");
     }
 
@@ -814,7 +944,7 @@
 
     function selectProject(projectId) {
       selectedProjectId = projectId;
-      localStorage.setItem(selectedProjectStorageKey, projectId);
+      safeLocalSet(selectedProjectStorageKey, projectId);
       grid.querySelectorAll("[data-project]").forEach((card) => {
         card.classList.toggle("selected", card.dataset.project === projectId);
       });
@@ -1001,10 +1131,11 @@
           if (!project || !confirm(`删除“${project.name}”？这个项目的本地画布记录也会删除。`)) return;
           projects = projects.filter((item) => item.id !== project.id);
           projectSummaryCache.delete(project.id);
-          localStorage.removeItem(projectCanvasStorageKey(project.id));
+          try { localStorage.removeItem(projectCanvasStorageKey(project.id)); } catch (_error) {}
           if (selectedProjectId === project.id) selectedProjectId = projects[0]?.id || "";
-          if (localStorage.getItem(activeProjectStorageKey) === project.id && projects[0]) {
-            localStorage.setItem(activeProjectStorageKey, projects[0].id);
+          if (activeProjectId === project.id && projects[0]) {
+            activeProjectId = projects[0].id;
+            safeLocalSet(activeProjectStorageKey, activeProjectId);
           }
           saveProjects();
           render();
@@ -1051,14 +1182,15 @@
         coverHtml: `<div class="empty-cover">空画布</div>`
       });
       selectedProjectId = project.id;
-      localStorage.setItem(activeProjectStorageKey, project.id);
-      saveProjects();
+      activeProjectId = project.id;
       insertProjectCard(project);
       requestAnimationFrame(() => editName(project.id));
+      safeLocalSet(activeProjectStorageKey, project.id);
+      void saveProjects();
     });
 
     document.getElementById("openCanvas").addEventListener("click", () => {
-      const active = selectedProjectId || localStorage.getItem(activeProjectStorageKey) || projects[0]?.id;
+      const active = selectedProjectId || activeProjectId || projects[0]?.id;
       if (active) openProject(active);
     });
 
@@ -1071,7 +1203,7 @@
     document.querySelectorAll("[data-size]").forEach((button) => {
       button.addEventListener("click", () => {
         sizeMode = button.dataset.size;
-        localStorage.setItem(viewSizeStorageKey, sizeMode);
+        safeLocalSet(viewSizeStorageKey, sizeMode);
         render();
       });
     });
@@ -1086,7 +1218,7 @@
       const nextTheme = theme === "light" ? "light" : "dark";
       document.body.classList.toggle("light-theme", nextTheme === "light");
       document.body.classList.toggle("dark-theme", nextTheme === "dark");
-      localStorage.setItem(themeStorageKey, nextTheme);
+      safeLocalSet(themeStorageKey, nextTheme);
       window.WandouLocalCache?.syncTheme(nextTheme);
       updateTheme();
     }
@@ -1096,21 +1228,24 @@
       applyGlobalTheme(nextLight ? "light" : "dark");
     });
 
-    applyGlobalTheme(window.WandouLocalCache?.readTheme(localStorage.getItem(themeStorageKey) || "light") || "light");
+    applyGlobalTheme(window.WandouLocalCache?.readTheme(safeLocalGet(themeStorageKey, "light")) || "light");
     window.addEventListener("storage", (event) => {
       if (event.key === themeStorageKey) applyGlobalTheme(event.newValue || "light");
       if (event.key === projectListStorageKey || event.key?.startsWith(`${canvasStorageKey}:`)) {
         loadProjects();
         render();
+        void initializeProjectState();
       }
     });
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState !== "visible") return;
       loadProjects();
       render();
+      void initializeProjectState();
     });
     loadProjects();
     render();
+    void initializeProjectState();
   </script>
 </body>
 </html>

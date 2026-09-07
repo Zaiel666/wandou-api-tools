@@ -53,6 +53,8 @@ contextBridge.exposeInMainWorld("wandouShell", {
   hasCanvasMedia: (payload) => ipcRenderer.invoke("desktop:has-canvas-media", payload),
   writeCanvasMedia: (payload) => ipcRenderer.invoke("desktop:write-canvas-media", payload),
   readCanvasMedia: (payload) => ipcRenderer.invoke("desktop:read-canvas-media", payload),
+  readProjectHubState: () => ipcRenderer.invoke("desktop:read-project-hub-state"),
+  writeProjectHubState: (state) => ipcRenderer.invoke("desktop:write-project-hub-state", { state }),
   listSkills: () => ipcRenderer.invoke("desktop:list-skills"),
   readSkill: (id) => ipcRenderer.invoke("desktop:read-skill", { id }),
   importSkill: () => ipcRenderer.invoke("desktop:import-skill"),
