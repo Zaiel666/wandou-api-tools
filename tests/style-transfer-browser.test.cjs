@@ -47,6 +47,14 @@ const { chromium } = require("../desktop-client/node_modules/playwright");
     assert.equal(await page.locator(".style-transfer-preview img").count(), 2);
     assert.equal(await page.locator("[data-style-generate]").textContent(), "开始风格迁移");
 
+    const selects = page.locator("[data-style-select]");
+    assert.equal(await selects.count(), 2);
+    await selects.nth(0).locator("[data-style-select-toggle]").click();
+    assert.equal(await selects.nth(0).evaluate((element) => element.classList.contains("open")), true);
+    assert.equal(await selects.nth(0).locator("[data-style-model]").count(), 4);
+    await selects.nth(0).locator('[data-style-model="Nano Banana2"]').click();
+    assert.equal(await selects.nth(0).locator("[data-style-select-toggle] span").textContent(), "Nano Banana2");
+
     await page.locator('[data-style-strength="strong"]').click();
     assert.equal(await page.locator('[data-style-strength="strong"]').evaluate((element) => element.classList.contains("active")), true);
     const restored = await page.evaluate(async () => {

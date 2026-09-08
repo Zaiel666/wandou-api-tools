@@ -7464,8 +7464,9 @@
       if (!resolutions.includes(node.resolution)) node.resolution = resolutions[0];
       const refs = styleTransferReferenceItems(node);
       const readyCount = refs.filter(Boolean).length;
-      const modelOptions = imageModelOptions.map((model) => `<option value="${escapeHtml(model)}" ${node.model === model ? "selected" : ""}>${escapeHtml(model)}</option>`).join("");
-      const outputOptions = styleTransferOutputOptions.map((item) => `<option value="${item.value}" ${node.styleOutputMode === item.value ? "selected" : ""}>${item.label}</option>`).join("");
+      const modelOptions = imageModelOptions.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-style-model="${escapeHtml(model)}" type="button" role="option" aria-selected="${node.model === model}"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
+      const selectedOutputLabel = styleTransferOutputOptions.find((item) => item.value === node.styleOutputMode)?.label || "跟随内容图";
+      const outputOptions = styleTransferOutputOptions.map((item) => `<button class="node-select-option ${node.styleOutputMode === item.value ? "active" : ""}" data-style-output="${item.value}" type="button" role="option" aria-selected="${node.styleOutputMode === item.value}"><span>${item.label}</span>${node.styleOutputMode === item.value ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const strengthButtons = styleTransferStrengths.map((item) => `<button class="choice-option ${node.styleStrength === item.value ? "active" : ""}" data-style-strength="${item.value}" type="button">${item.label}<small>${item.hint}</small></button>`).join("");
       const resolutionButtons = resolutions.map((resolution) => `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-style-resolution="${resolution}" type="button">${resolutionLabel(resolution)}</button>`).join("");
       wrap.innerHTML = `
@@ -7476,9 +7477,9 @@
           </div>
           <div class="style-transfer-role-hint"><strong>顺序固定：</strong>第 1 张决定画什么，第 2 张决定怎么画。</div>
         </div>
-        <div class="form-row"><label>模型</label><select data-style-model>${modelOptions}</select></div>
+        <div class="form-row"><label>模型</label><div class="node-select" data-style-select><button class="node-select-trigger" data-style-select-toggle type="button" aria-haspopup="listbox" aria-expanded="false"><span>${escapeHtml(node.model)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu" role="listbox">${modelOptions}</div></div></div>
         <div class="form-row"><label>迁移强度</label><div class="choice-options">${strengthButtons}</div></div>
-        <div class="form-row"><label>输出比例</label><select data-style-output>${outputOptions}</select></div>
+        <div class="form-row"><label>输出比例</label><div class="node-select" data-style-select><button class="node-select-trigger" data-style-select-toggle type="button" aria-haspopup="listbox" aria-expanded="false"><span>${selectedOutputLabel}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu" role="listbox">${outputOptions}</div></div></div>
         <div class="form-row resolution-row"><label>分辨率</label><div class="choice-options" style="--resolution-option-count:${resolutions.length}">${resolutionButtons}</div></div>
         <div class="field"><textarea class="prompt-textarea" data-style-prompt data-autogrow placeholder="补充要求（可选），例如：背景保持纯白、人物表情不变">${escapeHtml(node.prompt || "")}</textarea></div>
         <button data-generate data-style-generate class="wide-button" type="button">开始风格迁移</button>
@@ -7519,22 +7520,38 @@
         const reference = styleTransferReferenceItems(node)[Number(preview.dataset.stylePreview)];
         if (reference?.url) openLightbox(reference.url, { mode: "image", nodeId: node.id });
       }));
-      wrap.querySelector("[data-style-model]").addEventListener("change", (event) => {
+      wrap.querySelectorAll("[data-style-select-toggle]").forEach((toggle) => toggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const select = toggle.closest("[data-style-select]");
+        const shouldOpen = !select.classList.contains("open");
+        wrap.querySelectorAll("[data-style-select].open").forEach((item) => {
+          item.classList.remove("open");
+          item.querySelector("[data-style-select-toggle]")?.setAttribute("aria-expanded", "false");
+        });
+        if (!shouldOpen) return;
+        select.classList.add("open");
+        toggle.setAttribute("aria-expanded", "true");
+        setTimeout(() => document.addEventListener("click", () => {
+          select.classList.remove("open");
+          toggle.setAttribute("aria-expanded", "false");
+        }, { once: true }), 0);
+      }));
+      wrap.querySelectorAll("[data-style-model]").forEach((button) => button.addEventListener("click", () => {
         pushHistory();
-        node.model = event.target.value;
+        node.model = button.dataset.styleModel;
         node.resolution = imageResolutionOptionsForModel(node.model)[0];
         render();
-      });
+      }));
       wrap.querySelectorAll("[data-style-strength]").forEach((button) => button.addEventListener("click", () => {
         pushHistory();
         node.styleStrength = button.dataset.styleStrength;
         render();
       }));
-      wrap.querySelector("[data-style-output]").addEventListener("change", (event) => {
+      wrap.querySelectorAll("[data-style-output]").forEach((button) => button.addEventListener("click", () => {
         pushHistory();
-        node.styleOutputMode = event.target.value;
+        node.styleOutputMode = button.dataset.styleOutput;
         render();
-      });
+      }));
       wrap.querySelectorAll("[data-style-resolution]").forEach((button) => button.addEventListener("click", () => {
         pushHistory();
         node.resolution = button.dataset.styleResolution;

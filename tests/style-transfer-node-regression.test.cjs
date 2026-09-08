@@ -33,4 +33,6 @@ test("style transfer supports strength, output ratio and resolution controls", (
   assert.match(html, /跟随内容图/);
   assert.match(html, /跟随风格图/);
   assert.match(html, /data-style-resolution/);
+  assert.match(html, /data-style-select-toggle/);
+  assert.doesNotMatch(html, /<select data-style-(?:model|output)/);
 });
