@@ -19,6 +19,11 @@ try {
     New-Item -ItemType Directory -Path $install -Force | Out-Null
     [IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path $Package).Path, $install)
     if (-not (Test-Path -LiteralPath $runtimeExecutable)) { throw 'Internal Electron runtime is missing.' }
+    # Simulate files left at the outer level by an old updater's locked-directory
+    # fallback. The new launcher must keep them out of the user's three-entry view.
+    New-Item -ItemType Directory -Path (Join-Path $install 'locales') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $install 'chrome_100_percent.pak') -Value 'legacy' -Encoding ASCII
+    Set-Content -LiteralPath (Join-Path $install 'd3dcompiler_47.dll') -Value 'legacy' -Encoding ASCII
 
     $previousUserData = $env:WANDOU_TEST_USER_DATA_DIR
     $previousCloseDelay = $env:WANDOU_TEST_CLOSE_AFTER_MS
@@ -48,7 +53,7 @@ try {
         $runtimeProcesses = Get-RuntimeProcesses
     } while ($runtimeProcesses.Count -gt 0 -and [DateTime]::UtcNow -lt $exitDeadline)
     if ($runtimeProcesses.Count -gt 0) { throw 'The packaged app did not complete its normal save-and-close flow.' }
-    Write-Output 'PASS: packaged launcher starts, shows three outer entries, and exits through verified save flow.'
+    Write-Output 'PASS: packaged launcher starts, hides legacy root files, shows three entries, and exits through verified save flow.'
 }
 finally {
     foreach ($process in (Get-RuntimeProcesses)) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
