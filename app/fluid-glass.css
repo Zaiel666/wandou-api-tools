@@ -1858,6 +1858,22 @@ body.node-canvas-page .brand h1 {
   font-weight: 600 !important;
 }
 
+/* 风格迁移是单一主操作，需要在双图与参数区下方保持明确的视觉落点。 */
+html body.node-canvas-page .node.style .node-body button[data-style-generate][data-generate],
+html body.node-canvas-page.dark-theme .node.style .node-body button[data-style-generate][data-generate] {
+  color: #fff !important;
+  border-color: #2eae61 !important;
+  background: #2eae61 !important;
+  box-shadow: none !important;
+}
+
+html body.node-canvas-page .node.style .node-body button[data-style-generate][data-generate]:hover,
+html body.node-canvas-page.dark-theme .node.style .node-body button[data-style-generate][data-generate]:hover {
+  color: #fff !important;
+  border-color: #247f4a !important;
+  background: #247f4a !important;
+}
+
 body.node-canvas-page :is(.brand-subtitle, .status, .ratio-readout, .auto-split-hint, .auto-split-note) {
   color: var(--wd-neutral-muted) !important;
 }

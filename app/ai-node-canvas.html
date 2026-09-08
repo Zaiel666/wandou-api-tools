@@ -752,8 +752,16 @@
     }
 
     .button-grid button[data-add-node="png"],
-    .button-grid button[data-add-node="outpaint"] {
+    .button-grid button[data-add-node="outpaint"],
+    .button-grid button[data-add-node="style"] {
       white-space: nowrap;
+    }
+
+    .button-grid button[data-add-node="style"] {
+      grid-column: 1 / -1;
+      color: #176f3b;
+      border-color: rgba(42, 173, 95, .45);
+      background: rgba(42, 173, 95, .08);
     }
 
     .button-grid button span {
@@ -1946,6 +1954,130 @@
     .node.outpaint {
       width: 450px;
       min-width: 410px;
+    }
+
+    .node.style {
+      width: 470px;
+      min-width: 430px;
+    }
+
+    .style-transfer-images {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .style-transfer-slot {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--panel-soft);
+    }
+
+    .style-transfer-slot.has-image {
+      border-color: color-mix(in srgb, var(--slot-color) 64%, var(--line));
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--slot-color) 10%, transparent);
+    }
+
+    .style-transfer-slot-label {
+      height: 30px;
+      padding: 0 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      color: var(--text);
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .style-transfer-slot-label small {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .style-transfer-preview {
+      position: relative;
+      height: 142px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background: color-mix(in srgb, var(--panel-soft) 88%, var(--slot-color));
+    }
+
+    .style-transfer-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .style-transfer-empty {
+      padding: 18px 10px;
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      color: var(--muted);
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .style-transfer-empty strong {
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .style-transfer-plus {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid color-mix(in srgb, var(--slot-color) 55%, var(--line));
+      border-radius: 50%;
+      color: var(--slot-color);
+      background: var(--panel);
+      font-size: 23px;
+      line-height: 1;
+    }
+
+    .style-transfer-slot-actions {
+      position: absolute;
+      right: 7px;
+      bottom: 7px;
+      display: flex;
+      gap: 5px;
+    }
+
+    .style-transfer-slot-actions label,
+    .style-transfer-slot-actions button {
+      min-height: 25px;
+      padding: 3px 8px;
+      border: 1px solid rgba(255, 255, 255, .55);
+      border-radius: 7px;
+      color: #fff;
+      background: rgba(15, 23, 42, .76);
+      font-size: 9px;
+      cursor: pointer;
+    }
+
+    .style-transfer-role-hint {
+      margin: 7px 2px 0;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.45;
+    }
+
+    .style-transfer-role-hint strong { color: #228f4d; }
+
+    body.dark-theme .style-transfer-slot,
+    body.dark-theme .style-transfer-slot-label {
+      border-color: rgba(255, 255, 255, .11);
     }
 
     .outpaint-direction-options,
@@ -4629,6 +4761,7 @@
           <button type="button" data-add-node="keyword">反推/生成提示词</button>
           <button type="button" data-add-node="png">PNG透明底/抠图</button>
           <button type="button" data-add-node="outpaint">扩图</button>
+          <button type="button" data-add-node="style">风格迁移</button>
         </div>
         <p class="hint">拖动节点标题可移动。点击一个输出圆点，再点另一个输入圆点即可连线。</p>
       </div>
@@ -4741,6 +4874,7 @@
         <button type="button" data-menu-node="keyword">新建反推/生成提示词</button>
         <button type="button" data-menu-node="png">新建PNG透明底/抠图</button>
         <button type="button" data-menu-node="outpaint">新建扩图</button>
+        <button type="button" data-menu-node="style">新建风格迁移</button>
         <button type="button" data-menu-node="image-upload">上传图片</button>
       </div>
       <div id="selectionBox" class="selection-box"></div>
@@ -4753,6 +4887,7 @@
         <button type="button" data-link-create="video">连接到 AI 视频</button>
         <button type="button" data-link-create="keyword">连接到反推/生成提示词</button>
         <button type="button" data-link-create="outpaint">连接到扩图</button>
+        <button type="button" data-link-create="style">连接到风格迁移</button>
         <button type="button" data-link-cancel>取消连接</button>
       </div>
     </main>
@@ -6067,7 +6202,7 @@
         x,
         y,
         title: nodeTitle(type),
-        prompt: type === "keyword" ? defaultKeywordPrompt : type === "png" ? "请只抠出上传原图里的主体，移除背景并输出透明底 PNG，不要重绘、不要美化、不要改变人物/产品/文字/Logo/衣服/姿势/构图。" : type === "upscale" ? "将输入图片无损放大到 4K，保持原图构图、比例、文字、Logo、人物和产品细节不变，只增强清晰度与纹理细节。" : type === "outpaint" ? "只在原图外部自然延展背景、环境、光影和纹理，原图内部的主体、人物、产品、文字、Logo、构图、颜色与全部细节必须保持不变。" : type === "generator" || type === "video" ? defaultPrompt : "",
+        prompt: type === "keyword" ? defaultKeywordPrompt : type === "png" ? "请只抠出上传原图里的主体，移除背景并输出透明底 PNG，不要重绘、不要美化、不要改变人物/产品/文字/Logo/衣服/姿势/构图。" : type === "upscale" ? "将输入图片无损放大到 4K，保持原图构图、比例、文字、Logo、人物和产品细节不变，只增强清晰度与纹理细节。" : type === "outpaint" ? "只在原图外部自然延展背景、环境、光影和纹理，原图内部的主体、人物、产品、文字、Logo、构图、颜色与全部细节必须保持不变。" : type === "style" ? "保留内容图中的主体身份、姿势和构图，将风格参考图的画风、色彩、材质、线条和光影迁移到内容图。" : type === "generator" || type === "video" ? defaultPrompt : "",
         model: type === "video" ? videoPrimaryModel : type === "keyword" ? "GPT" : "GPT-image-2",
         promptFormat: "paragraph",
         promptReverseMode: type === "keyword" ? "image" : "",
@@ -6102,6 +6237,8 @@
         elapsed: 0,
         outpaintDirection: type === "outpaint" ? "horizontal" : "",
         outpaintAmount: type === "outpaint" ? 50 : 0,
+        styleStrength: type === "style" ? "standard" : "",
+        styleOutputMode: type === "style" ? "content" : "",
         status: "",
         ...nodeExtra
       };
@@ -6117,6 +6254,7 @@
       if (type === "png") return "PNG/透明底工作流";
       if (type === "upscale") return "4K放大";
       if (type === "outpaint") return "扩图";
+      if (type === "style") return "风格迁移";
       if (type === "result") return "";
       if (type === "selection") return "选区";
       return "参考图";
@@ -6128,6 +6266,7 @@
       if (type === "png") return "◫";
       if (type === "upscale") return "4K";
       if (type === "outpaint") return "↔";
+      if (type === "style") return "◈";
       if (type === "generator") return "✦";
       if (type === "result") return "↓";
       return "▣";
@@ -6350,7 +6489,7 @@
           </div>
         </div>
         <div class="node-body"></div>
-        ${!isSelection && (node.type === "generator" || node.type === "video" || node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint") ? '<div class="node-resize" data-resize-handle title="拖动缩放节点"></div>' : ''}
+        ${!isSelection && (node.type === "generator" || node.type === "video" || node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint" || node.type === "style") ? '<div class="node-resize" data-resize-handle title="拖动缩放节点"></div>' : ''}
       `;
 
       const body = el.querySelector(".node-body");
@@ -6362,6 +6501,8 @@
         body.appendChild(renderUpscaleBody(node));
       } else if (node.type === "outpaint") {
         body.appendChild(renderOutpaintBody(node));
+      } else if (node.type === "style") {
+        body.appendChild(renderStyleTransferBody(node));
       } else if (node.type === "generator" || node.type === "video") {
         body.appendChild(renderGeneratorBody(node));
       } else if (node.type === "selection") {
@@ -6447,7 +6588,9 @@
           skillLastAppliedPrompt: node.skillLastAppliedPrompt || "",
           skillOriginalPrompt: node.skillOriginalPrompt || "",
           skillOptimizedPrompt: node.skillOptimizedPrompt || "",
-          skillCompareOpen: Boolean(node.skillCompareOpen)
+          skillCompareOpen: Boolean(node.skillCompareOpen),
+          styleStrength: node.styleStrength || "standard",
+          styleOutputMode: node.styleOutputMode || "content"
         });
       });
 
@@ -7247,6 +7390,164 @@
         parts.push("第一张输入参考图是本批次系列母图，也是不可重新设计的版式模板。必须逐项锁定标题区、符号区、人物区、日期区、说明文字区的坐标、宽高、对齐、字号层级、字体粗细、字距、行距和边距；严格继承镜头、色板、材质与光线。只替换当前图片明确变化的主题、名称和内容，禁止移动、缩放、增删或重新排版固定区域。");
       }
       return parts.filter(Boolean).join("\n\n");
+    }
+
+    const styleTransferStrengths = [
+      { value: "subtle", label: "轻度", hint: "主体优先" },
+      { value: "standard", label: "标准", hint: "风格明显" },
+      { value: "strong", label: "强烈", hint: "高度风格化" }
+    ];
+
+    const styleTransferOutputOptions = [
+      { value: "content", label: "跟随内容图" },
+      { value: "style", label: "跟随风格图" },
+      { value: "1:1", label: "1:1 方图" },
+      { value: "16:9", label: "16:9 横屏" },
+      { value: "9:16", label: "9:16 竖屏" },
+      { value: "4:3", label: "4:3 横图" },
+      { value: "3:4", label: "3:4 竖图" }
+    ];
+
+    function styleTransferOwnReference(node, role) {
+      const refs = normalizeReferences(node);
+      refs.forEach((item, index) => {
+        if (!item.styleRole && index < 2) item.styleRole = index === 0 ? "content" : "style";
+      });
+      return refs.find((item) => item.styleRole === role) || null;
+    }
+
+    function styleTransferReferenceItems(node) {
+      const content = styleTransferOwnReference(node, "content");
+      const style = styleTransferOwnReference(node, "style");
+      const used = new Set([content?.url, style?.url].filter(Boolean));
+      const linked = collectReferenceItems(getInputMediaList(node.id)).filter((item) => item?.url && !used.has(item.url));
+      return [content || linked.shift() || null, style || linked.shift() || null];
+    }
+
+    function styleTransferPrompt(node) {
+      const strength = node.styleStrength === "subtle"
+        ? "轻度迁移：主体真实性和原始细节优先，只轻微吸收风格图的颜色、笔触与光影。"
+        : node.styleStrength === "strong"
+        ? "强烈迁移：明显采用风格图的画风、线条、材质、色板、光影与视觉语言，但仍须保持内容图主体可识别。"
+        : "标准迁移：清楚采用风格图的画风、色板、材质、线条与光影，同时稳定保留内容图主体和构图。";
+      return [
+        "这是严格的双图风格迁移任务，输入图片的顺序和职责不可互换。",
+        "第 1 张是内容图：锁定主体身份、面部特征、产品结构、姿势、轮廓、主要构图和空间关系。",
+        "第 2 张是风格参考图：只提取画风、色彩体系、材质、笔触、线条、光影、质感和视觉氛围，不要复制其中的人物或物体。",
+        strength,
+        String(node.prompt || "").trim(),
+        "输出必须是一张完整图片，不要拼图、分栏、画中画、对比图、文字说明或边框。"
+      ].filter(Boolean).join("\n\n");
+    }
+
+    function styleTransferSlotHtml(node, role, index, reference) {
+      const isContent = role === "content";
+      const ownReference = styleTransferOwnReference(node, role);
+      const title = isContent ? "① 内容图" : "② 风格参考";
+      const hint = isContent ? "保留主体与构图" : "提取画风与质感";
+      const color = isContent ? "#22c55e" : "#f97316";
+      return `<div class="style-transfer-slot ${reference ? "has-image" : ""}" style="--slot-color:${color}">
+        <div class="style-transfer-slot-label"><span>${title}</span><small>${hint}</small></div>
+        <div class="style-transfer-preview" data-style-preview="${index}">
+          ${reference ? `<img src="${reference.url}" alt="${title}">` : `<label class="style-transfer-empty"><span class="style-transfer-plus">＋</span><strong>添加${isContent ? "内容" : "风格"}图片</strong><span>${hint}</span><input data-style-upload="${role}" type="file" accept="image/*" hidden></label>`}
+          ${reference ? `<div class="style-transfer-slot-actions"><label>替换<input data-style-upload="${role}" type="file" accept="image/*" hidden></label><button data-style-remove="${role}" data-style-linked="${ownReference ? "0" : "1"}" type="button">${ownReference ? "移除" : "断开"}</button></div>` : ""}
+        </div>
+      </div>`;
+    }
+
+    function renderStyleTransferBody(node) {
+      const wrap = document.createElement("div");
+      if (!imageModelOptions.includes(node.model)) node.model = imageModelOptions[0];
+      if (!styleTransferStrengths.some((item) => item.value === node.styleStrength)) node.styleStrength = "standard";
+      if (!styleTransferOutputOptions.some((item) => item.value === node.styleOutputMode)) node.styleOutputMode = "content";
+      const resolutions = imageResolutionOptionsForModel(node.model);
+      if (!resolutions.includes(node.resolution)) node.resolution = resolutions[0];
+      const refs = styleTransferReferenceItems(node);
+      const readyCount = refs.filter(Boolean).length;
+      const modelOptions = imageModelOptions.map((model) => `<option value="${escapeHtml(model)}" ${node.model === model ? "selected" : ""}>${escapeHtml(model)}</option>`).join("");
+      const outputOptions = styleTransferOutputOptions.map((item) => `<option value="${item.value}" ${node.styleOutputMode === item.value ? "selected" : ""}>${item.label}</option>`).join("");
+      const strengthButtons = styleTransferStrengths.map((item) => `<button class="choice-option ${node.styleStrength === item.value ? "active" : ""}" data-style-strength="${item.value}" type="button">${item.label}<small>${item.hint}</small></button>`).join("");
+      const resolutionButtons = resolutions.map((resolution) => `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-style-resolution="${resolution}" type="button">${resolutionLabel(resolution)}</button>`).join("");
+      wrap.innerHTML = `
+        <div class="field">
+          <div class="style-transfer-images">
+            ${styleTransferSlotHtml(node, "content", 0, refs[0])}
+            ${styleTransferSlotHtml(node, "style", 1, refs[1])}
+          </div>
+          <div class="style-transfer-role-hint"><strong>顺序固定：</strong>第 1 张决定画什么，第 2 张决定怎么画。</div>
+        </div>
+        <div class="form-row"><label>模型</label><select data-style-model>${modelOptions}</select></div>
+        <div class="form-row"><label>迁移强度</label><div class="choice-options">${strengthButtons}</div></div>
+        <div class="form-row"><label>输出比例</label><select data-style-output>${outputOptions}</select></div>
+        <div class="form-row resolution-row"><label>分辨率</label><div class="choice-options" style="--resolution-option-count:${resolutions.length}">${resolutionButtons}</div></div>
+        <div class="field"><textarea class="prompt-textarea" data-style-prompt data-autogrow placeholder="补充要求（可选），例如：背景保持纯白、人物表情不变">${escapeHtml(node.prompt || "")}</textarea></div>
+        <button data-generate data-style-generate class="wide-button" type="button">开始风格迁移</button>
+        <div class="status">${escapeHtml(node.status || (readyCount === 2 ? "两张图片已就绪，可以开始迁移。" : `请按顺序添加两张图片（已添加 ${readyCount}/2）。`))}</div>
+      `;
+
+      wrap.querySelectorAll("[data-style-upload]").forEach((input) => input.addEventListener("change", async (event) => {
+        const file = Array.from(event.target.files || []).find(isImageFile);
+        if (!file) return;
+        pushHistory();
+        try {
+          const reference = await imageFileToReference(file);
+          const role = input.dataset.styleUpload;
+          node.references = normalizeReferences(node).filter((item) => item.styleRole !== role);
+          node.references.push({ ...reference, styleRole: role });
+          node.mediaUrl = styleTransferOwnReference(node, "content")?.url || "";
+          node.status = `${role === "content" ? "内容图" : "风格参考图"}已添加。`;
+        } catch (error) {
+          node.status = error?.message || "图片读取失败，请换一张图片重试。";
+        }
+        event.target.value = "";
+        render();
+      }));
+      wrap.querySelectorAll("[data-style-remove]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        if (button.dataset.styleLinked === "1") {
+          disconnectInputLinks(node.id);
+          return;
+        }
+        const role = button.dataset.styleRemove;
+        node.references = normalizeReferences(node).filter((item) => item.styleRole !== role);
+        node.mediaUrl = styleTransferOwnReference(node, "content")?.url || "";
+        node.status = `${role === "content" ? "内容图" : "风格参考图"}已移除。`;
+        render();
+      }));
+      wrap.querySelectorAll("[data-style-preview]").forEach((preview) => preview.addEventListener("click", (event) => {
+        if (event.target.closest("label, button, input")) return;
+        const reference = styleTransferReferenceItems(node)[Number(preview.dataset.stylePreview)];
+        if (reference?.url) openLightbox(reference.url, { mode: "image", nodeId: node.id });
+      }));
+      wrap.querySelector("[data-style-model]").addEventListener("change", (event) => {
+        pushHistory();
+        node.model = event.target.value;
+        node.resolution = imageResolutionOptionsForModel(node.model)[0];
+        render();
+      });
+      wrap.querySelectorAll("[data-style-strength]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        node.styleStrength = button.dataset.styleStrength;
+        render();
+      }));
+      wrap.querySelector("[data-style-output]").addEventListener("change", (event) => {
+        pushHistory();
+        node.styleOutputMode = event.target.value;
+        render();
+      });
+      wrap.querySelectorAll("[data-style-resolution]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        node.resolution = button.dataset.styleResolution;
+        render();
+      }));
+      wrap.querySelector("[data-style-prompt]").addEventListener("input", (event) => {
+        node.prompt = event.target.value;
+        node.promptHeight = Math.ceil(event.target.offsetHeight);
+        scheduleCanvasSave();
+      });
+      wrap.querySelector("[data-style-generate]").addEventListener("click", () => generateFromNode(node.id));
+      autoGrowTextareas(wrap);
+      return wrap;
     }
 
     function renderGeneratorBody(node) {
@@ -8813,6 +9114,7 @@
       pushHistory();
       links = links.filter((link) => !(link.from === from && link.to === to));
       links.push({ from, to });
+      refreshRenderedNode(to);
       scheduleCanvasSave();
       showToast("节点已连接");
     }
@@ -9970,9 +10272,17 @@
           ...(inputMediaList.length ? inputMediaList : inputMedia ? [inputMedia] : []),
           node
         ];
-      let references = collectReferenceItems(referenceSources);
+      let references = node.type === "style"
+        ? styleTransferReferenceItems(node).slice(0, 2).filter(Boolean)
+        : collectReferenceItems(referenceSources);
       if (node.type === "upscale" || node.type === "outpaint") references = references.slice(0, 1);
       await ensureReferenceDimensions(references);
+      if (node.type === "style" && references.length !== 2) {
+        node.status = `风格迁移需要 2 张图片：第 1 张内容图，第 2 张风格参考图（当前 ${references.length}/2）。`;
+        render();
+        showToast("请先添加内容图和风格参考图");
+        return;
+      }
       if ((node.type === "upscale" || node.type === "outpaint") && !references.length) {
         node.status = "请先上传图片，或连接一个参考图/效果图节点。";
         render();
@@ -9983,10 +10293,16 @@
         prompt: node.prompt
       };
       const fixedVideoRatio = node.type === "video" ? fixedVideoAspectRatio(node.model) : "";
+      const styleOutputReference = node.type === "style" && node.styleOutputMode === "style" ? references[1] : references[0];
+      const styleOutputRatio = node.type === "style" && !["content", "style"].includes(node.styleOutputMode)
+        ? node.styleOutputMode
+        : "Auto自适应";
       const sizeDecision = node.type === "outpaint"
         ? { size: outpaintTargetFrame(references[0], node.outpaintDirection, node.outpaintAmount).size, source: `扩图 ${outpaintDirectionLabel(node.outpaintDirection)}` }
         : node.type === "png"
         ? { size: transparentTargetSize(references, node.resolution), source: "透明 PNG 原图比例" }
+        : node.type === "style"
+        ? { size: sizeFromRatio(styleOutputRatio, node.resolution, styleOutputReference ? [styleOutputReference] : [], { prompt: "" }), source: node.styleOutputMode === "style" ? "跟随风格图" : node.styleOutputMode === "content" ? "跟随内容图" : `手动 ${node.styleOutputMode}` }
         : fixedVideoRatio
         ? { size: sizeFromRatio(fixedVideoRatio, node.resolution, [], { prompt: "" }), source: `视频模型固定 ${fixedVideoRatio}` }
         : sizeDecisionFromRatio(node.ratio, node.resolution, references, autoOptions);
@@ -10040,7 +10356,7 @@
       const effectiveTargetSize = confirmedAutoSplitPlan.length
         ? (node.autoSplitLockedSize || targetSize)
         : targetSize;
-      const count = node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint"
+      const count = node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint" || node.type === "style"
         ? 1
         : node.type === "video"
         ? (videoCountOptions.includes(Number(node.count)) ? Number(node.count) : 1)
@@ -10071,7 +10387,7 @@
         const position = layout(index);
         const isLandscapeResult = parsed.width > parsed.height && node.type !== "video";
         const pending = createNode("result", position.x, position.y, {
-          title: node.type === "keyword" ? "反推/生成提示词" : node.type === "video" ? "视频" : node.type === "png" ? "透明PNG" : node.type === "upscale" ? "4K图片" : node.type === "outpaint" ? "扩图" : "",
+          title: node.type === "keyword" ? "反推/生成提示词" : node.type === "video" ? "视频" : node.type === "png" ? "透明PNG" : node.type === "upscale" ? "4K图片" : node.type === "outpaint" ? "扩图" : node.type === "style" ? "风格迁移结果" : "",
           ratio: node.type === "outpaint" ? `${parsed.width}:${parsed.height}` : node.ratio,
           width: parsed.width,
           height: parsed.height,
@@ -10117,8 +10433,9 @@
       // and to reduce provider rate-limit spikes; frame sequences stay serial.
       const batchSource = {
         ...node,
-        prompt: node.type === "outpaint" ? outpaintPromptFor(node, effectiveTargetSize, references[0]) : String(node.prompt || ""),
-        references: references.map((item) => ({ ...item }))
+        prompt: node.type === "outpaint" ? outpaintPromptFor(node, effectiveTargetSize, references[0]) : node.type === "style" ? styleTransferPrompt(node) : String(node.prompt || ""),
+        references: references.map((item) => ({ ...item })),
+        ...(node.type === "style" ? { _directReferencesOnly: true, count: 1 } : {})
       };
       let motherReference = null;
       let previousFrameReference = null;
@@ -10207,6 +10524,8 @@
         ? `已完成，${failed} 张失败；其余图片已按 ${effectiveTargetSize} 输出。`
         : confirmedAutoSplitPlan.length
         ? `批次生成完成：${effectiveTargetSize} · ${consistencyMode === "frame" ? "逐帧强一致" : "系列母图一致"}。`
+        : node.type === "style"
+        ? `风格迁移完成：${effectiveTargetSize}。`
         : "接口返回成功。";
       if (confirmedAutoSplitPlan.length) node.autoSplitPlan = confirmedAutoSplitPlan;
       render();
@@ -10506,6 +10825,7 @@
       if (node.type === "png") return 420;
       if (node.type === "upscale") return 430;
       if (node.type === "outpaint") return 450;
+      if (node.type === "style") return 470;
       if (node.type === "selection") return 760;
       if (node.type === "result") return 240;
       return 300;
