@@ -25,9 +25,21 @@ assert.match(updater, /StartApplicationWithRetry\(install, executable, log\)/, "
 assert.match(updater, /Application restart launched process/, "restart attempts must be observable in the updater log");
 assert.match(updater, /CleanupPreviousInstallations\(install, log\)/, "successful updates must remove old installation directories");
 assert.match(updater, /DeleteDirectoryWithRetry\(directory, log\)/, "old installation cleanup must retry transient Windows locks");
+assert.match(updater, /VerifyPortableLayout\(stage, executable, target, "Package"\)/, "the extracted outer and runtime layouts must be verified");
+assert.match(updater, /RuntimeDirectoryName = "程序文件"/, "the updater must understand the compact portable runtime directory");
+assert.match(updater, /Directory\.GetFiles\(install, "\*", SearchOption\.AllDirectories\)/, "locked-directory migration must remove obsolete root runtime files");
 
 const main = fs.readFileSync(path.resolve(__dirname, "..", "desktop-client", "main.js"), "utf8");
 assert.match(main, /cleanupStalePortableInstallBackups/, "the restarted app must clean backups left by older updater versions");
 assert.match(main, /entry\.name\.startsWith\(backupPrefix\)/, "startup cleanup must stay scoped to this portable install name");
+assert.match(main, /portableInstallContext\(\)/, "the nested Electron runtime must update the outer portable folder");
+assert.match(main, /PORTABLE_RUNTIME_DIRECTORY = "程序文件"/, "the client and package builder must agree on the runtime directory");
 
-console.log("PASS: portable updater survives parent shutdown, restarts, and removes stale installation backups");
+const workflow = fs.readFileSync(path.resolve(__dirname, "..", ".github", "workflows", "release.yml"), "utf8");
+assert.match(workflow, /build-portable-package\.ps1/, "releases must use the compact three-entry package builder");
+
+const packageBuilder = fs.readFileSync(path.resolve(__dirname, "..", "scripts", "build-portable-package.ps1"), "utf8");
+assert.match(packageBuilder, /'使用说明\.txt', '网页版\.html', '豌豆AI工具\.exe'/, "only the three requested entries may remain visible");
+assert.match(packageBuilder, /resources\\app\\VERSION\.txt/, "the outer compatibility version must support old updaters");
+
+console.log("PASS: portable updater supports the compact outer folder, restarts, and removes stale backups");

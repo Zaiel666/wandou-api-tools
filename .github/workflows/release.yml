@@ -72,9 +72,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Portable updater compilation failed' }
           node tests\portable-updater-regression.test.cjs
           if ($LASTEXITCODE -ne 0) { throw 'Portable updater regression test failed' }
-          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\portable-updater-live-e2e.ps1
+          & pwsh -NoProfile -File tests\portable-updater-live-e2e.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Portable updater live upgrade test failed' }
-          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\portable-updater-live-e2e.ps1 -LockInstallDirectory
+          & pwsh -NoProfile -File tests\portable-updater-live-e2e.ps1 -LockInstallDirectory
           if ($LASTEXITCODE -ne 0) { throw 'Locked-directory upgrade test failed' }
 
       - name: Build portable folder
@@ -82,31 +82,25 @@ jobs:
         run: |
           Set-Location desktop-client
           node -e "const fs=require('fs'); const p=require('./package.json'); p.version=process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p,null,2)+'\n')"
-          Set-Content -LiteralPath "..\app\VERSION.txt" -Value "v$env:VERSION" -Encoding ASCII
+          $versionFile = "..\app\VERSION.txt"
+          $versionLines = @(Get-Content -LiteralPath $versionFile)
+          if ($versionLines.Count -eq 0) { $versionLines = @("v$env:VERSION") } else { $versionLines[0] = "v$env:VERSION" }
+          $versionLines | Set-Content -LiteralPath $versionFile -Encoding UTF8
           pnpm exec electron-builder --win dir --x64 --publish never
           if ($LASTEXITCODE -ne 0) { throw "Electron build failed" }
           Set-Location ..
-          $package = Join-Path $PWD "desktop-client\dist\win-unpacked"
-          if (-not (Test-Path -LiteralPath (Join-Path $package '豌豆AI工具.exe'))) {
-            throw "Portable executable was not generated"
-          }
-          Remove-Item -LiteralPath (Join-Path $package 'wandou-ai-update.log') -Force -ErrorAction SilentlyContinue
-          @"
-          豌豆AI工具 v$env:VERSION
-
-          使用方法：双击“豌豆AI工具.exe”。
-          本软件无需安装；有新版本时，顶部会显示“发现新版本”，点击即可自动更新。
-          "@ | Set-Content -LiteralPath (Join-Path $package "使用说明.txt") -Encoding UTF8
-          New-Item -ItemType Directory -Path (Join-Path $PWD "dist") -Force | Out-Null
+          & pwsh -NoProfile -File scripts\build-portable-package.ps1 -Version $env:VERSION
+          if ($LASTEXITCODE -ne 0) { throw "Portable package layout build failed" }
           $zip = Join-Path $PWD "dist\wandou-ai-tools-windows-x64.zip"
-          Compress-Archive -Path (Join-Path $package '*') -DestinationPath $zip -CompressionLevel Optimal
+          & pwsh -NoProfile -File tests\portable-package-smoke.ps1 -Package $zip
+          if ($LASTEXITCODE -ne 0) { throw "Packaged launcher/save/close smoke test failed" }
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash *wandou-ai-tools-windows-x64.zip" | Set-Content -LiteralPath "$zip.sha256" -Encoding ASCII
           $manifest = @{
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：项目文件夹清单改用软件数据目录中的磁盘 JSON 持久保存，网页缓存写满时也能立即新建、命名并在重启后恢复；旧清单首次启动自动合并迁移，不删除原图或画布备份。继续保留文件夹性能、大图画布内存、提示词工具和透明 PNG 等修复。"
+            notes = "v${env:VERSION}：新增双参考图风格迁移节点和统一下拉菜单；便携包外层默认只显示桌面启动器、网页版 HTML、使用说明三个入口，运行文件收进隐藏目录；兼容从旧版自动更新并在更新后正确重启。继续保留项目文件夹磁盘持久化、保存/透明 PNG、提示词工具和大图画布内存优化。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

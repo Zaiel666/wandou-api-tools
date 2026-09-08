@@ -7,6 +7,7 @@ const { spawn } = require("child_process");
 const { pathToFileURL, fileURLToPath } = require("url");
 
 const APP_NAME = "豌豆AI工具";
+const PORTABLE_RUNTIME_DIRECTORY = "程序文件";
 const TRUSTED_WEB_APPS = new Set(["wandou-video-workbench.netlify.app"]);
 const CANVAS_API_HOSTS = new Set([
   "zayapi.top",
@@ -29,9 +30,26 @@ let installedSkillsCache = { savedAt: 0, items: [] };
 // 与旧安装版共用数据目录，改成便携文件夹后用户原有的本地数据仍然可用。
 app.setPath("userData", process.env.WANDOU_TEST_USER_DATA_DIR || path.join(app.getPath("appData"), "豌豆AI"));
 
+function portableInstallContext() {
+  const executableDirectory = path.dirname(process.execPath);
+  // v1.0.69 起，真正的 Electron 运行文件位于“程序文件”中，外层仅保留
+  // 启动器、网页版入口和说明。更新器必须替换外层目录，否则只会更新内部
+  // 目录并丢失外层启动器，也无法兼容从旧版升级。
+  if (path.basename(executableDirectory).toLowerCase() === PORTABLE_RUNTIME_DIRECTORY.toLowerCase()) {
+    return {
+      installDirectory: path.dirname(executableDirectory),
+      executable: `${APP_NAME}.exe`
+    };
+  }
+  return {
+    installDirectory: executableDirectory,
+    executable: path.basename(process.execPath)
+  };
+}
+
 async function cleanupStalePortableInstallBackups() {
   if (!app.isPackaged) return;
-  const installDirectory = path.dirname(process.execPath);
+  const { installDirectory } = portableInstallContext();
   const installName = path.basename(installDirectory);
   if (!installName || installName.includes(".previous-")) return;
   const installParent = path.dirname(installDirectory);
@@ -818,11 +836,12 @@ async function startPortableUpdate(updateInfo) {
     await fs.promises.copyFile(sourceUpdater, updaterPath);
     sendUpdateStatus("下载完成，正在启动安装程序…", "ready");
 
+    const portableInstall = portableInstallContext();
     const args = [
-      "--install", path.dirname(process.execPath),
+      "--install", portableInstall.installDirectory,
       "--package", packagePath,
       "--parent", String(process.pid),
-      "--exe", path.basename(process.execPath),
+      "--exe", portableInstall.executable,
       "--ready", readyPath,
       "--target", String(updateInfo.latestVersion || "")
     ];
@@ -1187,6 +1206,20 @@ ipcMain.handle("desktop:get-canvas-backup-directory", () => ({
 
 app.whenReady().then(() => {
   createWindow();
+  const testCloseDelay = Number(process.env.WANDOU_TEST_CLOSE_AFTER_MS || 0);
+  if (Number.isInteger(testCloseDelay) && testCloseDelay >= 1000 && testCloseDelay <= 60000) {
+    setTimeout(() => {
+      // Packaged smoke tests use the normal close request, including renderer save
+      // verification, instead of terminating the Electron process directly.
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      mainWindow.close();
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.executeJavaScript("document.getElementById('closeDialogConfirm')?.click()", true).catch(() => {});
+        }
+      }, 500);
+    }, testCloseDelay);
+  }
   const cleanupTimer = setTimeout(() => { cleanupStalePortableInstallBackups(); }, 2500);
   cleanupTimer.unref?.();
 });

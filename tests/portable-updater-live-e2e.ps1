@@ -14,8 +14,10 @@ $log = Join-Path $testRoot 'wandou-ai-update.log'
 $updater = Join-Path $RepositoryRoot 'desktop-client\portable-updater.exe'
 $parentSource = Join-Path $RepositoryRoot 'tests\updater-e2e-parent.cs'
 $appSource = Join-Path $RepositoryRoot 'tests\updater-test-app.cs'
+$launcherSource = Join-Path $RepositoryRoot 'desktop-client\portable-launcher.cs'
 $parentExe = Join-Path $testRoot 'updater-e2e-parent.exe'
 $testApp = Join-Path $testRoot 'test-app.exe'
+$testLauncher = Join-Path $testRoot 'portable-launcher.exe'
 $directoryLock = $null
 
 function Stop-TestProcesses {
@@ -32,11 +34,14 @@ function Stop-TestProcesses {
 try {
     New-Item -ItemType Directory -Path (Join-Path $install 'resources\app') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $packageSource 'resources\app') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $packageSource '程序文件\resources\app') -Force | Out-Null
 
     & $compiler /nologo /target:winexe /optimize+ /out:$testApp $appSource
     if ($LASTEXITCODE -ne 0) { throw 'Failed to compile updater test application.' }
     & $compiler /nologo /target:winexe /optimize+ /out:$parentExe $parentSource
     if ($LASTEXITCODE -ne 0) { throw 'Failed to compile updater test parent.' }
+    & $compiler /nologo /target:winexe /optimize+ /out:$testLauncher $launcherSource
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to compile portable launcher.' }
 
     Copy-Item -LiteralPath $testApp -Destination (Join-Path $install '豌豆AI工具.exe')
     Copy-Item -LiteralPath $testApp -Destination (Join-Path $install 'crashpad_handler.exe')
@@ -46,10 +51,14 @@ try {
     New-Item -ItemType Directory -Path $stalePrevious -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $stalePrevious 'stale-marker.txt') -Value 'stale' -Encoding ASCII
 
-    Copy-Item -LiteralPath $testApp -Destination (Join-Path $packageSource '豌豆AI工具.exe')
-    Copy-Item -LiteralPath $testApp -Destination (Join-Path $packageSource 'crashpad_handler.exe')
+    Copy-Item -LiteralPath $testLauncher -Destination (Join-Path $packageSource '豌豆AI工具.exe')
+    Copy-Item -LiteralPath $testApp -Destination (Join-Path $packageSource '程序文件\豌豆AI工具.exe')
+    Copy-Item -LiteralPath $testApp -Destination (Join-Path $packageSource '程序文件\crashpad_handler.exe')
     Set-Content -LiteralPath (Join-Path $packageSource 'resources\app\VERSION.txt') -Value 'v1.0.57' -Encoding ASCII
-    Set-Content -LiteralPath (Join-Path $packageSource 'new-marker.txt') -Value 'new' -Encoding ASCII
+    Set-Content -LiteralPath (Join-Path $packageSource '程序文件\resources\app\VERSION.txt') -Value 'v1.0.57' -Encoding ASCII
+    Set-Content -LiteralPath (Join-Path $packageSource '网页版.html') -Value '<!doctype html><title>web</title>' -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $packageSource '使用说明.txt') -Value 'guide' -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $packageSource '程序文件\new-marker.txt') -Value 'new' -Encoding ASCII
     Compress-Archive -Path (Join-Path $packageSource '*') -DestinationPath $package -CompressionLevel Optimal
 
     if ($LockInstallDirectory) {
@@ -74,10 +83,12 @@ public static class UpdateDirectoryLock {
         Start-Sleep -Milliseconds 300
         $versionFile = Join-Path $install 'resources\app\VERSION.txt'
         $installedVersion = if (Test-Path -LiteralPath $versionFile) { (Get-Content -LiteralPath $versionFile -TotalCount 1).Trim() } else { '' }
-        if ($installedVersion -eq 'v1.0.57' -and (Test-Path -LiteralPath (Join-Path $install 'new-marker.txt'))) { break }
+        if ($installedVersion -eq 'v1.0.57' -and (Test-Path -LiteralPath (Join-Path $install '程序文件\new-marker.txt'))) { break }
     } while ([DateTime]::UtcNow -lt $deadline)
 
     if ($installedVersion -ne 'v1.0.57') { throw "Live updater test timed out; installed version is '$installedVersion'." }
+    $runtimeVersion = (Get-Content -LiteralPath (Join-Path $install '程序文件\resources\app\VERSION.txt') -TotalCount 1).Trim()
+    if ($runtimeVersion -ne 'v1.0.57') { throw "Internal runtime version is '$runtimeVersion'." }
     if (-not $LockInstallDirectory -and (Test-Path -LiteralPath (Join-Path $install 'old-marker.txt'))) { throw 'Old installation marker survived the directory swap.' }
     $logText = Get-Content -LiteralPath $log -Raw
     if ($logText -notmatch 'crashpad_handler\.exe') { throw 'The install-scoped helper process was not stopped.' }
@@ -92,6 +103,10 @@ public static class UpdateDirectoryLock {
     if ($logText -notmatch 'Application restart launched process (\d+)') { throw 'Application was not restarted.' }
     $restarted = Get-Process -Id ([int]$Matches[1]) -ErrorAction Stop
     if ($restarted.Path -ne (Join-Path $install '豌豆AI工具.exe')) { throw 'Restarted the wrong executable.' }
+    Start-Sleep -Milliseconds 250
+    $visible = @(Get-ChildItem -LiteralPath $install -Force | Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::Hidden) } | Select-Object -ExpandProperty Name | Sort-Object)
+    $expected = @('使用说明.txt', '网页版.html', '豌豆AI工具.exe') | Sort-Object
+    if (($visible -join '|') -ne ($expected -join '|')) { throw "Unexpected visible outer entries: $($visible -join ', ')." }
     $cleanupDeadline = [DateTime]::UtcNow.AddSeconds(15)
     do {
         Start-Sleep -Milliseconds 300
@@ -100,7 +115,7 @@ public static class UpdateDirectoryLock {
     if ($previous.Count -ne 0) { throw "Expected previous installations to be cleaned, found $($previous.Count)." }
     $logText = Get-Content -LiteralPath $log -Raw
     if ($logText -match 'Warning: previous installation remains') { throw 'The updater left a previous installation behind.' }
-    Write-Output "PASS: installed v1.0.57 and verified restarted process; locked directory: $LockInstallDirectory."
+    Write-Output "PASS: migrated old layout to three-entry v1.0.57 package and verified restart; locked directory: $LockInstallDirectory."
 }
 finally {
     if ($directoryLock) { $directoryLock.Dispose() }

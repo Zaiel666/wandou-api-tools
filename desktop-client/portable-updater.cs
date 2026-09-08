@@ -7,6 +7,8 @@ using System.Collections.Generic;
 
 internal static class PortableUpdater
 {
+    const string RuntimeDirectoryName = "程序文件";
+
     static string Arg(string[] args, string name)
     {
         for (var i = 0; i + 1 < args.Length; i++) if (args[i] == name) return args[i + 1];
@@ -97,6 +99,32 @@ internal static class PortableUpdater
         return false;
     }
 
+    static string VersionFile(string root)
+    {
+        var compatibility = Path.Combine(root, "resources", "app", "VERSION.txt");
+        if (File.Exists(compatibility)) return compatibility;
+        return Path.Combine(root, RuntimeDirectoryName, "resources", "app", "VERSION.txt");
+    }
+
+    static void VerifyPortableLayout(string root, string executable, string target, string description)
+    {
+        var versionFile = VersionFile(root);
+        if (!File.Exists(Path.Combine(root, executable)) || !File.Exists(versionFile))
+            throw new InvalidOperationException(description + " executable or version file is missing.");
+        if (!String.IsNullOrWhiteSpace(target)
+            && File.ReadAllLines(versionFile)[0].Trim().TrimStart('v') != target)
+            throw new InvalidOperationException(description + " version verification failed.");
+
+        var runtimeDirectory = Path.Combine(root, RuntimeDirectoryName);
+        if (!Directory.Exists(runtimeDirectory)) return;
+        var runtimeExecutable = Path.Combine(runtimeDirectory, executable);
+        var runtimeVersion = Path.Combine(runtimeDirectory, "resources", "app", "VERSION.txt");
+        if (!File.Exists(runtimeExecutable) || !File.Exists(runtimeVersion)
+            || (!String.IsNullOrWhiteSpace(target)
+                && File.ReadAllLines(runtimeVersion)[0].Trim().TrimStart('v') != target))
+            throw new InvalidOperationException(description + " internal runtime verification failed.");
+    }
+
     static void MoveDirectoryWithRetry(string source, string destination, string log)
     {
         Exception lastError = null;
@@ -164,18 +192,28 @@ internal static class PortableUpdater
         Directory.CreateDirectory(previous);
         try
         {
+            // A locked Explorer window may prevent renaming the outer directory. Move
+            // every old file into the rollback area first so obsolete Electron DLLs
+            // do not remain visible beside the new three-entry package.
+            foreach (var destination in Directory.GetFiles(install, "*", SearchOption.AllDirectories))
+            {
+                var relative = destination.Substring(install.Length).TrimStart(Path.DirectorySeparatorChar);
+                var backup = Path.Combine(previous, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(backup));
+                File.Move(destination, backup);
+                backedUp.Add(relative);
+            }
+            var oldDirectories = new List<string>(Directory.GetDirectories(install, "*", SearchOption.AllDirectories));
+            oldDirectories.Sort((left, right) => right.Length.CompareTo(left.Length));
+            foreach (var directory in oldDirectories)
+            {
+                try { if (Directory.GetFileSystemEntries(directory).Length == 0) Directory.Delete(directory); } catch { }
+            }
             foreach (var source in Directory.GetFiles(stage, "*", SearchOption.AllDirectories))
             {
                 var relative = source.Substring(stage.Length).TrimStart(Path.DirectorySeparatorChar);
                 var destination = Path.Combine(install, relative);
-                var backup = Path.Combine(previous, relative);
                 Directory.CreateDirectory(Path.GetDirectoryName(destination));
-                if (File.Exists(destination))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(backup));
-                    File.Move(destination, backup);
-                    backedUp.Add(relative);
-                }
                 replaced.Add(relative);
                 File.Copy(source, destination, false);
             }
@@ -187,7 +225,12 @@ internal static class PortableUpdater
                 var relative = replaced[i];
                 var destination = Path.Combine(install, relative);
                 if (File.Exists(destination)) File.Delete(destination);
-                if (backedUp.Contains(relative)) File.Move(Path.Combine(previous, relative), destination);
+            }
+            foreach (var relative in backedUp)
+            {
+                var destination = Path.Combine(install, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                if (!File.Exists(destination)) File.Move(Path.Combine(previous, relative), destination);
             }
             Log(log, "File replacements rolled back after failure.");
             throw;
@@ -233,10 +276,7 @@ internal static class PortableUpdater
             Log(log, "Extracting verified release package.");
             Directory.CreateDirectory(stage);
             ZipFile.ExtractToDirectory(package, stage);
-            var stagedVersion = Path.Combine(stage, "resources", "app", "VERSION.txt");
-            if (!File.Exists(Path.Combine(stage, executable)) || !File.Exists(stagedVersion)
-                || (!String.IsNullOrWhiteSpace(target) && File.ReadAllText(stagedVersion).Trim().Split('\n')[0].Trim().TrimStart('v') != target))
-                throw new InvalidOperationException("Package version or executable verification failed.");
+            VerifyPortableLayout(stage, executable, target, "Package");
             // Prefer a directory swap. If a directory handle blocks renaming, move
             // each old file to backup before copying its replacement (never overwrite
             // memory-mapped resources in place).
@@ -261,12 +301,7 @@ internal static class PortableUpdater
                 MoveDirectoryWithRetry(stage, install, log);
                 newInstallActivated = true;
             }
-            if (!String.IsNullOrWhiteSpace(target))
-            {
-                var versionFile = Path.Combine(install, "resources", "app", "VERSION.txt");
-                if (!File.Exists(versionFile) || File.ReadAllLines(versionFile)[0].Trim().TrimStart('v') != target)
-                    throw new InvalidOperationException("Installed version verification failed.");
-            }
+            VerifyPortableLayout(install, executable, target, "Installed package");
             try { File.Copy(log, Path.Combine(install, "wandou-ai-update.log"), true); } catch { }
             Log(log, "Native update completed. Restarting application.");
             if (StartApplicationWithRetry(install, executable, log))
