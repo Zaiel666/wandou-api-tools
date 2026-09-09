@@ -3,7 +3,6 @@
   const API_URL = `${atob("aHR0cHM6Ly93d3cuemF5YXBpLnRvcA==")}/v1`;
   const MODEL_OPTIONS = [
     "gpt-image-2",
-    "gpt-image-2-high",
     "gpt-image-2.5-1k",
     "gpt-image-2.5-flare",
     "gpt-image-2.5-sunburst",
@@ -12,7 +11,6 @@
   ];
   const MODEL_API_MAP = {
     "gpt-image-2": "gpt-image-2",
-    "gpt-image-2-high": "gpt-image-2-high",
     "gpt-image-2.5-1k": "gpt-image-2.5-1k",
     "gpt-image-2.5-flare": "gpt-image-2.5-flare",
     "gpt-image-2.5-sunburst": "gpt-image-2.5-sunburst",
@@ -200,7 +198,52 @@
   }
 
   function modelToApiModel(model) {
-    return MODEL_API_MAP[normalizeModelName(model)] || DEFAULT_MODEL;
+    const normalized = normalizeModelName(model);
+    return MODEL_API_MAP[normalized] || normalized || DEFAULT_MODEL;
+  }
+
+  function isDrawingModelId(model) {
+    const id = String(model || "").trim().toLowerCase();
+    if (!id || /(?:video|veo|sora|tts|speech|audio)/.test(id)) return false;
+    return /gpt-image|grok.*image|gemini.*image|nano[-_. ]?banana|imagen|dall[-_. ]?e|(?:^|[-_.])flux|ideogram|recraft/.test(id);
+  }
+
+  async function syncModelOptionsFromApi() {
+    const key = readGlobalApiKey();
+    if (!key) return false;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      let response;
+      try {
+        response = await nativeFetch(`${API_URL}/models`, { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const ids = (Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.models) ? payload.models : [])
+        .map((item) => typeof item === "string" ? item : item?.id || item?.name)
+        .filter(isDrawingModelId);
+      if (!ids.length) throw new Error("No image models");
+      const labels = [...new Set(ids.map((id) => API_MODEL_LABEL_MAP[id] || id))];
+      MODEL_OPTIONS.splice(0, MODEL_OPTIONS.length, ...labels);
+      ids.forEach((id) => { MODEL_API_MAP[API_MODEL_LABEL_MAP[id] || id] = id; });
+      localStorage.setItem("aiCanvasImageModels", JSON.stringify(ids));
+      document.querySelectorAll(".wd-model-control").forEach((control) => control.remove());
+      applyAll();
+      return true;
+    } catch {
+      try {
+        const ids = JSON.parse(localStorage.getItem("aiCanvasImageModels") || "[]");
+        if (Array.isArray(ids) && ids.some(isDrawingModelId)) {
+          const filtered = ids.filter(isDrawingModelId);
+          MODEL_OPTIONS.splice(0, MODEL_OPTIONS.length, ...new Set(filtered.map((id) => API_MODEL_LABEL_MAP[id] || id)));
+          filtered.forEach((id) => { MODEL_API_MAP[API_MODEL_LABEL_MAP[id] || id] = id; });
+        }
+      } catch {}
+      return false;
+    }
   }
 
   function isNanoBananaModel(model) {
@@ -383,10 +426,9 @@
     const model = readModel();
     const rawSize = readRawVisibleSize();
     const sizeSource = readResolutionSource();
-    const effectiveQuality = model === "gpt-image-2.5-1k"
-      ? "low"
-      : sizeSource === "size" ? (qualityFromSize(rawSize) || readQuality()) : readQuality();
-    const effectiveSize = sizeSource === "size" && parseSizeText(rawSize) ? rawSize : sizeForQuality(rawSize, effectiveQuality);
+    const targetQuality = sizeSource === "size" ? (qualityFromSize(rawSize) || readQuality()) : readQuality();
+    const effectiveQuality = model === "gpt-image-2.5-1k" ? "low" : targetQuality;
+    const effectiveSize = sizeSource === "size" && parseSizeText(rawSize) ? rawSize : sizeForQuality(rawSize, targetQuality);
     const googleModel = isGoogleModel(model);
     if (effectiveSize) writeTargetSize(effectiveSize);
     if (Object.prototype.hasOwnProperty.call(next, "moderation")) next.moderation = "low";
@@ -1266,12 +1308,6 @@ function rewriteQualityOptions() {
         event.preventDefault();
         event.stopPropagation();
         writeModel(model);
-        if (model === "gpt-image-2.5-1k") {
-          writeResolutionSource("quality");
-          writeQuality("low");
-          syncNativeQuality("low");
-          syncSizeDisplayFromQuality("low");
-        }
         updateModelControl(label);
         rewriteQualityOptions();
         enhanceCustomQuality();
@@ -2161,5 +2197,6 @@ function rewriteQualityOptions() {
   window.addEventListener("DOMContentLoaded", () => {
     applyAll();
     observer.observe(document.body, { childList: true, subtree: true });
+    syncModelOptionsFromApi();
   });
 })();

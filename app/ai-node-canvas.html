@@ -1544,7 +1544,7 @@
       fill: none;
       stroke: #8a8f98;
       stroke-width: 2;
-      stroke-dasharray: 7 7;
+      stroke-dasharray: 4 4;
       stroke-linecap: round;
       filter: none;
       cursor: pointer;
@@ -1597,7 +1597,7 @@
     .temp-line {
       stroke: var(--blue);
       stroke-width: 3;
-      stroke-dasharray: 9 9;
+      stroke-dasharray: 5 5;
       pointer-events: none;
       animation: linkFlow .8s linear infinite;
     }
@@ -2207,11 +2207,11 @@
     .port {
       position: absolute;
       top: 50%;
-      width: 12px;
-      height: 12px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: #fff;
-      border: 1.5px solid #aeb8c6;
+      border: 1px solid #aeb8c6;
       transform: translateY(-50%);
       z-index: 3;
       cursor: crosshair;
@@ -2219,19 +2219,19 @@
 
     .port:hover {
       border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.14);
+      box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.14);
     }
 
     .port.pending {
       border-color: var(--blue);
       background: var(--blue);
-      box-shadow: 0 0 0 4px rgba(47, 125, 80, 0.18);
+      box-shadow: 0 0 0 2px rgba(47, 125, 80, 0.18);
     }
 
     .port.connected {
       border-color: #43d13b;
       background: #43d13b;
-      box-shadow: 0 0 0 3px rgba(67, 209, 59, .16);
+      box-shadow: 0 0 0 1px rgba(67, 209, 59, .16);
     }
 
     .port.connected:hover {
@@ -2246,11 +2246,11 @@
     }
 
     .port.in {
-      left: -7px;
+      left: -4px;
     }
 
     .port.out {
-      right: -7px;
+      right: -4px;
     }
 
     .preview {
@@ -3345,6 +3345,12 @@
       padding: 4px 7px;
       font-size: 11px;
     }
+    .node-select-menu.ratio-menu .ratio-wide-option { grid-column: 1 / -1; }
+    .custom-size-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-top:7px; }
+    .custom-size-field { display:flex; align-items:center; gap:6px; min-width:0; }
+    .custom-size-field span { flex:none; color:var(--muted); font-size:11px; }
+    .custom-size-field input { width:100%; min-width:0; height:32px; padding:0 8px; color:var(--text); background:rgba(238,243,244,.92); border:1px solid rgba(15,23,42,.12); border-radius:8px; }
+    body.dark-theme .custom-size-field input { color:rgba(255,255,255,.92); background:#202523; border-color:rgba(255,255,255,.12); }
     .node-select-option {
       width: 100%; min-height: 34px; padding: 7px 9px; display: flex; align-items: center;
       justify-content: space-between; gap: 8px; color: #263238; background: transparent;
@@ -4842,12 +4848,16 @@
     .sketch-editor-color { width:34px; min-width:34px; height:34px; border:2px solid rgba(45,60,51,.2) !important; border-radius:50%; background:var(--swatch) !important; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12),0 2px 7px rgba(31,45,37,.1) !important; }
     .sketch-editor-color.active { outline:3px solid #2f76dc; outline-offset:3px; }
     .sketch-editor-done { position:absolute; right:18px; bottom:16px; width:54px; height:54px; color:#fff !important; font-size:30px; border-radius:50% !important; background:#2aad5f !important; }
+    .sketch-editor-brush-preview { position:fixed; z-index:4; display:none; border:1px solid rgba(17,24,39,.9); border-radius:50%; pointer-events:none; transform:translate(-50%,-50%); background:var(--brush-preview-fill,rgba(17,24,39,.18)); box-shadow:0 0 0 1px rgba(255,255,255,.92),0 2px 7px rgba(31,45,37,.18); }
+    .sketch-editor-brush-preview.visible { display:block; }
+    .sketch-editor-brush-preview.eraser { background:rgba(255,255,255,.35); border-style:dashed; }
 
     .creative-style-row { align-items:center; }
     .skill-row-control,.creative-style-control { position:relative; width:min(100%, 216px); }
     .skill-row-control > .node-select-trigger { width:100%; }
-    .creative-style-trigger { width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .creative-style-popover { position:absolute; z-index:90; top:calc(100% + 7px); right:0; display:none; width:430px; max-width:min(82vw,430px); max-height:470px; overflow:auto; padding:10px; border:1px solid rgba(54,73,63,.18); border-radius:12px; color:#17201c; background:rgba(255,255,255,.98); box-shadow:0 18px 50px rgba(15,23,42,.2); pointer-events:auto; }
+    .node .creative-style-trigger { width:100%; min-height:38px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text); background:rgba(238,243,244,.92); border:1px solid rgba(15,23,42,.12); border-radius:9px !important; font-size:12px; font-weight:600; text-align:left; box-shadow:none; }
+    .creative-style-control.open .creative-style-trigger { border-color:#43d13b; box-shadow:0 0 0 3px rgba(67,209,59,.12); }
+    .creative-style-popover { position:absolute; z-index:90; top:calc(100% + 7px); left:0; right:auto; display:none; width:430px; max-width:min(82vw,430px); max-height:470px; overflow:auto; padding:10px; border:1px solid rgba(54,73,63,.18); border-radius:12px; color:#17201c; background:rgba(255,255,255,.98); box-shadow:0 18px 50px rgba(15,23,42,.2); pointer-events:auto; }
     .creative-style-control.open .creative-style-popover { display:block; }
     .node.generator:has(.creative-style-control.open) { z-index:95 !important; }
     .creative-style-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
@@ -4860,6 +4870,7 @@
     .creative-style-copy strong { color:#fff; font-size:10px; line-height:1.2; }
     .creative-style-copy small { display:none; }
     body.dark-theme .creative-style-popover { color:rgba(255,255,255,.92); background:rgba(24,29,27,.98); border-color:rgba(255,255,255,.14); box-shadow:0 18px 50px rgba(0,0,0,.42); }
+    body.dark-theme .node .creative-style-trigger { color:rgba(255,255,255,.92); background:#202523; border-color:rgba(255,255,255,.12); }
     .generator-skill-description { line-height:1.35; }
 
     .prompt-optimize-choice { margin-top:9px; border-top:1px solid var(--line); padding-top:8px; }
@@ -5102,6 +5113,7 @@
     </div>
     <div class="sketch-editor-size"><input id="sketchEditorSize" type="range" min="2" max="96" value="12" orient="vertical" aria-label="画笔粗细"></div>
     <canvas id="sketchEditorCanvas" width="1024" height="1024" aria-label="画板"></canvas>
+    <div id="sketchEditorBrushPreview" class="sketch-editor-brush-preview" aria-hidden="true"></div>
     <div id="sketchEditorColors" class="sketch-editor-colors" aria-label="画笔颜色"></div>
     <button id="sketchEditorDone" class="sketch-editor-done" type="button" aria-label="完成画板">✓</button>
   </div>
@@ -5221,6 +5233,7 @@
     const paintSave = document.getElementById("paintSave");
     const sketchEditor = document.getElementById("sketchEditor");
     const sketchEditorCanvas = document.getElementById("sketchEditorCanvas");
+    const sketchEditorBrushPreview = document.getElementById("sketchEditorBrushPreview");
     const sketchEditorClose = document.getElementById("sketchEditorClose");
     const sketchEditorDone = document.getElementById("sketchEditorDone");
     const sketchEditorUndo = document.getElementById("sketchEditorUndo");
@@ -5305,6 +5318,7 @@
     let sketchEditorLastPoint = null;
     let sketchEditorUndoStack = [];
     let sketchEditorRedoStack = [];
+    let sketchEditorPointerPosition = null;
     let gallerySize = "medium";
     let galleryMode = "image";
     let galleryTab = "canvas";
@@ -5406,7 +5420,6 @@
     const defaultKeywordPrompt = "";
     const gptImageModelOptions = [
       "GPT-image-2",
-      "gpt-image-2-high",
       "gpt-image-2.5-1k",
       "gpt-image-2.5-flare",
       "gpt-image-2.5-sunburst"
@@ -5470,7 +5483,9 @@
     const autoSplitCountdownSeconds = 45;
     const imageRatioOptions = [
       "Auto自适应",
+      "自定义尺寸",
       "1:1 方图",
+      "21:9 超宽屏",
       "16:9 横屏",
       "9:16 竖屏",
       "4:3 横图",
@@ -5479,8 +5494,8 @@
       "2:3 摄影竖图",
       "5:4 商品图",
       "4:5 社媒图",
-      "1:3 长竖图",
-      "21:9 超宽屏"
+      "3:1 屏幕横图",
+      "1:3 长竖图"
     ];
     const videoRatioOptions = ["9:16 竖屏", "16:9 横屏"];
     const imageResolutionOptions = ["1K", "2K", "4K"];
@@ -5697,9 +5712,12 @@
     }
 
     function imageResolutionOptionsForModel(model) {
-      if (model === "gpt-image-2.5-1k") return ["1K"];
       if (model === "grok-imagine-image-2.0") return ["1K", "2K"];
       return model === "Nano Banana2" || model === "Nano BananaPro" ? ["4K"] : imageResolutionOptions;
+    }
+
+    function isOneKOnlyImageModel(model) {
+      return /(?:^|[-.])1k(?:$|[-.])/i.test(String(modelToApiModel(model) || ""));
     }
 
     function videoCapabilitiesForModel(model) {
@@ -5726,7 +5744,72 @@
       return atob("aHR0cHM6Ly93d3cuemF5YXBpLnRvcA==");
     }
 
-    function saveApiConfig() {
+    function modelsEndpointFromBase(url) {
+      const clean = String(url || defaultApiBaseUrl()).replace(/\/+$/, "");
+      return /\/v1$/i.test(clean) ? `${clean}/models` : `${clean}/v1/models`;
+    }
+
+    function isDrawingModelId(model) {
+      const id = String(model || "").trim().toLowerCase();
+      if (!id || /(?:video|veo|sora|tts|speech|audio)/.test(id)) return false;
+      return /gpt-image|grok.*image|gemini.*image|nano[-_. ]?banana|imagen|dall[-_. ]?e|(?:^|[-_.])flux|ideogram|recraft/.test(id);
+    }
+
+    function imageModelLabel(model) {
+      const id = String(model || "").trim();
+      const labels = {
+        "gpt-image-2": "GPT-image-2",
+        "gemini-3.1-flash-image-preview": "Nano Banana2",
+        "gemini-3-pro-image-preview": "Nano BananaPro"
+      };
+      return labels[id.toLowerCase()] || id;
+    }
+
+    function applySyncedImageModels(models) {
+      const labels = [...new Set((models || []).filter(isDrawingModelId).map(imageModelLabel).filter(Boolean))];
+      if (!labels.length) return false;
+      imageModelOptions.splice(0, imageModelOptions.length, ...labels);
+      gptImageModelOptions.splice(0, gptImageModelOptions.length, ...labels.filter((model) => /^gpt-image/i.test(modelToApiModel(model))));
+      if (!gptImageModelOptions.length && labels.includes("GPT-image-2")) gptImageModelOptions.push("GPT-image-2");
+      upscaleModelOptions.splice(0, upscaleModelOptions.length, ...labels);
+      return true;
+    }
+
+    async function syncImageModelsFromApi(options = {}) {
+      const key = apiKeyInput.value.trim();
+      if (!key) return false;
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        let response;
+        try {
+          response = await settleWithin(fetchMaybeProxied(modelsEndpointFromBase(apiUrlInput.value), {
+            headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
+            signal: controller.signal
+          }), 8000, null, "绘图模型同步");
+        } finally {
+          clearTimeout(timeout);
+        }
+        if (!response) throw new Error("模型同步超时");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        const ids = (Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.models) ? payload.models : [])
+          .map((item) => typeof item === "string" ? item : item?.id || item?.name)
+          .filter(Boolean);
+        if (!applySyncedImageModels(ids)) throw new Error("没有识别到绘图模型");
+        localStorage.setItem("aiCanvasImageModels", JSON.stringify(ids.filter(isDrawingModelId)));
+        if (options.render !== false && Array.isArray(nodes)) render();
+        return true;
+      } catch (error) {
+        try {
+          const cached = JSON.parse(localStorage.getItem("aiCanvasImageModels") || "[]");
+          if (Array.isArray(cached)) applySyncedImageModels(cached);
+        } catch (_error) {}
+        return false;
+      }
+    }
+
+    async function saveApiConfig() {
       const key = apiKeyInput.value.trim();
       if (!key) {
         apiKeyInput.focus();
@@ -5741,7 +5824,8 @@
         key,
         savedAt: new Date().toISOString()
       }));
-      showToast("接口配置已保存");
+      const synced = await syncImageModelsFromApi({ render: true });
+      showToast(synced ? "接口配置已保存，绘图模型已同步" : "接口配置已保存，模型同步暂时不可用");
       setSettingsOpen(false);
     }
 
@@ -6414,6 +6498,8 @@
         promptReverseMode: type === "keyword" ? "image" : "",
         negativePrompt: "",
         ratio: type === "video" ? "9:16 竖屏" : "Auto自适应",
+        customWidth: 1920,
+        customHeight: 1080,
         resolution: type === "video" ? "720P" : type === "upscale" ? "4K" : type === "outpaint" ? "2K" : "1K",
         count: 1,
         autoSplit: false,
@@ -7563,7 +7649,8 @@
     }
 
     function creativeStyleOptionsHtml(node) {
-      return creativeStyles.map((style, index) => {
+      const noneOption = `<button class="creative-style-card ${!node.creativeStyle ? "active" : ""}" data-creative-style="" type="button"><span class="creative-style-preview free">无</span><span class="creative-style-copy"><strong>无选择</strong><small>不添加创作风格</small></span></button>`;
+      return noneOption + creativeStyles.map((style, index) => {
         const column = index % 4;
         const row = Math.floor(index / 4);
         return `<button class="creative-style-card ${node.creativeStyle === style.id ? "active" : ""}" data-creative-style="${style.id}" type="button"><span class="creative-style-preview" style="--style-a:${style.a};--sprite-x:${column * 100 / 3}%;--sprite-y:${row * 100 / 3}%"></span><span class="creative-style-copy"><strong>${style.name}</strong><small>${style.note}</small></span></button>`;
@@ -7910,6 +7997,28 @@
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", String(active));
       });
+      updateSketchBrushPreview();
+    }
+
+    function updateSketchBrushPreview(event) {
+      if (event) sketchEditorPointerPosition = { x:event.clientX, y:event.clientY };
+      const node = nodes.find((item) => item.id === activeSketchNodeId);
+      if (!node || !sketchEditorPointerPosition || !sketchEditor.classList.contains("open")) return;
+      const rect = sketchEditorCanvas.getBoundingClientRect();
+      const displayScale = ((rect.width / sketchEditorCanvas.width) + (rect.height / sketchEditorCanvas.height)) / 2;
+      const diameter = Math.max(3, (Number(node.sketchSize) || 12) * displayScale);
+      sketchEditorBrushPreview.style.left = `${sketchEditorPointerPosition.x}px`;
+      sketchEditorBrushPreview.style.top = `${sketchEditorPointerPosition.y}px`;
+      sketchEditorBrushPreview.style.width = `${diameter}px`;
+      sketchEditorBrushPreview.style.height = `${diameter}px`;
+      sketchEditorBrushPreview.style.setProperty("--brush-preview-fill", node.sketchTool === "eraser" ? "rgba(255,255,255,.35)" : `${node.sketchColor || sketchColors[0]}33`);
+      sketchEditorBrushPreview.classList.toggle("eraser", node.sketchTool === "eraser");
+      sketchEditorBrushPreview.classList.add("visible");
+    }
+
+    function hideSketchBrushPreview() {
+      sketchEditorPointerPosition = null;
+      sketchEditorBrushPreview.classList.remove("visible");
     }
 
     function ensureSketchEditorBound() {
@@ -7927,6 +8036,7 @@
       sketchEditorSize.addEventListener("input", () => {
         const node = nodes.find((item) => item.id === activeSketchNodeId);
         if (node) node.sketchSize = Number(sketchEditorSize.value);
+        updateSketchBrushPreview();
       });
       sketchEditorUndo.addEventListener("click", () => {
         if (sketchEditorUndoStack.length < 2) return;
@@ -7952,6 +8062,7 @@
         sketchEditorCanvas.setPointerCapture?.(event.pointerId);
       });
       sketchEditorCanvas.addEventListener("pointermove", (event) => {
+        updateSketchBrushPreview(event);
         if (!sketchEditorDrawing) return;
         const node = nodes.find((item) => item.id === activeSketchNodeId);
         if (!node) return;
@@ -7976,6 +8087,8 @@
       };
       sketchEditorCanvas.addEventListener("pointerup", finishStroke);
       sketchEditorCanvas.addEventListener("pointercancel", finishStroke);
+      sketchEditorCanvas.addEventListener("pointerenter", updateSketchBrushPreview);
+      sketchEditorCanvas.addEventListener("pointerleave", hideSketchBrushPreview);
       sketchEditorDone.addEventListener("click", closeSketchEditor);
       sketchEditorClose.addEventListener("click", closeSketchEditor);
     }
@@ -8024,6 +8137,7 @@
       }
       sketchEditor.classList.remove("open");
       sketchEditor.setAttribute("aria-hidden", "true");
+      hideSketchBrushPreview();
       activeSketchNodeId = null;
       render();
     }
@@ -8069,7 +8183,7 @@
         }
       }
       const modelMenuHtml = models.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-node-model="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
-      const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
+      const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${/^(Auto|自定义)/i.test(ratio) ? "ratio-wide-option " : ""}${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const durationHtml = `<button class="count-option active model-default" type="button" disabled>默认时长</button>`;
       const countHtml = (isVideoNode ? videoCountOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9]).map((count) => (
         `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button" ${!isVideoNode && node.autoSplit ? "disabled" : ""}>${count}</button>`
@@ -8146,7 +8260,7 @@
         </div>
         <div class="form-row creative-style-row">
           <label>创作技能</label>
-          <div class="creative-style-control" data-creative-style-control><button class="creative-style-trigger" data-creative-style-toggle type="button" aria-expanded="false"><span>${selectedCreativeStyle ? selectedCreativeStyle.name : "选择视觉风格"}</span><span>▾</span></button><div class="creative-style-popover" data-creative-style-popover><div class="creative-style-grid">${creativeStyleOptionsHtml(node)}</div></div></div>
+          <div class="creative-style-control" data-creative-style-control><button class="creative-style-trigger" data-creative-style-toggle type="button" aria-expanded="false"><span>${selectedCreativeStyle ? selectedCreativeStyle.name : "无选择"}</span><span>▾</span></button><div class="creative-style-popover" data-creative-style-popover><div class="creative-style-grid">${creativeStyleOptionsHtml(node)}</div></div></div>
         </div>` : ""}
         <div class="form-row">
           <label>模型</label>
@@ -8156,12 +8270,13 @@
           <label>比例尺寸</label>
           <div>
             <div class="node-select" data-node-select><button class="node-select-trigger" data-node-select-toggle type="button" aria-haspopup="listbox" aria-expanded="false"><span>${escapeHtml(node.ratio)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu ratio-menu" role="listbox">${ratioMenuHtml}</div></div>
+            ${!isVideoNode && node.ratio === "自定义尺寸" ? `<div class="custom-size-fields" data-custom-size-fields><label class="custom-size-field"><span>宽</span><input data-custom-size="width" type="number" min="64" max="8192" step="1" value="${Math.max(64, Number(node.customWidth) || 1920)}" aria-label="自定义宽度像素"></label><label class="custom-size-field"><span>高</span><input data-custom-size="height" type="number" min="64" max="8192" step="1" value="${Math.max(64, Number(node.customHeight) || 1080)}" aria-label="自定义高度像素"></label></div>` : ""}
             <div class="ratio-readout" data-ratio-readout>当前画面比例：${node.ratio}</div>
           </div>
         </div>
         <div class="form-row resolution-row">
           <label>分辨率</label>
-          <div class="choice-options ${(isVideoNode || resolutions.length === 1) ? "align-right" : ""} ${resolutions.length === 1 ? "single-option" : ""}" style="--resolution-option-count:${resolutions.length}">${resolutionHtml}</div>
+          <div><div class="choice-options ${(isVideoNode || resolutions.length === 1) ? "align-right" : ""} ${resolutions.length === 1 ? "single-option" : ""}" style="--resolution-option-count:${resolutions.length}">${resolutionHtml}</div>${!isVideoNode && isOneKOnlyImageModel(node.model) ? '<div class="ratio-readout">原生 1K；选择 2K/4K 后自动等比放大</div>' : ""}</div>
         </div>
         ${isVideoNode ? `
         <div class="form-row video-duration-row">
@@ -8474,6 +8589,16 @@
           pushHistory();
           node.ratio = button.dataset.nodeRatio;
           render();
+        });
+      });
+      wrap.querySelectorAll("[data-custom-size]").forEach((input) => {
+        input.addEventListener("change", () => {
+          pushHistory();
+          const value = Math.max(64, Math.min(8192, Math.round(Number(input.value) || (input.dataset.customSize === "width" ? 1920 : 1080))));
+          if (input.dataset.customSize === "width") node.customWidth = value;
+          else node.customHeight = value;
+          input.value = String(value);
+          scheduleCanvasSave();
         });
       });
       wrap.querySelectorAll("[data-count]").forEach((button) => {
@@ -10743,7 +10868,7 @@
 
       const targetSize = original.width && original.height
         ? `${Math.max(1, Number(original.width))}x${Math.max(1, Number(original.height))}`
-        : String(sourceNode.autoSplitLockedSize || sizeDecisionFromRatio(sourceNode.ratio, sourceNode.resolution, [], { prompt: original.prompt || sourceNode.prompt }).size);
+        : String(sourceNode.autoSplitLockedSize || sizeDecisionFromRatio(sourceNode.ratio, sourceNode.resolution, [], { prompt: original.prompt || sourceNode.prompt, customWidth: sourceNode.customWidth, customHeight: sourceNode.customHeight }).size);
       const parsed = parseSize(targetSize);
       const position = resultGridPositioner(sourceNode, 1, parsed)(0);
       const isLandscapeResult = parsed.width > parsed.height;
@@ -10884,7 +11009,9 @@
       }
       const autoOptions = {
         randomAuto: node.type === "generator" || node.type === "video",
-        prompt: creativeStylePrompt(node, node.prompt)
+        prompt: creativeStylePrompt(node, node.prompt),
+        customWidth: node.customWidth,
+        customHeight: node.customHeight
       };
       const fixedVideoRatio = node.type === "video" ? fixedVideoAspectRatio(node.model) : "";
       const styleOutputReference = node.type === "style" && node.styleOutputMode === "style" ? references[1] : references[0];
@@ -11324,6 +11451,8 @@
                 ...getInputMediaList(sourceNode.id),
                 sourceNode
               ])[0], targetSize, sourceNode.outpaintDirection, sourceNode.outpaintAmount)
+            : (isOneKOnlyImageModel(sourceNode.model) && String(sourceNode.resolution || "1K").toUpperCase() !== "1K") || ratioKey(sourceNode.ratio) === "自定义尺寸"
+            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 24000, rawUrl, "目标分辨率处理")
             : sourceNode._lockOutputSize
             ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 18000, rawUrl, "批次统一尺寸处理")
             : rawUrl)
@@ -12222,7 +12351,8 @@ ${formatInstruction}`;
         "不要重新绘制主体，不要美化，不要换脸，不要改变人物、产品、姿势、五官、发型、衣服、Logo、文字、构图、比例、颜色和任何细节。",
         "输出透明背景 PNG，主体必须与上传图片保持一致，只把背景变成完全透明；边缘干净自然，不要白底、灰底、纯色底、阴影底或棋盘格底。"
       ].filter(Boolean).join("\n\n");
-      const requestResolution = node._forceBaseGeneration ? "1K" : String(node.resolution || "1K").toUpperCase();
+      const selectedResolution = String(node.resolution || "1K").toUpperCase();
+      const requestResolution = node._forceBaseGeneration || isOneKOnlyImageModel(node.model) ? "1K" : selectedResolution;
       const maskedReference = references.find((item) => item?.maskUrl && item?.url) || null;
       const imageModel = maskedReference ? "gpt-image-2" : imageGenerationApiModel(node.model, requestResolution);
       const grokImageModel = isGrokImageModel(imageModel);
@@ -12543,7 +12673,6 @@ ${formatInstruction}`;
     function modelToApiModel(model) {
       const map = {
         "GPT-image-2": "gpt-image-2",
-        "gpt-image-2-high": "gpt-image-2-high",
         "gpt-image-2.5-1k": "gpt-image-2.5-1k",
         "gpt-image-2.5-flare": "gpt-image-2.5-flare",
         "gpt-image-2.5-sunburst": "gpt-image-2.5-sunburst",
@@ -12764,6 +12893,7 @@ ${formatInstruction}`;
         [/2\s*[:/]\s*3/, "2:3"],
         [/5\s*[:/]\s*4/, "5:4"],
         [/4\s*[:/]\s*5/, "4:5"],
+        [/3\s*[:/]\s*1/, "3:1"],
         [/1\s*[:/]\s*3/, "1:3"]
       ];
       const found = phraseMap.find(([pattern, key]) => pattern.test(text) && available.has(key));
@@ -12794,6 +12924,7 @@ ${formatInstruction}`;
 
     function sizeDecisionFromRatio(ratio, resolution, references = [], options = {}) {
       const size = sizeFromRatio(ratio, resolution, references, options);
+      if (ratioKey(ratio) === "自定义尺寸") return { size, source: "自定义尺寸" };
       if (ratioKey(ratio) !== "Auto") return { size, source: "手动比例" };
       const promptPixels = extractPromptPixelSize(options.prompt);
       if (promptPixels) return { size, source: "关键词像素尺寸" };
@@ -12812,6 +12943,7 @@ ${formatInstruction}`;
         "3:4": [3, 4],
         "3:2": [3, 2],
         "2:3": [2, 3],
+        "3:1": [3, 1],
         "1:3": [1, 3],
         "5:4": [5, 4],
         "4:5": [4, 5],
@@ -12823,6 +12955,11 @@ ${formatInstruction}`;
     }
 
     function sizeFromRatio(ratio, resolution, references = [], options = {}) {
+      if (ratioKey(ratio) === "自定义尺寸") {
+        const width = Math.max(64, Math.min(8192, Math.round(Number(options.customWidth) || 1920)));
+        const height = Math.max(64, Math.min(8192, Math.round(Number(options.customHeight) || 1080)));
+        return `${width}x${height}`;
+      }
       const videoLongMap = {
         "DEFAULT": 1280,
         "480P": 854,
@@ -12833,16 +12970,17 @@ ${formatInstruction}`;
       const imageSizeMap = {
         "1K": {
           "1:1": [1024, 1024],
-          "16:9": [1024, 576],
-          "9:16": [576, 1024],
-          "4:3": [1024, 768],
-          "3:4": [768, 1024],
-          "3:2": [1024, 683],
-          "2:3": [683, 1024],
-          "1:3": [341, 1024],
-          "5:4": [1024, 819],
-          "4:5": [819, 1024],
-          "21:9": [1024, 439]
+          "16:9": [1820, 1024],
+          "9:16": [1024, 1820],
+          "4:3": [1365, 1024],
+          "3:4": [1024, 1365],
+          "3:2": [1536, 1024],
+          "2:3": [1024, 1536],
+          "3:1": [3072, 1024],
+          "1:3": [1024, 3072],
+          "5:4": [1280, 1024],
+          "4:5": [1024, 1280],
+          "21:9": [2389, 1024]
         },
         "2K": {
           "1:1": [1920, 1920],
@@ -12852,6 +12990,7 @@ ${formatInstruction}`;
           "3:4": [1440, 1920],
           "3:2": [1920, 1280],
           "2:3": [1280, 1920],
+          "3:1": [1920, 640],
           "1:3": [640, 1920],
           "5:4": [1920, 1536],
           "4:5": [1536, 1920],
@@ -12865,6 +13004,7 @@ ${formatInstruction}`;
           "3:4": [2880, 3840],
           "3:2": [3840, 2560],
           "2:3": [2560, 3840],
+          "3:1": [3840, 1280],
           "1:3": [1280, 3840],
           "5:4": [3840, 3072],
           "4:5": [3072, 3840],
@@ -16113,6 +16253,7 @@ ${formatInstruction}`;
 
     (async function initApp() {
       loadApiConfig();
+      await syncImageModelsFromApi({ render: false });
       loadProjects();
       await refreshInstalledDrawingSkills({ render: false });
       projectHubPinned = localStorage.getItem(projectHubPinStorageKey) === "1";

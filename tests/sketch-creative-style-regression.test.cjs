@@ -35,8 +35,16 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
   assert.match(await editor.locator('[data-editor-tool="eraser"]').innerText(), /橡皮/);
   await editor.locator('[data-editor-tool="eraser"]').click();
   assert.ok(await editor.locator('[data-editor-tool="eraser"]').evaluate((element) => element.classList.contains("active")));
-  await editor.locator('[data-editor-tool="brush"]').click();
   const box = await board.boundingBox();
+  await board.dispatchEvent("pointermove", { pointerId: 1, clientX: box.x + 120, clientY: box.y + 120 });
+  const cursor = editor.locator("#sketchEditorBrushPreview");
+  assert.ok(await cursor.evaluate((element) => element.classList.contains("visible")));
+  assert.ok(await cursor.evaluate((element) => element.classList.contains("eraser")));
+  const thinCursor = await cursor.evaluate((element) => parseFloat(getComputedStyle(element).width));
+  await editor.locator("#sketchEditorSize").evaluate((input) => { input.value = "96"; input.dispatchEvent(new Event("input", { bubbles: true })); });
+  const thickCursor = await cursor.evaluate((element) => parseFloat(getComputedStyle(element).width));
+  assert.ok(thickCursor > thinCursor * 4, "cursor preview should reflect the selected brush size");
+  await editor.locator('[data-editor-tool="brush"]').click();
   await board.dispatchEvent("pointerdown", { pointerId: 1, clientX: box.x + 100, clientY: box.y + 100 });
   await board.dispatchEvent("pointermove", { pointerId: 1, clientX: box.x + 160, clientY: box.y + 150 });
   await board.dispatchEvent("pointerup", { pointerId: 1, clientX: box.x + 160, clientY: box.y + 150 });
@@ -75,18 +83,45 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
     sizeFromRatio("16:9 横屏", "1K"),
     sizeFromRatio("16:9 横屏", "2K"),
     sizeFromRatio("16:9 横屏", "4K"),
-  ]), ["1024x576", "1920x1080", "3840x2160"]);
+  ]), ["1820x1024", "1920x1080", "3840x2160"]);
   const labels = await generator.locator(".form-row > label").allTextContents();
   assert.ok(labels.indexOf("Skill") < labels.indexOf("创作技能"));
   assert.ok(labels.indexOf("创作技能") < labels.indexOf("模型"));
+  assert.match(await generator.locator("[data-creative-style-toggle]").innerText(), /无选择/);
   await generator.locator("[data-creative-style-toggle]").click();
-  assert.equal(await generator.locator("[data-creative-style]").count(), 16);
+  assert.equal(await generator.locator("[data-creative-style]").count(), 17);
   assert.match(await generator.locator('[data-creative-style="poster"] .creative-style-preview').evaluate((element) => getComputedStyle(element).backgroundImage), /creative-styles-grid\.png/);
   assert.equal(await generator.locator('[data-creative-style="poster"]').evaluate((element) => getComputedStyle(element).borderRadius), "8px");
   const styleCardBox = await generator.locator('[data-creative-style="poster"]').boundingBox();
   assert.ok(Math.abs(styleCardBox.width - styleCardBox.height) < 1, "creative style card should be square");
   await generator.locator('[data-creative-style="poster"]').click();
   assert.match(await generator.locator("[data-creative-style-toggle]").innerText(), /海报/);
+  await generator.locator("[data-creative-style-toggle]").click();
+  await generator.locator('[data-creative-style=""]').click();
+  assert.match(await generator.locator("[data-creative-style-toggle]").innerText(), /无选择/);
+  const ratioRow = generator.locator('.form-row > label').filter({ hasText: "比例尺寸" }).locator("..");
+  await ratioRow.locator("[data-node-select-toggle]").dispatchEvent("click");
+  await ratioRow.locator('[data-node-ratio="自定义尺寸"]').dispatchEvent("click");
+  assert.equal(await generator.locator("[data-custom-size]").count(), 2);
+  await generator.locator('[data-custom-size="width"]').fill("2560");
+  await generator.locator('[data-custom-size="width"]').dispatchEvent("change");
+  await generator.locator('[data-custom-size="height"]').fill("1440");
+  await generator.locator('[data-custom-size="height"]').dispatchEvent("change");
+  assert.equal(await generator.evaluate((element) => {
+    const node = nodes.find((item) => item.id === element.dataset.id);
+    return sizeFromRatio(node.ratio, node.resolution, [], { customWidth: node.customWidth, customHeight: node.customHeight });
+  }), "2560x1440");
+  assert.deepEqual(await page.evaluate(() => imageRatioOptions), [
+    "Auto自适应", "自定义尺寸", "1:1 方图", "21:9 超宽屏", "16:9 横屏", "9:16 竖屏",
+    "4:3 横图", "3:4 竖图", "3:2 摄影横图", "2:3 摄影竖图", "5:4 商品图", "4:5 社媒图",
+    "3:1 屏幕横图", "1:3 长竖图",
+  ]);
+  assert.ok(await page.evaluate(() => imageRatioOptions
+    .filter((ratio) => !/^(Auto|自定义)/.test(ratio))
+    .every((ratio) => {
+      const { width, height } = parseSize(sizeFromRatio(ratio, "1K"));
+      return Math.min(width, height) >= 1024;
+    })));
   await page.evaluate(() => document.body.classList.remove("dark-theme"));
   await generator.locator("[data-creative-style-toggle]").click();
   await generator.locator('[data-creative-style="logo"]').click();

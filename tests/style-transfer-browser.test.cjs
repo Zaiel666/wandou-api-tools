@@ -51,7 +51,7 @@ const { chromium } = require("../desktop-client/node_modules/playwright");
     assert.equal(await selects.count(), 2);
     await selects.nth(0).locator("[data-style-select-toggle]").click();
     assert.equal(await selects.nth(0).evaluate((element) => element.classList.contains("open")), true);
-    assert.equal(await selects.nth(0).locator("[data-style-model]").count(), 8);
+    assert.equal(await selects.nth(0).locator("[data-style-model]").count(), 7);
     await selects.nth(0).locator('[data-style-model="Nano Banana2"]').click();
     assert.equal(await selects.nth(0).locator("[data-style-select-toggle] span").textContent(), "Nano Banana2");
 
