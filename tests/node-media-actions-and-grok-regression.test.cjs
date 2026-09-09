@@ -6,7 +6,7 @@ const canvas = fs.readFileSync(path.resolve(__dirname, "../app/ai-node-canvas.ht
 const main = fs.readFileSync(path.resolve(__dirname, "../desktop-client/main.js"), "utf8");
 const preload = fs.readFileSync(path.resolve(__dirname, "../desktop-client/preload.js"), "utf8");
 
-assert.match(canvas, /const imageModelOptions = \["GPT-image-2", "grok-imagine-image-2\.0",/);
+assert.match(canvas, /const imageModelOptions = \[[\s\S]*?\.\.\.gptImageModelOptions,[\s\S]*?"grok-imagine-image-2\.0"/);
 assert.match(canvas, /"grok-imagine-image-2\.0": "grok-imagine-image-2\.0"/);
 assert.match(canvas, /if \(model === "grok-imagine-image-2\.0"\) return \["1K", "2K"\]/);
 assert.match(canvas, /imagePayload\.quality = grokImageModel \? "auto" : "high"/);

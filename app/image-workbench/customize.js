@@ -3,11 +3,19 @@
   const API_URL = `${atob("aHR0cHM6Ly93d3cuemF5YXBpLnRvcA==")}/v1`;
   const MODEL_OPTIONS = [
     "gpt-image-2",
+    "gpt-image-2-high",
+    "gpt-image-2.5-1k",
+    "gpt-image-2.5-flare",
+    "gpt-image-2.5-sunburst",
     "Nano Banana2",
     "Nano BananaPro"
   ];
   const MODEL_API_MAP = {
     "gpt-image-2": "gpt-image-2",
+    "gpt-image-2-high": "gpt-image-2-high",
+    "gpt-image-2.5-1k": "gpt-image-2.5-1k",
+    "gpt-image-2.5-flare": "gpt-image-2.5-flare",
+    "gpt-image-2.5-sunburst": "gpt-image-2.5-sunburst",
     "Nano Banana2": "gemini-3.1-flash-image-preview",
     "Nano BananaPro": "gemini-3-pro-image-preview"
   };
@@ -375,7 +383,9 @@
     const model = readModel();
     const rawSize = readRawVisibleSize();
     const sizeSource = readResolutionSource();
-    const effectiveQuality = sizeSource === "size" ? (qualityFromSize(rawSize) || readQuality()) : readQuality();
+    const effectiveQuality = model === "gpt-image-2.5-1k"
+      ? "low"
+      : sizeSource === "size" ? (qualityFromSize(rawSize) || readQuality()) : readQuality();
     const effectiveSize = sizeSource === "size" && parseSizeText(rawSize) ? rawSize : sizeForQuality(rawSize, effectiveQuality);
     const googleModel = isGoogleModel(model);
     if (effectiveSize) writeTargetSize(effectiveSize);
@@ -1256,6 +1266,12 @@ function rewriteQualityOptions() {
         event.preventDefault();
         event.stopPropagation();
         writeModel(model);
+        if (model === "gpt-image-2.5-1k") {
+          writeResolutionSource("quality");
+          writeQuality("low");
+          syncNativeQuality("low");
+          syncSizeDisplayFromQuality("low");
+        }
         updateModelControl(label);
         rewriteQualityOptions();
         enhanceCustomQuality();

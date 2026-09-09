@@ -79,7 +79,7 @@ for (const [resolution, ratios] of Object.entries(sizeMap)) {
 
 assert.equal(tested, 33);
 const pageSource = fs.readFileSync(new URL("../app/ai-node-canvas.html", import.meta.url), "utf8");
-assert.match(pageSource, /size:\s*node\._forceStandardApiSize[\s\S]*?imageModel === "gpt-image-2"[\s\S]*?apiSafeGenerationSize\(targetSize\)[\s\S]*?apiSizeFromTarget\(targetSize\)/);
+assert.match(pageSource, /size:\s*node\._forceStandardApiSize[\s\S]*?isGptImageModel\(imageModel\)[\s\S]*?apiSafeGenerationSize\(targetSize\)[\s\S]*?apiSizeFromTarget\(targetSize\)/);
 assert.match(pageSource, /prompt:\s*promptWithSize\(imagePrompt, targetSize\)/);
 assert.doesNotMatch(pageSource, /normalizeGeneratedImage\(rawUrl,\s*targetSize,\s*false,\s*true\)/);
 assert.match(pageSource, /getImageDimensions\(url\)/);

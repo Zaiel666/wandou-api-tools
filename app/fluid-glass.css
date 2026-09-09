@@ -544,6 +544,11 @@ body.node-canvas-page .generator-skill-popover .generator-skill-chip {
   border-radius: 6px !important;
 }
 
+/* 创作技能使用图片卡片，保留官网式圆角矩形，不继承画布按钮的胶囊外形。 */
+body.node-canvas-page button.creative-style-card {
+  border-radius: 12px !important;
+}
+
 body.node-canvas-page .generator-skill-popover .generator-skill-manage {
   min-height: 24px !important;
   height: 24px !important;

@@ -55,7 +55,7 @@ assert.match(html, /references: referenceList/);
 assert.match(html, /_directReferencesOnly: true/);
 assert.match(html, /_lockOutputSize: true/);
 assert.match(html, /node\.autoSplitLockedSize = targetSize/);
-assert.match(html, /imageModel === "gpt-image-2"[\s\S]*?apiSafeGenerationSize\(targetSize\)/);
+assert.match(html, /isGptImageModel\(imageModel\)[\s\S]*?apiSafeGenerationSize\(targetSize\)/);
 assert.doesNotMatch(html, /input_fidelity\s*=/);
 assert.match(html, /_forceStandardApiSize/);
 

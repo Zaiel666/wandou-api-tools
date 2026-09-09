@@ -4702,7 +4702,7 @@
     .node.generator .auto-split-toggle { min-height:28px; height:28px; padding:2px 8px; }
     .node.generator .generator-reference-field { margin-top:7px; }
     .node.generator .generator-reference-field .upload-box { padding:6px; }
-    .generator-skill-popover { position:absolute; top:8px; right:47px; z-index:16; width:292px; max-height:360px; padding:8px; display:none; border:1px solid rgba(127,143,134,.28); border-radius:11px; background:rgba(255,255,255,.96); box-shadow:0 14px 36px rgba(33,45,38,.16); backdrop-filter:blur(18px); }
+    .generator-skill-popover { position:absolute; top:calc(100% + 7px); right:0; z-index:31; width:292px; max-height:360px; padding:8px; display:none; border:1px solid rgba(127,143,134,.28); border-radius:11px; background:rgba(255,255,255,.96); box-shadow:0 14px 36px rgba(33,45,38,.16); backdrop-filter:blur(18px); }
     .generator-skill-popover.open { display:block; }
     .generator-skill-head { min-height:26px; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .generator-skill-head strong { font-size:11px; font-weight:600; color:var(--text); }
@@ -4736,7 +4736,61 @@
     body.dark-theme .skill-active-action,
     body.dark-theme .skill-compare-column.optimized > span { color:#a9e6bd; }
     body.dark-theme .skill-compare-column { background:rgba(255,255,255,.035); }
-    @media (max-width:760px) { .prompt-manager-modal { grid-template-columns:1fr; } .prompt-tags { display:none; } .prompt-manager-list { grid-template-columns:1fr; } }
+    /* 独立画板节点：它保存为普通 PNG，因此连线后与上传的参考图完全一致。 */
+    .node.sketch { width:300px; }
+    .sketch-shell { display:grid; gap:7px; }
+    .sketch-node-preview { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1; padding:0; overflow:hidden; border:1px solid rgba(100,116,139,.42); border-radius:12px; background:#fff; cursor:zoom-in; }
+    .sketch-node-preview img { width:100%; height:100%; object-fit:contain; }
+    .sketch-node-preview span { position:absolute; left:50%; bottom:12px; transform:translateX(-50%); padding:5px 10px; color:#fff; font-size:10px; white-space:nowrap; border-radius:999px; background:rgba(0,0,0,.58); backdrop-filter:blur(8px); opacity:0; transition:opacity .16s ease; }
+    .sketch-node-preview:hover span,.sketch-node-preview:focus-visible span { opacity:1; }
+    .sketch-note { color:var(--muted); font-size:10px; line-height:1.4; text-align:center; }
+
+    .sketch-editor { position:fixed; z-index:1000; inset:0; display:none; place-items:center; overflow:hidden; color:#fff; background:#181818; }
+    .sketch-editor.open { display:grid; }
+    .sketch-editor canvas { display:block; width:min(82vh,82vw); height:min(82vh,82vw); max-width:calc(100vw - 150px); max-height:calc(100vh - 150px); background:#fff; box-shadow:0 0 0 1px rgba(255,255,255,.14),0 18px 60px rgba(0,0,0,.28); touch-action:none; cursor:crosshair; }
+    .sketch-editor button { display:grid; place-items:center; padding:0; color:rgba(255,255,255,.88); background:transparent; border:0; box-shadow:none; }
+    .sketch-editor button:hover,.sketch-editor button:focus-visible { color:#fff; background:rgba(255,255,255,.1); }
+    .sketch-editor-close { position:absolute; top:18px; left:18px; width:40px; height:40px; font-size:36px; font-weight:200; }
+    .sketch-editor-top { position:absolute; z-index:2; top:14px; left:50%; display:flex; gap:4px; padding:5px; transform:translateX(-50%); border:1px solid rgba(255,255,255,.14); border-radius:999px; background:rgba(28,28,28,.9); }
+    .sketch-editor-tool { width:44px; height:44px; border-radius:50%; font-size:24px; }
+    .sketch-editor-tool.active { color:#fff; background:rgba(255,255,255,.1); }
+    .sketch-editor-history { position:absolute; top:18px; right:18px; display:flex; gap:12px; }
+    .sketch-editor-history button { width:42px; height:42px; font-size:29px; }
+    .sketch-editor-size { position:absolute; left:20px; top:50%; width:28px; height:278px; transform:translateY(-50%); }
+    .sketch-editor-size input { width:278px; height:28px; margin:125px 0 0 -125px; transform:rotate(-90deg); accent-color:#fff; }
+    .sketch-editor-colors { position:absolute; z-index:2; bottom:20px; left:50%; display:flex; align-items:center; gap:10px; transform:translateX(-50%); }
+    .sketch-editor-color { width:34px; min-width:34px; height:34px; border:2px solid rgba(255,255,255,.32) !important; border-radius:50%; background:var(--swatch) !important; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12) !important; }
+    .sketch-editor-color.active { outline:3px solid #2f76dc; outline-offset:3px; }
+    .sketch-editor-done { position:absolute; right:18px; bottom:16px; width:54px; height:54px; color:#fff !important; font-size:30px; border-radius:50% !important; background:#286bd0 !important; }
+
+    .creative-style-row { align-items:flex-start; }
+    .skill-row-control,.creative-style-control { position:relative; width:min(100%, 216px); }
+    .skill-row-control > .node-select-trigger { width:100%; }
+    .creative-style-trigger { width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .creative-style-popover { position:absolute; z-index:30; top:calc(100% + 7px); right:0; display:none; width:620px; max-width:min(82vw,620px); max-height:590px; overflow:auto; padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--panel); box-shadow:0 18px 50px rgba(15,23,42,.2); }
+    .creative-style-control.open .creative-style-popover { display:block; }
+    .creative-style-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .node .creative-style-card { position:relative; display:block; height:128px; min-height:128px; padding:0; overflow:hidden; text-align:left; border-radius:12px !important; background:transparent; }
+    .node .creative-style-card.active { border-color:#2fbd5b; box-shadow:0 0 0 2px rgba(47,189,91,.14); }
+    .creative-style-preview { display:block; width:100%; height:100%; overflow:hidden; border-radius:11px !important; background-color:var(--style-a); background-image:url('./assets/creative-styles-grid.png'); background-repeat:no-repeat; background-size:400% 400%; background-position:var(--sprite-x) var(--sprite-y); }
+    .creative-style-copy { position:absolute; right:0; bottom:0; left:0; padding:28px 10px 9px; background:linear-gradient(transparent,rgba(0,0,0,.72)); }
+    .creative-style-preview.free { display:grid; place-items:center; color:#fff; font-size:28px; background-image:linear-gradient(145deg,#64748b,#334155); }
+    .creative-style-copy strong,.creative-style-copy small { display:block; }
+    .creative-style-copy strong { color:#fff; font-size:11px; }
+    .creative-style-copy small { margin-top:2px; color:rgba(255,255,255,.78); font-size:8.5px; line-height:1.25; }
+    .generator-skill-description { line-height:1.35; }
+
+    .prompt-optimize-choice { margin-top:9px; border-top:1px solid var(--line); padding-top:8px; }
+    .prompt-optimize-choice > button { width:100%; }
+    .prompt-optimize-question { display:none; margin-top:7px; padding:8px; border:1px solid var(--line); border-radius:9px; background:rgba(127,127,127,.06); }
+    .prompt-optimize-choice.open .prompt-optimize-question { display:block; }
+    .prompt-optimize-question p { margin:0 0 7px; font-size:11px; }
+    .prompt-optimize-actions { display:flex; justify-content:flex-end; gap:6px; }
+
+    .node.result .preview { position:relative; }
+    .node.result .result-meta-line { position:absolute; z-index:8; top:5px; left:73px; right:27px; width:auto; height:20px; margin:0; padding:0 7px; color:#fff; font-size:9px; line-height:20px; border-radius:999px; background:rgba(15,18,17,.58); backdrop-filter:blur(8px); pointer-events:none; }
+    .node.result .result-meta-line span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    @media (max-width:760px) { .prompt-manager-modal { grid-template-columns:1fr; } .prompt-tags { display:none; } .prompt-manager-list { grid-template-columns:1fr; } .creative-style-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .creative-style-popover { width:340px; } .sketch-editor-colors{gap:5px}.sketch-editor-color{width:25px;min-width:25px;height:25px}.sketch-editor canvas{max-width:calc(100vw - 80px);max-height:calc(100vh - 140px)} }
   </style>
   <link rel="stylesheet" href="./fluid-glass.css">
 </head>
@@ -4756,6 +4810,7 @@
         <h2 class="tool-title">创建节点</h2>
         <div class="button-grid">
           <button type="button" data-add-node="image">参考图</button>
+          <button type="button" data-add-node="sketch">画板</button>
           <button type="button" data-add-node="generator">AI文字绘图</button>
           <button type="button" data-add-node="video">AI视频</button>
           <button type="button" data-add-node="keyword">反推/生成提示词</button>
@@ -4869,6 +4924,7 @@
       </div>
       <div id="contextMenu" class="context-menu">
         <button type="button" data-menu-node="image">新建参考图</button>
+        <button type="button" data-menu-node="sketch">新建画板</button>
         <button type="button" data-menu-node="generator">新建AI文字绘图</button>
         <button type="button" data-menu-node="video">新建AI视频</button>
         <button type="button" data-menu-node="keyword">新建反推/生成提示词</button>
@@ -4949,6 +5005,21 @@
         <button id="paintSave" class="ghost" type="button">保存遮罩</button>
       </div>
     </div>
+  </div>
+  <div id="sketchEditor" class="sketch-editor" role="dialog" aria-modal="true" aria-label="画板编辑器" aria-hidden="true">
+    <button id="sketchEditorClose" class="sketch-editor-close" type="button" aria-label="关闭画板">×</button>
+    <div class="sketch-editor-top" role="toolbar" aria-label="画板工具">
+      <button class="sketch-editor-tool active" data-editor-tool="brush" type="button" aria-pressed="true" title="画笔">〰</button>
+      <button class="sketch-editor-tool" data-editor-tool="eraser" type="button" aria-pressed="false" title="橡皮擦">◇</button>
+    </div>
+    <div class="sketch-editor-history">
+      <button id="sketchEditorUndo" type="button" title="撤回" aria-label="撤回">↶</button>
+      <button id="sketchEditorRedo" type="button" title="重做" aria-label="重做">↷</button>
+    </div>
+    <div class="sketch-editor-size"><input id="sketchEditorSize" type="range" min="2" max="96" value="12" orient="vertical" aria-label="画笔粗细"></div>
+    <canvas id="sketchEditorCanvas" width="1024" height="1024" aria-label="画板"></canvas>
+    <div id="sketchEditorColors" class="sketch-editor-colors" aria-label="画笔颜色"></div>
+    <button id="sketchEditorDone" class="sketch-editor-done" type="button" aria-label="完成画板">✓</button>
   </div>
   <div id="galleryOverlay" class="gallery-overlay">
     <div class="gallery-panel">
@@ -5064,6 +5135,14 @@
     const paintRedo = document.getElementById("paintRedo");
     const paintClear = document.getElementById("paintClear");
     const paintSave = document.getElementById("paintSave");
+    const sketchEditor = document.getElementById("sketchEditor");
+    const sketchEditorCanvas = document.getElementById("sketchEditorCanvas");
+    const sketchEditorClose = document.getElementById("sketchEditorClose");
+    const sketchEditorDone = document.getElementById("sketchEditorDone");
+    const sketchEditorUndo = document.getElementById("sketchEditorUndo");
+    const sketchEditorRedo = document.getElementById("sketchEditorRedo");
+    const sketchEditorSize = document.getElementById("sketchEditorSize");
+    const sketchEditorColors = document.getElementById("sketchEditorColors");
     const openGalleryButton = document.getElementById("openGalleryButton");
     const openVideoGalleryButton = document.getElementById("openVideoGalleryButton");
     const openFavoritesButton = document.getElementById("openFavoritesButton");
@@ -5137,6 +5216,11 @@
     let paintReady = false;
     let paintPointerId = null;
     let paintLoadToken = 0;
+    let activeSketchNodeId = null;
+    let sketchEditorDrawing = false;
+    let sketchEditorLastPoint = null;
+    let sketchEditorUndoStack = [];
+    let sketchEditorRedoStack = [];
     let gallerySize = "medium";
     let galleryMode = "image";
     let galleryTab = "canvas";
@@ -5236,14 +5320,51 @@
 
       const defaultPrompt = "把参考图优化成适合社交平台传播的高级质感海报，画面干净，文字清晰，现代商业视觉。";
     const defaultKeywordPrompt = "";
-    const imageModelOptions = ["GPT-image-2", "grok-imagine-image-2.0", "Nano Banana2", "Nano BananaPro"];
-    const upscaleModelOptions = ["GPT-image-2", "Nano Banana2", "Nano BananaPro"];
+    const gptImageModelOptions = [
+      "GPT-image-2",
+      "gpt-image-2-high",
+      "gpt-image-2.5-1k",
+      "gpt-image-2.5-flare",
+      "gpt-image-2.5-sunburst"
+    ];
+    const imageModelOptions = [
+      ...gptImageModelOptions,
+      "grok-imagine-image-2.0",
+      "Nano Banana2",
+      "Nano BananaPro"
+    ];
+    const upscaleModelOptions = [
+      ...gptImageModelOptions,
+      "Nano Banana2",
+      "Nano BananaPro"
+    ];
     const outpaintDirectionOptions = [
       { value: "horizontal", label: "左右扩图" },
       { value: "vertical", label: "上下扩图" },
       { value: "all", label: "四周扩图" }
     ];
     const outpaintAmountOptions = [25, 50, 100];
+    const sketchColors = ["#111827", "#ffffff", "#808995", "#a94b08", "#ef2727", "#ff7417", "#f7a600", "#16a34a", "#109b90", "#11afd0", "#2869df", "#5046df", "#9834dc", "#df2675"];
+    const sketchBackgroundColor = "#ffffff";
+    const legacySketchBackgroundColor = { red:24, green:24, blue:24 };
+    const creativeStyles = [
+      { id:"poster", name:"海报", note:"醒目标题与视觉中心", mark:"字", a:"#ee9155", b:"#c75931", prompt:"海报设计：突出主标题和单一视觉焦点，保留清晰文案区、网格层级与安全边距。" },
+      { id:"interior", name:"室内设计", note:"空间、材质与采光", mark:"⌂", a:"#e7bad9", b:"#a981a9", prompt:"室内设计效果图：空间尺度可信，材质细节清楚，采光自然，家具布局可落地。" },
+      { id:"logo", name:"Logo", note:"简洁且易识别", mark:"◉", a:"#dce6ec", b:"#8fa2ae", prompt:"Logo设计：图形简洁、轮廓清楚、缩小后仍可识别，适合纯色和矢量化使用。" },
+      { id:"illustration", name:"插画", note:"叙事感与统一画风", mark:"✿", a:"#cfc5ef", b:"#8178a7", prompt:"插画创作：角色与场景具有叙事感，线条、色彩、材质和光影保持统一画风。" },
+      { id:"headshot", name:"头像照", note:"自然真实的人像光线", mark:"☺", a:"#d9d3cd", b:"#7c716a", prompt:"专业头像照：真实自然的人像比例，柔和棚拍光，干净背景，清晰眼神与皮肤质感。" },
+      { id:"icon", name:"图标", note:"小尺寸清晰可辨", mark:"✦", a:"#176d69", b:"#0b4348", prompt:"图标设计：使用统一线宽与圆角，小尺寸清晰可辨，造型简洁并适合成套扩展。" },
+      { id:"product", name:"产品摄影", note:"棚拍质感与卖点", mark:"▣", a:"#ffc7dc", b:"#d7799e", prompt:"产品摄影：棚拍级光影，主体轮廓清楚，材质真实，背景简洁并突出产品卖点。" },
+      { id:"merch", name:"周边商品", note:"图案贴合真实载体", mark:"T", a:"#3c8bd4", b:"#13538d", prompt:"周边商品设计：图案自然贴合真实载体，透视、褶皱和印刷质感可信，适合商品展示。" },
+      { id:"infographic", name:"信息图", note:"数据结构一眼读懂", mark:"↗", a:"#c9deef", b:"#7ea6c8", prompt:"信息图设计：信息分组明确，阅读顺序清晰，图形辅助理解，数字和中文文字准确可读。" },
+      { id:"flyer", name:"传单", note:"促销信息层级清楚", mark:"A", a:"#5b5b67", b:"#272731", prompt:"传单设计：促销主题突出，标题、利益点、时间和行动号召层级清楚，适合印刷。" },
+      { id:"book", name:"书籍封面", note:"书名醒目且有氛围", mark:"书", a:"#7596ce", b:"#31507d", prompt:"书籍封面设计：书名醒目，图像表达主题与情绪，书脊和边缘保留排版安全空间。" },
+      { id:"app", name:"App 样机", note:"真实设备与界面展示", mark:"▤", a:"#d2c7ef", b:"#8e80bd", prompt:"App样机：界面置于真实设备或展示场景中，屏幕内容清晰，透视与反射自然。" },
+      { id:"packaging", name:"包装", note:"结构、材质与品牌统一", mark:"◇", a:"#f3bd96", b:"#c77e55", prompt:"包装设计：包装结构合理，品牌、品名和必要信息层级明确，材质和印刷工艺可信。" },
+      { id:"advertisement", name:"广告", note:"卖点突出并可转化", mark:"!", a:"#da9bb1", b:"#9d4d70", prompt:"广告创意：产品卖点突出，视觉冲击明确，文案区域清楚，构图引导用户关注行动号召。" },
+      { id:"thumbnail", name:"缩略图", note:"小图也有强焦点", mark:"▶", a:"#bcd5b8", b:"#6f996b", prompt:"缩略图设计：小尺寸仍有强视觉焦点，高对比、少文字、主体表情或动作清楚。" },
+      { id:"website", name:"网站样机", note:"完整网页视觉预览", mark:"▦", a:"#3275a8", b:"#154265", prompt:"网站样机：展示完整网页层级、响应式布局和组件状态，内容密度合理，界面真实可用。" }
+    ];
     const builtInKeywordPresets = [
       { name: "图片高清放大", text: "4K超清放大，增强纹理与边缘细节，保持原始构图、比例、文字和主体不变" },
       { name: "商业海报", text: "商业海报设计，高级版式，清晰视觉层级，醒目标题区，专业品牌质感" },
@@ -5492,6 +5613,7 @@
     }
 
     function imageResolutionOptionsForModel(model) {
+      if (model === "gpt-image-2.5-1k") return ["1K"];
       if (model === "grok-imagine-image-2.0") return ["1K", "2K"];
       return model === "Nano Banana2" || model === "Nano BananaPro" ? ["4K"] : imageResolutionOptions;
     }
@@ -6226,6 +6348,12 @@
         skillOriginalPrompt: "",
         skillOptimizedPrompt: "",
         skillCompareOpen: false,
+        creativeStyle: "",
+        promptOptimizeOpen: false,
+        promptOptimizeChoice: "",
+        sketchColor: "#111827",
+        sketchSize: 8,
+        sketchTool: "brush",
         duration: type === "video" ? "default" : "5s",
         videoMode: type === "video" ? "text" : "",
         mediaUrl: "",
@@ -6255,6 +6383,7 @@
       if (type === "upscale") return "4K放大";
       if (type === "outpaint") return "扩图";
       if (type === "style") return "风格迁移";
+      if (type === "sketch") return "画板";
       if (type === "result") return "";
       if (type === "selection") return "选区";
       return "参考图";
@@ -6267,6 +6396,7 @@
       if (type === "upscale") return "4K";
       if (type === "outpaint") return "↔";
       if (type === "style") return "◈";
+      if (type === "sketch") return "✎";
       if (type === "generator") return "✦";
       if (type === "result") return "↓";
       return "▣";
@@ -6489,7 +6619,7 @@
           </div>
         </div>
         <div class="node-body"></div>
-        ${!isSelection && (node.type === "generator" || node.type === "video" || node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint" || node.type === "style") ? '<div class="node-resize" data-resize-handle title="拖动缩放节点"></div>' : ''}
+        ${!isSelection && (node.type === "generator" || node.type === "video" || node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint" || node.type === "style" || node.type === "sketch") ? '<div class="node-resize" data-resize-handle title="拖动缩放节点"></div>' : ''}
       `;
 
       const body = el.querySelector(".node-body");
@@ -6503,6 +6633,8 @@
         body.appendChild(renderOutpaintBody(node));
       } else if (node.type === "style") {
         body.appendChild(renderStyleTransferBody(node));
+      } else if (node.type === "sketch") {
+        body.appendChild(renderSketchBody(node));
       } else if (node.type === "generator" || node.type === "video") {
         body.appendChild(renderGeneratorBody(node));
       } else if (node.type === "selection") {
@@ -6589,6 +6721,12 @@
           skillOriginalPrompt: node.skillOriginalPrompt || "",
           skillOptimizedPrompt: node.skillOptimizedPrompt || "",
           skillCompareOpen: Boolean(node.skillCompareOpen),
+          creativeStyle: node.creativeStyle || "",
+          promptOptimizeOpen: Boolean(node.promptOptimizeOpen),
+          promptOptimizeChoice: node.promptOptimizeChoice || "",
+          sketchColor: node.sketchColor || "#111827",
+          sketchSize: Number(node.sketchSize) || 8,
+          sketchTool: node.sketchTool || "brush",
           styleStrength: node.styleStrength || "standard",
           styleOutputMode: node.styleOutputMode || "content"
         });
@@ -6636,6 +6774,38 @@
 
     function isGroupDragBlockedTarget(target) {
       return Boolean(target.closest("button, input, textarea, select, label, .port, [data-resize-handle]"));
+    }
+
+    async function optimizeKeywordOutput(node) {
+      const source = String(node.text || "").trim();
+      if (!source) return;
+      node.promptOptimizeChoice = "yes";
+      node.status = "正在优化提示词…";
+      render();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
+      try {
+        const configuredUrl = apiUrlInput.value.trim() || defaultApiBaseUrl();
+        const headers = { "Content-Type":"application/json", Authorization:`Bearer ${apiKeyInput.value.trim()}` };
+        const response = await postPromptModelWithFallback(configuredUrl, headers, {
+          messages:[
+            { role:"system", content:"你是绘图提示词优化助手。保留原意和中英文分区，补齐主体、环境、构图、镜头、光线、材质、色彩和硬性约束。只返回优化后的提示词，不要解释。" },
+            { role:"user", content:source }
+          ], temperature:0.35
+        }, controller.signal);
+        const optimized = String(response.text || "").trim();
+        if (!optimized) throw new Error("没有返回优化结果");
+        pushHistory();
+        node.text = optimized;
+        node.status = "提示词优化完成。";
+        node.promptOptimizeOpen = false;
+      } catch (error) {
+        node.status = `提示词优化失败：${friendlyErrorMessage(error)}`;
+      } finally {
+        clearTimeout(timeout);
+        render();
+        scheduleCanvasSave();
+      }
     }
 
     function renderPromptReverseBody(node) {
@@ -6708,6 +6878,7 @@
           <textarea data-prompt-output="en" data-autogrow readonly placeholder="提取后显示英文提示词">${output.en}</textarea>
         </div>
         <div class="status">${node.status || (node.promptReverseMode === "image" ? "连接参考图后，选择模型提取中英文提示词。" : "输入文字需求后，选择模型生成中英文提示词。")}</div>
+        ${node.text ? `<div class="prompt-optimize-choice ${node.promptOptimizeOpen ? "open" : ""}"><button class="ghost" data-prompt-optimize-toggle type="button">提示词</button><div class="prompt-optimize-question"><p>是否优化提示词？</p><div class="prompt-optimize-actions"><button class="ghost" data-prompt-optimize-no type="button">否</button><button class="primary" data-prompt-optimize-yes type="button">是</button></div></div></div>` : ""}
       `;
       bindFields(wrap, node);
       wrap.querySelectorAll("[data-prompt-reverse-mode]").forEach((button) => {
@@ -6829,6 +7000,9 @@
         node.promptRefineOpen = false;
         render();
       });
+      wrap.querySelector("[data-prompt-optimize-toggle]")?.addEventListener("click", () => { node.promptOptimizeOpen = !node.promptOptimizeOpen; render(); });
+      wrap.querySelector("[data-prompt-optimize-no]")?.addEventListener("click", () => { node.promptOptimizeChoice = "no"; node.promptOptimizeOpen = false; node.status = "已保留原提示词。"; render(); scheduleCanvasSave(); });
+      wrap.querySelector("[data-prompt-optimize-yes]")?.addEventListener("click", () => optimizeKeywordOutput(node));
       autoGrowTextareas(wrap);
       return wrap;
     }
@@ -7281,12 +7455,41 @@
       return [...unique.values()].slice(0, 12);
     }
 
+    function skillChineseNote(skill, label) {
+      const description = String(skill?.description || "").trim();
+      if (/[\u3400-\u9fff]/.test(description)) return description;
+      const name = String(label || "").toLowerCase();
+      if (/imagegen|image/.test(name)) return "把场景、构图、光线和材质整理成可直接生图的提示词。";
+      if (/banner/.test(name)) return "适合海报、横幅和社交媒体图片的构图与排版。";
+      if (/brand/.test(name)) return "统一品牌语气、色彩、字体和视觉识别。";
+      if (/design/.test(name)) return "补齐视觉层级、网格、留白和配色规范。";
+      if (/prompt/.test(name)) return "整理零散描述，消除歧义并强化生成约束。";
+      return `用于按“${label}”规则优化当前绘图提示词。`;
+    }
+
+    function creativeStyleById(id) {
+      return creativeStyles.find((item) => item.id === id) || null;
+    }
+
+    function creativeStylePrompt(node, prompt) {
+      const style = creativeStyleById(node.creativeStyle);
+      return style ? `${String(prompt || "").trim()}\n\n创作技能：${style.prompt}`.trim() : String(prompt || "");
+    }
+
+    function creativeStyleOptionsHtml(node) {
+      return creativeStyles.map((style, index) => {
+        const column = index % 4;
+        const row = Math.floor(index / 4);
+        return `<button class="creative-style-card ${node.creativeStyle === style.id ? "active" : ""}" data-creative-style="${style.id}" type="button"><span class="creative-style-preview" style="--style-a:${style.a};--sprite-x:${column * 100 / 3}%;--sprite-y:${row * 100 / 3}%"></span><span class="creative-style-copy"><strong>${style.name}</strong><small>${style.note}</small></span></button>`;
+      }).join("");
+    }
+
     function generatorSkillOptionsHtml(node) {
       const skills = drawingSkillOptions();
       const selectedMissing = node.skillId && !skills.some((skill) => skill.id === node.skillId);
       const buttons = skills.map((skill) => {
         const label = skill.directoryName && skill.directoryName !== skill.name ? skill.directoryName : skill.name;
-        const description = skill.description || `${label} 绘图提示词规则`;
+        const description = skillChineseNote(skill, label);
         return `<button class="generator-skill-chip ${node.skillId === skill.id ? "active" : ""}" data-generator-skill="${escapeHtml(skill.id)}" type="button"><span class="generator-skill-name">${escapeHtml(label)}</span><span class="generator-skill-description">${escapeHtml(description)}</span></button>`;
       }).join("");
       return `<div class="generator-skill-popover" data-generator-skill-popover role="dialog" aria-label="绘图 Skill"><div class="generator-skill-head"><strong>绘图 Skill</strong><button class="generator-skill-manage" data-skill-manage type="button">管理 Skill</button></div><div class="generator-skill-options"><button class="generator-skill-chip ${!node.skillId ? "active" : ""}" data-generator-skill="" type="button"><span class="generator-skill-name">默认绘图规则</span><span class="generator-skill-description">不额外改写，直接使用当前提示词生成。</span></button>${selectedMissing ? `<button class="generator-skill-chip active" type="button" disabled><span class="generator-skill-name">${escapeHtml(node.skillName || "已选 Skill")}</span><span class="generator-skill-description">当前已启用此 Skill。</span></button>` : ""}${buttons || '<span class="generator-skill-empty">未发现已安装 Skill</span>'}</div></div>`;
@@ -7567,6 +7770,189 @@
       return wrap;
     }
 
+    function initializeSketchNode(node) {
+      const initial = document.createElement("canvas");
+      initial.width = 1024;
+      initial.height = 1024;
+      const context = initial.getContext("2d", { alpha:false });
+      context.fillStyle = sketchBackgroundColor;
+      context.fillRect(0, 0, initial.width, initial.height);
+      node.mediaUrl = initial.toDataURL("image/png");
+      node.mediaType = "image";
+      node.width = initial.width;
+      node.height = initial.height;
+      node.references = [{ url:node.mediaUrl, mediaType:"image", width:node.width, height:node.height, name:"画板参考图" }];
+    }
+
+    function sketchEditorSnapshot() {
+      return sketchEditorCanvas.getContext("2d", { alpha:false }).getImageData(0, 0, sketchEditorCanvas.width, sketchEditorCanvas.height);
+    }
+
+    function migrateLegacySketchBackground(context) {
+      const imageData = context.getImageData(0, 0, sketchEditorCanvas.width, sketchEditorCanvas.height);
+      const pixels = imageData.data;
+      let legacyPixels = 0;
+      for (let index = 0; index < pixels.length; index += 4) {
+        if (
+          Math.abs(pixels[index] - legacySketchBackgroundColor.red) <= 2 &&
+          Math.abs(pixels[index + 1] - legacySketchBackgroundColor.green) <= 2 &&
+          Math.abs(pixels[index + 2] - legacySketchBackgroundColor.blue) <= 2
+        ) legacyPixels += 1;
+      }
+      if (legacyPixels < sketchEditorCanvas.width * sketchEditorCanvas.height * 0.5) return false;
+      for (let index = 0; index < pixels.length; index += 4) {
+        if (
+          Math.abs(pixels[index] - legacySketchBackgroundColor.red) <= 2 &&
+          Math.abs(pixels[index + 1] - legacySketchBackgroundColor.green) <= 2 &&
+          Math.abs(pixels[index + 2] - legacySketchBackgroundColor.blue) <= 2
+        ) {
+          pixels[index] = 255;
+          pixels[index + 1] = 255;
+          pixels[index + 2] = 255;
+        }
+      }
+      context.putImageData(imageData, 0, 0);
+      return true;
+    }
+
+    function setSketchEditorTool(tool) {
+      const node = nodes.find((item) => item.id === activeSketchNodeId);
+      if (!node) return;
+      node.sketchTool = tool === "eraser" ? "eraser" : "brush";
+      sketchEditor.querySelectorAll("[data-editor-tool]").forEach((button) => {
+        const active = button.dataset.editorTool === node.sketchTool;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    }
+
+    function ensureSketchEditorBound() {
+      if (sketchEditor.dataset.bound) return;
+      sketchEditor.dataset.bound = "true";
+      sketchEditorColors.innerHTML = sketchColors.map((color) => `<button class="sketch-editor-color" style="--swatch:${color}" data-editor-color="${color}" type="button" aria-label="选择颜色 ${color}"></button>`).join("");
+      sketchEditor.querySelectorAll("[data-editor-tool]").forEach((button) => button.addEventListener("click", () => setSketchEditorTool(button.dataset.editorTool)));
+      sketchEditorColors.querySelectorAll("[data-editor-color]").forEach((button) => button.addEventListener("click", () => {
+        const node = nodes.find((item) => item.id === activeSketchNodeId);
+        if (!node) return;
+        node.sketchColor = button.dataset.editorColor;
+        setSketchEditorTool("brush");
+        updateSketchEditorControls(node);
+      }));
+      sketchEditorSize.addEventListener("input", () => {
+        const node = nodes.find((item) => item.id === activeSketchNodeId);
+        if (node) node.sketchSize = Number(sketchEditorSize.value);
+      });
+      sketchEditorUndo.addEventListener("click", () => {
+        if (sketchEditorUndoStack.length < 2) return;
+        sketchEditorRedoStack.push(sketchEditorUndoStack.pop());
+        sketchEditorCanvas.getContext("2d", { alpha:false }).putImageData(sketchEditorUndoStack[sketchEditorUndoStack.length - 1], 0, 0);
+      });
+      sketchEditorRedo.addEventListener("click", () => {
+        const state = sketchEditorRedoStack.pop();
+        if (!state) return;
+        sketchEditorCanvas.getContext("2d", { alpha:false }).putImageData(state, 0, 0);
+        sketchEditorUndoStack.push(state);
+      });
+      const point = (event) => {
+        const rect = sketchEditorCanvas.getBoundingClientRect();
+        return { x:(event.clientX - rect.left) * sketchEditorCanvas.width / rect.width, y:(event.clientY - rect.top) * sketchEditorCanvas.height / rect.height };
+      };
+      sketchEditorCanvas.addEventListener("pointerdown", (event) => {
+        const node = nodes.find((item) => item.id === activeSketchNodeId);
+        if (!node) return;
+        event.preventDefault();
+        sketchEditorDrawing = true;
+        sketchEditorLastPoint = point(event);
+        sketchEditorCanvas.setPointerCapture?.(event.pointerId);
+      });
+      sketchEditorCanvas.addEventListener("pointermove", (event) => {
+        if (!sketchEditorDrawing) return;
+        const node = nodes.find((item) => item.id === activeSketchNodeId);
+        if (!node) return;
+        const next = point(event);
+        const context = sketchEditorCanvas.getContext("2d", { alpha:false });
+        context.beginPath();
+        context.moveTo(sketchEditorLastPoint.x, sketchEditorLastPoint.y);
+        context.lineTo(next.x, next.y);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.lineWidth = Number(node.sketchSize) || 12;
+        context.strokeStyle = node.sketchTool === "eraser" ? sketchBackgroundColor : (node.sketchColor || sketchColors[0]);
+        context.stroke();
+        sketchEditorLastPoint = next;
+      });
+      const finishStroke = () => {
+        if (!sketchEditorDrawing) return;
+        sketchEditorDrawing = false;
+        sketchEditorUndoStack.push(sketchEditorSnapshot());
+        if (sketchEditorUndoStack.length > 40) sketchEditorUndoStack.shift();
+        sketchEditorRedoStack = [];
+      };
+      sketchEditorCanvas.addEventListener("pointerup", finishStroke);
+      sketchEditorCanvas.addEventListener("pointercancel", finishStroke);
+      sketchEditorDone.addEventListener("click", () => closeSketchEditor(true));
+      sketchEditorClose.addEventListener("click", () => closeSketchEditor(false));
+    }
+
+    function updateSketchEditorControls(node) {
+      sketchEditorSize.value = String(Number(node.sketchSize) || 12);
+      sketchEditorColors.querySelectorAll("[data-editor-color]").forEach((button) => button.classList.toggle("active", button.dataset.editorColor === node.sketchColor));
+      setSketchEditorTool(node.sketchTool || "brush");
+    }
+
+    async function openSketchEditor(nodeIdValue) {
+      const node = nodes.find((item) => item.id === nodeIdValue && item.type === "sketch");
+      if (!node) return;
+      ensureSketchEditorBound();
+      activeSketchNodeId = node.id;
+      updateSketchEditorControls(node);
+      const context = sketchEditorCanvas.getContext("2d", { alpha:false });
+      context.fillStyle = sketchBackgroundColor;
+      context.fillRect(0, 0, sketchEditorCanvas.width, sketchEditorCanvas.height);
+      if (node.mediaUrl) {
+        const image = new Image();
+        image.src = node.mediaUrl;
+        try { await image.decode(); } catch (_error) {}
+        if (image.naturalWidth) {
+          context.drawImage(image, 0, 0, sketchEditorCanvas.width, sketchEditorCanvas.height);
+          migrateLegacySketchBackground(context);
+        }
+      }
+      sketchEditorUndoStack = [sketchEditorSnapshot()];
+      sketchEditorRedoStack = [];
+      sketchEditor.classList.add("open");
+      sketchEditor.setAttribute("aria-hidden", "false");
+    }
+
+    function closeSketchEditor(save) {
+      const node = nodes.find((item) => item.id === activeSketchNodeId);
+      if (save && node) {
+        pushHistory();
+        node.mediaUrl = sketchEditorCanvas.toDataURL("image/png");
+        node.mediaType = "image";
+        node.width = sketchEditorCanvas.width;
+        node.height = sketchEditorCanvas.height;
+        node.references = [{ url:node.mediaUrl, mediaType:"image", width:node.width, height:node.height, name:"画板参考图" }];
+        node.status = "画板已保存，可连接新的绘图节点。";
+        scheduleCanvasSave();
+      }
+      sketchEditor.classList.remove("open");
+      sketchEditor.setAttribute("aria-hidden", "true");
+      activeSketchNodeId = null;
+      render();
+    }
+
+    function renderSketchBody(node) {
+      const wrap = document.createElement("div");
+      if (!node.mediaUrl) initializeSketchNode(node);
+      wrap.innerHTML = `<div class="sketch-shell">
+        <button class="sketch-node-preview" data-sketch-open type="button" aria-label="打开画板编辑器"><img src="${node.mediaUrl}" alt="当前画板内容"><span>点击中心放大编辑</span></button>
+        <div class="sketch-note">此节点用于展示和连线；点击图片进入画板。</div>
+      </div>`;
+      wrap.querySelector("[data-sketch-open]").addEventListener("click", () => openSketchEditor(node.id));
+      return wrap;
+    }
+
     function renderGeneratorBody(node) {
       const wrap = document.createElement("div");
       const actionText = node.type === "keyword" ? "提取提示词" : node.type === "video" ? "生成视频" : "生成图片";
@@ -7622,6 +8008,7 @@
       const promptReferenceCount = generatorReferenceItems(node).length;
       const selectedSkill = installedDrawingSkills.find((skill) => skill.id === node.skillId) || null;
       const selectedSkillName = node.skillName || selectedSkill?.name || "已选 Skill";
+      const selectedCreativeStyle = creativeStyleById(node.creativeStyle);
       const hasSkillComparison = Boolean(node.skillOriginalPrompt && node.skillOptimizedPrompt);
       const skillUsageHtml = !isVideoNode && node.skillId ? `
         <div class="skill-active-strip" data-skill-active-strip>
@@ -7646,7 +8033,7 @@
       wrap.innerHTML = `
         <div class="field">
           <div class="prompt-field-wrap">
-            ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button ${node.skillId ? "skill-active" : ""}" data-skill-picker-toggle type="button" data-tooltip="${node.skillId ? `正在使用：${escapeHtml(selectedSkillName)}` : "Skill 工具"}" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div>${generatorSkillOptionsHtml(node)}` : ""}
+            ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button ${node.skillId ? "skill-active" : ""}" data-skill-picker-toggle type="button" data-tooltip="${node.skillId ? `正在使用：${escapeHtml(selectedSkillName)}` : "Skill 工具"}" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div>` : ""}
             ${promptReferenceCount ? `<div class="prompt-token-overlay" data-prompt-token-overlay aria-hidden="true">${renderPromptReferenceTokens(node.prompt, promptReferenceCount)}</div>` : ""}
             <textarea class="prompt-textarea${promptReferenceCount ? " prompt-token-input" : ""}" data-field="prompt" data-autogrow style="${node.promptHeight ? `height:${node.promptHeight}px;` : ""}" placeholder="输入提示词">${escapeHtml(node.prompt)}</textarea>
           </div>
@@ -7666,6 +8053,14 @@
           <div class="video-mode-options">
             ${modeHtml}
           </div>
+        </div>` : ""}
+        ${!isVideoNode ? `<div class="form-row">
+          <label>Skill</label>
+          <div class="skill-row-control"><button class="node-select-trigger" data-skill-row-toggle type="button" aria-expanded="false"><span>${escapeHtml(node.skillId ? selectedSkillName : "默认绘图规则")}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button>${generatorSkillOptionsHtml(node)}</div>
+        </div>
+        <div class="form-row creative-style-row">
+          <label>创作技能</label>
+          <div class="creative-style-control" data-creative-style-control><button class="creative-style-trigger" data-creative-style-toggle type="button" aria-expanded="false"><span>${selectedCreativeStyle ? selectedCreativeStyle.name : "选择视觉风格"}</span><span>▾</span></button><div class="creative-style-popover" data-creative-style-popover><div class="creative-style-grid">${creativeStyleOptionsHtml(node)}</div></div></div>
         </div>` : ""}
         <div class="form-row">
           <label>模型</label>
@@ -7759,18 +8154,40 @@
       }
       wrap.querySelector("[data-generate]").addEventListener("click", () => generateFromNode(node.id));
       const skillPickerToggle = wrap.querySelector("[data-skill-picker-toggle]");
+      const skillRowToggle = wrap.querySelector("[data-skill-row-toggle]");
       const skillPickerPopover = wrap.querySelector("[data-generator-skill-popover]");
-      skillPickerToggle?.addEventListener("click", (event) => {
+      const toggleSkillPicker = (event) => {
         event.stopPropagation();
         const open = !skillPickerPopover?.classList.contains("open");
         skillPickerPopover?.classList.toggle("open", open);
         skillPickerToggle.setAttribute("aria-expanded", String(open));
+        skillRowToggle?.setAttribute("aria-expanded", String(open));
         if (open) setTimeout(() => document.addEventListener("click", () => {
           skillPickerPopover?.classList.remove("open");
           skillPickerToggle.setAttribute("aria-expanded", "false");
+          skillRowToggle?.setAttribute("aria-expanded", "false");
         }, { once: true }), 0);
-      });
+      };
+      skillPickerToggle?.addEventListener("click", toggleSkillPicker);
+      skillRowToggle?.addEventListener("click", toggleSkillPicker);
       skillPickerPopover?.addEventListener("click", (event) => event.stopPropagation());
+      const creativeControl = wrap.querySelector("[data-creative-style-control]");
+      const creativeToggle = wrap.querySelector("[data-creative-style-toggle]");
+      creativeToggle?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const open = !creativeControl.classList.contains("open");
+        creativeControl.classList.toggle("open", open);
+        creativeToggle.setAttribute("aria-expanded", String(open));
+        if (open) setTimeout(() => document.addEventListener("click", () => { creativeControl.classList.remove("open"); creativeToggle.setAttribute("aria-expanded", "false"); }, { once:true }), 0);
+      });
+      wrap.querySelector("[data-creative-style-popover]")?.addEventListener("click", (event) => event.stopPropagation());
+      wrap.querySelectorAll("[data-creative-style]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        const selected = button.dataset.creativeStyle || "";
+        node.creativeStyle = node.creativeStyle === selected ? "" : selected;
+        node.status = node.creativeStyle ? `已选择创作技能：${creativeStyleById(node.creativeStyle)?.name || ""}。` : "已切换为自由创作。";
+        render();
+      }));
       wrap.querySelector("[data-skill-manage]")?.addEventListener("click", () => openNamedTab("./asset-library.html#skills", "资产 · Skill"));
       wrap.querySelectorAll("[data-generator-skill]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -8207,10 +8624,11 @@
       const wrap = document.createElement("div");
       wrap.className = "transparent-workflow";
       if (!node.prompt) node.prompt = "请只抠出上传原图里的主体，移除背景并输出透明底 PNG，不要重绘、不要美化、不要改变人物/产品/文字/Logo/衣服/姿势/构图。";
-      if (!node.model) node.model = "GPT-image-2";
+      if (!gptImageModelOptions.includes(node.model)) node.model = gptImageModelOptions[0];
       node.count = 1;
       node.resolution = node.resolution || "1K";
-      if (!pngResolutionOptions.includes(node.resolution)) node.resolution = "2K";
+      const allowedResolutions = imageResolutionOptionsForModel(node.model).filter((resolution) => pngResolutionOptions.includes(resolution));
+      if (!allowedResolutions.includes(node.resolution)) node.resolution = allowedResolutions[0];
       node.ratio = "Auto自适应";
       const refs = normalizeReferences(node);
       const ref = refs.find((item) => item.width && item.height);
@@ -8228,7 +8646,8 @@
             <span class="ratio-readout">一次只能上传一张</span>
             <input data-upload type="file" accept="image/*" hidden>
           </label>`;
-      const resolutionHtml = pngResolutionOptions.map((resolution) => (
+      const modelMenu = gptImageModelOptions.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-png-model-option="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
+      const resolutionHtml = allowedResolutions.map((resolution) => (
         `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-resolution="${resolution}" type="button">${resolution}</button>`
       )).join("");
       wrap.innerHTML = `
@@ -8237,6 +8656,13 @@
           <label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">${uploadButtonText}
             <input data-upload type="file" accept="image/*" hidden>
           </label>
+        </div>
+        <div class="form-row">
+          <label>模型</label>
+          <div class="node-select compact-select" data-png-model-select>
+            <button class="node-select-trigger" data-png-model-toggle type="button" aria-haspopup="listbox" aria-expanded="false"><span>${escapeHtml(node.model)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg></button>
+            <div class="node-select-menu" role="listbox">${modelMenu}</div>
+          </div>
         </div>
         <div class="form-row">
           <label>分辨率</label>
@@ -8249,6 +8675,23 @@
         <div class="status">${node.status || (ref ? `已上传 ${ref.width} x ${ref.height}px，将按原图比例生成透明 PNG。` : "上传图片后会按图片比例自动生成透明底 PNG 效果图。")}</div>
       `;
       bindFields(wrap, node);
+      const modelSelect = wrap.querySelector("[data-png-model-select]");
+      wrap.querySelector("[data-png-model-toggle]").addEventListener("click", (event) => {
+        event.stopPropagation();
+        const shouldOpen = !modelSelect.classList.contains("open");
+        closeNodeSelects();
+        if (shouldOpen) {
+          modelSelect.classList.add("open");
+          modelSelect.querySelector("[data-png-model-toggle]").setAttribute("aria-expanded", "true");
+          document.addEventListener("click", () => modelSelect.classList.remove("open"), { once:true });
+        }
+      });
+      wrap.querySelectorAll("[data-png-model-option]").forEach((button) => button.addEventListener("click", () => {
+        pushHistory();
+        node.model = gptImageModelOptions.includes(button.dataset.pngModelOption) ? button.dataset.pngModelOption : gptImageModelOptions[0];
+        node.resolution = imageResolutionOptionsForModel(node.model)[0];
+        render();
+      }));
       wrap.querySelectorAll("[data-upload]").forEach((upload) => upload.addEventListener("change", async (event) => {
         pushHistory();
         const replaced = await replaceFilesInNode(node, event.target.files);
@@ -8336,8 +8779,7 @@
         : `<div class="placeholder-art"><strong>参考图片</strong><span>可上传素材，也可连接生成节点输出。</span></div>`;
 
       wrap.innerHTML = `
-        <div class="preview ${isVideo ? "wide" : ""}${node.pending ? " loading" : ""}${node.transparent ? " transparent-preview" : ""}" data-preview>${media}${node.type === "result" ? `${previewFavoriteButton(node)}${previewRegenerateButton(node)}${previewDownloadButton(node)}${!node.pending && node.mediaType === "image" && node.mediaUrl ? '<div class="result-transfer-zone" data-result-transfer draggable="true" title="从中心拖到参考图；从四周拖动节点"></div>' : ""}` : ""}</div>
-        ${node.type === "result" ? `<div class="result-meta-line" data-meta>${resultMetaHtml(node)}</div>` : ""}
+        <div class="preview ${isVideo ? "wide" : ""}${node.pending ? " loading" : ""}${node.transparent ? " transparent-preview" : ""}" data-preview>${media}${node.type === "result" ? `${previewFavoriteButton(node)}${previewRegenerateButton(node)}${previewDownloadButton(node)}<div class="result-meta-line" data-meta>${resultMetaHtml(node)}</div>${!node.pending && node.mediaType === "image" && node.mediaUrl ? '<div class="result-transfer-zone" data-result-transfer draggable="true" title="从中心拖到参考图；从四周拖动节点"></div>' : ""}` : ""}</div>
         ${node.type === "result" ? "" : `<div class="result-actions" style="${node.type === "image" ? "grid-template-columns:1fr;" : ""}">
           ${node.type === "result" || node.type === "image" ? "" : `<label class="button-like ghost mini" style="display:grid;place-items:center;cursor:pointer;">上传
             <input data-upload type="file" accept="image/*,video/*" ${node.type === "image" ? "multiple" : ""} hidden>
@@ -9139,7 +9581,7 @@
     function normalizeConnectionDirection(from, to) {
       const fromNode = nodes.find((item) => item.id === from);
       const toNode = nodes.find((item) => item.id === to);
-      if (fromNode?.type === "generator" && toNode?.type === "image") {
+      if (fromNode?.type === "generator" && (toNode?.type === "image" || toNode?.type === "sketch")) {
         return { from: to, to: from };
       }
       if (fromNode?.type === "upscale" && (toNode?.type === "image" || toNode?.type === "result")) {
@@ -9622,7 +10064,7 @@
       const source = nodes.find((item) => item.id === pendingLinkCreate.from);
       const node = createNode(type, pendingLinkCreate.world.x, pendingLinkCreate.world.y - 120);
       connectNodes(pendingLinkCreate.from, node.id);
-      if (source?.type === "image") {
+      if (source?.type === "image" || source?.type === "sketch") {
         node.status = type === "video"
           ? "已连接参考图，可直接生成视频。"
           : type === "keyword"
@@ -10307,7 +10749,7 @@
       }
       const autoOptions = {
         randomAuto: node.type === "generator" || node.type === "video",
-        prompt: node.prompt
+        prompt: creativeStylePrompt(node, node.prompt)
       };
       const fixedVideoRatio = node.type === "video" ? fixedVideoAspectRatio(node.model) : "";
       const styleOutputReference = node.type === "style" && node.styleOutputMode === "style" ? references[1] : references[0];
@@ -10391,6 +10833,8 @@
         try {
           const apiResult = await callApi({ ...node, count: 1 }, new AbortController().signal);
           node.text = apiResult.text || "";
+          node.promptOptimizeOpen = false;
+          node.promptOptimizeChoice = "";
           node.status = apiResult.fromApi ? "提示词提取完成。" : "演示提示词已生成。";
         } catch (error) {
           node.status = `提示词提取失败：${friendlyApiError(error)}`;
@@ -10409,7 +10853,7 @@
           width: parsed.width,
           height: parsed.height,
           frameWidth: isLandscapeResult ? 360 : 240,
-          prompt: confirmedAutoSplitPlan[index]?.prompt || String(node.prompt || ""),
+          prompt: confirmedAutoSplitPlan[index]?.prompt || creativeStylePrompt(node, node.prompt),
           generationPrompt: "",
           autoSplitIndex: confirmedAutoSplitPlan.length ? index + 1 : 0,
           autoSaveBatchFolder: confirmedAutoSplitPlan.length ? String(node.autoSplitBatchFolder || "") : "",
@@ -10450,7 +10894,7 @@
       // and to reduce provider rate-limit spikes; frame sequences stay serial.
       const batchSource = {
         ...node,
-        prompt: node.type === "outpaint" ? outpaintPromptFor(node, effectiveTargetSize, references[0]) : node.type === "style" ? styleTransferPrompt(node) : String(node.prompt || ""),
+        prompt: node.type === "outpaint" ? outpaintPromptFor(node, effectiveTargetSize, references[0]) : node.type === "style" ? styleTransferPrompt(node) : creativeStylePrompt(node, node.prompt),
         references: references.map((item) => ({ ...item })),
         ...(node.type === "style" ? { _directReferencesOnly: true, count: 1 } : {})
       };
@@ -11666,7 +12110,7 @@ ${formatInstruction}`;
           ? apiSizeFromTarget(targetSize)
           : grokImageModel
           ? ratioLabelFromSize(parseSize(targetSize).width, parseSize(targetSize).height)
-          : imageModel === "gpt-image-2"
+          : isGptImageModel(imageModel)
           ? apiSafeGenerationSize(targetSize)
           : apiSizeFromTarget(targetSize)
       };
@@ -11964,6 +12408,10 @@ ${formatInstruction}`;
     function modelToApiModel(model) {
       const map = {
         "GPT-image-2": "gpt-image-2",
+        "gpt-image-2-high": "gpt-image-2-high",
+        "gpt-image-2.5-1k": "gpt-image-2.5-1k",
+        "gpt-image-2.5-flare": "gpt-image-2.5-flare",
+        "gpt-image-2.5-sunburst": "gpt-image-2.5-sunburst",
         "grok-imagine-image-2.0": "grok-imagine-image-2.0",
         "Nano Banana2": "gemini-3.1-flash-image-preview",
         "Nano BananaPro": "gemini-3-pro-image-preview",
@@ -11981,6 +12429,10 @@ ${formatInstruction}`;
 
     function imageGenerationApiModel(model) {
       return modelToApiModel(model || "GPT-image-2");
+    }
+
+    function isGptImageModel(model) {
+      return /^gpt-image-2(?:$|[-.])/i.test(String(model || ""));
     }
 
     function fixedVideoAspectRatio(model) {
@@ -12082,7 +12534,7 @@ ${formatInstruction}`;
         return "接口后台没有开通 grok-imagine-image-pro 图片模型通道。1K、2K、4K 参数都已测试，当前都被接口拒绝，需要在接口后台添加这个模型通道后才能生成。";
       }
       if (/model_not_found|No available channel for model|Model not found:/i.test(message)) {
-        return "接口后台没有开通当前选择的图片模型通道。请确认后台已启用 gpt-image-2，然后重新生成。";
+        return "接口后台没有开通当前选择的图片模型通道。请确认后台已启用所选模型，然后重新生成。";
       }
       if (/used all available credits|monthly spending limit|purchase more credits|raise your spending limit/i.test(message)) {
         return "接口额度不足或已达到月度限额。grok-imagine-image-pro 的 1K、2K、4K 请求已能到达模型通道，但需要补充额度后才能真正生成图片。";
