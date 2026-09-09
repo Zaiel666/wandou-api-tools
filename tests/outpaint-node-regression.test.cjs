@@ -36,5 +36,6 @@ test("pending elapsed time is kept in metadata and not duplicated in the center"
   const pendingMarkup = html.match(/const media = node\.pending[\s\S]*?: node\.type === "image"/);
   assert.ok(pendingMarkup, "pending media markup should exist");
   assert.doesNotMatch(pendingMarkup[0], /data-elapsed/);
-  assert.match(html, /node\.pending[\s\S]*?`用时 \$\{Number\(node\.elapsed\) \|\| 0\}秒`/);
+  assert.match(html, /node\.pending[\s\S]*?`\$\{Number\(node\.elapsed\) \|\| 0\}s`/);
+  assert.match(html, /class="result-time-meta"[\s\S]*?<svg/);
 });

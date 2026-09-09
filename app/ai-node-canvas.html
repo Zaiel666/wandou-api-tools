@@ -2412,6 +2412,9 @@
       width: 68px;
       height: 68px;
       padding: 6px;
+      border-radius: 9px !important;
+      background: rgba(255, 255, 255, .66);
+      box-shadow: none;
     }
 
     .reference-upload-trigger:hover,
@@ -2442,7 +2445,7 @@
     body.dark-theme .reference-upload-trigger,
     body.dark-theme .reference-add-thumb {
       color: #dbe7e1;
-      background: #252a28;
+      background: rgba(37, 42, 40, .72);
       border-color: rgba(255, 255, 255, .18);
       box-shadow: none;
     }
@@ -2590,6 +2593,81 @@
       z-index: 4;
       display: grid;
       gap: 6px;
+    }
+
+    .prompt-optimize-nudge {
+      position: absolute;
+      z-index: 7;
+      top: 81px;
+      right: 43px;
+      display: none;
+      align-items: center;
+      gap: 5px;
+      color: #24312a;
+    }
+
+    .prompt-optimize-nudge.visible { display: flex; }
+    .prompt-optimize-nudge-toggle {
+      width: 25px;
+      min-width: 25px;
+      height: 30px;
+      min-height: 30px;
+      padding: 0 !important;
+      display: grid;
+      place-items: center;
+      border-radius: 8px !important;
+      color: #fff !important;
+      background: #2aad5f !important;
+      border: 1px solid #239b53 !important;
+      box-shadow: 0 6px 14px rgba(42,173,95,.18) !important;
+      font-size: 18px;
+      line-height: 1;
+      transition: transform .16s ease;
+    }
+    .prompt-optimize-nudge.open .prompt-optimize-nudge-toggle { transform: rotate(180deg); }
+    .prompt-optimize-nudge-panel {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      min-height: 32px;
+      padding: 4px 5px 4px 9px;
+      border: 1px solid rgba(42,173,95,.28);
+      border-radius: 9px;
+      background: rgba(255,255,255,.98);
+      box-shadow: 0 10px 26px rgba(26,45,34,.14);
+      white-space: nowrap;
+    }
+    .prompt-optimize-nudge.open .prompt-optimize-nudge-panel { display: flex; }
+    .prompt-optimize-nudge-panel span { font-size: 10px; font-weight: 600; }
+    .prompt-optimize-nudge-panel button {
+      width: 30px;
+      min-width: 30px;
+      min-height: 24px;
+      height: 24px;
+      padding: 0 !important;
+      border-radius: 6px !important;
+      font-size: 10px;
+    }
+    .prompt-optimize-nudge-panel [data-generator-prompt-optimize-no] {
+      color: #324039 !important;
+      background: #fff !important;
+      border: 1px solid rgba(50,64,57,.18) !important;
+    }
+    .prompt-optimize-nudge-panel [data-generator-prompt-optimize-yes] {
+      color: #fff !important;
+      background: #2aad5f !important;
+      border: 1px solid #239b53 !important;
+    }
+    body.dark-theme .prompt-optimize-nudge { color: rgba(255,255,255,.92); }
+    body.dark-theme .prompt-optimize-nudge-panel {
+      background: rgba(28,33,31,.98);
+      border-color: rgba(72,190,111,.38);
+      box-shadow: 0 12px 28px rgba(0,0,0,.36);
+    }
+    body.dark-theme .prompt-optimize-nudge-panel [data-generator-prompt-optimize-no] {
+      color: rgba(255,255,255,.9) !important;
+      background: rgba(255,255,255,.08) !important;
+      border-color: rgba(255,255,255,.16) !important;
     }
 
     .prompt-corner-button {
@@ -3325,7 +3403,8 @@
       place-items: center;
       border-radius: 999px;
       color: #fff;
-      background: rgba(15, 23, 42, 0.72);
+      background: var(--reference-color, rgba(15, 23, 42, 0.72));
+      box-shadow: 0 2px 7px color-mix(in srgb, var(--reference-color, #0f172a) 28%, transparent);
       font-size: 9px;
       font-weight: 800;
     }
@@ -4739,45 +4818,48 @@
     /* 独立画板节点：它保存为普通 PNG，因此连线后与上传的参考图完全一致。 */
     .node.sketch { width:300px; }
     .sketch-shell { display:grid; gap:7px; }
-    .sketch-node-preview { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1; padding:0; overflow:hidden; border:1px solid rgba(100,116,139,.42); border-radius:12px; background:#fff; cursor:zoom-in; }
-    .sketch-node-preview img { width:100%; height:100%; object-fit:contain; }
+    .sketch-node-preview { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1; padding:0; overflow:hidden; border:1px solid rgba(100,116,139,.42); border-radius:10px !important; background:#fff !important; cursor:zoom-in; }
+    .sketch-node-preview img { display:block; width:100%; height:100%; object-fit:contain; border-radius:0 !important; background:#fff !important; }
     .sketch-node-preview span { position:absolute; left:50%; bottom:12px; transform:translateX(-50%); padding:5px 10px; color:#fff; font-size:10px; white-space:nowrap; border-radius:999px; background:rgba(0,0,0,.58); backdrop-filter:blur(8px); opacity:0; transition:opacity .16s ease; }
     .sketch-node-preview:hover span,.sketch-node-preview:focus-visible span { opacity:1; }
     .sketch-note { color:var(--muted); font-size:10px; line-height:1.4; text-align:center; }
 
-    .sketch-editor { position:fixed; z-index:1000; inset:0; display:none; place-items:center; overflow:hidden; color:#fff; background:#181818; }
+    .sketch-editor { position:fixed; z-index:1000; inset:0; display:none; place-items:center; overflow:hidden; color:#17201c; background:#f2f4f3; }
     .sketch-editor.open { display:grid; }
-    .sketch-editor canvas { display:block; width:min(82vh,82vw); height:min(82vh,82vw); max-width:calc(100vw - 150px); max-height:calc(100vh - 150px); background:#fff; box-shadow:0 0 0 1px rgba(255,255,255,.14),0 18px 60px rgba(0,0,0,.28); touch-action:none; cursor:crosshair; }
-    .sketch-editor button { display:grid; place-items:center; padding:0; color:rgba(255,255,255,.88); background:transparent; border:0; box-shadow:none; }
-    .sketch-editor button:hover,.sketch-editor button:focus-visible { color:#fff; background:rgba(255,255,255,.1); }
+    .sketch-editor canvas { display:block; width:min(82vh,82vw); height:min(82vh,82vw); max-width:calc(100vw - 150px); max-height:calc(100vh - 150px); background:#fff; box-shadow:0 0 0 1px rgba(42,58,49,.16),0 18px 60px rgba(34,52,42,.18); touch-action:none; cursor:crosshair; }
+    .sketch-editor button { display:grid; place-items:center; padding:0; color:#233128; background:transparent; border:0; box-shadow:none; }
+    .sketch-editor button:hover,.sketch-editor button:focus-visible { color:#17201c; background:rgba(42,173,95,.1); }
     .sketch-editor-close { position:absolute; top:18px; left:18px; width:40px; height:40px; font-size:36px; font-weight:200; }
-    .sketch-editor-top { position:absolute; z-index:2; top:14px; left:50%; display:flex; gap:4px; padding:5px; transform:translateX(-50%); border:1px solid rgba(255,255,255,.14); border-radius:999px; background:rgba(28,28,28,.9); }
-    .sketch-editor-tool { width:44px; height:44px; border-radius:50%; font-size:24px; }
-    .sketch-editor-tool.active { color:#fff; background:rgba(255,255,255,.1); }
+    .sketch-editor-top { position:absolute; z-index:2; top:14px; left:50%; display:flex; gap:5px; padding:5px; transform:translateX(-50%); border:1px solid rgba(38,53,45,.16); border-radius:999px; background:rgba(255,255,255,.94); box-shadow:0 8px 24px rgba(30,48,38,.12); }
+    .sketch-editor-tool { width:auto; min-width:78px; height:38px; padding:0 12px !important; display:flex !important; align-items:center; justify-content:center; gap:6px; border-radius:999px !important; font-size:13px; font-weight:700; }
+    .sketch-editor-tool-symbol { font-size:18px; font-weight:400; line-height:1; }
+    .sketch-editor-tool.active { color:#fff !important; background:#2aad5f !important; box-shadow:0 5px 14px rgba(42,173,95,.22) !important; }
     .sketch-editor-history { position:absolute; top:18px; right:18px; display:flex; gap:12px; }
     .sketch-editor-history button { width:42px; height:42px; font-size:29px; }
     .sketch-editor-size { position:absolute; left:20px; top:50%; width:28px; height:278px; transform:translateY(-50%); }
-    .sketch-editor-size input { width:278px; height:28px; margin:125px 0 0 -125px; transform:rotate(-90deg); accent-color:#fff; }
+    .sketch-editor-size input { width:278px; height:28px; margin:125px 0 0 -125px; transform:rotate(-90deg); accent-color:#2aad5f; }
     .sketch-editor-colors { position:absolute; z-index:2; bottom:20px; left:50%; display:flex; align-items:center; gap:10px; transform:translateX(-50%); }
-    .sketch-editor-color { width:34px; min-width:34px; height:34px; border:2px solid rgba(255,255,255,.32) !important; border-radius:50%; background:var(--swatch) !important; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12) !important; }
+    .sketch-editor-color { width:34px; min-width:34px; height:34px; border:2px solid rgba(45,60,51,.2) !important; border-radius:50%; background:var(--swatch) !important; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12),0 2px 7px rgba(31,45,37,.1) !important; }
     .sketch-editor-color.active { outline:3px solid #2f76dc; outline-offset:3px; }
-    .sketch-editor-done { position:absolute; right:18px; bottom:16px; width:54px; height:54px; color:#fff !important; font-size:30px; border-radius:50% !important; background:#286bd0 !important; }
+    .sketch-editor-done { position:absolute; right:18px; bottom:16px; width:54px; height:54px; color:#fff !important; font-size:30px; border-radius:50% !important; background:#2aad5f !important; }
 
-    .creative-style-row { align-items:flex-start; }
+    .creative-style-row { align-items:center; }
     .skill-row-control,.creative-style-control { position:relative; width:min(100%, 216px); }
     .skill-row-control > .node-select-trigger { width:100%; }
     .creative-style-trigger { width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .creative-style-popover { position:absolute; z-index:30; top:calc(100% + 7px); right:0; display:none; width:620px; max-width:min(82vw,620px); max-height:590px; overflow:auto; padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--panel); box-shadow:0 18px 50px rgba(15,23,42,.2); }
+    .creative-style-popover { position:absolute; z-index:90; top:calc(100% + 7px); right:0; display:none; width:430px; max-width:min(82vw,430px); max-height:470px; overflow:auto; padding:10px; border:1px solid rgba(54,73,63,.18); border-radius:12px; color:#17201c; background:rgba(255,255,255,.98); box-shadow:0 18px 50px rgba(15,23,42,.2); pointer-events:auto; }
     .creative-style-control.open .creative-style-popover { display:block; }
-    .creative-style-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
-    .node .creative-style-card { position:relative; display:block; height:128px; min-height:128px; padding:0; overflow:hidden; text-align:left; border-radius:12px !important; background:transparent; }
+    .node.generator:has(.creative-style-control.open) { z-index:95 !important; }
+    .creative-style-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
+    .node .creative-style-card { position:relative; display:block; width:100%; height:auto; min-height:0; aspect-ratio:1; padding:0; overflow:hidden; text-align:left; border:1px solid rgba(62,81,70,.16); border-radius:8px !important; background:#eef2ef; pointer-events:auto; cursor:pointer; }
     .node .creative-style-card.active { border-color:#2fbd5b; box-shadow:0 0 0 2px rgba(47,189,91,.14); }
-    .creative-style-preview { display:block; width:100%; height:100%; overflow:hidden; border-radius:11px !important; background-color:var(--style-a); background-image:url('./assets/creative-styles-grid.png'); background-repeat:no-repeat; background-size:400% 400%; background-position:var(--sprite-x) var(--sprite-y); }
-    .creative-style-copy { position:absolute; right:0; bottom:0; left:0; padding:28px 10px 9px; background:linear-gradient(transparent,rgba(0,0,0,.72)); }
+    .creative-style-preview { display:block; width:100%; height:100%; overflow:hidden; border-radius:7px !important; background-color:var(--style-a); background-image:url('./assets/creative-styles-grid.png'); background-repeat:no-repeat; background-size:400% 400%; background-position:var(--sprite-x) var(--sprite-y); }
+    .creative-style-copy { position:absolute; right:0; bottom:0; left:0; padding:22px 7px 6px; background:linear-gradient(transparent,rgba(0,0,0,.72)); }
     .creative-style-preview.free { display:grid; place-items:center; color:#fff; font-size:28px; background-image:linear-gradient(145deg,#64748b,#334155); }
     .creative-style-copy strong,.creative-style-copy small { display:block; }
-    .creative-style-copy strong { color:#fff; font-size:11px; }
-    .creative-style-copy small { margin-top:2px; color:rgba(255,255,255,.78); font-size:8.5px; line-height:1.25; }
+    .creative-style-copy strong { color:#fff; font-size:10px; line-height:1.2; }
+    .creative-style-copy small { display:none; }
+    body.dark-theme .creative-style-popover { color:rgba(255,255,255,.92); background:rgba(24,29,27,.98); border-color:rgba(255,255,255,.14); box-shadow:0 18px 50px rgba(0,0,0,.42); }
     .generator-skill-description { line-height:1.35; }
 
     .prompt-optimize-choice { margin-top:9px; border-top:1px solid var(--line); padding-top:8px; }
@@ -4788,9 +4870,11 @@
     .prompt-optimize-actions { display:flex; justify-content:flex-end; gap:6px; }
 
     .node.result .preview { position:relative; }
-    .node.result .result-meta-line { position:absolute; z-index:8; top:5px; left:73px; right:27px; width:auto; height:20px; margin:0; padding:0 7px; color:#fff; font-size:9px; line-height:20px; border-radius:999px; background:rgba(15,18,17,.58); backdrop-filter:blur(8px); pointer-events:none; }
-    .node.result .result-meta-line span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    @media (max-width:760px) { .prompt-manager-modal { grid-template-columns:1fr; } .prompt-tags { display:none; } .prompt-manager-list { grid-template-columns:1fr; } .creative-style-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .creative-style-popover { width:340px; } .sketch-editor-colors{gap:5px}.sketch-editor-color{width:25px;min-width:25px;height:25px}.sketch-editor canvas{max-width:calc(100vw - 80px);max-height:calc(100vh - 140px)} }
+    .node.result .result-meta-line { position:absolute; z-index:8; right:7px; bottom:7px; left:7px; width:auto; height:22px; margin:0; padding:0; color:#fff; font-size:9px; line-height:22px; background:transparent; pointer-events:none; }
+    .node.result .result-meta-line span { display:inline-flex; align-items:center; height:22px; padding:0 7px; border-radius:7px; background:rgba(15,18,17,.62); box-shadow:0 2px 8px rgba(0,0,0,.12); backdrop-filter:blur(8px); white-space:nowrap; }
+    .node.result .result-meta-line span:first-child { overflow:hidden; text-overflow:ellipsis; }
+    .node.result .result-meta-line svg { width:11px; height:11px; margin-right:4px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    @media (max-width:760px) { .prompt-manager-modal { grid-template-columns:1fr; } .prompt-tags { display:none; } .prompt-manager-list { grid-template-columns:1fr; } .creative-style-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .creative-style-popover { width:224px; } .sketch-editor-top{top:10px}.sketch-editor-tool{min-width:68px;padding:0 9px!important}.sketch-editor-colors{gap:5px}.sketch-editor-color{width:25px;min-width:25px;height:25px}.sketch-editor canvas{max-width:calc(100vw - 80px);max-height:calc(100vh - 150px)} }
   </style>
   <link rel="stylesheet" href="./fluid-glass.css">
 </head>
@@ -5009,8 +5093,8 @@
   <div id="sketchEditor" class="sketch-editor" role="dialog" aria-modal="true" aria-label="画板编辑器" aria-hidden="true">
     <button id="sketchEditorClose" class="sketch-editor-close" type="button" aria-label="关闭画板">×</button>
     <div class="sketch-editor-top" role="toolbar" aria-label="画板工具">
-      <button class="sketch-editor-tool active" data-editor-tool="brush" type="button" aria-pressed="true" title="画笔">〰</button>
-      <button class="sketch-editor-tool" data-editor-tool="eraser" type="button" aria-pressed="false" title="橡皮擦">◇</button>
+      <button class="sketch-editor-tool active" data-editor-tool="brush" type="button" aria-pressed="true" title="画笔"><span class="sketch-editor-tool-symbol" aria-hidden="true">〰</span><span>画笔</span></button>
+      <button class="sketch-editor-tool" data-editor-tool="eraser" type="button" aria-pressed="false" title="橡皮擦"><span class="sketch-editor-tool-symbol" aria-hidden="true">◇</span><span>橡皮</span></button>
     </div>
     <div class="sketch-editor-history">
       <button id="sketchEditorUndo" type="button" title="撤回" aria-label="撤回">↶</button>
@@ -6350,6 +6434,7 @@
         skillCompareOpen: false,
         creativeStyle: "",
         promptOptimizeOpen: false,
+        promptOptimizeSuggested: false,
         promptOptimizeChoice: "",
         sketchColor: "#111827",
         sketchSize: 8,
@@ -6723,6 +6808,7 @@
           skillCompareOpen: Boolean(node.skillCompareOpen),
           creativeStyle: node.creativeStyle || "",
           promptOptimizeOpen: Boolean(node.promptOptimizeOpen),
+          promptOptimizeSuggested: Boolean(node.promptOptimizeSuggested),
           promptOptimizeChoice: node.promptOptimizeChoice || "",
           sketchColor: node.sketchColor || "#111827",
           sketchSize: Number(node.sketchSize) || 8,
@@ -7890,8 +7976,8 @@
       };
       sketchEditorCanvas.addEventListener("pointerup", finishStroke);
       sketchEditorCanvas.addEventListener("pointercancel", finishStroke);
-      sketchEditorDone.addEventListener("click", () => closeSketchEditor(true));
-      sketchEditorClose.addEventListener("click", () => closeSketchEditor(false));
+      sketchEditorDone.addEventListener("click", closeSketchEditor);
+      sketchEditorClose.addEventListener("click", closeSketchEditor);
     }
 
     function updateSketchEditorControls(node) {
@@ -7924,16 +8010,16 @@
       sketchEditor.setAttribute("aria-hidden", "false");
     }
 
-    function closeSketchEditor(save) {
+    function closeSketchEditor() {
       const node = nodes.find((item) => item.id === activeSketchNodeId);
-      if (save && node) {
+      if (node) {
         pushHistory();
         node.mediaUrl = sketchEditorCanvas.toDataURL("image/png");
         node.mediaType = "image";
         node.width = sketchEditorCanvas.width;
         node.height = sketchEditorCanvas.height;
         node.references = [{ url:node.mediaUrl, mediaType:"image", width:node.width, height:node.height, name:"画板参考图" }];
-        node.status = "画板已保存，可连接新的绘图节点。";
+        node.status = "画板内容已自动更新，可连接新的绘图节点。";
         scheduleCanvasSave();
       }
       sketchEditor.classList.remove("open");
@@ -8033,7 +8119,7 @@
       wrap.innerHTML = `
         <div class="field">
           <div class="prompt-field-wrap">
-            ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button ${node.skillId ? "skill-active" : ""}" data-skill-picker-toggle type="button" data-tooltip="${node.skillId ? `正在使用：${escapeHtml(selectedSkillName)}` : "Skill 工具"}" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div>` : ""}
+            ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button ${node.skillId ? "skill-active" : ""}" data-skill-picker-toggle type="button" data-tooltip="${node.skillId ? `正在使用：${escapeHtml(selectedSkillName)}` : "Skill 工具"}" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div><div class="prompt-optimize-nudge ${node.promptOptimizeSuggested ? "visible" : ""} ${node.promptOptimizeOpen ? "open" : ""}" data-prompt-optimize-nudge><div class="prompt-optimize-nudge-panel"><span>是否优化提示词？</span><button class="ghost" data-generator-prompt-optimize-no type="button">否</button><button class="primary" data-generator-prompt-optimize-yes type="button">是</button></div><button class="prompt-optimize-nudge-toggle" data-generator-prompt-optimize-toggle type="button" aria-label="展开提示词优化选择" aria-expanded="${node.promptOptimizeOpen ? "true" : "false"}">‹</button></div>` : ""}
             ${promptReferenceCount ? `<div class="prompt-token-overlay" data-prompt-token-overlay aria-hidden="true">${renderPromptReferenceTokens(node.prompt, promptReferenceCount)}</div>` : ""}
             <textarea class="prompt-textarea${promptReferenceCount ? " prompt-token-input" : ""}" data-field="prompt" data-autogrow style="${node.promptHeight ? `height:${node.promptHeight}px;` : ""}" placeholder="输入提示词">${escapeHtml(node.prompt)}</textarea>
           </div>
@@ -8128,6 +8214,55 @@
         if (promptField.value !== node.skillOptimizedPrompt) node.skillLastAppliedPrompt = "";
       });
       promptField?.addEventListener("scroll", syncPromptReferenceTokens);
+      const promptOptimizeNudge = wrap.querySelector("[data-prompt-optimize-nudge]");
+      let promptOptimizeRevealTimer = 0;
+      let promptOptimizeCollapseTimer = 0;
+      const setPromptOptimizeNudgeOpen = (open) => {
+        if (!promptOptimizeNudge) return;
+        node.promptOptimizeSuggested = true;
+        node.promptOptimizeOpen = Boolean(open);
+        promptOptimizeNudge.classList.add("visible");
+        promptOptimizeNudge.classList.toggle("open", node.promptOptimizeOpen);
+        promptOptimizeNudge.querySelector("[data-generator-prompt-optimize-toggle]")?.setAttribute("aria-expanded", String(node.promptOptimizeOpen));
+      };
+      const schedulePromptOptimizeNudge = () => {
+        if (isVideoNode || !String(promptField?.value || "").trim()) return;
+        window.clearTimeout(promptOptimizeRevealTimer);
+        window.clearTimeout(promptOptimizeCollapseTimer);
+        promptOptimizeRevealTimer = window.setTimeout(() => {
+          setPromptOptimizeNudgeOpen(true);
+          scheduleCanvasSave();
+          promptOptimizeCollapseTimer = window.setTimeout(() => {
+            if (!promptOptimizeNudge?.isConnected) return;
+            setPromptOptimizeNudgeOpen(false);
+            scheduleCanvasSave();
+          }, 6000);
+        }, 1100);
+      };
+      promptField?.addEventListener("input", schedulePromptOptimizeNudge);
+      wrap.querySelector("[data-generator-prompt-optimize-toggle]")?.addEventListener("click", () => {
+        window.clearTimeout(promptOptimizeCollapseTimer);
+        setPromptOptimizeNudgeOpen(!node.promptOptimizeOpen);
+        scheduleCanvasSave();
+      });
+      wrap.querySelector("[data-generator-prompt-optimize-no]")?.addEventListener("click", () => {
+        window.clearTimeout(promptOptimizeCollapseTimer);
+        node.promptOptimizeChoice = "no";
+        node.promptOptimizeSuggested = false;
+        node.promptOptimizeOpen = false;
+        scheduleCanvasSave();
+        render();
+      });
+      wrap.querySelector("[data-generator-prompt-optimize-yes]")?.addEventListener("click", () => {
+        window.clearTimeout(promptOptimizeCollapseTimer);
+        closePromptLibrary();
+        node.promptOptimizeChoice = "yes";
+        node.promptOptimizeSuggested = false;
+        node.promptOptimizeOpen = false;
+        node.promptRefineOpen = true;
+        scheduleCanvasSave();
+        render();
+      });
       const keywordToggle = wrap.querySelector("[data-keyword-toggle]");
       const keywordMenu = wrap.querySelector("[data-keyword-menu]");
       if (keywordToggle && keywordMenu) {
@@ -9064,13 +9199,13 @@
       const linkedRefs = getInputMediaList(node.id).flatMap((source) => normalizeReferences(source));
       const ownRefs = normalizeReferences(node);
       const linkedHtml = linkedRefs.map((item, index) => `
-        <div class="thumb" title="连接参考图 ${index + 1}">
+        <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" title="连接参考图 ${index + 1}">
           <img src="${item.url}" alt="连接参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           <span class="thumb-index">连${index + 1}</span>
         </div>
       `).join("");
       const ownHtml = ownRefs.map((item, index) => `
-        <div class="thumb" draggable="true" data-ref-index="${index}" title="拖动调整顺序，点击放大或涂抹编辑">
+        <div class="thumb" style="--reference-color:${referenceTokenColor(linkedRefs.length + index + 1)}" draggable="true" data-ref-index="${index}" title="拖动调整顺序，点击放大或涂抹编辑">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           ${referenceMaskOverlayHtml(item)}
           <span class="thumb-index">${index + 1}</span>
@@ -9103,7 +9238,7 @@
         </div>`;
       }
       return `<div class="upload-box">${visibleRefs.map(({ item, index }) => `
-        <div class="thumb" draggable="true" data-ref-index="${index}" title="拖动调整顺序">
+        <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" draggable="true" data-ref-index="${index}" title="拖动调整顺序">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           ${referenceMaskOverlayHtml(item)}
           <span class="thumb-index">${index + 1}</span>
@@ -9465,13 +9600,13 @@
 
     function resultMetaHtml(node) {
       const size = node.width && node.height
-        ? `尺寸 ${node.width} × ${node.height}px`
-        : node.mediaUrl ? "尺寸识别中" : "暂无尺寸";
+        ? `${node.width}×${node.height}`
+        : node.mediaUrl ? "识别中" : "--×--";
       const seconds = resultElapsedSeconds(node);
       const elapsed = node.pending
-        ? `用时 ${Number(node.elapsed) || 0}秒`
-        : seconds ? `用时 ${seconds}秒` : "用时 --";
-      return `<span>${size}</span><span>${elapsed}</span>`;
+        ? `${Number(node.elapsed) || 0}s`
+        : seconds ? `${seconds}s` : "--s";
+      return `<span class="result-size-meta">${size}</span><span class="result-time-meta"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>${elapsed}</span>`;
     }
 
     function updateInlineReadouts(field, node) {
@@ -12548,7 +12683,7 @@ ${formatInstruction}`;
     let lastRandomAutoKey = "";
 
     function resolutionLongSide(resolution) {
-      const map = { "1K": 1024, "2K": 2048, "4K": 4096, "DEFAULT": 1280, "720P": 1280, "1080P": 1920 };
+      const map = { "1K": 1024, "2K": 1920, "4K": 3840, "DEFAULT": 1280, "720P": 1280, "1080P": 1920 };
       return map[resolution] || 1024;
     }
 
@@ -12698,45 +12833,45 @@ ${formatInstruction}`;
       const imageSizeMap = {
         "1K": {
           "1:1": [1024, 1024],
-          "16:9": [1536, 864],
-          "9:16": [864, 1536],
+          "16:9": [1024, 576],
+          "9:16": [576, 1024],
           "4:3": [1024, 768],
           "3:4": [768, 1024],
-          "3:2": [1536, 1024],
-          "2:3": [1024, 1536],
-          "1:3": [512, 1536],
-          "5:4": [1280, 1024],
-          "4:5": [1024, 1280],
-          "21:9": [2016, 864]
+          "3:2": [1024, 683],
+          "2:3": [683, 1024],
+          "1:3": [341, 1024],
+          "5:4": [1024, 819],
+          "4:5": [819, 1024],
+          "21:9": [1024, 439]
         },
         "2K": {
-          "1:1": [2048, 2048],
-          "16:9": [2048, 1152],
-          "9:16": [1152, 2048],
-          "4:3": [2048, 1536],
-          "3:4": [1536, 2048],
-          "3:2": [2048, 1360],
-          "2:3": [1360, 2048],
-          "1:3": [768, 2304],
-          "5:4": [2560, 2048],
-          "4:5": [2048, 2560],
-          "21:9": [2688, 1152]
+          "1:1": [1920, 1920],
+          "16:9": [1920, 1080],
+          "9:16": [1080, 1920],
+          "4:3": [1920, 1440],
+          "3:4": [1440, 1920],
+          "3:2": [1920, 1280],
+          "2:3": [1280, 1920],
+          "1:3": [640, 1920],
+          "5:4": [1920, 1536],
+          "4:5": [1536, 1920],
+          "21:9": [1920, 823]
         },
         "4K": {
-          "1:1": [4096, 4096],
-          "16:9": [4096, 2304],
-          "9:16": [2304, 4096],
-          "4:3": [4096, 3072],
-          "3:4": [3072, 4096],
-          "3:2": [4096, 2736],
-          "2:3": [2736, 4096],
-          "1:3": [1360, 4096],
-          "5:4": [4096, 3280],
-          "4:5": [3280, 4096],
-          "21:9": [4096, 1760]
+          "1:1": [3840, 3840],
+          "16:9": [3840, 2160],
+          "9:16": [2160, 3840],
+          "4:3": [3840, 2880],
+          "3:4": [2880, 3840],
+          "3:2": [3840, 2560],
+          "2:3": [2560, 3840],
+          "1:3": [1280, 3840],
+          "5:4": [3840, 3072],
+          "4:5": [3072, 3840],
+          "21:9": [3840, 1646]
         }
       };
-      const long = videoLongMap[resolution] || (resolution === "2K" ? 2048 : 1024);
+      const long = videoLongMap[resolution] || (resolution === "2K" ? 1920 : 1024);
       const videoMap = {
         "1:1": [long, long],
         "16:9": [long, Math.round(long * 9 / 16)],
@@ -12790,7 +12925,7 @@ ${formatInstruction}`;
 
     function transparentTargetSize(references = [], resolution = "1K") {
       const ref = references.find((item) => item.width && item.height);
-      const longMap = { "1K": 1024, "2K": 2048, "4K": 4096 };
+      const longMap = { "1K": 1024, "2K": 1920, "4K": 3840 };
       const long = longMap[resolution] || 1024;
       if (!ref) return `${long}x${long}`;
       const sourceW = Math.max(1, Number(ref.width) || long);
@@ -15925,6 +16060,11 @@ ${formatInstruction}`;
       savePaintToReference();
     });
     window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && sketchEditor.classList.contains("open")) {
+        event.preventDefault();
+        closeSketchEditor();
+        return;
+      }
       const active = document.activeElement;
       const isTyping = active && active.closest?.("input, textarea, select");
       if (isTyping || lightbox.classList.contains("open")) return;

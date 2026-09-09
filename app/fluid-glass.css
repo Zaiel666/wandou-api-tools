@@ -544,9 +544,9 @@ body.node-canvas-page .generator-skill-popover .generator-skill-chip {
   border-radius: 6px !important;
 }
 
-/* 创作技能使用图片卡片，保留官网式圆角矩形，不继承画布按钮的胶囊外形。 */
+/* 创作技能使用紧凑正方形图片卡片，不继承画布按钮的胶囊外形。 */
 body.node-canvas-page button.creative-style-card {
-  border-radius: 12px !important;
+  border-radius: 8px !important;
 }
 
 body.node-canvas-page .generator-skill-popover .generator-skill-manage {
@@ -1881,4 +1881,22 @@ html body.node-canvas-page.dark-theme .node.style .node-body button[data-style-g
 
 body.node-canvas-page :is(.brand-subtitle, .status, .ratio-readout, .auto-split-hint, .auto-split-note) {
   color: var(--wd-neutral-muted) !important;
+}
+
+/* 画板与参考图是方形内容控件，提示词建议按钮保持紧凑矩形。 */
+body.node-canvas-page button.sketch-node-preview {
+  border-radius: 10px !important;
+  background: #fff !important;
+}
+
+body.node-canvas-page button.reference-add-thumb {
+  border-radius: 9px !important;
+}
+
+body.node-canvas-page button.prompt-optimize-nudge-toggle {
+  border-radius: 8px !important;
+}
+
+body.node-canvas-page .prompt-optimize-nudge-panel button {
+  border-radius: 6px !important;
 }
