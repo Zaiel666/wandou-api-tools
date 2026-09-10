@@ -5356,6 +5356,7 @@
     let isRestoring = false;
     let canvasRecoveryBlocked = false;
     let startupRecoveredProjectName = "";
+    let currentFolderDisplayName = "";
     let intentionalResetAt = 0;
     const lastDesktopBackupAt = new Map();
     const pendingDesktopBackupTimers = new Map();
@@ -5902,9 +5903,25 @@
       try {
         const folders = JSON.parse(localStorage.getItem(homeProjectListStorageKey) || "[]");
         const folder = Array.isArray(folders) ? folders.find((item) => item.id === currentFolderId) : null;
-        return folder?.name || "文件夹01";
+        return folder?.name || currentFolderDisplayName || "文件夹01";
       } catch (error) {
-        return "文件夹01";
+        return currentFolderDisplayName || "文件夹01";
+      }
+    }
+
+    async function recoverCurrentFolderMetadata() {
+      if (!window.wandouShell?.readProjectHubState) return false;
+      try {
+        const result = await window.wandouShell.readProjectHubState();
+        const folder = result?.success !== false && Array.isArray(result?.state?.projects)
+          ? result.state.projects.find((item) => item?.id === currentFolderId)
+          : null;
+        if (!folder) return false;
+        currentFolderDisplayName = String(folder.name || "").trim();
+        return Boolean(currentFolderDisplayName);
+      } catch (error) {
+        console.warn("Project folder metadata could not be recovered", error);
+        return false;
       }
     }
 
@@ -6053,12 +6070,76 @@
       return true;
     }
 
-    function loadProjects() {
+    async function readDesktopProjectCatalog() {
+      if (!window.wandouShell?.readCanvasBackups) return [];
+      try {
+        const result = await window.wandouShell.readCanvasBackups({
+          folderId: currentFolderId,
+          allProjects: true
+        });
+        if (!result?.success || !Array.isArray(result.projectStates)) return [];
+        return result.projectStates.filter((entry) =>
+          entry?.projectId && Array.isArray(entry.states) && entry.states.some((state) => Array.isArray(state?.nodes) && state.nodes.length)
+        );
+      } catch (error) {
+        console.warn("Desktop project catalog could not be read", error);
+        return [];
+      }
+    }
+
+    function mergeDesktopProjectCatalog(catalog) {
+      const knownIds = new Set(projects.map((project) => project?.id).filter(Boolean));
+      let recoveredIndex = 0;
+      for (const entry of catalog) {
+        if (knownIds.has(entry.projectId)) continue;
+        const state = chooseCanvasRecoveryState(entry.states);
+        if (!state) continue;
+        recoveredIndex += 1;
+        const savedAt = Number(state.savedAt) || Date.now();
+        projects.push({
+          id: entry.projectId,
+          name: String(state.projectName || "").trim() || `恢复项目${String(recoveredIndex).padStart(2, "0")}`,
+          color: projectColorPalette[(projects.length + recoveredIndex - 1) % projectColorPalette.length],
+          createdAt: savedAt,
+          updatedAt: savedAt,
+          nodeCount: state.nodes.length,
+          favorite: false,
+          recoveredFromDisk: true
+        });
+        knownIds.add(entry.projectId);
+      }
+    }
+
+    function recoverDesktopProjectSelection(catalog) {
+      const stateFor = (projectId) => {
+        const entry = catalog.find((item) => item.projectId === projectId);
+        return chooseCanvasRecoveryState([
+          parseProjectCanvasState(projectId),
+          ...(entry?.states || [])
+        ]);
+      };
+      const activeState = stateFor(activeProjectId);
+      if (isMeaningfulCanvasState(activeState) || Number(activeState?.intentionalResetAt) > 0) return false;
+      const candidates = projects
+        .map((project) => ({ project, state: stateFor(project.id) }))
+        .filter(({ state }) => isMeaningfulCanvasState(state))
+        .sort((left, right) => canvasStateSavedAt(right.state) - canvasStateSavedAt(left.state));
+      if (!candidates.length) return false;
+      activeProjectId = candidates[0].project.id;
+      startupRecoveredProjectName = candidates[0].project.name || "磁盘恢复项目";
+      return true;
+    }
+
+    async function loadProjects() {
       try {
         projects = JSON.parse(localStorage.getItem(projectListStorageKey) || "[]");
       } catch (error) {
         projects = [];
       }
+      if (!Array.isArray(projects)) projects = [];
+      await recoverCurrentFolderMetadata();
+      const desktopCatalog = await readDesktopProjectCatalog();
+      mergeDesktopProjectCatalog(desktopCatalog);
       if (!Array.isArray(projects) || !projects.length) projects = [defaultProject()];
       projects.forEach((project, index) => {
         if (project.name === "默认项目" || /^文件夹\s*\d+$/i.test(project.name || "") || /^文件夹\d+$/i.test(project.name || "")) project.name = `项目${String(index + 1).padStart(2, "0")}`;
@@ -6071,6 +6152,7 @@
       if (!projects.some((project) => project.id === activeProjectId)) activeProjectId = projects[0].id;
       migrateLegacyFolderCanvasState();
       recoverStaleActiveProjectSelection();
+      recoverDesktopProjectSelection(desktopCatalog);
       try { saveProjects(); } catch (error) { warnCanvasStorageSkipped(error); }
       renderProjects();
     }
@@ -6276,7 +6358,7 @@
       projects.push(project);
       activeProjectId = project.id;
       canvasRecoveryBlocked = false;
-      intentionalResetAt = 0;
+      intentionalResetAt = Date.now();
       saveProjects();
       nodes = [];
       links = [];
@@ -15052,6 +15134,7 @@ ${formatInstruction}`;
         savedAt: Date.now(),
         folderId: currentFolderId,
         projectId: activeProjectId,
+        projectName: projects.find((project) => project.id === activeProjectId)?.name || "",
         nodes: cleanNodes,
         links: links.filter((link) => cleanIds.has(link.from) && cleanIds.has(link.to)).map((link) => ({ ...link })),
         nodeId,
@@ -16386,7 +16469,7 @@ ${formatInstruction}`;
     (async function initApp() {
       loadApiConfig();
       await syncImageModelsFromApi({ render: false });
-      loadProjects();
+      await loadProjects();
       await refreshInstalledDrawingSkills({ render: false });
       projectHubPinned = localStorage.getItem(projectHubPinStorageKey) === "1";
       updateProjectHubPinState();

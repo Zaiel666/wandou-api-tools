@@ -663,14 +663,21 @@ async function readCanvasBackups(payload = {}) {
         .filter((entry) => entry.isDirectory())
         .slice(0, 100);
       const states = [];
+      const projectStates = [];
       let skippedLarge = 0;
       for (const entry of projectDirectories) {
         const result = await readCanvasBackupDirectory(path.join(folderDirectory, entry.name), 1);
         states.push(...result.states);
+        if (result.states.length) {
+          projectStates.push({ projectId: entry.name, states: result.states });
+        }
         skippedLarge += result.skippedLarge;
       }
       states.sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
-      return { success: true, states, skippedLarge };
+      projectStates.sort((left, right) =>
+        Number(right.states[0]?.savedAt || 0) - Number(left.states[0]?.savedAt || 0)
+      );
+      return { success: true, states, projectStates, skippedLarge };
     }
     const projectId = safeCanvasBackupId(payload.projectId, "default-project");
     const result = await readCanvasBackupDirectory(canvasBackupDirectory(folderId, projectId), 3);

@@ -35,6 +35,8 @@ assert.match(main, /containsEmbeddedCanvasMedia\(state\)/);
 assert.match(main, /compactEmbeddedCanvasMedia[\s\S]*writeCanvasMedia[\s\S]*indexed-media:/);
 assert.match(main, /state = await compactEmbeddedCanvasMedia\(state\)/);
 assert.match(main, /canvasBackupFingerprint[\s\S]*deduplicated: true/);
+assert.match(main, /const projectStates = \[\][\s\S]*projectStates\.push\(\{ projectId: entry\.name, states: result\.states \}\)/);
+assert.match(main, /return \{ success: true, states, projectStates, skippedLarge \}/);
 assert.match(main, /function writeCanvasMedia[\s\S]*canvasMediaRootDirectory/);
 assert.match(preload, /desktop:has-canvas-media/);
 assert.match(preload, /desktop:write-canvas-media/);
@@ -44,5 +46,11 @@ assert.match(projectHub, /projectResultPreviewSources/);
 assert.match(projectHub, /node\?\.type === "result"/);
 assert.match(projectHub, /hydrateProjectCovers/);
 assert.match(projectHub, /cover-media-grid/);
+assert.match(projectHub, /isUntouchedSeedCanvasState/);
+
+assert.match(canvas, /async function readDesktopProjectCatalog/);
+assert.match(canvas, /mergeDesktopProjectCatalog\(desktopCatalog\)/);
+assert.match(canvas, /recoverDesktopProjectSelection\(desktopCatalog\)/);
+assert.match(canvas, /await loadProjects\(\)/);
 
 console.log("PASS: compact desktop storage, safe tab suspension, and real project covers");

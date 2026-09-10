@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { chromium } = require("playwright");
+const { chromium } = require(path.join(__dirname, "..", "desktop-client", "node_modules", "playwright"));
 
 (async () => {
   const browser = await chromium.launch({
@@ -25,6 +25,25 @@ const { chromium } = require("playwright");
               previewUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='9'%3E%3Crect width='16' height='9' fill='blue'/%3E%3C/svg%3E"
             } : { id: index, type: "image" })
           }]
+        } : folderId === "disk-mixed" && allProjects ? {
+          success: true,
+          states: [
+            {
+              savedAt: Date.now(),
+              nodes: Array.from({ length: 4 }, (_, index) => ({ id: 50 + index, type: index === 3 ? "result" : "image" })),
+              links: [],
+            },
+            {
+              savedAt: Date.now() + 1000,
+              nodes: [
+                { id: 1, type: "image" },
+                { id: 2, type: "generator", prompt: "把参考图优化成适合社交平台传播的高级质感海报，画面干净，文字清晰，现代商业视觉。" },
+                { id: 3, type: "result" },
+              ],
+              links: [{ from: 1, to: 2 }, { from: 2, to: 3 }],
+              intentionalResetAt: 0,
+            },
+          ],
         } : { success: true, states: [] }
       };
     });
@@ -35,6 +54,7 @@ const { chromium } = require("playwright");
       localStorage.setItem("aiCanvasProjectsV1", JSON.stringify([
         { id: "cover-test", name: "封面测试", color: "#76b900", createdAt: now, updatedAt: now, favorite: false },
         { id: "disk-test", name: "磁盘封面测试", color: "#76b900", createdAt: now, updatedAt: now, favorite: false },
+        { id: "disk-mixed", name: "磁盘恢复测试", color: "#76b900", createdAt: now, updatedAt: now, favorite: false },
       ]));
       localStorage.setItem("aiCanvasStateV1:project-collection:disk-test", JSON.stringify([{ id: "inner-disk-test" }]));
       localStorage.setItem("aiCanvasStateV1:cover-test", JSON.stringify({
@@ -59,6 +79,8 @@ const { chromium } = require("playwright");
     await diskCover.waitFor({ state: "visible" });
     assert.match(await diskCover.getAttribute("src"), /fill='blue'/);
     assert.equal(await page.locator('[data-node-count="disk-test"]').textContent(), "21 个节点");
+    await page.waitForFunction(() => document.querySelector('[data-node-count="disk-mixed"]')?.textContent === "4 个节点");
+    assert.equal(await page.locator('[data-node-count="disk-mixed"]').textContent(), "4 个节点", "a newer untouched seed must not inflate the original project count");
 
     const canvasPage = await context.newPage();
     const canvasUrl = `${pathToFileURL(path.resolve(__dirname, "../app/ai-node-canvas.html")).href}?project=compact-test`;

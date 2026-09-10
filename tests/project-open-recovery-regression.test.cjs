@@ -133,7 +133,80 @@ const { chromium } = require(path.join(__dirname, "..", "desktop-client", "node_
     assert.equal(await otherPage.evaluate(() => nodes.length), 3, "the global legacy canvas must not appear in every folder");
     await otherPage.close();
 
-    console.log("PASS: legacy project files migrate safely, remain visible, and backups stay folder/project-scoped");
+    const diskContext = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+    await diskContext.addInitScript(() => {
+      const now = Date.now();
+      const seed = {
+        savedAt: now,
+        folderId: "disk-folder",
+        projectId: "current-empty",
+        nodes: [
+          { id: 1, type: "image", title: "参考图", x: 70, y: 130, prompt: "" },
+          { id: 2, type: "generator", title: "AI文字绘图", x: 430, y: 70, prompt: "把参考图优化成适合社交平台传播的高级质感海报，画面干净，文字清晰，现代商业视觉。" },
+          { id: 3, type: "result", title: "效果图", x: 1040, y: 120, prompt: "" },
+        ],
+        links: [{ from: 1, to: 2 }, { from: 2, to: 3 }],
+        nodeId: 4,
+        intentionalResetAt: 0,
+      };
+      const recovered = {
+        savedAt: now - 10_000,
+        folderId: "disk-folder",
+        projectId: "disk-original",
+        nodes: Array.from({ length: 4 }, (_, index) => ({
+          id: index + 20,
+          type: index === 3 ? "result" : "image",
+          title: `磁盘原文件 ${index + 1}`,
+          x: 80 + index * 280,
+          y: 120,
+        })),
+        links: [],
+        nodeId: 30,
+        intentionalResetAt: 0,
+      };
+      localStorage.setItem("aiCanvasStateV1:project-collection:disk-folder", JSON.stringify([
+        { id: "current-empty", name: "项目01", createdAt: now - 1000, updatedAt: now, nodeCount: 3 },
+      ]));
+      localStorage.setItem("aiCanvasStateV1:active-project-collection:disk-folder", "current-empty");
+      localStorage.setItem("aiCanvasStateV1:disk-folder:current-empty", JSON.stringify(seed));
+      window.wandouShell = {
+        readProjectHubState: async () => ({
+          success: true,
+          state: { projects: [{ id: "disk-folder", name: "扩展" }] },
+        }),
+        readCanvasBackups: async ({ allProjects, projectId }) => {
+          if (allProjects) {
+            return {
+              success: true,
+              states: [seed, recovered],
+              projectStates: [
+                { projectId: "current-empty", states: [seed] },
+                { projectId: "disk-original", states: [recovered] },
+              ],
+            };
+          }
+          return { success: true, states: projectId === "disk-original" ? [recovered] : [seed] };
+        },
+      };
+    });
+    const diskPage = await diskContext.newPage();
+    await diskPage.goto(`${pathToFileURL(path.resolve(__dirname, "../app/ai-node-canvas.html")).href}?project=disk-folder`, { waitUntil: "domcontentloaded" });
+    await diskPage.waitForFunction(() => document.body.dataset.canvasReady === "true");
+    const diskRestore = await diskPage.evaluate(() => ({
+      activeProjectId,
+      nodeCount: nodes.length,
+      firstTitle: nodes[0]?.title,
+      folderName: document.getElementById("currentFolderName")?.textContent,
+      projects: JSON.parse(localStorage.getItem("aiCanvasStateV1:project-collection:disk-folder") || "[]").map((project) => project.id),
+    }));
+    assert.equal(diskRestore.activeProjectId, "disk-original", "an orphaned meaningful disk project should replace an untouched seed selection");
+    assert.equal(diskRestore.nodeCount, 4, "all nodes from the original disk project should reopen");
+    assert.equal(diskRestore.firstTitle, "磁盘原文件 1");
+    assert.equal(diskRestore.folderName, "扩展", "the durable folder name should remain visible when browser storage is incomplete");
+    assert.deepEqual(diskRestore.projects.sort(), ["current-empty", "disk-original"], "the recovered project must return to the inner project list");
+    await diskContext.close();
+
+    console.log("PASS: legacy and orphaned disk projects reopen safely, remain visible, and backups stay folder/project-scoped");
   } finally {
     await browser.close();
   }

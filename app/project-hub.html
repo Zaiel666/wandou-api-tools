@@ -779,6 +779,23 @@
         .slice(0, 3);
     }
 
+    function isUntouchedSeedCanvasState(state) {
+      const nodes = Array.isArray(state?.nodes) ? state.nodes : [];
+      if (nodes.length !== 3 || Number(state?.intentionalResetAt) > 0) return false;
+      const types = nodes.map((node) => node?.type).sort().join(",");
+      if (types !== "generator,image,result" || (state.links || []).length !== 2) return false;
+      const hasMedia = nodes.some((node) =>
+        node?.mediaUrl || node?.previewUrl || node?.fullUrl || node?.mediaSourceUrl || node?.previewSourceUrl || node?.fullSourceUrl
+        || (Array.isArray(node?.references) && node.references.some((item) => item?.url))
+      );
+      if (hasMedia) return false;
+      const result = nodes.find((node) => node?.type === "result");
+      if (Number(result?.elapsed) > 0 || Number(result?.width) > 0 || Number(result?.height) > 0 || String(result?.status || "").trim()) return false;
+      const generator = nodes.find((node) => node?.type === "generator");
+      const prompt = String(generator?.prompt || "").trim();
+      return !prompt || prompt === "把参考图优化成适合社交平台传播的高级质感海报，画面干净，文字清晰，现代商业视觉。";
+    }
+
     async function readDesktopFolderState(folderId) {
       if (!window.wandouShell?.readCanvasBackups) return null;
       try {
@@ -798,9 +815,11 @@
         }
         if (!states.length) return null;
         states = states.slice().sort((left, right) => Number(left?.savedAt || 0) - Number(right?.savedAt || 0));
+        const meaningfulStates = states.filter((state) => !isUntouchedSeedCanvasState(state));
+        const visibleStates = meaningfulStates.length ? meaningfulStates : states;
         return {
-          savedAt: Math.max(...states.map((state) => Number(state?.savedAt || 0))),
-          nodes: states.flatMap((state) => Array.isArray(state?.nodes) ? state.nodes : []),
+          savedAt: Math.max(...visibleStates.map((state) => Number(state?.savedAt || 0))),
+          nodes: visibleStates.flatMap((state) => Array.isArray(state?.nodes) ? state.nodes : []),
           links: []
         };
       } catch (error) {
