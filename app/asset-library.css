@@ -47,10 +47,11 @@ button, input, select { font: inherit; }
 .asset-heading { margin-bottom: 18px; }
 .asset-heading h1 { font-weight: 650; }
 .heading-tools { justify-content: flex-end; flex-wrap: wrap; }
-.asset-search, .folder-select { height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: var(--panel-soft); outline: none; }
+.asset-search, .folder-select, .sort-select { height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: var(--panel-soft); outline: none; }
 .asset-search { width: min(320px, 34vw); }
 .folder-select { width: min(210px, 24vw); }
-.asset-search:focus, .folder-select:focus { border-color: #62bf84; box-shadow: 0 0 0 3px rgba(40, 173, 95, .1); }
+.sort-select { width: 154px; }
+.asset-search:focus, .folder-select:focus, .sort-select:focus { border-color: #62bf84; box-shadow: 0 0 0 3px rgba(40, 173, 95, .1); }
 .asset-groups { display: grid; gap: 20px; }
 .asset-group { min-width: 0; }
 .asset-group-head { min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
@@ -61,6 +62,7 @@ button, input, select { font: inherit; }
 .media-card { cursor: zoom-in; transition: transform .16s ease, border-color .16s ease; }
 .media-card:hover { transform: translateY(-2px); border-color: var(--line-strong); }
 .media-preview, .media-preview img, .media-preview video { background: var(--preview); }
+.asset-card-directory { margin-top: 5px; overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .skill-card { min-height: 198px; background: var(--panel-soft); }
 .installed-badge { color: var(--green-strong); background: var(--green-soft); }
 .skill-actions { margin-top: 12px; }
@@ -81,7 +83,7 @@ button, input, select { font: inherit; }
 
 @media (max-width: 760px) {
   .heading-tools { align-items: stretch; flex-direction: column; }
-  .asset-search, .folder-select { width: 100%; }
+  .asset-search, .folder-select, .sort-select { width: 100%; }
 }
 
 /* 资产页视觉校准：中性黑灰为主，绿色只用于当前状态和主操作。 */
@@ -128,7 +130,7 @@ button, input, select { font: inherit; }
 .asset-heading { align-items:center; margin-bottom:20px; }
 .asset-heading h1 { font-size:20px; font-weight:600; letter-spacing:-.01em; }
 .asset-heading p { font-size:11px; }
-.asset-search, .folder-select { height:36px; border-radius:8px; }
+.asset-search, .folder-select, .sort-select { height:36px; border-radius:8px; }
 .asset-search { width:min(300px,32vw); }
 .folder-select { width:min(200px,22vw); }
 .asset-groups { gap:22px; }

@@ -1585,6 +1585,14 @@
       user-select: none;
     }
 
+    .line-cut .line-cut-mark {
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+      stroke-linecap: round;
+      pointer-events: none;
+    }
+
     body:not(.dark-theme) .line-cut circle {
       fill: rgba(255,255,255,.96);
       stroke: var(--blue);
@@ -1593,6 +1601,8 @@
     body:not(.dark-theme) .line-cut text {
       fill: #16251f;
     }
+
+    body:not(.dark-theme) .line-cut .line-cut-mark { stroke:#16251f; }
 
     .temp-line {
       stroke: var(--blue);
@@ -2624,6 +2634,7 @@
       line-height: 1;
       transition: transform .16s ease;
     }
+    .prompt-optimize-nudge-toggle svg { width:16px; height:16px; display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     .prompt-optimize-nudge.open .prompt-optimize-nudge-toggle { transform: rotate(180deg); }
     .prompt-optimize-nudge-panel {
       display: none;
@@ -3345,7 +3356,6 @@
       padding: 4px 7px;
       font-size: 11px;
     }
-    .node-select-menu.ratio-menu .ratio-wide-option { grid-column: 1 / -1; }
     .custom-size-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-top:7px; }
     .custom-size-field { display:flex; align-items:center; gap:6px; min-width:0; }
     .custom-size-field span { flex:none; color:var(--muted); font-size:11px; }
@@ -4855,7 +4865,8 @@
     .creative-style-row { align-items:center; }
     .skill-row-control,.creative-style-control { position:relative; width:min(100%, 216px); }
     .skill-row-control > .node-select-trigger { width:100%; }
-    .node .creative-style-trigger { width:100%; min-height:38px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text); background:rgba(238,243,244,.92); border:1px solid rgba(15,23,42,.12); border-radius:9px !important; font-size:12px; font-weight:600; text-align:left; box-shadow:none; }
+    .node .creative-style-trigger { width:100%; min-height:30px; height:30px; padding:0 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text); background:rgba(238,243,244,.92); border:1px solid rgba(15,23,42,.12); border-radius:9px !important; font-size:11px; font-weight:600; text-align:left; box-shadow:none; }
+    .node .creative-style-trigger svg { width:14px; height:14px; flex:0 0 auto; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     .creative-style-control.open .creative-style-trigger { border-color:#43d13b; box-shadow:0 0 0 3px rgba(67,209,59,.12); }
     .creative-style-popover { position:absolute; z-index:90; top:calc(100% + 7px); left:0; right:auto; display:none; width:430px; max-width:min(82vw,430px); max-height:470px; overflow:auto; padding:10px; border:1px solid rgba(54,73,63,.18); border-radius:12px; color:#17201c; background:rgba(255,255,255,.98); box-shadow:0 18px 50px rgba(15,23,42,.2); pointer-events:auto; }
     .creative-style-control.open .creative-style-popover { display:block; }
@@ -4881,8 +4892,8 @@
     .prompt-optimize-actions { display:flex; justify-content:flex-end; gap:6px; }
 
     .node.result .preview { position:relative; }
-    .node.result .result-meta-line { position:absolute; z-index:8; right:7px; bottom:7px; left:7px; width:auto; height:22px; margin:0; padding:0; color:#fff; font-size:9px; line-height:22px; background:transparent; pointer-events:none; }
-    .node.result .result-meta-line span { display:inline-flex; align-items:center; height:22px; padding:0 7px; border-radius:7px; background:rgba(15,18,17,.62); box-shadow:0 2px 8px rgba(0,0,0,.12); backdrop-filter:blur(8px); white-space:nowrap; }
+    .node.result .result-meta-line { position:absolute; z-index:8; right:7px; bottom:7px; left:7px; width:auto; height:22px; margin:0; padding:0; color:rgba(255,255,255,.6); font-size:9px; line-height:22px; background:transparent; pointer-events:none; }
+    .node.result .result-meta-line span { display:inline-flex; align-items:center; height:22px; padding:0 7px; border-radius:7px; background:rgba(15,18,17,.31); box-shadow:0 2px 8px rgba(0,0,0,.08); backdrop-filter:blur(8px); white-space:nowrap; }
     .node.result .result-meta-line span:first-child { overflow:hidden; text-overflow:ellipsis; }
     .node.result .result-meta-line svg { width:11px; height:11px; margin-right:4px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     @media (max-width:760px) { .prompt-manager-modal { grid-template-columns:1fr; } .prompt-tags { display:none; } .prompt-manager-list { grid-template-columns:1fr; } .creative-style-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .creative-style-popover { width:224px; } .sketch-editor-top{top:10px}.sketch-editor-tool{min-width:68px;padding:0 9px!important}.sketch-editor-colors{gap:5px}.sketch-editor-color{width:25px;min-width:25px;height:25px}.sketch-editor canvas{max-width:calc(100vw - 80px);max-height:calc(100vh - 150px)} }
@@ -5418,9 +5429,10 @@
 
       const defaultPrompt = "把参考图优化成适合社交平台传播的高级质感海报，画面干净，文字清晰，现代商业视觉。";
     const defaultKeywordPrompt = "";
+    const preferredDefaultImageModel = "gpt-image-2.5-1k";
     const gptImageModelOptions = [
-      "GPT-image-2",
       "gpt-image-2.5-1k",
+      "GPT-image-2",
       "gpt-image-2.5-flare",
       "gpt-image-2.5-sunburst"
     ];
@@ -5430,6 +5442,11 @@
       "Nano Banana2",
       "Nano BananaPro"
     ];
+    function defaultImageModel(options = imageModelOptions) {
+      return options.includes(preferredDefaultImageModel)
+        ? preferredDefaultImageModel
+        : (options[0] || "GPT-image-2");
+    }
     const upscaleModelOptions = [
       ...gptImageModelOptions,
       "Nano Banana2",
@@ -5906,6 +5923,25 @@
       return `${canvasStorageKey}:${currentFolderId || "default"}`;
     }
 
+    function isPrimaryHomeFolder() {
+      if (currentFolderId === "default") return true;
+      try {
+        const folders = JSON.parse(localStorage.getItem(homeProjectListStorageKey) || "[]");
+        return Array.isArray(folders) && folders[0]?.id === currentFolderId;
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    function parseStoredCanvasState(raw, label) {
+      if (!raw) return null;
+      try { return JSON.parse(raw); }
+      catch (error) {
+        console.warn(`${label} canvas state is invalid`, error);
+        return null;
+      }
+    }
+
     function defaultProject() {
       const now = Date.now();
       return { id: `project-${now}`, name: "项目01", color: "#76b900", createdAt: now, updatedAt: now, favorite: false };
@@ -5949,6 +5985,52 @@
       return Boolean(state && Array.isArray(state.nodes) && state.nodes.length && !isSeedCanvasState(state));
     }
 
+    function sameCanvasState(left, right) {
+      if (!left || !right) return false;
+      try { return JSON.stringify(left) === JSON.stringify(right); }
+      catch (_error) { return false; }
+    }
+
+    function legacyCanvasStateMatchesProject(state, projectId = activeProjectId) {
+      if (!state) return false;
+      if (state.folderId && state.folderId !== currentFolderId) return false;
+      if (state.projectId) return state.projectId === projectId;
+      return !projects.some((project) =>
+        project.id !== projectId && sameCanvasState(parseProjectCanvasState(project.id), state)
+      );
+    }
+
+    function migrateLegacyFolderCanvasState() {
+      if (!projects.length) return false;
+      let legacyRaw = "";
+      let legacyState = null;
+      try {
+        legacyRaw = localStorage.getItem(folderCanvasStorageKey()) || "";
+        legacyState = legacyRaw ? JSON.parse(legacyRaw) : null;
+      } catch (error) {
+        console.warn("Legacy folder canvas state is invalid", error);
+        return false;
+      }
+      if (!isMeaningfulCanvasState(legacyState)) return false;
+      const nestedStates = projects.map((project) => ({ project, state: parseProjectCanvasState(project.id) }));
+      if (nestedStates.some(({ state }) => sameCanvasState(state, legacyState))) return false;
+      const first = nestedStates[0];
+      if (!first?.project || isMeaningfulCanvasState(first.state) || Number(first.state?.intentionalResetAt) > 0) return false;
+      const activeState = parseProjectCanvasState(activeProjectId);
+      if (!isMeaningfulCanvasState(activeState) && Number(activeState?.intentionalResetAt) <= 0) {
+        activeProjectId = first.project.id;
+        startupRecoveredProjectName = first.project.name || "原项目";
+      }
+      try {
+        localStorage.setItem(projectCanvasStorageKey(first.project.id), legacyRaw);
+      } catch (error) {
+        warnCanvasStorageSkipped(error);
+      }
+      first.project.nodeCount = legacyState.nodes.length;
+      first.project.updatedAt = Math.max(Number(first.project.updatedAt || 0), Number(legacyState.savedAt || 0));
+      return true;
+    }
+
     function recoverStaleActiveProjectSelection() {
       const activeProject = projects.find((project) => project.id === activeProjectId);
       const activeState = parseProjectCanvasState(activeProjectId);
@@ -5987,6 +6069,7 @@
       });
       activeProjectId = localStorage.getItem(activeProjectStorageKey) || projects[0].id;
       if (!projects.some((project) => project.id === activeProjectId)) activeProjectId = projects[0].id;
+      migrateLegacyFolderCanvasState();
       recoverStaleActiveProjectSelection();
       try { saveProjects(); } catch (error) { warnCanvasStorageSkipped(error); }
       renderProjects();
@@ -6319,7 +6402,7 @@
         nodes = payload.canvas.nodes;
         links = payload.canvas.links;
         nodeId = Math.max(Number(payload.canvas.nodeId) || 1, ...nodes.map((node) => Number(node.id) || 0)) + 1;
-        view = payload.canvas.view && Number.isFinite(payload.canvas.view.scale) ? payload.canvas.view : view;
+        view = payload.canvas.view ? normalizeRestoredCanvasView(payload.canvas.view) : view;
         selectedNodeId = null;
         historyStack = [];
         redoStack = [];
@@ -6434,7 +6517,7 @@
         links = Array.isArray(state.links) ? state.links : [];
         pruneBrokenLinks();
         nodeId = Number(state.nodeId) || 1;
-        view = state.view || view;
+        view = normalizeRestoredCanvasView(state.view || view);
         selectedNodeId = null;
         render();
         syncDeletedResultsWithCanvas();
@@ -6488,12 +6571,13 @@
       const selectedSkill = window.WandouSkills?.getSelected?.();
       const base = {
         id,
+        createdAt: Date.now(),
         type,
         x,
         y,
         title: nodeTitle(type),
         prompt: type === "keyword" ? defaultKeywordPrompt : type === "png" ? "请只抠出上传原图里的主体，移除背景并输出透明底 PNG，不要重绘、不要美化、不要改变人物/产品/文字/Logo/衣服/姿势/构图。" : type === "upscale" ? "将输入图片无损放大到 4K，保持原图构图、比例、文字、Logo、人物和产品细节不变，只增强清晰度与纹理细节。" : type === "outpaint" ? "只在原图外部自然延展背景、环境、光影和纹理，原图内部的主体、人物、产品、文字、Logo、构图、颜色与全部细节必须保持不变。" : type === "style" ? "保留内容图中的主体身份、姿势和构图，将风格参考图的画风、色彩、材质、线条和光影迁移到内容图。" : type === "generator" || type === "video" ? defaultPrompt : "",
-        model: type === "video" ? videoPrimaryModel : type === "keyword" ? "GPT" : "GPT-image-2",
+        model: type === "video" ? videoPrimaryModel : type === "keyword" ? "GPT" : defaultImageModel(type === "png" ? gptImageModelOptions : imageModelOptions),
         promptFormat: "paragraph",
         promptReverseMode: type === "keyword" ? "image" : "",
         negativePrompt: "",
@@ -7833,7 +7917,7 @@
 
     function renderStyleTransferBody(node) {
       const wrap = document.createElement("div");
-      if (!imageModelOptions.includes(node.model)) node.model = imageModelOptions[0];
+      if (!imageModelOptions.includes(node.model)) node.model = defaultImageModel();
       if (!styleTransferStrengths.some((item) => item.value === node.styleStrength)) node.styleStrength = "standard";
       if (!styleTransferOutputOptions.some((item) => item.value === node.styleOutputMode)) node.styleOutputMode = "content";
       const resolutions = imageResolutionOptionsForModel(node.model);
@@ -8183,7 +8267,7 @@
         }
       }
       const modelMenuHtml = models.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-node-model="${escapeHtml(model)}" type="button"><span>${escapeHtml(model)}</span>${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
-      const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${/^(Auto|自定义)/i.test(ratio) ? "ratio-wide-option " : ""}${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
+      const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const durationHtml = `<button class="count-option active model-default" type="button" disabled>默认时长</button>`;
       const countHtml = (isVideoNode ? videoCountOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9]).map((count) => (
         `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button" ${!isVideoNode && node.autoSplit ? "disabled" : ""}>${count}</button>`
@@ -8233,7 +8317,7 @@
       wrap.innerHTML = `
         <div class="field">
           <div class="prompt-field-wrap">
-            ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button ${node.skillId ? "skill-active" : ""}" data-skill-picker-toggle type="button" data-tooltip="${node.skillId ? `正在使用：${escapeHtml(selectedSkillName)}` : "Skill 工具"}" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div><div class="prompt-optimize-nudge ${node.promptOptimizeSuggested ? "visible" : ""} ${node.promptOptimizeOpen ? "open" : ""}" data-prompt-optimize-nudge><div class="prompt-optimize-nudge-panel"><span>是否优化提示词？</span><button class="ghost" data-generator-prompt-optimize-no type="button">否</button><button class="primary" data-generator-prompt-optimize-yes type="button">是</button></div><button class="prompt-optimize-nudge-toggle" data-generator-prompt-optimize-toggle type="button" aria-label="展开提示词优化选择" aria-expanded="${node.promptOptimizeOpen ? "true" : "false"}">‹</button></div>` : ""}
+            ${!isVideoNode ? `<div class="prompt-corner-tools"><button class="prompt-corner-button ${node.skillId ? "skill-active" : ""}" data-skill-picker-toggle type="button" data-tooltip="${node.skillId ? `正在使用：${escapeHtml(selectedSkillName)}` : "Skill 工具"}" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI修改提示词" aria-label="AI修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div><div class="prompt-optimize-nudge ${node.promptOptimizeSuggested ? "visible" : ""} ${node.promptOptimizeOpen ? "open" : ""}" data-prompt-optimize-nudge><div class="prompt-optimize-nudge-panel"><span>是否优化提示词？</span><button class="ghost" data-generator-prompt-optimize-no type="button">否</button><button class="primary" data-generator-prompt-optimize-yes type="button">是</button></div><button class="prompt-optimize-nudge-toggle" data-generator-prompt-optimize-toggle type="button" aria-label="${node.promptOptimizeOpen ? "收起" : "展开"}提示词优化选择" aria-expanded="${node.promptOptimizeOpen ? "true" : "false"}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 5-5 5 5 5"/></svg></button></div>` : ""}
             ${promptReferenceCount ? `<div class="prompt-token-overlay" data-prompt-token-overlay aria-hidden="true">${renderPromptReferenceTokens(node.prompt, promptReferenceCount)}</div>` : ""}
             <textarea class="prompt-textarea${promptReferenceCount ? " prompt-token-input" : ""}" data-field="prompt" data-autogrow style="${node.promptHeight ? `height:${node.promptHeight}px;` : ""}" placeholder="输入提示词">${escapeHtml(node.prompt)}</textarea>
           </div>
@@ -8260,7 +8344,7 @@
         </div>
         <div class="form-row creative-style-row">
           <label>创作技能</label>
-          <div class="creative-style-control" data-creative-style-control><button class="creative-style-trigger" data-creative-style-toggle type="button" aria-expanded="false"><span>${selectedCreativeStyle ? selectedCreativeStyle.name : "无选择"}</span><span>▾</span></button><div class="creative-style-popover" data-creative-style-popover><div class="creative-style-grid">${creativeStyleOptionsHtml(node)}</div></div></div>
+          <div class="creative-style-control" data-creative-style-control><button class="creative-style-trigger" data-creative-style-toggle type="button" aria-expanded="false"><span>${selectedCreativeStyle ? selectedCreativeStyle.name : "无选择"}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="creative-style-popover" data-creative-style-popover><div class="creative-style-grid">${creativeStyleOptionsHtml(node)}</div></div></div>
         </div>` : ""}
         <div class="form-row">
           <label>模型</label>
@@ -8276,7 +8360,7 @@
         </div>
         <div class="form-row resolution-row">
           <label>分辨率</label>
-          <div><div class="choice-options ${(isVideoNode || resolutions.length === 1) ? "align-right" : ""} ${resolutions.length === 1 ? "single-option" : ""}" style="--resolution-option-count:${resolutions.length}">${resolutionHtml}</div>${!isVideoNode && isOneKOnlyImageModel(node.model) ? '<div class="ratio-readout">原生 1K；选择 2K/4K 后自动等比放大</div>' : ""}</div>
+          <div><div class="choice-options ${(isVideoNode || resolutions.length === 1) ? "align-right" : ""} ${resolutions.length === 1 ? "single-option" : ""}" style="--resolution-option-count:${resolutions.length}">${resolutionHtml}</div></div>
         </div>
         ${isVideoNode ? `
         <div class="form-row video-duration-row">
@@ -8331,37 +8415,35 @@
       promptField?.addEventListener("scroll", syncPromptReferenceTokens);
       const promptOptimizeNudge = wrap.querySelector("[data-prompt-optimize-nudge]");
       let promptOptimizeRevealTimer = 0;
-      let promptOptimizeCollapseTimer = 0;
       const setPromptOptimizeNudgeOpen = (open) => {
         if (!promptOptimizeNudge) return;
         node.promptOptimizeSuggested = true;
         node.promptOptimizeOpen = Boolean(open);
         promptOptimizeNudge.classList.add("visible");
         promptOptimizeNudge.classList.toggle("open", node.promptOptimizeOpen);
-        promptOptimizeNudge.querySelector("[data-generator-prompt-optimize-toggle]")?.setAttribute("aria-expanded", String(node.promptOptimizeOpen));
+        const toggle = promptOptimizeNudge.querySelector("[data-generator-prompt-optimize-toggle]");
+        toggle?.setAttribute("aria-expanded", String(node.promptOptimizeOpen));
+        toggle?.setAttribute("aria-label", `${node.promptOptimizeOpen ? "收起" : "展开"}提示词优化选择`);
       };
       const schedulePromptOptimizeNudge = () => {
-        if (isVideoNode || !String(promptField?.value || "").trim()) return;
         window.clearTimeout(promptOptimizeRevealTimer);
-        window.clearTimeout(promptOptimizeCollapseTimer);
+        if (isVideoNode || !String(promptField?.value || "").trim()) {
+          node.promptOptimizeSuggested = false;
+          node.promptOptimizeOpen = false;
+          promptOptimizeNudge?.classList.remove("visible", "open");
+          return;
+        }
         promptOptimizeRevealTimer = window.setTimeout(() => {
           setPromptOptimizeNudgeOpen(true);
           scheduleCanvasSave();
-          promptOptimizeCollapseTimer = window.setTimeout(() => {
-            if (!promptOptimizeNudge?.isConnected) return;
-            setPromptOptimizeNudgeOpen(false);
-            scheduleCanvasSave();
-          }, 6000);
-        }, 1100);
+        }, 900);
       };
       promptField?.addEventListener("input", schedulePromptOptimizeNudge);
       wrap.querySelector("[data-generator-prompt-optimize-toggle]")?.addEventListener("click", () => {
-        window.clearTimeout(promptOptimizeCollapseTimer);
         setPromptOptimizeNudgeOpen(!node.promptOptimizeOpen);
         scheduleCanvasSave();
       });
       wrap.querySelector("[data-generator-prompt-optimize-no]")?.addEventListener("click", () => {
-        window.clearTimeout(promptOptimizeCollapseTimer);
         node.promptOptimizeChoice = "no";
         node.promptOptimizeSuggested = false;
         node.promptOptimizeOpen = false;
@@ -8369,7 +8451,6 @@
         render();
       });
       wrap.querySelector("[data-generator-prompt-optimize-yes]")?.addEventListener("click", () => {
-        window.clearTimeout(promptOptimizeCollapseTimer);
         closePromptLibrary();
         node.promptOptimizeChoice = "yes";
         node.promptOptimizeSuggested = false;
@@ -8776,7 +8857,7 @@
 
     function renderOutpaintBody(node) {
       const wrap = document.createElement("div");
-      node.model = imageModelOptions.includes(node.model) ? node.model : imageModelOptions[0];
+      node.model = imageModelOptions.includes(node.model) ? node.model : defaultImageModel();
       node.outpaintDirection = outpaintDirectionOptions.some((item) => item.value === node.outpaintDirection) ? node.outpaintDirection : "horizontal";
       node.outpaintAmount = outpaintAmountOptions.includes(Number(node.outpaintAmount)) ? Number(node.outpaintAmount) : 50;
       const allowedResolutions = imageResolutionOptionsForModel(node.model);
@@ -8832,7 +8913,7 @@
       });
       wrap.querySelectorAll("[data-outpaint-model-option]").forEach((button) => button.addEventListener("click", () => {
         pushHistory();
-        node.model = imageModelOptions.includes(button.dataset.outpaintModelOption) ? button.dataset.outpaintModelOption : imageModelOptions[0];
+        node.model = imageModelOptions.includes(button.dataset.outpaintModelOption) ? button.dataset.outpaintModelOption : defaultImageModel();
         node.resolution = imageResolutionOptionsForModel(node.model)[0];
         render();
       }));
@@ -8884,7 +8965,7 @@
       const wrap = document.createElement("div");
       wrap.className = "transparent-workflow";
       if (!node.prompt) node.prompt = "请只抠出上传原图里的主体，移除背景并输出透明底 PNG，不要重绘、不要美化、不要改变人物/产品/文字/Logo/衣服/姿势/构图。";
-      if (!gptImageModelOptions.includes(node.model)) node.model = gptImageModelOptions[0];
+      if (!gptImageModelOptions.includes(node.model)) node.model = defaultImageModel(gptImageModelOptions);
       node.count = 1;
       node.resolution = node.resolution || "1K";
       const allowedResolutions = imageResolutionOptionsForModel(node.model).filter((resolution) => pngResolutionOptions.includes(resolution));
@@ -8948,7 +9029,7 @@
       });
       wrap.querySelectorAll("[data-png-model-option]").forEach((button) => button.addEventListener("click", () => {
         pushHistory();
-        node.model = gptImageModelOptions.includes(button.dataset.pngModelOption) ? button.dataset.pngModelOption : gptImageModelOptions[0];
+        node.model = gptImageModelOptions.includes(button.dataset.pngModelOption) ? button.dataset.pngModelOption : defaultImageModel(gptImageModelOptions);
         node.resolution = imageResolutionOptionsForModel(node.model)[0];
         render();
       }));
@@ -9950,8 +10031,9 @@
         cut.setAttribute("transform", `translate(${(from.x + to.x) / 2} ${(from.y + to.y) / 2})`);
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttribute("r", "11");
-        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        label.textContent = "×";
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        label.setAttribute("class", "line-cut-mark");
+        label.setAttribute("d", "M -3.5 -3.5 L 3.5 3.5 M 3.5 -3.5 L -3.5 3.5");
         cut.appendChild(circle);
         cut.appendChild(label);
         cut.addEventListener("pointerdown", (event) => event.stopPropagation());
@@ -10009,8 +10091,9 @@
           cut.dataset.to = link.to;
           const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
           circle.setAttribute("r", "11");
-          const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          label.textContent = "x";
+          const label = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          label.setAttribute("class", "line-cut-mark");
+          label.setAttribute("d", "M -3.5 -3.5 L 3.5 3.5 M 3.5 -3.5 L -3.5 3.5");
           cut.append(circle, label);
           path.addEventListener("pointerdown", (event) => event.stopPropagation());
           path.addEventListener("dblclick", (event) => {
@@ -11325,6 +11408,36 @@
       const width = node.frameWidth || nodeWidth(node);
       const mediaHeight = node.width && node.height ? Math.round(width * node.height / Math.max(1, node.width)) : 260;
       return Math.max(260, mediaHeight + 150);
+    }
+
+    function normalizeRestoredCanvasView(candidate) {
+      const zoom = Number(candidate?.zoom ?? candidate?.scale);
+      return {
+        x: Number.isFinite(Number(candidate?.x)) ? Number(candidate.x) : 40,
+        y: Number.isFinite(Number(candidate?.y)) ? Number(candidate.y) : 20,
+        zoom: Number.isFinite(zoom) && zoom > 0 ? Math.max(0.12, Math.min(2.5, zoom)) : 0.9
+      };
+    }
+
+    function restoredCanvasHasVisibleContent() {
+      const width = canvasWrap.clientWidth || canvasWrap.getBoundingClientRect().width;
+      const height = canvasWrap.clientHeight || canvasWrap.getBoundingClientRect().height;
+      if (!width || !height) return true;
+      return nodesWithoutRemovedTypes().some((node) => {
+        const left = node.x * view.zoom + view.x;
+        const top = node.y * view.zoom + view.y;
+        const right = left + estimatedNodeWidth(node) * view.zoom;
+        const bottom = top + estimatedNodeHeight(node) * view.zoom;
+        return right >= 24 && bottom >= 24 && left <= width - 24 && top <= height - 24;
+      });
+    }
+
+    function ensureRestoredCanvasVisible() {
+      view = normalizeRestoredCanvasView(view);
+      applyCanvasTransform();
+      if (restoredCanvasHasVisibleContent()) return false;
+      fitCanvasToContent(false);
+      return true;
     }
 
     function fitCanvasToContent(onlyShrink = false) {
@@ -12692,7 +12805,7 @@ ${formatInstruction}`;
     }
 
     function imageGenerationApiModel(model) {
-      return modelToApiModel(model || "GPT-image-2");
+      return modelToApiModel(model || defaultImageModel());
     }
 
     function isGptImageModel(model) {
@@ -12970,31 +13083,31 @@ ${formatInstruction}`;
       const imageSizeMap = {
         "1K": {
           "1:1": [1024, 1024],
-          "16:9": [1820, 1024],
-          "9:16": [1024, 1820],
-          "4:3": [1365, 1024],
-          "3:4": [1024, 1365],
-          "3:2": [1536, 1024],
-          "2:3": [1024, 1536],
-          "3:1": [3072, 1024],
-          "1:3": [1024, 3072],
-          "5:4": [1280, 1024],
-          "4:5": [1024, 1280],
-          "21:9": [2389, 1024]
-        },
-        "2K": {
-          "1:1": [1920, 1920],
           "16:9": [1920, 1080],
           "9:16": [1080, 1920],
-          "4:3": [1920, 1440],
-          "3:4": [1440, 1920],
-          "3:2": [1920, 1280],
-          "2:3": [1280, 1920],
-          "3:1": [1920, 640],
-          "1:3": [640, 1920],
-          "5:4": [1920, 1536],
-          "4:5": [1536, 1920],
-          "21:9": [1920, 823]
+          "4:3": [1600, 1200],
+          "3:4": [1200, 1600],
+          "3:2": [1800, 1200],
+          "2:3": [1200, 1800],
+          "3:1": [3072, 1024],
+          "1:3": [1024, 3072],
+          "5:4": [1500, 1200],
+          "4:5": [1200, 1500],
+          "21:9": [2520, 1080]
+        },
+        "2K": {
+          "1:1": [2048, 2048],
+          "16:9": [2560, 1440],
+          "9:16": [1440, 2560],
+          "4:3": [2048, 1536],
+          "3:4": [1536, 2048],
+          "3:2": [2400, 1600],
+          "2:3": [1600, 2400],
+          "3:1": [3600, 1200],
+          "1:3": [1200, 3600],
+          "5:4": [2000, 1600],
+          "4:5": [1600, 2000],
+          "21:9": [2800, 1200]
         },
         "4K": {
           "1:1": [3840, 3840],
@@ -14906,13 +15019,15 @@ ${formatInstruction}`;
       const projectRecords = records.filter((record) =>
         record?.state && (record.id === projectPrefix || record.id.startsWith(`${projectPrefix}:session-`))
       );
-      const candidates = projectRecords.length
-        ? projectRecords
-        : records.filter((record) =>
-          record?.state && (record.id === folderPrefix || record.id.startsWith(`${folderPrefix}:session-`))
-        );
-      return candidates
-        .sort((a, b) => Number(b.savedAt || b.state?.savedAt) - Number(a.savedAt || a.state?.savedAt))[0]?.state || null;
+      const legacyFolderRecords = activeProjectId === projects[0]?.id
+        ? records.filter((record) =>
+          record?.state
+          && legacyCanvasStateMatchesProject(record.state)
+          && (record.id === folderPrefix || record.id.startsWith(`${folderPrefix}:session-`))
+        )
+        : [];
+      const candidates = [...projectRecords, ...legacyFolderRecords];
+      return chooseCanvasRecoveryState(candidates.map((record) => record.state));
     }
 
     function warnCanvasStorageSkipped(error) {
@@ -14935,6 +15050,8 @@ ${formatInstruction}`;
       const cleanIds = new Set(cleanNodes.map((node) => node.id));
       return {
         savedAt: Date.now(),
+        folderId: currentFolderId,
+        projectId: activeProjectId,
         nodes: cleanNodes,
         links: links.filter((link) => cleanIds.has(link.from) && cleanIds.has(link.to)).map((link) => ({ ...link })),
         nodeId,
@@ -15366,17 +15483,29 @@ ${formatInstruction}`;
     async function loadCanvasState() {
       isRestoring = true;
       try {
-        const raw = localStorage.getItem(projectCanvasStorageKey())
-          || (activeProjectId === projects[0]?.id ? (localStorage.getItem(folderCanvasStorageKey()) || localStorage.getItem(canvasStorageKey)) : "");
-        let compactState = null;
-        try { compactState = raw ? JSON.parse(raw) : null; } catch (error) { console.warn("Compact canvas state is invalid", error); }
+        const compactState = parseStoredCanvasState(localStorage.getItem(projectCanvasStorageKey()), "Project");
+        const legacyFolderState = activeProjectId === projects[0]?.id
+          ? parseStoredCanvasState(localStorage.getItem(folderCanvasStorageKey()), "Folder")
+          : null;
+        const legacyGlobalState = activeProjectId === projects[0]?.id && isPrimaryHomeFolder()
+          ? parseStoredCanvasState(localStorage.getItem(canvasStorageKey), "Global")
+          : null;
+        const compatibleFolderState = legacyCanvasStateMatchesProject(legacyFolderState) ? legacyFolderState : null;
+        const compatibleGlobalState = legacyCanvasStateMatchesProject(legacyGlobalState) ? legacyGlobalState : null;
         // Browser database failures must not prevent reading independent disk backups.
         let backupState = null;
         try { backupState = await readCanvasStateBackup(); }
         catch (error) { console.warn("Browser backup unavailable; trying desktop backup", error); }
         const desktopStates = await readDesktopCanvasBackups();
         const localState = mergeCanvasRecoveryState(compactState, backupState);
-        const state = chooseCanvasRecoveryState([localState, compactState, backupState, ...desktopStates]);
+        const state = chooseCanvasRecoveryState([
+          localState,
+          compactState,
+          compatibleFolderState,
+          compatibleGlobalState,
+          backupState,
+          ...desktopStates
+        ]);
         if (!state || !Array.isArray(state.nodes) || !state.nodes.length) {
           isRestoring = false;
           return false;
@@ -15387,15 +15516,16 @@ ${formatInstruction}`;
         links = Array.isArray(state.links) ? state.links : [];
         pruneBrokenLinks();
         nodeId = Number(state.nodeId) || 1;
-        view = state.view || view;
+        view = normalizeRestoredCanvasView(state.view || view);
         intentionalResetAt = Number(state.intentionalResetAt) || 0;
         document.body.classList.toggle("dark-theme", readGlobalTheme() === "dark");
         document.querySelector(".app").classList.toggle("sidebar-collapsed", Boolean(state.collapsed));
-      updateThemeLabel();
-      render();
-      syncDeletedResultsWithCanvas();
-      isRestoring = false;
+        updateThemeLabel();
+        render();
+        syncDeletedResultsWithCanvas();
+        isRestoring = false;
         canvasRecoveryBlocked = false;
+        ensureRestoredCanvasVisible();
         if (desktopStates.includes(state) && state !== localState) {
           showToast("已从安全备份恢复画布");
         }
@@ -15412,6 +15542,8 @@ ${formatInstruction}`;
       const project = projects.find((item) => item.id === projectId);
       return Boolean(
         localStorage.getItem(projectCanvasStorageKey(projectId))
+        || (projectId === projects[0]?.id && localStorage.getItem(folderCanvasStorageKey()))
+        || (projectId === projects[0]?.id && isPrimaryHomeFolder() && localStorage.getItem(canvasStorageKey))
         || Number(project?.nodeCount) > 0
         || Number(project?.updatedAt || 0) > Number(project?.createdAt || 0) + 2000
       );

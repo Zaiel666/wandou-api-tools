@@ -32,6 +32,10 @@
           <div><h1 id="assetTitle">全部资产</h1><p id="assetSubtitle">按项目文件夹整理节点画布生成的图片与视频。</p></div>
           <div class="heading-tools">
             <select class="folder-select" id="folderFilter" aria-label="项目文件夹"><option value="all">全部项目文件夹</option></select>
+            <select class="sort-select" id="assetSort" aria-label="资产排序">
+              <option value="desc">倒序 · 最近生成</option>
+              <option value="asc">正序 · 最早生成</option>
+            </select>
             <input class="asset-search" id="assetSearch" type="search" placeholder="搜索资产或项目…">
             <button class="button primary" id="importSkill" type="button" hidden>＋ 导入自己的 Skill</button>
           </div>

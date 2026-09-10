@@ -6,12 +6,14 @@ const code = source.slice(source.indexOf('async function loadCanvasState()'), so
 const saved = {nodes: [{id: 1, type: 'image', mediaUrl: 'indexed-media:test'}], links: [], nodeId: 2};
 const sandbox = {
   localStorage: {getItem: () => null}, projectCanvasStorageKey: () => 'p', folderCanvasStorageKey: () => 'f', canvasStorageKey: 'c', activeProjectId: 'p', projects: [{id: 'p'}],
+  parseStoredCanvasState: () => null, isPrimaryHomeFolder: () => true, legacyCanvasStateMatchesProject: () => false,
   readCanvasStateBackup: async () => { throw new Error('database closed'); },
   readDesktopCanvasBackups: async () => [saved],
   mergeCanvasRecoveryState: () => null, chooseCanvasRecoveryState: states => states.find(Boolean),
   removeDeprecatedSelectionNodes() {}, cleanLoadedNode: async node => { node.mediaUrl = 'data:image/png;base64,recovered'; },
   cleanLoadedNodes: async nodes => { for (const node of nodes) await sandbox.cleanLoadedNode(node); },
   pruneBrokenLinks() {}, view: {}, document: {body: {classList: {toggle() {}}}, querySelector: () => ({classList: {toggle() {}}})},
+  normalizeRestoredCanvasView: view => view, ensureRestoredCanvasVisible() {},
   readGlobalTheme: () => 'dark', updateThemeLabel() {}, render() {}, syncDeletedResultsWithCanvas() {}, showToast() {}, console: {warn() {}}
 };
 vm.createContext(sandbox);

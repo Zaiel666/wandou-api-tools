@@ -83,11 +83,16 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
     sizeFromRatio("16:9 横屏", "1K"),
     sizeFromRatio("16:9 横屏", "2K"),
     sizeFromRatio("16:9 横屏", "4K"),
-  ]), ["1820x1024", "1920x1080", "3840x2160"]);
+    sizeFromRatio("3:4 竖图", "1K"),
+  ]), ["1920x1080", "2560x1440", "3840x2160", "1200x1600"]);
   const labels = await generator.locator(".form-row > label").allTextContents();
   assert.ok(labels.indexOf("Skill") < labels.indexOf("创作技能"));
   assert.ok(labels.indexOf("创作技能") < labels.indexOf("模型"));
   assert.match(await generator.locator("[data-creative-style-toggle]").innerText(), /无选择/);
+  assert.equal(await generator.locator("[data-node-select-toggle]").first().innerText(), "gpt-image-2.5-1k");
+  const creativeTriggerBox = await generator.locator("[data-creative-style-toggle]").boundingBox();
+  const modelTriggerBox = await generator.locator("[data-node-select-toggle]").first().boundingBox();
+  assert.ok(Math.abs(creativeTriggerBox.height - modelTriggerBox.height) < 1, "creative style control should match neighboring control height");
   await generator.locator("[data-creative-style-toggle]").click();
   assert.equal(await generator.locator("[data-creative-style]").count(), 17);
   assert.match(await generator.locator('[data-creative-style="poster"] .creative-style-preview').evaluate((element) => getComputedStyle(element).backgroundImage), /creative-styles-grid\.png/);
@@ -101,6 +106,10 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
   assert.match(await generator.locator("[data-creative-style-toggle]").innerText(), /无选择/);
   const ratioRow = generator.locator('.form-row > label').filter({ hasText: "比例尺寸" }).locator("..");
   await ratioRow.locator("[data-node-select-toggle]").dispatchEvent("click");
+  const autoRatioBox = await ratioRow.locator('[data-node-ratio="Auto自适应"]').boundingBox();
+  const customRatioBox = await ratioRow.locator('[data-node-ratio="自定义尺寸"]').boundingBox();
+  assert.ok(Math.abs(autoRatioBox.y - customRatioBox.y) < 2, "Auto and custom size should share one row");
+  assert.ok(customRatioBox.x > autoRatioBox.x, "custom size should appear to the right of Auto");
   await ratioRow.locator('[data-node-ratio="自定义尺寸"]').dispatchEvent("click");
   assert.equal(await generator.locator("[data-custom-size]").count(), 2);
   await generator.locator('[data-custom-size="width"]').fill("2560");
@@ -137,6 +146,16 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
   assert.equal(await result.locator(".result-time-meta svg").count(), 1);
   const resultMetaText = await result.locator(".result-meta-line").innerText();
   assert.doesNotMatch(resultMetaText, /尺寸|px|用时|秒/);
+  assert.deepEqual(await result.locator(".result-size-meta").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, color: style.color, height: style.height };
+  }), { background: "rgba(15, 18, 17, 0.31)", color: "rgba(255, 255, 255, 0.6)", height: "22px" });
+  assert.equal(await result.locator(".result-time-meta").evaluate((element) => getComputedStyle(element).height), "22px");
+  const linkMarkCenter = await page.locator(".line-cut .line-cut-mark").first().evaluate((mark) => {
+    const box = mark.getBBox();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  });
+  assert.ok(Math.abs(linkMarkCenter.x) < .01 && Math.abs(linkMarkCenter.y) < .01, "link remove icon should be centered on its connection point");
   assert.deepEqual(errors, []);
 });
 
@@ -162,6 +181,20 @@ test("生成器输入完成后显示可忽略的提示词优化选择", async (t
     const style = getComputedStyle(element);
     return { color: style.color, background: style.backgroundColor };
   }), { color: "rgb(255, 255, 255)", background: "rgb(42, 173, 95)" });
+  const toggleCenter = await nudge.locator("[data-generator-prompt-optimize-toggle]").evaluate((button) => {
+    const buttonBox = button.getBoundingClientRect();
+    const iconBox = button.querySelector("svg").getBoundingClientRect();
+    return {
+      x: (iconBox.left + iconBox.right - buttonBox.left - buttonBox.right) / 2,
+      y: (iconBox.top + iconBox.bottom - buttonBox.top - buttonBox.bottom) / 2,
+    };
+  });
+  assert.ok(Math.abs(toggleCenter.x) < .5 && Math.abs(toggleCenter.y) < .5, "prompt optimization arrow should be centered");
+  assert.doesNotMatch(fs.readFileSync(htmlPath, "utf8"), /promptOptimizeCollapseTimer/);
+  await nudge.locator("[data-generator-prompt-optimize-toggle]").click();
+  assert.equal(await nudge.evaluate((element) => element.classList.contains("open")), false);
+  await nudge.locator("[data-generator-prompt-optimize-toggle]").click();
+  assert.equal(await nudge.evaluate((element) => element.classList.contains("open")), true);
   await nudge.locator("[data-generator-prompt-optimize-no]").click();
   assert.equal(await generator.locator("[data-prompt-optimize-nudge].visible").count(), 0);
 });

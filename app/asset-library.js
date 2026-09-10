@@ -4,6 +4,7 @@
   const title = document.getElementById("assetTitle");
   const subtitle = document.getElementById("assetSubtitle");
   const folderSelect = document.getElementById("folderFilter");
+  const sortSelect = document.getElementById("assetSort");
   const importButton = document.getElementById("importSkill");
   const toast = document.getElementById("assetToast");
   const canvasPrefix = "aiCanvasStateV1";
@@ -66,7 +67,20 @@
     });
   }
 
-  function projectContextForStorageKey(key) {
+  function projectContextForStorageKey(key, state = null) {
+    const ownedFolderId = String(state?.folderId || "");
+    if (ownedFolderId) {
+      const folder = folders.find((item) => String(item.id) === ownedFolderId);
+      const projectId = String(state?.projectId || "");
+      const projects = readJson(`${canvasPrefix}:project-collection:${ownedFolderId}`, []);
+      const project = Array.isArray(projects) ? projects.find((item) => String(item.id) === projectId) : null;
+      return {
+        folderId: ownedFolderId,
+        folderName: folder?.name || "未命名文件夹",
+        projectId,
+        projectName: project?.name || ""
+      };
+    }
     const ordered = [...folders].sort((left, right) => String(right.id).length - String(left.id).length);
     for (const folder of ordered) {
       const base = `${canvasPrefix}:${folder.id}`;
@@ -98,7 +112,7 @@
       if (key.includes(":project-collection:") || key.includes(":active-project-collection:")) continue;
       const state = readJson(key, null);
       if (!state || !Array.isArray(state.nodes)) continue;
-      const project = projectContextForStorageKey(key);
+      const project = projectContextForStorageKey(key, state);
       if (!project) continue;
       for (const node of state.nodes) {
         if (node?.type !== "result" || !["image", "video"].includes(node.mediaType)) continue;
@@ -111,14 +125,15 @@
           name: node.title || node.prompt?.slice(0, 36) || (node.mediaType === "video" ? "视频资产" : "图片资产"),
           stored,
           fullStored,
-          createdAt: Number(node.createdAt || String(node.id || "").replace(/\D/g, "").slice(0, 13)) || 0,
+          createdAt: Number(node.createdAt || state.savedAt) || 0,
+          sequence: Number(String(node.id || "").replace(/\D/g, "")) || 0,
           width: node.width,
           height: node.height,
           ...project
         });
       }
     }
-    return media.sort((left, right) => right.createdAt - left.createdAt);
+    return media;
   }
 
   function refreshFolderOptions() {
@@ -128,7 +143,21 @@
     });
     const current = folderSelect.value || "all";
     const options = ['<option value="all">全部项目文件夹</option>'];
-    for (const folder of folders) {
+    const direction = sortSelect?.value === "asc" ? 1 : -1;
+    const folderTimes = new Map();
+    assets.filter((item) => item.type !== "skill").forEach((item) => {
+      const currentTime = folderTimes.get(item.folderId);
+      const itemTime = Number(item.createdAt) || 0;
+      folderTimes.set(item.folderId, currentTime === undefined
+        ? itemTime
+        : (direction < 0 ? Math.max(currentTime, itemTime) : Math.min(currentTime, itemTime)));
+    });
+    const orderedFolders = [...folders].sort((left, right) => {
+      const timeDifference = (folderTimes.get(left.id) || 0) - (folderTimes.get(right.id) || 0);
+      if (timeDifference) return timeDifference * direction;
+      return String(left.name || "").localeCompare(String(right.name || ""), "zh-CN") * direction;
+    });
+    for (const folder of orderedFolders) {
       options.push(`<option value="${escapeHtml(folder.id)}">${escapeHtml(folder.name)}（${counts.get(folder.id) || 0}）</option>`);
     }
     if (counts.get("ungrouped")) options.push(`<option value="ungrouped">未归类（${counts.get("ungrouped")}）</option>`);
@@ -149,8 +178,8 @@
 
   function mediaCard(asset) {
     const index = assets.indexOf(asset);
-    const project = asset.projectName ? ` · ${escapeHtml(asset.projectName)}` : "";
-    return `<article class="asset-card media-card" data-media-index="${index}"><div class="media-preview" data-preview-index="${index}"><span>正在读取…</span></div><div class="asset-card-body"><h3 class="asset-card-title">${escapeHtml(asset.name)}</h3><div class="asset-card-meta">${asset.type === "video" ? "视频" : "图片"}${asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}${project}</div></div></article>`;
+    const directory = [asset.folderName, asset.projectName].filter(Boolean).map(escapeHtml).join(" / ");
+    return `<article class="asset-card media-card" data-media-index="${index}"><div class="media-preview" data-preview-index="${index}"><span>正在读取…</span></div><div class="asset-card-body"><h3 class="asset-card-title">${escapeHtml(asset.name)}</h3><div class="asset-card-meta">${asset.type === "video" ? "视频" : "图片"}${asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}</div>${directory ? `<div class="asset-card-directory" title="${directory}">${directory}</div>` : ""}</div></article>`;
   }
 
   function skillCard(skill, selected) {
@@ -174,7 +203,15 @@
       if (asset.type !== "skill" && chosenFolder !== "all" && asset.folderId !== chosenFolder) return false;
       return !query || `${asset.name || ""} ${asset.description || ""} ${asset.folderName || ""} ${asset.projectName || ""}`.toLowerCase().includes(query);
     });
-    const limited = matching.slice(0, visibleLimit);
+    const direction = sortSelect?.value === "asc" ? 1 : -1;
+    const ordered = [...matching].sort((left, right) => {
+      const timeDifference = (Number(left.createdAt) || 0) - (Number(right.createdAt) || 0);
+      if (timeDifference) return timeDifference * direction;
+      const sequenceDifference = (Number(left.sequence) || 0) - (Number(right.sequence) || 0);
+      if (sequenceDifference) return sequenceDifference * direction;
+      return String(left.name || "").localeCompare(String(right.name || ""), "zh-CN") * direction;
+    });
+    const limited = ordered.slice(0, visibleLimit);
     for (const type of ["image", "video", "skill"]) {
       document.querySelector(`[data-count="${type}"]`).textContent = assets.filter((asset) => asset.type === type).length;
     }
@@ -182,7 +219,7 @@
     title.textContent = { all: "全部资产", image: "图片资产", video: "视频资产", skill: "绘图 Skill" }[filter];
     subtitle.textContent = filter === "skill"
       ? "系统 Skill 保障基础生图能力；个人 Skill 可自行删除。"
-      : "图片和视频按项目文件夹归类，查找更直接。";
+      : `图片和视频按文件夹目录归类，当前${direction < 0 ? "最近生成优先" : "最早生成优先"}。`;
     importButton.hidden = filter !== "skill";
     folderSelect.hidden = filter === "skill";
     search.placeholder = filter === "skill" ? "搜索绘图 Skill…" : "搜索资产或项目…";
@@ -193,10 +230,16 @@
     const sections = [];
     const media = limited.filter((asset) => asset.type !== "skill");
     const skills = limited.filter((asset) => asset.type === "skill");
-    const folderOrder = [...folders.map((folder) => folder.id), "ungrouped"];
-    for (const folderId of folderOrder) {
-      const items = media.filter((asset) => asset.folderId === folderId);
-      if (items.length) sections.push(groupMarkup(items[0].folderName || "未归类", items, mediaCard));
+    const directoryGroups = new Map();
+    for (const asset of media) {
+      const key = `${asset.folderId || "ungrouped"}:${asset.projectId || ""}`;
+      if (!directoryGroups.has(key)) directoryGroups.set(key, []);
+      directoryGroups.get(key).push(asset);
+    }
+    for (const items of directoryGroups.values()) {
+      const first = items[0];
+      const directoryName = [first.folderName || "未归类", first.projectName].filter(Boolean).join(" / ");
+      sections.push(groupMarkup(directoryName, items, mediaCard));
     }
     if (skills.length) sections.push(groupMarkup("绘图 Skill", skills, (skill) => skillCard(skill, selected)));
     if (matching.length > visibleLimit) sections.push(`<button class="asset-load-more" type="button">加载更多（剩余 ${matching.length - visibleLimit}）</button>`);
@@ -261,6 +304,7 @@
   });
   search.oninput = () => { visibleLimit = 120; render(); };
   folderSelect.onchange = () => { visibleLimit = 120; render(); };
+  sortSelect.onchange = () => { visibleLimit = 120; refreshFolderOptions(); render(); };
   importButton.onclick = importSkill;
   document.getElementById("refreshAssets").onclick = load;
   document.querySelector(".lightbox-close").onclick = () => document.getElementById("assetLightbox").classList.remove("open");

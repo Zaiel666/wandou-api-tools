@@ -16,6 +16,7 @@ test("homepage removes upscale card and exposes the asset library", () => {
   assert.match(assetHtml, /data-filter="skill"><span>Skill<\/span>/);
   assert.match(assetHtml, /id="importSkill"/);
   assert.match(assetHtml, /id="folderFilter"/);
+  assert.match(assetHtml, /id="assetSort"/);
   assert.match(assetHtml, /asset-library\.css/);
   assert.match(assetHtml, /asset-library\.js/);
   assert.match(css, /\.common-tool-grid\s*\{[^}]*max-width:\s*760px/s);
@@ -28,6 +29,8 @@ test("asset library groups media by project folder and keeps one coherent theme"
   assert.match(script, /aiCanvasProjectsV1/);
   assert.match(script, /projectContextForStorageKey/);
   assert.match(script, /folderName/);
+  assert.match(script, /最近生成优先/);
+  assert.match(script, /directoryGroups/);
   assert.match(script, /document\.documentElement\.dataset\.theme/);
   assert.match(script, /wandouShell\.importSkill/);
   assert.match(script, /wandouShell\.deleteSkill/);

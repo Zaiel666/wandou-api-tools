@@ -2,8 +2,8 @@
   const BRAND = "豌豆AI绘图工作台";
   const API_URL = `${atob("aHR0cHM6Ly93d3cuemF5YXBpLnRvcA==")}/v1`;
   const MODEL_OPTIONS = [
-    "gpt-image-2",
     "gpt-image-2.5-1k",
+    "gpt-image-2",
     "gpt-image-2.5-flare",
     "gpt-image-2.5-sunburst",
     "Nano Banana2",
@@ -21,7 +21,10 @@
     "gemini-3.1-flash-image-preview": "Nano Banana2",
     "gemini-3-pro-image-preview": "Nano BananaPro"
   };
-  const DEFAULT_MODEL = MODEL_OPTIONS[0];
+  const PREFERRED_DEFAULT_MODEL = "gpt-image-2.5-1k";
+  const defaultModel = () => MODEL_OPTIONS.includes(PREFERRED_DEFAULT_MODEL)
+    ? PREFERRED_DEFAULT_MODEL
+    : (MODEL_OPTIONS[0] || "gpt-image-2");
   const SIZE_OPTIONS = [
     "auto",
     "1024x1024",
@@ -95,14 +98,14 @@
       const settings = store.state.settings;
       settings.baseUrl = API_URL;
       if (key) settings.apiKey = key;
-      settings.model = modelToApiModel(normalizeModelName(settings.model || DEFAULT_MODEL));
+      settings.model = modelToApiModel(normalizeModelName(settings.model || defaultModel()));
       settings.timeout = 999;
       settings.apiMode = settings.apiMode || "images";
       settings.profiles = Array.isArray(settings.profiles) && settings.profiles.length ? settings.profiles : [{
         id: "default-openai",
         name: "默认",
         provider: "openai",
-        model: modelToApiModel(DEFAULT_MODEL),
+        model: modelToApiModel(defaultModel()),
         timeout: 999,
         apiMode: "images"
       }];
@@ -112,7 +115,7 @@
         provider: profile.provider || "openai",
         baseUrl: API_URL,
         apiKey: key || profile.apiKey || "",
-        model: modelToApiModel(normalizeModelName(profile.model || settings.model || DEFAULT_MODEL)),
+        model: modelToApiModel(normalizeModelName(profile.model || settings.model || defaultModel())),
         timeout: 999,
         apiMode: profile.apiMode || settings.apiMode || "images"
       }));
@@ -194,12 +197,12 @@
   function normalizeModelName(value) {
     const text = String(value || "");
     const label = API_MODEL_LABEL_MAP[text] || text;
-    return MODEL_OPTIONS.includes(label) ? label : DEFAULT_MODEL;
+    return MODEL_OPTIONS.includes(label) ? label : defaultModel();
   }
 
   function modelToApiModel(model) {
     const normalized = normalizeModelName(model);
-    return MODEL_API_MAP[normalized] || normalized || DEFAULT_MODEL;
+    return MODEL_API_MAP[normalized] || normalized || defaultModel();
   }
 
   function isDrawingModelId(model) {
@@ -255,7 +258,7 @@
       const value = localStorage.getItem("wd-model");
       return normalizeModelName(value);
     } catch {
-      return DEFAULT_MODEL;
+      return defaultModel();
     }
   }
 

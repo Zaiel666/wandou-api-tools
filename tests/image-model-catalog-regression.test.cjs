@@ -9,8 +9,8 @@ const root = path.resolve(__dirname, "..");
 const canvasPath = path.join(root, "app", "ai-node-canvas.html");
 const workbenchPath = path.join(root, "app", "image-workbench", "customize.js");
 const expectedModels = [
-  "GPT-image-2",
   "gpt-image-2.5-1k",
+  "GPT-image-2",
   "gpt-image-2.5-flare",
   "gpt-image-2.5-sunburst",
 ];
@@ -49,8 +49,8 @@ test("全部 GPT 绘图模型按统一顺序出现在各图片节点并映射到
 
   const mapping = await page.evaluate((models) => models.map((model) => imageGenerationApiModel(model)), expectedModels);
   assert.deepEqual(mapping, [
-    "gpt-image-2",
     "gpt-image-2.5-1k",
+    "gpt-image-2",
     "gpt-image-2.5-flare",
     "gpt-image-2.5-sunburst",
   ]);
@@ -100,6 +100,8 @@ test("工作台模式移除不存在模型，1K 专用模型使用低档请求�
   assert.match(source, /model === "gpt-image-2\.5-1k" \? "low" : targetQuality/);
   assert.match(source, /sizeForQuality\(rawSize, targetQuality\)/);
   assert.match(source, /syncModelOptionsFromApi/);
+  assert.match(source, /PREFERRED_DEFAULT_MODEL = "gpt-image-2\.5-1k"/);
+  assert.match(source, /MODEL_OPTIONS\.includes\(PREFERRED_DEFAULT_MODEL\)/);
 });
 
 test("节点画布从 API 模型接口同步并只显示绘图模型", async (t) => {
