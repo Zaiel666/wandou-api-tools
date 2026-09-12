@@ -13,9 +13,9 @@
     "builtin-prompt": "把用户的绘图需求整理为清晰、无占位符、可直接执行的提示词。保持原意，消除冲突和歧义，只返回最终提示词。"
   };
 
-  async function list() {
+  async function list(options = {}) {
     try {
-      const installed = await window.wandouShell?.listSkills?.();
+      const installed = await window.wandouShell?.listSkills?.({ force: Boolean(options.force) });
       if (Array.isArray(installed) && installed.length) return installed;
     } catch (_error) {}
     return fallbacks.slice();

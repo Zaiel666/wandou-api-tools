@@ -439,6 +439,17 @@ async function deletePersonalSkill(payload = {}) {
   }
 }
 
+async function openPersonalSkillDirectory() {
+  try {
+    const directory = personalSkillRoot();
+    fs.mkdirSync(directory, { recursive: true });
+    const error = await shell.openPath(directory);
+    return error ? { success: false, error } : { success: true, directory };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 async function hasCanvasMedia(payload = {}) {
   const id = safeCanvasBackupId(payload.id, "");
   if (!id) return { success: false, exists: false, error: "Invalid media id" };
@@ -1191,8 +1202,9 @@ ipcMain.handle("desktop:write-project-hub-state", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以保存项目文件夹" };
   return writeProjectHubState(payload);
 });
-ipcMain.handle("desktop:list-skills", (event) => {
+ipcMain.handle("desktop:list-skills", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return [];
+  if (payload?.force) installedSkillsCache = { savedAt: 0, items: [] };
   return publicInstalledSkills();
 });
 ipcMain.handle("desktop:read-skill", (event, payload = {}) => {
@@ -1206,6 +1218,10 @@ ipcMain.handle("desktop:import-skill", (event) => {
 ipcMain.handle("desktop:delete-skill", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以删除 Skill" };
   return deletePersonalSkill(payload);
+});
+ipcMain.handle("desktop:open-skill-directory", (event) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以打开 Skill 目录" };
+  return openPersonalSkillDirectory();
 });
 ipcMain.handle("desktop:get-canvas-backup-directory", () => ({
   directory: canvasBackupRootDirectory()

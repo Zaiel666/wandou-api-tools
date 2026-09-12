@@ -64,7 +64,8 @@ test("node canvas removes new-upscale entries and exposes selectable drawing ski
   assert.match(html, /skillOriginalPrompt/);
   assert.match(html, /skillOptimizedPrompt/);
   assert.match(html, /body\.node-canvas-page \.node\.generator \.prompt-corner-button \{[^}]*color:\s*#fff !important/s);
-  assert.match(html, /new Set\(\["imagegen", "banner-design", "brand", "design", "prompt-optimizer"\]\)/);
+  assert.doesNotMatch(html, /builtInDrawingSkills/, "the node picker must not hide skills already detected by the desktop catalog");
+  assert.match(html, /WandouSkills\?\.list\?\.\(\{ force: Boolean\(options\.force\) \}\)/);
   assert.match(fluidCss, /\.generator-skill-popover \.generator-skill-chip \{[^}]*min-height:\s*27px !important;[^}]*border-radius:\s*6px !important;/s);
   assert.match(fluidCss, /Skill 下拉属于紧凑菜单/);
 });
@@ -88,6 +89,7 @@ test("desktop bridge filters, imports, and safely removes personal drawing skill
   assert.match(main, /desktop:read-skill/);
   assert.match(main, /MAX_SKILL_INSTRUCTIONS_BYTES/);
   assert.match(main, /isDrawingSkill/);
+  assert.match(main, /payload\?\.force\) installedSkillsCache = \{ savedAt: 0, items: \[\] \}/);
   assert.match(main, /desktop:import-skill/);
   assert.match(main, /desktop:delete-skill/);
   assert.match(main, /shell\.trashItem/);

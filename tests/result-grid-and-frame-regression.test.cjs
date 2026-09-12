@@ -12,6 +12,13 @@ assert.match(
 );
 assert.match(
   source,
+  /const resultBodyHeight = resultWidth \* parsed\.height \/ Math\.max\(1, parsed\.width\);/,
+  "result row height must match the visible image height without an extra metadata allowance",
+);
+assert.match(source, /\.node\.result \{[^}]*min-height: 0;/s, "result nodes must not add an invisible minimum height");
+assert.doesNotMatch(source, /resultMetaHeight/, "overlay metadata must not add space between result rows");
+assert.match(
+  source,
   /columnX \+= nodeWidth\(item\) \+ gap;/,
   "completed result cards must be reflowed with an exact 2px horizontal gap",
 );

@@ -6,6 +6,7 @@
   const folderSelect = document.getElementById("folderFilter");
   const sortSelect = document.getElementById("assetSort");
   const importButton = document.getElementById("importSkill");
+  const openSkillDirectoryButton = document.getElementById("openSkillDirectory");
   const toast = document.getElementById("assetToast");
   const canvasPrefix = "aiCanvasStateV1";
   const indexedPrefix = "indexed-media:";
@@ -218,9 +219,10 @@
     document.querySelector('[data-count="all"]').textContent = assets.length;
     title.textContent = { all: "全部资产", image: "图片资产", video: "视频资产", skill: "绘图 Skill" }[filter];
     subtitle.textContent = filter === "skill"
-      ? "系统 Skill 保障基础生图能力；个人 Skill 可自行删除。"
+      ? "个人 Skill 统一存放在软件 Skill 目录；ZIP 请先解压，再导入含 SKILL.md 的文件夹。"
       : `图片和视频按文件夹目录归类，当前${direction < 0 ? "最近生成优先" : "最早生成优先"}。`;
     importButton.hidden = filter !== "skill";
+    openSkillDirectoryButton.hidden = filter !== "skill";
     folderSelect.hidden = filter === "skill";
     search.placeholder = filter === "skill" ? "搜索绘图 Skill…" : "搜索资产或项目…";
     if (!limited.length) {
@@ -306,6 +308,10 @@
   folderSelect.onchange = () => { visibleLimit = 120; render(); };
   sortSelect.onchange = () => { visibleLimit = 120; refreshFolderOptions(); render(); };
   importButton.onclick = importSkill;
+  openSkillDirectoryButton.onclick = async () => {
+    const result = await window.wandouShell?.openSkillDirectory?.();
+    if (!result?.success) showToast(result?.error || "无法打开 Skill 目录");
+  };
   document.getElementById("refreshAssets").onclick = load;
   document.querySelector(".lightbox-close").onclick = () => document.getElementById("assetLightbox").classList.remove("open");
   document.getElementById("assetLightbox").onclick = (event) => {

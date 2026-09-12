@@ -13,8 +13,8 @@ assert.match(styles, /\.node\.selected,[^}]*font-weight:\s*var\(--wd-weight-medi
 assert.match(styles, /body\.dark-theme #promptLibrarySearch,[^}]*background:\s*#0d1110\s*!important/s);
 assert.match(styles, /\.node\.result \.node-menu \[data-delete\][^}]*background:\s*transparent/s);
 assert.match(styles, /body\.dark-theme \.node\.result \.node-menu \[data-delete\][^}]*background:\s*transparent/s);
-assert.match(styles, /\.node\.result\.selected,\s*\n\s*\.node\.result\.box-selected\s*\{[^}]*outline:\s*1px solid #43d13b\s*!important[^}]*outline-offset:\s*0\s*!important[^}]*box-shadow:\s*none\s*!important/s,
-  "selected result nodes should use only a one-pixel outline without a glow");
+assert.match(source, /box-shadow:\s*inset 0 0 0 1px #c7ffe1,0 0 7px rgba\(19,170,114,\.22\)\s*!important/,
+  "selected result nodes should use one bright pale-green pixel with a restrained outer glow");
 assert.match(styles, /\.preview-favorite[^}]*background:\s*transparent/s);
 assert.match(styles, /\.preview-download[^}]*background:\s*transparent/s);
 assert.match(styles, /\.preview-regenerate[^}]*background:\s*transparent/s);

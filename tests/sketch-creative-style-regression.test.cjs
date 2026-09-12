@@ -149,8 +149,29 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
   assert.deepEqual(await result.locator(".result-size-meta").evaluate((element) => {
     const style = getComputedStyle(element);
     return { background: style.backgroundColor, color: style.color, height: style.height };
-  }), { background: "rgba(15, 18, 17, 0.31)", color: "rgba(255, 255, 255, 0.6)", height: "22px" });
-  assert.equal(await result.locator(".result-time-meta").evaluate((element) => getComputedStyle(element).height), "22px");
+  }), { background: "rgba(15, 18, 17, 0.157)", color: "rgba(255, 255, 255, 0.6)", height: "16px" });
+  assert.equal(await result.locator(".result-time-meta").evaluate((element) => getComputedStyle(element).height), "16px");
+  const generatedGridGap = await page.evaluate(() => {
+    view = { x: 0, y: 0, zoom: 1 };
+    const source = { id: "gap-test-source", type: "generator", x: 0, y: 100, frameWidth: 520 };
+    const parsed = { width: 1080, height: 1920 };
+    const position = resultGridPositioner(source, 6, parsed);
+    const ids = Array.from({ length: 6 }, (_item, index) => {
+      const point = position(index);
+      return createNode("result", point.x, point.y, {
+        width: parsed.width,
+        height: parsed.height,
+        frameWidth: 240,
+        pending: true,
+        _deferRender: true,
+      }).id;
+    });
+    render();
+    const first = document.querySelector(`[data-id="${ids[0]}"]`).getBoundingClientRect();
+    const below = document.querySelector(`[data-id="${ids[3]}"]`).getBoundingClientRect();
+    return below.top - first.bottom;
+  });
+  assert.ok(Math.abs(generatedGridGap - 2) < .1, `generated result rows should have a 2px gap, received ${generatedGridGap}px`);
   const linkMarkCenter = await page.locator(".line-cut .line-cut-mark").first().evaluate((mark) => {
     const box = mark.getBBox();
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -159,7 +180,7 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
   assert.deepEqual(errors, []);
 });
 
-test("生成器输入完成后显示可忽略的提示词优化选择", async (t) => {
+test("生成器输入后不再显示提示词优化提示", async (t) => {
   const browser = await chromium.launch({
     headless: true,
     executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -170,39 +191,58 @@ test("生成器输入完成后显示可忽略的提示词优化选择", async (t
   const generator = page.locator(".node.generator").first();
   const prompt = generator.locator('[data-field="prompt"]');
   await prompt.fill("一张简洁的现代产品海报");
-  await page.waitForTimeout(1250);
-  const nudge = generator.locator("[data-prompt-optimize-nudge]");
-  assert.ok(await nudge.evaluate((element) => element.classList.contains("visible")));
-  assert.ok(await nudge.evaluate((element) => element.classList.contains("open")));
-  assert.match(await nudge.innerText(), /是否优化提示词/);
-  assert.equal(await nudge.locator("[data-generator-prompt-optimize-yes]").innerText(), "是");
-  assert.equal(await nudge.locator("[data-generator-prompt-optimize-no]").innerText(), "否");
-  assert.deepEqual(await nudge.locator("[data-generator-prompt-optimize-yes]").evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { color: style.color, background: style.backgroundColor };
-  }), { color: "rgb(255, 255, 255)", background: "rgb(42, 173, 95)" });
-  const toggleCenter = await nudge.locator("[data-generator-prompt-optimize-toggle]").evaluate((button) => {
-    const buttonBox = button.getBoundingClientRect();
-    const iconBox = button.querySelector("svg").getBoundingClientRect();
-    return {
-      x: (iconBox.left + iconBox.right - buttonBox.left - buttonBox.right) / 2,
-      y: (iconBox.top + iconBox.bottom - buttonBox.top - buttonBox.bottom) / 2,
-    };
-  });
-  assert.ok(Math.abs(toggleCenter.x) < .5 && Math.abs(toggleCenter.y) < .5, "prompt optimization arrow should be centered");
-  assert.doesNotMatch(fs.readFileSync(htmlPath, "utf8"), /promptOptimizeCollapseTimer/);
-  await nudge.locator("[data-generator-prompt-optimize-toggle]").click();
-  assert.equal(await nudge.evaluate((element) => element.classList.contains("open")), false);
-  await nudge.locator("[data-generator-prompt-optimize-toggle]").click();
-  assert.equal(await nudge.evaluate((element) => element.classList.contains("open")), true);
-  await nudge.locator("[data-generator-prompt-optimize-no]").click();
-  assert.equal(await generator.locator("[data-prompt-optimize-nudge].visible").count(), 0);
+  await page.waitForTimeout(900);
+  assert.equal(await generator.locator("[data-prompt-optimize-nudge]").count(), 0);
+  assert.equal(await generator.locator("[data-generator-prompt-optimize-yes]").count(), 0);
+  assert.equal(await generator.locator("[data-generator-prompt-optimize-no]").count(), 0);
+  assert.equal(await prompt.inputValue(), "一张简洁的现代产品海报");
 });
 
-test("关键词结果提供可选的提示词优化确认", () => {
+test("节点 Skill 每次打开时自动检测软件已有的本地 Skill", async (t) => {
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await page.addInitScript(() => {
+    window.__skillListRequests = [];
+    window.wandouShell = {
+      listSkills: async (options = {}) => {
+        window.__skillListRequests.push(Boolean(options.force));
+        if (!options.force) return [];
+        return [{
+          id: "local-weijing-detail",
+          name: "weijing-one-click-detail",
+          directoryName: "weijing-one-click-detail",
+          description: "Create premium Taobao product detail pages from reference screenshots.",
+          source: "个人",
+          canDelete: true,
+        }];
+      },
+      readSkill: async () => ({ success: true, instructions: "用于电商详情页绘图。" }),
+    };
+  });
+  await page.goto(pathToFileURL(htmlPath).href);
+  await page.waitForFunction(() => document.body.dataset.canvasReady === "true");
+  const generator = page.locator(".node.generator").first();
+  assert.equal(await generator.getByText("weijing-one-click-detail", { exact: true }).count(), 0);
+  await generator.locator("[data-skill-row-toggle]").click();
+  const localSkill = generator.locator('[data-generator-skill="local-weijing-detail"]');
+  await assert.doesNotReject(() => localSkill.waitFor({ state: "visible" }));
+  assert.match(await localSkill.innerText(), /weijing-one-click-detail/);
+  assert.equal(await page.evaluate(() => window.__skillListRequests.includes(true)), true);
+  await localSkill.click();
+  assert.equal(await generator.evaluate((element) => {
+    const node = nodes.find((item) => item.id === element.dataset.id);
+    return node.skillId;
+  }), "local-weijing-detail");
+});
+
+test("页面源码不再包含关键词优化确认控件", () => {
   const source = fs.readFileSync(htmlPath, "utf8");
-  assert.match(source, /是否优化提示词？/);
-  assert.match(source, /data-prompt-optimize-yes/);
-  assert.match(source, /data-prompt-optimize-no/);
-  assert.match(source, /node\.text \? `<div class="prompt-optimize-choice/);
+  assert.doesNotMatch(source, /是否优化提示词？/);
+  assert.doesNotMatch(source, /data-prompt-optimize-yes/);
+  assert.doesNotMatch(source, /data-prompt-optimize-no/);
+  assert.doesNotMatch(source, /prompt-optimize-choice/);
 });
