@@ -5044,37 +5044,43 @@
     body:not(.dark-theme) .port.connected,
     body:not(.dark-theme) .port.pending { background:#fff; border-color:#8d9692; box-shadow:0 0 0 1px rgba(71,82,76,.1); }
 
-    /* Compact canvas toolbar. */
-    .topbar { top:8px; left:8px; right:8px; height:26px; }
-    .topbar-actions { gap:3px; flex-wrap:nowrap; justify-content:flex-end; }
+    /* Fill the intended top-right toolbar area without crowding its controls. */
+    .topbar { top:6px; left:8px; right:8px; height:44px; }
+    .topbar-actions {
+      width:min(530px, 100%);
+      height:44px;
+      gap:6px;
+      flex-wrap:nowrap;
+      justify-content:space-between;
+    }
     .topbar-actions button,
     .topbar-actions .icon-button,
     .zoom-pill {
-      height:24px;
-      min-height:24px;
-      min-width:24px;
+      height:32px;
+      min-height:32px;
+      min-width:32px;
       border-radius:999px;
-      padding:0 7px;
-      font-size:9px;
+      padding:0 9px;
+      font-size:11px;
       line-height:1;
     }
-    .topbar-actions .icon-button { width:24px; min-width:24px; padding:0; }
-    .topbar-actions svg { width:12px; height:12px; }
-    .zoom-pill { min-width:38px; padding:0 7px; box-shadow:none; }
-    .theme-button { min-width:36px !important; gap:2px; }
-    .folder-home-control { height:24px; border-radius:999px; }
+    .topbar-actions .icon-button { width:32px; min-width:32px; padding:0; }
+    .topbar-actions svg { width:16px; height:16px; }
+    .zoom-pill { min-width:46px; padding:0 9px; box-shadow:none; }
+    .theme-button { min-width:46px !important; gap:3px; }
+    .folder-home-control { height:32px; border-radius:999px; }
     .topbar-actions .folder-home-control .folder-name-pill,
     .topbar-actions .folder-home-control .project-home-button,
     body:not(.dark-theme) .topbar-actions .folder-home-control .folder-name-pill,
     body:not(.dark-theme) .topbar-actions .folder-home-control .project-home-button {
-      height:22px;
-      min-height:22px;
-      font-size:9px;
+      height:30px;
+      min-height:30px;
+      font-size:11px;
     }
-    .topbar-actions .folder-home-control .folder-name-pill { max-width:86px; padding:0 7px; }
-    .topbar-actions .folder-home-control .project-home-button { width:24px; min-width:24px; padding:0; }
-    .folder-home-control .project-home-button svg { width:12px; height:12px; }
-    #autoSaveDirectoryButton { min-width:72px !important; max-width:112px; padding:0 7px; }
+    .topbar-actions .folder-home-control .folder-name-pill { max-width:96px; padding:0 9px; }
+    .topbar-actions .folder-home-control .project-home-button { width:32px; min-width:32px; padding:0; }
+    .folder-home-control .project-home-button svg { width:16px; height:16px; }
+    #autoSaveDirectoryButton { min-width:78px !important; max-width:112px; padding:0 9px; }
     #assistantToggleButton.active { color:#fff; border-color:rgba(118,185,0,.68); background:rgba(76,127,0,.78); }
 
     /* Project collection now belongs to the left sidebar and opens in place. */
@@ -5235,7 +5241,7 @@
 
     .zoom-pill { color:#eef2f0; background:rgba(19,23,21,.88); border-color:rgba(255,255,255,.15); }
     body:not(.dark-theme) .zoom-pill { color:#18211d; background:rgba(255,255,255,.9); border-color:rgba(24,33,29,.14); }
-    #autoSaveDirectoryButton { min-width:66px !important; max-width:98px; padding:0 5px; font-size:8px !important; letter-spacing:-.15px; }
+    #autoSaveDirectoryButton { font-size:10px !important; letter-spacing:-.15px; }
 
     .line-cut circle { fill:#111513; stroke:#eef2f0; stroke-width:1.25; }
     .line-cut .line-cut-mark { stroke:#fff; stroke-width:1.65; }
@@ -6448,7 +6454,6 @@
     let panState = null;
     let boxSelectState = null;
     let boxSelectedIds = [];
-    let suppressNextContextMenu = false;
     let contextMenuWorld = { x: 0, y: 0 };
     let pendingLinkCreate = null;
     let activePasteNodeId = null;
@@ -7374,6 +7379,7 @@
     }
 
     let projectSwitchClickTimer = 0;
+    projectList?.addEventListener("contextmenu", (event) => event.preventDefault());
     function renderProjects() {
       if (!projectList) return;
       if (projectCountHint) projectCountHint.textContent = `${projects.length}/${maxProjectCount}`;
@@ -7420,7 +7426,6 @@
           projectMenu.style.top = `${event.clientY}px`;
           projectMenu.classList.add("open");
         };
-        item.addEventListener("contextmenu", openProjectItemMenu);
         item.addEventListener("dblclick", openProjectItemMenu);
       });
       projectList.querySelectorAll("[data-project-color]").forEach((button) => {
@@ -12487,11 +12492,6 @@
             event.stopPropagation();
             disconnectLink(link.from, link.to);
           });
-          path.addEventListener("contextmenu", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            disconnectLink(link.from, link.to);
-          });
           cut.addEventListener("pointerdown", (event) => event.stopPropagation());
           cut.addEventListener("click", (event) => {
             event.preventDefault();
@@ -12917,7 +12917,6 @@
         clearBoxSelection();
         return;
       }
-      suppressNextContextMenu = true;
       selectionBox.classList.remove("open");
       boxSelectedIds = [...selectedCandidateIds(state)];
       if (!boxSelectedIds.length) {
@@ -13127,18 +13126,13 @@
         event.preventDefault();
         return;
       }
-      if (event.type === "contextmenu" && suppressNextContextMenu) {
-        event.preventDefault();
-        suppressNextContextMenu = false;
-        return;
-      }
       if (event.target.closest(".node") || event.target.closest(".topbar") || event.target.closest(".project-hub")) return;
       event.preventDefault();
       contextMenuWorld = screenToWorld(event.clientX, event.clientY);
       positionCanvasOverlay(contextMenu, event.clientX, event.clientY);
       contextMenu.classList.add("open");
     };
-    canvasWrap.addEventListener("contextmenu", openCanvasContextMenu);
+    canvasWrap.addEventListener("contextmenu", (event) => event.preventDefault());
     canvasWrap.addEventListener("dblclick", openCanvasContextMenu);
 
     window.addEventListener("click", (event) => {
@@ -18849,7 +18843,7 @@ ${formatInstruction}`;
       galleryMenu.style.top = `${event.clientY}px`;
       galleryMenu.classList.add("open");
     };
-    favoriteGrid.addEventListener("contextmenu", openFavoriteCardMenu);
+    favoriteGrid.addEventListener("contextmenu", (event) => event.preventDefault());
     favoriteGrid.addEventListener("dblclick", openFavoriteCardMenu);
     closeGalleryButton.addEventListener("click", closeGallery);
     galleryOverlay.addEventListener("click", (event) => {
@@ -18890,7 +18884,7 @@ ${formatInstruction}`;
       galleryMenu.style.top = `${event.clientY}px`;
       galleryMenu.classList.add("open");
     };
-    galleryGrid.addEventListener("contextmenu", openGalleryCardMenu);
+    galleryGrid.addEventListener("contextmenu", (event) => event.preventDefault());
     galleryGrid.addEventListener("dblclick", openGalleryCardMenu);
     galleryMenu.querySelectorAll("[data-gallery-action]").forEach((button) => {
       button.addEventListener("click", async () => {
@@ -19027,7 +19021,7 @@ ${formatInstruction}`;
       lightboxImageMenu.classList.add("open");
       setLightboxImageMenuHot(lightboxContextCopy);
     };
-    lightboxImage.addEventListener("contextmenu", openLightboxImageMenu);
+    lightboxImage.addEventListener("contextmenu", (event) => event.preventDefault());
     lightboxImage.addEventListener("dblclick", openLightboxImageMenu);
     lightboxImageMenu.querySelectorAll("button").forEach((button) => {
       button.addEventListener("pointerenter", () => setLightboxImageMenuHot(button));

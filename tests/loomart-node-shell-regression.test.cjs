@@ -41,6 +41,8 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
       sidebarHandleCenter: document.querySelector("#collapseSidebarButton").getBoundingClientRect().top
         + document.querySelector("#collapseSidebarButton").getBoundingClientRect().height / 2,
       toolbarRightGap: main.getBoundingClientRect().right - toolbar.getBoundingClientRect().right,
+      toolbarWidth: toolbar.getBoundingClientRect().width,
+      toolbarHeight: toolbar.getBoundingClientRect().height,
       buttonHeights: buttons.map((item) => item.height),
       buttonOrder: buttons.map((item) => item.left),
     };
@@ -55,7 +57,9 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.equal(shell.panelVisible, "1");
   assert.ok(Math.abs(shell.sidebarHandleCenter - 480) < 1, JSON.stringify(shell));
   assert.ok(shell.toolbarRightGap >= 7 && shell.toolbarRightGap <= 9, JSON.stringify(shell));
-  assert.ok(shell.buttonHeights.every((height) => height <= 24.1), JSON.stringify(shell.buttonHeights));
+  assert.ok(Math.abs(shell.toolbarWidth - 530) < 1, JSON.stringify(shell));
+  assert.ok(Math.abs(shell.toolbarHeight - 44) < 1, JSON.stringify(shell));
+  assert.ok(shell.buttonHeights.every((height) => height >= 30 && height <= 32.1), JSON.stringify(shell.buttonHeights));
   assert.deepEqual(shell.buttonOrder, [...shell.buttonOrder].sort((a, b) => a - b));
   assert.equal(await page.locator("#undoButton, #redoButton").count(), 0);
   assert.equal(await page.locator("#collapseSidebarButton").isVisible(), true);
@@ -86,12 +90,25 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   await page.locator("#contextMenu button").first().hover();
   assert.equal(await page.locator("#contextMenu button").first().evaluate((button) => getComputedStyle(button).backgroundColor), "rgb(19, 170, 114)");
   await page.locator("#contextMenu").evaluate((menu) => menu.classList.remove("open"));
+  const canvasMenuTriggers = await page.evaluate(() => {
+    const wrap = document.querySelector(".canvas-wrap");
+    const menu = document.querySelector("#contextMenu");
+    wrap.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 520, clientY: 360 }));
+    const openedOnRightClick = menu.classList.contains("open");
+    wrap.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, clientX: 520, clientY: 360 }));
+    return { openedOnRightClick, openedOnDoubleClick: menu.classList.contains("open") };
+  });
+  assert.deepEqual(canvasMenuTriggers, { openedOnRightClick: false, openedOnDoubleClick: true });
+  await page.locator("#contextMenu").evaluate((menu) => menu.classList.remove("open"));
   const lightboxContextVisual = await page.evaluate(() => {
     openLightbox("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Crect width='600' height='400' fill='green'/%3E%3C/svg%3E", { mode: "image" });
     lightboxImage.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 520, clientY: 360 }));
     const menu = document.querySelector("#lightboxImageMenu");
+    const openedOnRightClick = menu.classList.contains("open");
+    lightboxImage.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, clientX: 520, clientY: 360 }));
     const button = menu.querySelector("button:not([hidden])");
     return {
+      openedOnRightClick,
       open: menu.classList.contains("open"),
       width: getComputedStyle(menu).width,
       radius: getComputedStyle(menu).borderRadius,
@@ -103,6 +120,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     };
   });
   assert.deepEqual(lightboxContextVisual, {
+    openedOnRightClick: false,
     open: true,
     width: "176px",
     radius: "8px",

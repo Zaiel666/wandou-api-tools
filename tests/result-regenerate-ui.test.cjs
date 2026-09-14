@@ -75,6 +75,8 @@ const { chromium } = require("playwright");
       openLightbox(favoriteMediaUrl(original), { mode: "image", nodeId: originalId });
     }, seeded.originalId);
     await page.locator("#lightboxImage").click({ button: "right" });
+    assert.equal(await page.locator("#lightboxContextRegenerate").isVisible(), false);
+    await page.locator("#lightboxImage").dblclick();
     await page.locator("#lightboxContextRegenerate").waitFor({ state: "visible" });
     assert.equal(await page.locator("#lightboxContextRegenerate").textContent(), "重新生成");
     await page.locator("#lightboxContextRegenerate").click();
@@ -124,7 +126,7 @@ const { chromium } = require("playwright");
     });
     assert.deepEqual(controls, { favoriteToRegenerate: 2, regenerateToDownload: 2 });
 
-    console.log("PASS: right-click regeneration keeps the original, appends a selectable result below, and preserves prompt/model/size");
+    console.log("PASS: double-click regeneration keeps the original, appends a selectable result below, and preserves prompt/model/size");
   } finally {
     await browser.close();
   }
