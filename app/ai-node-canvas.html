@@ -5651,11 +5651,6 @@
     .context-menu [data-menu-node="outpaint"]::before { content:"↔"; }
     .context-menu [data-menu-node="style"]::before { content:"◈"; }
     .context-menu [data-menu-node="psd"]::before { content:"▤"; }
-    .context-menu [data-menu-node="image-upload"] {
-      margin-top:5px;
-      box-shadow:inset 0 1px rgba(255,255,255,.08);
-    }
-    .context-menu [data-menu-node="image-upload"]::before { content:"↑"; }
     .context-menu [data-selection-action="layout"]::before { content:"⌗"; }
     .context-menu [data-selection-action="delete"] { color:#ff686f; }
     .context-menu [data-selection-action="delete"]::before { content:"⌫"; color:#ff686f; }
@@ -6103,7 +6098,6 @@
         <button type="button" data-menu-node="outpaint">新建扩图</button>
         <button type="button" data-menu-node="style">新建风格迁移</button>
         <button type="button" data-menu-node="psd">新建分层 PSD</button>
-        <button type="button" data-menu-node="image-upload">上传图片</button>
       </div>
       <div id="selectionBox" class="selection-box"></div>
       <div id="selectionMenu" class="context-menu">
@@ -7133,8 +7127,9 @@
     }
 
     function updateCurrentFolderName() {
-      if (!currentFolderNameEl) return;
       const name = currentFolderName();
+      document.title = name;
+      if (!currentFolderNameEl) return;
       currentFolderNameEl.textContent = name;
       currentFolderNameEl.title = `当前文件夹：${name}`;
     }
@@ -7378,6 +7373,7 @@
       catch (error) { warnCanvasStorageSkipped(error); }
     }
 
+    let projectSwitchClickTimer = 0;
     function renderProjects() {
       if (!projectList) return;
       if (projectCountHint) projectCountHint.textContent = `${projects.length}/${maxProjectCount}`;
@@ -7409,17 +7405,23 @@
       projectList.querySelectorAll("[data-project-id]").forEach((item) => {
         item.addEventListener("click", (event) => {
           if (event.target.closest("button, .color-palette")) return;
-          switchProject(item.dataset.projectId);
+          clearTimeout(projectSwitchClickTimer);
+          projectSwitchClickTimer = setTimeout(() => switchProject(item.dataset.projectId), 300);
         });
-        item.addEventListener("contextmenu", (event) => {
+        const openProjectItemMenu = (event) => {
           event.preventDefault();
+          event.stopPropagation();
+          clearTimeout(projectSwitchClickTimer);
+          if (event.target.closest("button, .color-palette")) return;
           activeProjectMenuId = item.dataset.projectId;
           projectDeleteArmed = false;
           projectMenu.classList.remove("confirming");
           projectMenu.style.left = `${event.clientX}px`;
           projectMenu.style.top = `${event.clientY}px`;
           projectMenu.classList.add("open");
-        });
+        };
+        item.addEventListener("contextmenu", openProjectItemMenu);
+        item.addEventListener("dblclick", openProjectItemMenu);
       });
       projectList.querySelectorAll("[data-project-color]").forEach((button) => {
         button.addEventListener("click", (event) => {
@@ -13120,12 +13122,12 @@
       scheduleCanvasSave();
     }, { passive: false });
 
-    canvasWrap.addEventListener("contextmenu", (event) => {
+    const openCanvasContextMenu = (event) => {
       if (boxSelectState) {
         event.preventDefault();
         return;
       }
-      if (suppressNextContextMenu) {
+      if (event.type === "contextmenu" && suppressNextContextMenu) {
         event.preventDefault();
         suppressNextContextMenu = false;
         return;
@@ -13135,7 +13137,9 @@
       contextMenuWorld = screenToWorld(event.clientX, event.clientY);
       positionCanvasOverlay(contextMenu, event.clientX, event.clientY);
       contextMenu.classList.add("open");
-    });
+    };
+    canvasWrap.addEventListener("contextmenu", openCanvasContextMenu);
+    canvasWrap.addEventListener("dblclick", openCanvasContextMenu);
 
     window.addEventListener("click", (event) => {
       if (suppressMenuCloseOnce) return;
@@ -13169,30 +13173,6 @@
       nodes = nodes.filter((node) => node.id !== id);
       links = links.filter((link) => link.from !== id && link.to !== id);
       render();
-    }
-
-    function promptUploadForNode(id) {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*,video/*";
-      input.addEventListener("change", async () => {
-        const file = input.files[0];
-        if (!file) return;
-        const node = nodes.find((item) => item.id === id);
-        if (!node) return;
-        if ((node.type === "png" || node.type === "outpaint" || node.type === "upscale") && isImageFile(file)) {
-          await replaceFilesInNode(node, [file]);
-          node.ratio = "Auto自适应";
-        } else if (node.type === "image" && isImageFile(file)) {
-          await addFilesToNode(node, [file]);
-        } else {
-          node.mediaUrl = file.type.startsWith("image") ? await compressImageFileToDataUrl(file) : await readFileAsDataUrl(file);
-          node.mediaType = file.type.startsWith("video") ? "video" : "image";
-        }
-        node.status = "素材已上传。";
-        render();
-      });
-      input.click();
     }
 
     function readFileAsDataUrl(file) {
@@ -18412,6 +18392,9 @@ ${formatInstruction}`;
       saveDeletedResults();
     }
 
+    let galleryCardClickTimer = 0;
+    let favoriteCardClickTimer = 0;
+
     function openGallery(mode = "image") {
       galleryMode = mode;
       galleryTab = "canvas";
@@ -18427,11 +18410,13 @@ ${formatInstruction}`;
     }
 
     function closeGallery() {
+      clearTimeout(galleryCardClickTimer);
       galleryOverlay.classList.remove("open");
       galleryMenu.classList.remove("open");
     }
 
     function renderGallery() {
+      clearTimeout(galleryCardClickTimer);
       const sizeMap = { small: 130, medium: 190, large: 280 };
       galleryGrid.style.setProperty("--gallery-card", `${sizeMap[gallerySize] || 190}px`);
       loadDeletedResults();
@@ -18479,10 +18464,12 @@ ${formatInstruction}`;
     }
 
     function closeFavorites() {
+      clearTimeout(favoriteCardClickTimer);
       favoriteOverlay.classList.remove("open");
     }
 
     function renderFavorites() {
+      clearTimeout(favoriteCardClickTimer);
       const items = favoriteNodes();
       favoriteOverlay.querySelectorAll("[data-favorite-tab]").forEach((button) => {
         button.classList.toggle("active", button.dataset.favoriteTab === favoriteMode);
@@ -18776,6 +18763,7 @@ ${formatInstruction}`;
     });
     window.addEventListener("storage", (event) => {
       if (event.key === globalThemeStorageKey) applyGlobalTheme(event.newValue || "light");
+      if (event.key === homeProjectListStorageKey) updateCurrentFolderName();
     });
     openGalleryButton.addEventListener("click", () => openGallery("image"));
     openVideoGalleryButton.addEventListener("click", () => openGallery("video"));
@@ -18828,11 +18816,7 @@ ${formatInstruction}`;
         renderFavorites();
       });
     });
-    favoriteGrid.addEventListener("click", (event) => {
-      const imageCard = event.target.closest("[data-fav-image]");
-      if (imageCard) return openLightbox(imageCard.dataset.favImage, { mode: "image" });
-      const card = event.target.closest("[data-fav-node]");
-      if (!card) return;
+    function openFavoriteCard(card) {
       const node = nodes.find((item) => item.id === card.dataset.favNode);
       if (!node) return;
       if (favoriteMode === "text" || node.mediaType === "text" || node.type === "keyword") {
@@ -18841,11 +18825,20 @@ ${formatInstruction}`;
         return;
       }
       openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id });
+    }
+    favoriteGrid.addEventListener("click", (event) => {
+      const imageCard = event.target.closest("[data-fav-image]");
+      if (imageCard) return openLightbox(imageCard.dataset.favImage, { mode: "image" });
+      const card = event.target.closest("[data-fav-node]");
+      if (!card) return;
+      clearTimeout(favoriteCardClickTimer);
+      favoriteCardClickTimer = setTimeout(() => openFavoriteCard(card), 300);
     });
-    favoriteGrid.addEventListener("contextmenu", (event) => {
+    const openFavoriteCardMenu = (event) => {
       const card = event.target.closest("[data-fav-node]");
       if (!card) return;
       event.preventDefault();
+      clearTimeout(favoriteCardClickTimer);
       activeGalleryNodeId = card.dataset.favNode;
       const node = galleryNode();
       activeGalleryMenuMode = favoriteMode;
@@ -18855,7 +18848,9 @@ ${formatInstruction}`;
       galleryMenu.style.left = `${event.clientX}px`;
       galleryMenu.style.top = `${event.clientY}px`;
       galleryMenu.classList.add("open");
-    });
+    };
+    favoriteGrid.addEventListener("contextmenu", openFavoriteCardMenu);
+    favoriteGrid.addEventListener("dblclick", openFavoriteCardMenu);
     closeGalleryButton.addEventListener("click", closeGallery);
     galleryOverlay.addEventListener("click", (event) => {
       if (event.target === galleryOverlay) closeGallery();
@@ -18876,13 +18871,17 @@ ${formatInstruction}`;
     galleryGrid.addEventListener("click", (event) => {
       const card = event.target.closest("[data-gallery-node]");
       if (!card) return;
-      const node = findGalleryNode(card.dataset.galleryNode);
-      if (node) openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id });
+      clearTimeout(galleryCardClickTimer);
+      galleryCardClickTimer = setTimeout(() => {
+        const node = findGalleryNode(card.dataset.galleryNode);
+        if (node) openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id });
+      }, 300);
     });
-    galleryGrid.addEventListener("contextmenu", (event) => {
+    const openGalleryCardMenu = (event) => {
       const card = event.target.closest("[data-gallery-node]");
       if (!card) return;
       event.preventDefault();
+      clearTimeout(galleryCardClickTimer);
       activeGalleryNodeId = card.dataset.galleryNode;
       activeGalleryMenuMode = "gallery";
       galleryMenu.classList.remove("prompt-menu");
@@ -18890,7 +18889,9 @@ ${formatInstruction}`;
       galleryMenu.style.left = `${event.clientX}px`;
       galleryMenu.style.top = `${event.clientY}px`;
       galleryMenu.classList.add("open");
-    });
+    };
+    galleryGrid.addEventListener("contextmenu", openGalleryCardMenu);
+    galleryGrid.addEventListener("dblclick", openGalleryCardMenu);
     galleryMenu.querySelectorAll("[data-gallery-action]").forEach((button) => {
       button.addEventListener("click", async () => {
         const node = galleryNode();
@@ -19012,7 +19013,7 @@ ${formatInstruction}`;
       closeLightboxImageMenu();
       if (resultId) regenerateResultNode(resultId);
     });
-    lightboxImage.addEventListener("contextmenu", (event) => {
+    const openLightboxImageMenu = (event) => {
       if (!activeLightbox.src || activeLightbox.mode === "prompt") return;
       event.preventDefault();
       event.stopPropagation();
@@ -19025,7 +19026,9 @@ ${formatInstruction}`;
       lightboxImageMenu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8))}px`;
       lightboxImageMenu.classList.add("open");
       setLightboxImageMenuHot(lightboxContextCopy);
-    });
+    };
+    lightboxImage.addEventListener("contextmenu", openLightboxImageMenu);
+    lightboxImage.addEventListener("dblclick", openLightboxImageMenu);
     lightboxImageMenu.querySelectorAll("button").forEach((button) => {
       button.addEventListener("pointerenter", () => setLightboxImageMenuHot(button));
     });
@@ -19184,10 +19187,8 @@ ${formatInstruction}`;
     contextMenu.querySelectorAll("[data-menu-node]").forEach((button) => {
       button.addEventListener("pointerdown", (event) => event.stopPropagation());
       button.addEventListener("click", () => {
-        const type = button.dataset.menuNode;
-        const node = createNode(type === "image-upload" ? "image" : type, contextMenuWorld.x, contextMenuWorld.y);
+        createNode(button.dataset.menuNode, contextMenuWorld.x, contextMenuWorld.y);
         contextMenu.classList.remove("open");
-        if (type === "image-upload") promptUploadForNode(node.id);
       });
     });
     linkCreateMenu.querySelectorAll("[data-link-create]").forEach((button) => {

@@ -1,6 +1,9 @@
 name: Build portable folder release
 
 on:
+  push:
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       version:
@@ -100,7 +103,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：新增智能分层 PSD 节点；优化扩图画布、上传与预览，增加透明背景选项；修复扩图结果硬贴原图形成矩形接缝的问题，并在接口未保留原图或比例不符时提示检查；改进图片接口取消、结果识别及生成状态反馈。"
+            notes = "v${env:VERSION}：画布菜单支持左键双击；项目文件夹名称同步显示在桌面标签；精简顶部图标和重复的上传图片菜单项。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
@@ -109,19 +112,26 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $notesFile = "docs\release-v$env:VERSION.md"
           gh release view $env:TAG *> $null
           if ($LASTEXITCODE -eq 0) {
             gh release edit $env:TAG --title "豌豆AI工具 v$env:VERSION"
+            if (Test-Path -LiteralPath $notesFile) { gh release edit $env:TAG --notes-file $notesFile }
             gh release upload $env:TAG `
               "dist\wandou-ai-tools-windows-x64.zip" `
               "dist\wandou-ai-tools-windows-x64.zip.sha256" `
               "dist\update-manifest.json" `
               --clobber
           } else {
-            gh release create $env:TAG `
-              "dist\wandou-ai-tools-windows-x64.zip" `
-              "dist\wandou-ai-tools-windows-x64.zip.sha256" `
-              "dist\update-manifest.json" `
-              --title "豌豆AI工具 v$env:VERSION" `
-              --generate-notes
+            $releaseArgs = @(
+              $env:TAG,
+              "dist\wandou-ai-tools-windows-x64.zip",
+              "dist\wandou-ai-tools-windows-x64.zip.sha256",
+              "dist\update-manifest.json",
+              "--title", "豌豆AI工具 v$env:VERSION"
+            )
+            if (Test-Path -LiteralPath $notesFile) { $releaseArgs += @("--notes-file", $notesFile) }
+            else { $releaseArgs += "--generate-notes" }
+            gh release create @releaseArgs
           }
+          if ($LASTEXITCODE -ne 0) { throw "GitHub Release publication failed: $env:TAG" }

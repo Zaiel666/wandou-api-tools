@@ -65,12 +65,11 @@ button { font: inherit; }
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
   width: fit-content;
   min-width: 0;
   flex: 0 0 auto;
   height: 36px;
-  padding: 0 12px 0 7px;
+  padding: 0 12px;
   color: var(--text);
   background: transparent;
   border: 0;
@@ -81,13 +80,6 @@ button { font: inherit; }
 }
 .brand:hover { background: var(--surface-muted); }
 .brand.active { background: var(--tab-active); }
-.brand img {
-  width: 25px;
-  height: 25px;
-  object-fit: contain;
-  filter: drop-shadow(0 3px 7px rgba(53, 200, 47, .16));
-}
-
 .tab.home-tab { display: none; }
 
 .tab-list {
@@ -130,22 +122,7 @@ button { font: inherit; }
   color: var(--text);
   background: var(--tab-active);
 }
-.tab.suspended:not(.active) .tab-icon {
-  opacity: .55;
-}
 .tab:active { transform: translateY(1px); }
-.tab-icon {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  flex: none;
-  color: #839087;
-  font-size: 10px;
-  line-height: 1;
-  border-radius: 6px;
-}
-.tab.active .tab-icon { color: #fff; background: var(--brand-deep); }
 .tab-label {
   min-width: 0;
   overflow: hidden;
@@ -458,8 +435,8 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 @media (max-width: 1120px) {
   .desktop-bar { gap: 5px; }
-  .brand span, .version-text { display: none; }
-  .brand { min-width: 38px; width: 38px; padding: 0 6px; }
+  .version-text { display: none; }
+  .brand { padding: 0 9px; }
   .tab-list { max-width: 54vw; }
   .tab { min-width: 102px; max-width: 160px; }
 }

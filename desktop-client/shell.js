@@ -8,7 +8,6 @@ const $ = (id) => document.getElementById(id);
 const tabList = $("tabList");
 const views = $("views");
 const brandButton = $("brandButton");
-const brandLogo = $("brandLogo");
 const brandText = $("brandText");
 const backButton = $("backButton");
 const forwardButton = $("forwardButton");
@@ -28,7 +27,6 @@ const closeDialogCancel = $("closeDialogCancel");
 const closeDialogConfirm = $("closeDialogConfirm");
 const desktopToast = $("desktopToast");
 
-brandLogo.src = new URL("./logo.png", homeUrl).href;
 versionText.textContent = version ? `v${version}` : "";
 
 const tabs = new Map();
@@ -130,12 +128,6 @@ function createTabButton(tab, closable) {
   button.dataset.tabId = tab.id;
   button.setAttribute("role", "tab");
 
-  const icon = document.createElement("span");
-  icon.className = "tab-icon";
-  icon.setAttribute("aria-hidden", "true");
-  icon.textContent = tab.pinned ? "●" : "○";
-  button.append(icon);
-
   const label = document.createElement("span");
   label.className = "tab-label";
   label.textContent = tab.title;
@@ -163,6 +155,10 @@ function openTab({ url, title = "新标签页", pinned = false }) {
   const targetUrl = normalizedUrl(url);
   const existing = [...tabs.values()].find((tab) => tab.url === targetUrl);
   if (existing) {
+    if (title && existing.title !== title) {
+      existing.title = title;
+      existing.button.querySelector(".tab-label").textContent = title;
+    }
     activateTab(existing.id);
     return existing;
   }
@@ -206,7 +202,8 @@ function openTab({ url, title = "新标签页", pinned = false }) {
     updateNavigation();
   });
   view.addEventListener("page-title-updated", (event) => {
-    if (tab.title === "新标签页" || tab.title === "豌豆AI") {
+    const isCanvasTab = /ai-node-canvas\.html(?:[?#]|$)/i.test(tab.url);
+    if (tab.title === "新标签页" || tab.title === "豌豆AI" || (isCanvasTab && event.title && event.title !== "豌豆AI节点画布")) {
       tab.title = event.title || tab.title;
       tab.button.querySelector(".tab-label").textContent = tab.title;
     }

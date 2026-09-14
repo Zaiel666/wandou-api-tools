@@ -947,10 +947,12 @@
     }
 
     function openProject(projectId) {
+      const project = projects.find((item) => item.id === projectId);
+      if (!project) return;
       activeProjectId = projectId;
       safeLocalSet(activeProjectStorageKey, projectId);
       void saveProjects({ silent: true });
-      openNamedTab(canvasUrl(projectId), "豌豆AI节点画布");
+      openNamedTab(canvasUrl(projectId), project.name);
     }
 
     function editName(projectId) {
