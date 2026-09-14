@@ -278,7 +278,8 @@ const { chromium } = require("playwright");
       const generated = document.createElement('canvas'); generated.width = 200; generated.height = 120;
       const generatedContext = generated.getContext('2d');
       generatedContext.fillStyle = '#277da1'; generatedContext.fillRect(0,0,200,120);
-      const composedUrl = await composeOutpaintImage(generated.toDataURL('image/png'), reference, frame.size, 'horizontal', 50, custom);
+      const compositionInfo = {};
+      const composedUrl = await composeOutpaintImage(generated.toDataURL('image/png'), reference, frame.size, 'horizontal', 50, custom, compositionInfo);
       const composed = new Image(); composed.src = composedUrl; await composed.decode();
       ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(composed,0,0);
       const composedOutside = Array.from(ctx.getImageData(10,60,1,1).data);
@@ -288,7 +289,7 @@ const { chromium } = require("playwright");
       const alphaUrl = await composeOutpaintImage(generated.toDataURL('image/png'), reference, frame.size, 'horizontal', 50, custom);
       const alphaImage = new Image(); alphaImage.src = alphaUrl; await alphaImage.decode();
       ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(alphaImage,0,0);
-      return { frame, outside, inside, maskOutside, maskInside,
+      return { frame, outside, inside, maskOutside, maskInside, compositionInfo,
         composedOutside, composedInside,
         transparentOutside:Array.from(ctx.getImageData(10,10,1,1).data), extendedSubject:Array.from(ctx.getImageData(25,60,1,1).data) };
     });
@@ -298,7 +299,8 @@ const { chromium } = require("playwright");
     assert.equal(customGuide.maskOutside[3],0);
     assert.equal(customGuide.maskInside[3],255);
     assert.ok(customGuide.composedOutside[2] > 100 && customGuide.composedOutside[0] < 100);
-    assert.ok(customGuide.composedInside[0] > 200 && customGuide.composedInside[2] < 100);
+    assert.equal(customGuide.compositionInfo.sourcePreserved, false, 'a gateway that redraws the source must be detected');
+    assert.ok(customGuide.composedInside[2] > 100 && customGuide.composedInside[0] < 100, 'a redrawn source must not be pasted back as a hard rectangle');
     assert.equal(customGuide.transparentOutside[3], 0, 'transparent expansion must retain real alpha outside the new subject');
     assert.equal(customGuide.extendedSubject[3], 255, 'new content can remain opaque within an otherwise transparent extension');
 
@@ -314,12 +316,15 @@ const { chromium } = require("playwright");
       };
       const original = makeImage(100, 80, "#ef233c");
       const generated = makeImage(150, 80, "#277da1");
+      const mismatchInfo = {};
       const composed = await composeOutpaintImage(
         generated,
         { url: original, width: 100, height: 80 },
         "150x80",
         "horizontal",
         50,
+        null,
+        mismatchInfo,
       );
       const image = new Image();
       image.src = composed;
@@ -330,9 +335,23 @@ const { chromium } = require("playwright");
       const ctx = canvas.getContext("2d");
       ctx.drawImage(image, 0, 0);
       const pixel = (x, y) => Array.from(ctx.getImageData(x, y, 1, 1).data);
+      const matching = document.createElement('canvas');
+      matching.width = 150; matching.height = 80;
+      const matchingCtx = matching.getContext('2d');
+      matchingCtx.fillStyle = '#277da1'; matchingCtx.fillRect(0, 0, 150, 80);
+      matchingCtx.fillStyle = '#ef233c'; matchingCtx.fillRect(25, 0, 100, 80);
+      const matchingInfo = {};
+      const matchingUrl = await composeOutpaintImage(matching.toDataURL('image/png'), { url: original, width:100, height:80 }, '150x80', 'horizontal', 50, null, matchingInfo);
+      const matchingImage = new Image(); matchingImage.src = matchingUrl; await matchingImage.decode();
+      ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(matchingImage, 0, 0);
+      const matchedCenter = pixel(75, 40);
+      ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(image, 0, 0);
       return {
         width: canvas.width,
         height: canvas.height,
+        mismatchInfo,
+        matchingInfo,
+        matchedCenter,
         left: pixel(5, 40),
         center: pixel(75, 40),
         right: pixel(145, 40),
@@ -341,9 +360,12 @@ const { chromium } = require("playwright");
 
     assert.deepEqual([result.width, result.height], [150, 80]);
     assert.ok(result.left[2] > 100 && result.left[0] < 100, "left extension should remain generated");
-    assert.ok(result.center[0] > 200 && result.center[2] < 100, "center should restore original pixels");
+    assert.equal(result.mismatchInfo.sourcePreserved, false);
+    assert.ok(result.center[2] > 100 && result.center[0] < 100, "a redrawn center should stay in the seamless generated image");
+    assert.equal(result.matchingInfo.sourcePreserved, true);
+    assert.ok(result.matchedCenter[0] > 200 && result.matchedCenter[2] < 100, "a matching center should retain exact original pixels");
     assert.ok(result.right[2] > 100 && result.right[0] < 100, "right extension should remain generated");
-    console.log("PASS: outpaint preserves original pixels and only keeps generated extensions");
+    console.log("PASS: outpaint preserves matching originals and avoids pasting redrawn sources");
   } finally {
     await browser.close();
   }
