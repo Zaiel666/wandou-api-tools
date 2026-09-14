@@ -100,7 +100,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：完善节点画布的参考图、效果图、模型选择和对话模式交互。参考图支持更大的自适应预览、空白处拖动画布及四角缩放；统一绿色图标、选中描边和生成按钮样式；增加仅 GPT 模型可用的透明背景开关并输出 PNG；优化图片右键菜单、模型品牌图标、对话默认引导与节点紧凑布局；同时完善个人 Skill 的刷新、导入和目录管理。"
+            notes = "v${env:VERSION}：新增智能分层 PSD 节点；优化扩图画布、上传与预览，增加透明背景选项；修复扩图结果硬贴原图形成矩形接缝的问题，并在接口未保留原图或比例不符时提示检查；改进图片接口取消、结果识别及生成状态反馈。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

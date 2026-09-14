@@ -75,4 +75,31 @@ test("透明背景开关和兼容关键词都生成真实 Alpha PNG 请求", asy
   await toggle.click();
   assert.equal(await generator.locator("[data-transparent-background-toggle]").getAttribute("aria-checked"), "true");
   assert.equal(await generator.evaluate((element) => nodes.find((item) => item.id === element.dataset.id).transparentBackground), true);
+
+  await page.locator('[data-add-node="png"]').click();
+  const pngNode = page.locator('.node.png').last();
+  assert.equal(await pngNode.locator('[data-transparent-background-toggle]').getAttribute('aria-checked'), 'true');
+  await pngNode.locator('[data-transparent-background-toggle]').click();
+  assert.equal(await page.locator('.node.png').last().locator('[data-transparent-background-toggle]').getAttribute('aria-checked'), 'false');
+  assert.equal(await page.locator('.node.png').last().locator('[data-generate]').innerText(), '生成图片');
+  const pngRequests = await page.evaluate(async () => {
+    const node = nodes.filter((item) => item.type === 'png').at(-1);
+    const canvas = document.createElement('canvas'); canvas.width = 100; canvas.height = 80;
+    canvas.getContext('2d').fillRect(0,0,100,80);
+    const reference = [{ url:canvas.toDataURL('image/png'), width:100, height:80 }];
+    const ordinary = await buildApiRequest({ ...node, _apiTargetSize:'100x80' }, reference);
+    const transparent = await buildApiRequest({ ...node, transparentBackground:true, prompt:'抠出主体', _apiTargetSize:'100x80' }, reference);
+    const translucent = document.createElement('canvas'); translucent.width = 100; translucent.height = 80;
+    translucent.getContext('2d').fillStyle = 'rgba(19,170,114,.5)';
+    translucent.getContext('2d').fillRect(0,0,100,80);
+    const opaqueUrl = await normalizeGeneratedImage(translucent.toDataURL('image/png'), '100x80', false);
+    const opaqueImage = new Image(); opaqueImage.src = opaqueUrl; await opaqueImage.decode();
+    const output = document.createElement('canvas'); output.width = 100; output.height = 80;
+    const outputContext = output.getContext('2d'); outputContext.drawImage(opaqueImage,0,0);
+    return { ordinaryBackground:ordinary.body.get('background'), ordinaryPrompt:ordinary.body.get('prompt'), transparentBackground:transparent.body.get('background'), opaqueAlpha:outputContext.getImageData(10,10,1,1).data[3] };
+  });
+  assert.equal(pngRequests.ordinaryBackground, null);
+  assert.match(pngRequests.ordinaryPrompt, /普通不透明图片/);
+  assert.equal(pngRequests.transparentBackground, 'transparent');
+  assert.equal(pngRequests.opaqueAlpha, 255);
 });

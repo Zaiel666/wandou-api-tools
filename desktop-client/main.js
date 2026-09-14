@@ -1082,6 +1082,7 @@ ipcMain.on("desktop:open-tab", (_event, payload = {}) => {
   }
   if (isSafeHttpsUrl(payload.url)) shell.openExternal(payload.url);
 });
+const activeCanvasApiRequests = new Map();
 ipcMain.handle("desktop:api-fetch", async (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) throw new Error("仅本地工具页面可以调用 API 请求");
   const url = String(payload.url || "");
@@ -1090,20 +1091,35 @@ ipcMain.handle("desktop:api-fetch", async (event, payload = {}) => {
   const request = payload.request || {};
   const method = String(request.method || "GET").toUpperCase();
   if (!/^(GET|POST)$/.test(method)) throw new Error("不支持的 API 请求方法");
-  const response = await net.fetch(url, {
-    method,
-    headers: apiRequestHeaders(request.headers),
-    body: apiRequestBody(request)
-  });
-  const bytes = Buffer.from(await response.arrayBuffer());
-  if (bytes.length > MAX_DESKTOP_API_RESPONSE_BYTES) throw new Error("接口响应超过 32 MB，无法传回页面");
-  return {
-    ok: response.ok,
-    status: response.status,
-    statusText: response.statusText,
-    headers: [...response.headers.entries()],
-    bodyBase64: bytes.toString("base64")
-  };
+  const requestId = String(payload.requestId || "");
+  const requestKey = requestId ? `${event.sender.id}:${requestId}` : "";
+  const controller = new AbortController();
+  if (requestKey) activeCanvasApiRequests.set(requestKey, controller);
+  try {
+    const response = await net.fetch(url, {
+      method,
+      headers: apiRequestHeaders(request.headers),
+      body: apiRequestBody(request),
+      signal: controller.signal
+    });
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length > MAX_DESKTOP_API_RESPONSE_BYTES) throw new Error("接口响应超过 32 MB，无法传回页面");
+    return {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      headers: [...response.headers.entries()],
+      bodyBase64: bytes.toString("base64")
+    };
+  } finally {
+    if (requestKey && activeCanvasApiRequests.get(requestKey) === controller) activeCanvasApiRequests.delete(requestKey);
+  }
+});
+ipcMain.on("desktop:api-fetch-cancel", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return;
+  const requestId = String(payload.requestId || "");
+  if (!requestId) return;
+  activeCanvasApiRequests.get(`${event.sender.id}:${requestId}`)?.abort();
 });
 ipcMain.on("desktop:set-theme", (_event, theme) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;

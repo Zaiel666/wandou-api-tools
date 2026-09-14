@@ -25,9 +25,13 @@ test("workflow empty-state copy is centered", () => {
   assert.match(html, /reference-empty-visual workflow-empty-visual/);
 });
 
-test("outpaint restores the source image over the generated canvas", () => {
+test("outpaint blends the original interior over the generated canvas", () => {
   assert.match(html, /function composeOutpaintImage\(/);
-  assert.match(html, /ctx\.drawImage\(\s*original\.image,/);
+  assert.match(html, /sourceCtx\.drawImage\(original\.image,/);
+  assert.match(html, /fadeOutpaintOriginalEdges\(sourceCtx, placement, expected, placement\.x, placement\.y\)/);
+  assert.match(html, /ctx\.drawImage\(sourceLayer, placement\.x, placement\.y\)/);
+  assert.match(html, /if \(outpaintGeneratedSourceMismatch\(generated\.image, original\.image, placement, expected\)\)/);
+  assert.match(html, /outpaintComposition\.sourcePreserved === false/);
   assert.match(html, /sourceNode\.type === "outpaint"/);
   assert.match(html, /outpaintPromptFor\(node, targetSize/);
 });

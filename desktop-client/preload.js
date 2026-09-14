@@ -6,7 +6,8 @@ contextBridge.exposeInMainWorld("wandouDesktopTabs", {
 
 // API 请求在主进程中执行，避免 file:// 页面被 Chromium 的 CORS 策略拦截。
 contextBridge.exposeInMainWorld("wandouDesktopApi", {
-  fetch: (url, request) => ipcRenderer.invoke("desktop:api-fetch", { url, request })
+  fetch: (url, request, requestId) => ipcRenderer.invoke("desktop:api-fetch", { url, request, requestId }),
+  cancel: (requestId) => ipcRenderer.send("desktop:api-fetch-cancel", { requestId })
 });
 
 contextBridge.exposeInMainWorld("wandouShell", {

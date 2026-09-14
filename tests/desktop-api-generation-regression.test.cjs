@@ -9,7 +9,10 @@ const canvas = fs.readFileSync(path.join(root, "app", "ai-node-canvas.html"), "u
 
 assert.match(preload, /wandouDesktopApi/);
 assert.match(preload, /ipcRenderer\.invoke\("desktop:api-fetch"/);
+assert.match(preload, /desktop:api-fetch-cancel/);
 assert.match(main, /ipcMain\.handle\("desktop:api-fetch"/);
+assert.match(main, /ipcMain\.on\("desktop:api-fetch-cancel"/);
+assert.match(main, /signal:\s*controller\.signal/);
 assert.match(main, /isLocalAppPage\(event\.senderFrame\?\.url/);
 assert.match(main, /isAllowedCanvasApiUrl\(url\)/);
 assert.match(main, /MAX_DESKTOP_API_RESPONSE_BYTES/);

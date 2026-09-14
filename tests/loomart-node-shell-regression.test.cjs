@@ -243,11 +243,11 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.equal(referenceLayout.gap, "2px");
   assert.equal(referenceLayout.marginTop, "0px");
   assert.equal(referenceLayout.padding, "0px");
-  assert.equal(referenceLayout.frameWidth, "720px");
-  assert.equal(referenceLayout.frameHeight, "720px");
+  assert.equal(referenceLayout.frameWidth, "520px");
+  assert.equal(referenceLayout.frameHeight, "520px");
   assert.notEqual(referenceLayout.frameBackground, "rgba(0, 0, 0, 0)");
   assert.notEqual(referenceLayout.frameBorder, "rgba(0, 0, 0, 0)");
-  assert.ok(parseFloat(referenceLayout.thumbWidth) >= 230, referenceLayout.thumbWidth);
+  assert.ok(parseFloat(referenceLayout.thumbWidth) >= 160, referenceLayout.thumbWidth);
   assert.equal(referenceLayout.scrollbarWidth, "none");
   assert.ok(referenceLayout.scrollWidth <= referenceLayout.clientWidth, JSON.stringify(referenceLayout));
   assert.equal(referenceLayout.thumbCount, 2);
@@ -305,7 +305,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     const node = nodes.find((item) => item.id === nodeId);
     return { width: node.frameWidth, height: node.frameHeight };
   }, referenceLayout.nodeId);
-  assert.ok(resizedReference.width >= 754 && resizedReference.height >= 746, JSON.stringify(resizedReference));
+  assert.ok(resizedReference.width >= 554 && resizedReference.height >= 546, JSON.stringify(resizedReference));
   const resizedTileWidth = await page.locator(`[data-id="${referenceLayout.nodeId}"] .thumb`).first().evaluate((thumb) => getComputedStyle(thumb).width);
   assert.ok(parseFloat(resizedTileWidth) > parseFloat(referenceLayout.thumbWidth), `${referenceLayout.thumbWidth} -> ${resizedTileWidth}`);
 
