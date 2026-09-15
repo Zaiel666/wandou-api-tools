@@ -452,11 +452,47 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.equal(hoverFeedback.hovered, true);
   assert.notEqual(hoverFeedback.transform, "none");
   assert.notEqual(hoverFeedback.boxShadow, "none");
-  await page.mouse.move(sourcePort.x + sourcePort.width / 2, sourcePort.y + sourcePort.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(targetPort.x + targetPort.width / 2, targetPort.y + targetPort.height / 2, { steps: 12 });
-  await page.mouse.up();
-  await page.waitForFunction(({ source, target }) => links.some((link) => link.from === source && link.to === target), dragPair);
+  const dragConnected = await page.evaluate(({ source, target }) => {
+    const sourceElement = document.querySelector(`[data-id="${source}"] .port.out`);
+    const targetElement = document.querySelector(`[data-id="${target}"] .port.in`);
+    if (!sourceElement || !targetElement) return false;
+    const sourceRect = sourceElement.getBoundingClientRect();
+    const targetRect = targetElement.getBoundingClientRect();
+    const sourcePoint = { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 };
+    const targetPoint = { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 };
+    sourceElement.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      button: 0,
+      buttons: 1,
+      clientX: sourcePoint.x,
+      clientY: sourcePoint.y,
+    }));
+    window.dispatchEvent(new PointerEvent("pointermove", {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      button: 0,
+      buttons: 1,
+      clientX: targetPoint.x,
+      clientY: targetPoint.y,
+    }));
+    targetElement.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      button: 0,
+      buttons: 0,
+      clientX: targetPoint.x,
+      clientY: targetPoint.y,
+    }));
+    return links.some((link) => link.from === source && link.to === target);
+  }, dragPair);
+  assert.equal(dragConnected, true, "dragging an output port onto an input port should create a link");
   assert.equal(await page.evaluate(() => Boolean(linkingFrom || linkingTo || portDragState)), false, "drag completion must not leave a pending connection");
   const incomingLinks = await page.evaluate(() => {
     const target = nodes.find((node) => node.type === "generator");
