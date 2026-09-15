@@ -25,6 +25,12 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     const panel = document.querySelector("#assistantPanel");
     const main = document.querySelector(".canvas-wrap");
     const toolbar = document.querySelector(".topbar-actions");
+    const toolbarItems = [...toolbar.children]
+      .filter((item) => item.matches("#zoomValue, .folder-home-control, #themeToggleButton, #autoSaveDirectoryButton, #settingsButton"))
+      .map((item) => {
+        const rect = item.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, height: rect.height, background: getComputedStyle(item).backgroundColor };
+      });
     const buttons = [...toolbar.querySelectorAll("button")].map((button) => {
       const rect = button.getBoundingClientRect();
       return { id: button.id, height: rect.height, left: rect.left, right: rect.right };
@@ -43,6 +49,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
       toolbarRightGap: main.getBoundingClientRect().right - toolbar.getBoundingClientRect().right,
       toolbarWidth: toolbar.getBoundingClientRect().width,
       toolbarHeight: toolbar.getBoundingClientRect().height,
+      toolbarItems,
       buttonHeights: buttons.map((item) => item.height),
       buttonOrder: buttons.map((item) => item.left),
     };
@@ -57,10 +64,23 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.equal(shell.panelVisible, "1");
   assert.ok(Math.abs(shell.sidebarHandleCenter - 480) < 1, JSON.stringify(shell));
   assert.ok(shell.toolbarRightGap >= 7 && shell.toolbarRightGap <= 9, JSON.stringify(shell));
-  assert.ok(Math.abs(shell.toolbarWidth - 530) < 1, JSON.stringify(shell));
-  assert.ok(Math.abs(shell.toolbarHeight - 44) < 1, JSON.stringify(shell));
-  assert.ok(shell.buttonHeights.every((height) => height >= 30 && height <= 32.1), JSON.stringify(shell.buttonHeights));
+  assert.ok(shell.toolbarWidth >= 340 && shell.toolbarWidth <= 480, JSON.stringify(shell));
+  assert.ok(Math.abs(shell.toolbarHeight - 52) < 1, JSON.stringify(shell));
+  assert.ok(shell.buttonHeights.every((height) => height >= 38 && height <= 40.1), JSON.stringify(shell.buttonHeights));
+  assert.equal(shell.toolbarItems.length, 5);
+  assert.ok(shell.toolbarItems.every((item) => item.height === 40 && item.background === "rgb(32, 33, 35)"), JSON.stringify(shell.toolbarItems));
+  assert.ok(shell.toolbarItems.slice(1).every((item, index) => Math.abs(item.left - shell.toolbarItems[index].right - 8) < 1), JSON.stringify(shell.toolbarItems));
   assert.deepEqual(shell.buttonOrder, [...shell.buttonOrder].sort((a, b) => a - b));
+  await page.setViewportSize({ width: 900, height: 700 });
+  const compactToolbar = await page.evaluate(() => ({
+    canvas: document.querySelector(".canvas-wrap").getBoundingClientRect().toJSON(),
+    zoom: document.querySelector("#zoomValue").getBoundingClientRect().toJSON(),
+    settings: document.querySelector("#settingsButton").getBoundingClientRect().toJSON(),
+  }));
+  assert.ok(compactToolbar.canvas.width >= 899, JSON.stringify(compactToolbar));
+  assert.ok(compactToolbar.zoom.left >= compactToolbar.canvas.left, JSON.stringify(compactToolbar));
+  assert.ok(compactToolbar.settings.right <= compactToolbar.canvas.right, JSON.stringify(compactToolbar));
+  await page.setViewportSize({ width: 1440, height: 960 });
   assert.equal(await page.locator("#undoButton, #redoButton").count(), 0);
   assert.equal(await page.locator("#collapseSidebarButton").isVisible(), true);
   assert.equal(await page.locator("#expandSidebarButton").isVisible(), false);
@@ -156,6 +176,25 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   });
 
   const promptField = page.locator(".node.generator .prompt-textarea").first();
+  const promptComposer = await page.locator(".node.generator .prompt-composer-shell").first().evaluate((shell) => {
+    const reference = shell.querySelector(".generator-reference-field").getBoundingClientRect();
+    const textarea = shell.querySelector(".prompt-textarea").getBoundingClientRect();
+    const footer = shell.querySelector(".prompt-composer-footer").getBoundingClientRect();
+    const shellStyle = getComputedStyle(shell);
+    const buttons = [...shell.querySelectorAll(".prompt-corner-button")];
+    return {
+      referenceTop: reference.top,
+      textareaTop: textarea.top,
+      footerTop: footer.top,
+      radius: shellStyle.borderRadius,
+      buttonLabels: buttons.map((button) => button.getAttribute("aria-label")),
+      buttonDisplays: buttons.map((button) => getComputedStyle(button).display),
+    };
+  });
+  assert.ok(promptComposer.referenceTop < promptComposer.textareaTop && promptComposer.textareaTop < promptComposer.footerTop, JSON.stringify(promptComposer));
+  assert.equal(promptComposer.radius, "15px");
+  assert.deepEqual(promptComposer.buttonLabels, ["Skill 工具", "提示词管理", "AI 修改提示词"]);
+  assert.ok(promptComposer.buttonDisplays.every((display) => display === "grid"), JSON.stringify(promptComposer));
   await promptField.fill(`${await promptField.inputValue()} 测试优化入口`);
   await page.waitForTimeout(800);
   assert.equal(await page.locator(".node.generator [data-prompt-optimize-nudge]").count(), 0, "the redundant prompt optimization nudge should stay removed");

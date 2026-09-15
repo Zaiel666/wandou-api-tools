@@ -32,7 +32,10 @@ assert.match(styles, /\.prompt-corner-button svg[^}]*stroke-width:\s*1\.35/s,
   "the three prompt action icons should use a refined thin stroke");
 assert.match(source, /\[data-prompt-library\][\s\S]*togglePromptLibrary\(node\.id\)/,
   "the prompt library trigger should use toggle behavior");
-assert.match(source, /function togglePromptLibrary\(nodeId\)[\s\S]*isCurrentPanelOpen[\s\S]*closePromptLibrary\(\)[\s\S]*openPromptLibrary\(nodeId\)/,
-  "clicking the same prompt library button again should close its panel");
+assert.match(source, /function togglePromptLibrary\(nodeId\)[\s\S]*isCurrentPanelOpen[\s\S]*closePromptManager\(\)[\s\S]*openPromptManager\(nodeId\)/,
+  "clicking the same prompt library button again should close the full prompt manager");
+assert.match(source, /prompt-library-sources\.js/, "the open-source prompt registry should load before the canvas application");
+assert.match(source, /prompt-source-button[\s\S]*prompt-card-cover[\s\S]*prompt-card-tags/,
+  "the prompt manager should render source filters and visual prompt cards");
 
 console.log("PASS: node typography uses two crisp Source Han Sans weights and prompt/result controls stay legible");
