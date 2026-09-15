@@ -30,6 +30,14 @@ const { chromium } = require("playwright");
 
     const homePage = await context.newPage();
     await homePage.goto(pathToFileURL(path.resolve(__dirname, "../app/index.html")).href);
+    await homePage.locator("[data-api-open]").click();
+    await homePage.locator("[data-api-key]").fill("channel-one-secret");
+    const homeVisibility = homePage.locator('[data-api-key-visibility="channel-1"]');
+    await homeVisibility.click();
+    assert.equal(await homePage.locator("[data-api-key]").getAttribute("type"), "text");
+    assert.equal(await homeVisibility.getAttribute("aria-pressed"), "true");
+    await homeVisibility.click();
+    assert.equal(await homePage.locator("[data-api-key]").getAttribute("type"), "password");
     const neutralUi = await homePage.evaluate(() => {
       const modal = document.querySelector(".api-modal");
       modal.hidden = false;

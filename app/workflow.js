@@ -17,10 +17,11 @@ function readApiConfig() {
     return {
       url: defaultApiBaseUrl(),
       key: config.key || "",
+      key2: config.key2 || "",
       savedAt: config.savedAt || ""
     };
   } catch {
-    return { url: defaultApiBaseUrl(), key: "" };
+    return { url: defaultApiBaseUrl(), key: "", key2: "" };
   }
 }
 
@@ -273,34 +274,74 @@ window.addEventListener("pagehide", () => {
 const apiModal = document.querySelector("[data-api-modal]");
 const apiForm = document.querySelector("[data-api-form]");
 const apiKeyInput = document.querySelector("[data-api-key]");
+const apiKey2Input = document.querySelector("[data-api-key-2]");
 
 function fillApiForm() {
   const config = readApiConfig();
   if (apiKeyInput) apiKeyInput.value = config.key || "";
+  if (apiKey2Input) apiKey2Input.value = config.key2 || "";
 }
 
 function openApiModal() {
   if (!apiModal) return;
   fillApiForm();
+  resetApiKeyVisibility();
   apiModal.hidden = false;
 }
 
 function closeApiModal() {
   if (apiModal) apiModal.hidden = true;
+  resetApiKeyVisibility();
 }
+
+function resetApiKeyVisibility() {
+  document.querySelectorAll("[data-api-key-visibility]").forEach((button) => {
+    const input = button.dataset.apiKeyVisibility === "channel-2" ? apiKey2Input : apiKeyInput;
+    if (input) input.type = "password";
+    button.setAttribute("aria-pressed", "false");
+    const channel = button.dataset.apiKeyVisibility === "channel-2" ? "渠道 2" : "渠道 1";
+    button.setAttribute("aria-label", `显示${channel}密钥`);
+    button.title = "显示密钥";
+  });
+}
+
+document.querySelectorAll("[data-api-key-visibility]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const input = button.dataset.apiKeyVisibility === "channel-2" ? apiKey2Input : apiKeyInput;
+    if (!input) return;
+    const visible = input.type === "password";
+    input.type = visible ? "text" : "password";
+    button.setAttribute("aria-pressed", String(visible));
+    const channel = button.dataset.apiKeyVisibility === "channel-2" ? "渠道 2" : "渠道 1";
+    button.setAttribute("aria-label", `${visible ? "隐藏" : "显示"}${channel}密钥`);
+    button.title = visible ? "隐藏密钥" : "显示密钥";
+    input.focus({ preventScroll: true });
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
+});
 
 document.querySelector("[data-api-open]")?.addEventListener("click", openApiModal);
 document.querySelector("[data-api-close]")?.addEventListener("click", closeApiModal);
 apiForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   const key = apiKeyInput?.value.trim() || "";
+  const key2 = apiKey2Input?.value.trim() || "";
+  if (!key) {
+    apiKeyInput?.focus();
+    showToast("请先填写渠道 1 API 密钥");
+    return;
+  }
   localStorage.setItem(apiStorageKey, JSON.stringify({
     key,
+    key2,
     savedAt: new Date().toISOString()
   }));
   localStorage.setItem("aiCanvasApi", JSON.stringify({
     url: defaultApiBaseUrl(),
-    key
+    key,
+    key2
   }));
   closeApiModal();
   showToast("API 设置已保存");

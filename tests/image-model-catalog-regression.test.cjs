@@ -128,3 +128,79 @@ test("节点画布从 API 模型接口同步并只显示绘图模型", async (t)
     "gemini-3.1-flash-lite-image",
   ]);
 });
+
+test("两个 API 渠道独立识别同名模型并按节点选择使用对应密钥", async (t) => {
+  const browser = await chromium.launch({ headless: true, executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
+  const generationAuthorizations = [];
+  await page.addInitScript(() => localStorage.setItem("ai-tools-api-config", JSON.stringify({
+    key: "channel-one-key",
+    key2: "channel-two-key",
+  })));
+  await page.route("https://www.zayapi.top/v1/models", (route) => {
+    const authorization = route.request().headers().authorization || "";
+    const models = authorization === "Bearer channel-two-key"
+      ? ["gpt-image-2", "gpt-image-4k-official"]
+      : ["gpt-image-2", "gpt-image-2.5-1k", "gpt-6-astra"];
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: models.map((id) => ({ id })) }),
+    });
+  });
+  await page.route("https://www.zayapi.top/v1/images/generations", (route) => {
+    generationAuthorizations.push(route.request().headers().authorization || "");
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: [{ url: "https://example.test/channel-two-result.png" }] }),
+    });
+  });
+  await page.goto(pathToFileURL(canvasPath).href);
+  await page.waitForFunction(() => document.body.dataset.canvasReady === "true");
+
+  await page.locator("#settingsButton").click();
+  assert.equal(await page.locator("#apiKey").inputValue(), "channel-one-key");
+  assert.equal(await page.locator("#apiKey2").inputValue(), "channel-two-key");
+  assert.equal(await page.locator("#apiChannelOneTitle").textContent(), "渠道 1 必填");
+  assert.equal(await page.locator("#apiChannelTwoTitle").textContent(), "渠道 2 选填");
+  const channelTwoVisibility = page.locator('[data-api-key-visibility="apiKey2"]');
+  await channelTwoVisibility.click();
+  assert.equal(await page.locator("#apiKey2").getAttribute("type"), "text");
+  assert.equal(await channelTwoVisibility.getAttribute("aria-pressed"), "true");
+  await channelTwoVisibility.click();
+  assert.equal(await page.locator("#apiKey2").getAttribute("type"), "password");
+  const settingsBounds = await page.locator("#settingsPopover").boundingBox();
+  assert.ok(settingsBounds);
+  assert.ok(settingsBounds.y >= 0 && settingsBounds.y + settingsBounds.height <= 600);
+  await page.locator("#closeSettingsButton").click();
+
+  assert.deepEqual(await page.evaluate(() => [...imageModelOptions]), [
+    "GPT-image-2",
+    "gpt-image-2.5-1k",
+    "GPT-image-2 · 渠道 2",
+    "gpt-image-4k-official · 渠道 2",
+  ]);
+  assert.deepEqual(await page.evaluate(() => ({
+    channelOne: apiProfileForModel("GPT-image-2"),
+    channelTwo: apiProfileForModel("GPT-image-2 · 渠道 2"),
+    apiModel: modelToApiModel("GPT-image-2 · 渠道 2"),
+  })), {
+    channelOne: { id: "channel1", label: "渠道 1", url: "https://www.zayapi.top", key: "channel-one-key" },
+    channelTwo: { id: "channel2", label: "渠道 2", url: "https://www.zayapi.top", key: "channel-two-key" },
+    apiModel: "gpt-image-2",
+  });
+
+  const result = await page.evaluate(() => callApi({
+    id: "channel-two-request",
+    type: "generator",
+    model: "GPT-image-2 · 渠道 2",
+    prompt: "测试渠道",
+    ratio: "1:1",
+    resolution: "4K",
+    count: 1,
+  }));
+  assert.equal(result.url, "https://example.test/channel-two-result.png");
+  assert.deepEqual(generationAuthorizations, ["Bearer channel-two-key"]);
+});

@@ -8,7 +8,7 @@ const preload = fs.readFileSync(path.resolve(__dirname, "../desktop-client/prelo
 
 assert.match(canvas, /const imageModelOptions = \[[\s\S]*?\.\.\.gptImageModelOptions,[\s\S]*?"grok-imagine-image-2\.0"/);
 assert.match(canvas, /"grok-imagine-image-2\.0": "grok-imagine-image-2\.0"/);
-assert.match(canvas, /if \(model === "grok-imagine-image-2\.0"\) return \["1K", "2K"\]/);
+assert.match(canvas, /const apiModel = modelToApiModel\(model\);[\s\S]*?if \(apiModel === "grok-imagine-image-2\.0"\) return \["1K", "2K"\]/);
 assert.match(canvas, /imagePayload\.quality = grokImageModel \? "auto" : "high"/);
 assert.match(canvas, /if \(grokImageModel\) imagePayload\.aspect_ratio = imagePayload\.size/);
 assert.match(canvas, /navigator\.clipboard\.write\(\[new ClipboardItem\(\{ "image\/png": blobPromise \}\)\]\)/);

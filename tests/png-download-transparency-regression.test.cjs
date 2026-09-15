@@ -6,7 +6,7 @@ const source = fs.readFileSync(path.join(__dirname, "..", "app", "ai-node-canvas
 
 assert.match(source, /imagePayload\.output_format = "png";/, "GPT Image requests must ask for PNG output");
 assert.match(source, /imagePayload\.background = "transparent";/, "transparent-image requests must ask the API for transparency");
-assert.match(source, /const extension = node\.mediaType === "video" \? "mp4" : "png";/, "all downloaded images must use a PNG filename");
+assert.match(source, /const extension = node\.mediaType === "video" \? "mp4" : node\.mediaType === "audio" \? \(node\.audioFormat \|\| "mp3"\) : "png";/, "images must remain PNG while audio results retain their audio filename extension");
 assert.match(source, /objectUrl = await sourceToLosslessPngUrl\(downloadUrl, node\.width, node\.height\);/, "downloads must use the lossless PNG path");
 assert.match(source, /const blob = await sourceToLosslessPngBlob\(src, node\.width, node\.height\);/, "automatic saves must use the lossless PNG path");
 assert.match(source, /if \(await blobIsPng\(original\)\) return original;/, "an existing PNG must be saved without canvas recomposition");
