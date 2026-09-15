@@ -13523,7 +13523,10 @@
         const dragSnapshot = { ...portDragState };
         const targetPortName = dragSnapshot.anchorPort === "out" ? "in" : "out";
         const targetPort = event.target.closest?.(`.port.${targetPortName}`);
-        const snapTo = dragSnapshot.snapTo || nearestPortNode(event.clientX, event.clientY, targetPortName, dragSnapshot.anchorNode);
+        const droppedNodeId = targetPort?.closest?.(".node")?.dataset?.id || null;
+        const snapTo = droppedNodeId && droppedNodeId !== dragSnapshot.anchorNode
+          ? droppedNodeId
+          : dragSnapshot.snapTo || nearestPortNode(event.clientX, event.clientY, targetPortName, dragSnapshot.anchorNode);
         if (snapTo) {
           const from = dragSnapshot.anchorPort === "out" ? dragSnapshot.anchorNode : snapTo;
           const to = dragSnapshot.anchorPort === "out" ? snapTo : dragSnapshot.anchorNode;

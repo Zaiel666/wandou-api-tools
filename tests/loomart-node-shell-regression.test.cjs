@@ -460,6 +460,8 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     const targetRect = targetElement.getBoundingClientRect();
     const sourcePoint = { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 };
     const targetPoint = { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 };
+    const originalNearestPortNode = nearestPortNode;
+    nearestPortNode = () => null;
     sourceElement.dispatchEvent(new PointerEvent("pointerdown", {
       bubbles: true,
       cancelable: true,
@@ -490,9 +492,10 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
       clientX: targetPoint.x,
       clientY: targetPoint.y,
     }));
+    nearestPortNode = originalNearestPortNode;
     return links.some((link) => link.from === source && link.to === target);
   }, dragPair);
-  assert.equal(dragConnected, true, "dragging an output port onto an input port should create a link");
+  assert.equal(dragConnected, true, "dropping directly on an input port should create a link even when proximity snapping is unavailable");
   assert.equal(await page.evaluate(() => Boolean(linkingFrom || linkingTo || portDragState)), false, "drag completion must not leave a pending connection");
   const incomingLinks = await page.evaluate(() => {
     const target = nodes.find((node) => node.type === "generator");
