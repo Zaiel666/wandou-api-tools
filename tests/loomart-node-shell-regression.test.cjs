@@ -370,10 +370,22 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     const node = nodes.find((item) => item.id === nodeId);
     return { x: node.x, y: node.y };
   }, referenceLayout.nodeId);
-  const referenceFrame = await page.locator(`[data-id="${referenceLayout.nodeId}"] .preview`).boundingBox();
-  await page.mouse.move(referenceFrame.x + referenceFrame.width / 2, referenceFrame.y + referenceFrame.height - 70);
+  const blankDragPoint = await page.locator(`[data-id="${referenceLayout.nodeId}"] .preview`).evaluate((preview) => {
+    const rect = preview.getBoundingClientRect();
+    for (let y = rect.bottom - 24; y >= rect.top + 24; y -= 20) {
+      for (let x = rect.right - 24; x >= rect.left + 24; x -= 20) {
+        const target = document.elementFromPoint(x, y);
+        if (!target || !preview.contains(target)) continue;
+        const blocked = target.closest("button, input, label, .thumb, img, [data-resize-handle]");
+        if (!blocked) return { x, y };
+      }
+    }
+    return null;
+  });
+  assert.ok(blankDragPoint, "reference node should expose a blank draggable preview area");
+  await page.mouse.move(blankDragPoint.x, blankDragPoint.y);
   await page.mouse.down();
-  await page.mouse.move(referenceFrame.x + referenceFrame.width + 26, referenceFrame.y + referenceFrame.height + 6, { steps: 8 });
+  await page.mouse.move(blankDragPoint.x + 100, blankDragPoint.y + 60, { steps: 8 });
   await page.mouse.up();
   const blankDragAfter = await page.evaluate((nodeId) => {
     const node = nodes.find((item) => item.id === nodeId);
