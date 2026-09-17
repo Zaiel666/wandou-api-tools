@@ -33,10 +33,13 @@ const { chromium } = require("playwright");
     await homePage.locator("[data-api-open]").click();
     await homePage.locator("[data-api-key]").fill("channel-one-secret");
     const homeVisibility = homePage.locator('[data-api-key-visibility="channel-1"]');
-    await homeVisibility.click();
+    const homeVisibilityBox = await homeVisibility.boundingBox();
+    assert.ok(homeVisibilityBox.width >= 54 && homeVisibilityBox.height >= 44, JSON.stringify(homeVisibilityBox));
+    await homePage.mouse.click(homeVisibilityBox.x + 4, homeVisibilityBox.y + 4);
     assert.equal(await homePage.locator("[data-api-key]").getAttribute("type"), "text");
+    assert.equal(await homePage.locator("[data-api-key]").evaluate((input) => getComputedStyle(input).webkitTextSecurity), "none");
     assert.equal(await homeVisibility.getAttribute("aria-pressed"), "true");
-    await homeVisibility.click();
+    await homePage.mouse.click(homeVisibilityBox.x + homeVisibilityBox.width - 4, homeVisibilityBox.y + homeVisibilityBox.height - 4);
     assert.equal(await homePage.locator("[data-api-key]").getAttribute("type"), "password");
     const neutralUi = await homePage.evaluate(() => {
       const modal = document.querySelector(".api-modal");

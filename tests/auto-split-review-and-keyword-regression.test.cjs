@@ -19,7 +19,7 @@ const countdownSource = source.slice(countdownStart, countdownEnd);
 assert.match(countdownSource, /\.auto-split-countdown/);
 assert.doesNotMatch(countdownSource, /refreshRenderedNode\(node\.id\)/, "countdown must not rebuild the node every second");
 
-assert.match(source, /id="lightboxContextPrompt"[^>]*>查看关键词<\/button>/);
+assert.match(source, /id="lightboxContextPrompt"[^>]*>[\s\S]*?<span>查看关键词<\/span><\/button>/);
 assert.match(source, /function activeLightboxPromptText\(\)/);
 assert.match(source, /openPromptPreview\(prompt, "", ""\)/, "view keyword must open the copyable prompt preview");
 assert.match(source, /links\.find\(\(link\) => link\.to === node\?\.id\)/, "legacy results should inherit their source prompt");

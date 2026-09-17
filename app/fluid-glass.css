@@ -531,7 +531,7 @@ body.node-canvas-page.dark-theme .prompt-field-wrap .prompt-textarea.prompt-toke
   -webkit-text-fill-color: transparent !important;
 }
 
-body.node-canvas-page button:not(.node-resize),
+body.node-canvas-page button:not(.node-resize):where(:not(.api-key-visibility)),
 body.node-canvas-page .button-like {
   border-radius: var(--fg-radius-pill) !important;
   background-image: none !important;

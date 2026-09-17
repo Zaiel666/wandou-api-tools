@@ -68,7 +68,9 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.ok(Math.abs(shell.toolbarHeight - 52) < 1, JSON.stringify(shell));
   assert.ok(shell.buttonHeights.every((height) => height >= 38 && height <= 40.1), JSON.stringify(shell.buttonHeights));
   assert.equal(shell.toolbarItems.length, 5);
-  assert.ok(shell.toolbarItems.every((item) => item.height === 40 && item.background === "rgb(32, 33, 35)"), JSON.stringify(shell.toolbarItems));
+  assert.ok(shell.toolbarItems.every((item) => item.height === 40), JSON.stringify(shell.toolbarItems));
+  assert.ok(shell.toolbarItems.filter((_, index) => index !== 3).every((item) => item.background === "rgb(249, 250, 249)"), JSON.stringify(shell.toolbarItems));
+  assert.equal(shell.toolbarItems[3].background, "rgb(255, 247, 247)");
   assert.ok(shell.toolbarItems.slice(1).every((item, index) => Math.abs(item.left - shell.toolbarItems[index].right - 8) < 1), JSON.stringify(shell.toolbarItems));
   assert.deepEqual(shell.buttonOrder, [...shell.buttonOrder].sort((a, b) => a - b));
   await page.setViewportSize({ width: 900, height: 700 });
@@ -125,6 +127,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     lightboxImage.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 520, clientY: 360 }));
     const menu = document.querySelector("#lightboxImageMenu");
     const openedOnRightClick = menu.classList.contains("open");
+    menu.classList.remove("open");
     lightboxImage.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, clientX: 520, clientY: 360 }));
     const button = menu.querySelector("button:not([hidden])");
     return {
@@ -140,7 +143,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     };
   });
   assert.deepEqual(lightboxContextVisual, {
-    openedOnRightClick: false,
+      openedOnRightClick: true,
     open: true,
     width: "176px",
     radius: "8px",

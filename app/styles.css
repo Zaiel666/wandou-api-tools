@@ -696,7 +696,7 @@ h1 {
   min-height: 46px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 0 52px 0 14px;
+  padding: 0 66px 0 14px;
   color: var(--text);
   background: rgba(255, 255, 255, 0.06);
   outline: none;
@@ -4065,18 +4065,29 @@ body.home-page .tool-section[data-home-section] > .tool-grid {
 
 .api-secret-toggle {
   position: absolute;
-  top: 50%;
-  right: 7px;
-  width: 36px;
-  height: 36px;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 56px;
+  height: auto;
+  min-height: 44px;
   padding: 0;
-  transform: translateY(-50%);
+  transform: none !important;
   display: inline-grid;
   place-items: center;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0 !important;
   color: var(--muted);
   background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  z-index: 2;
+}
+
+.api-field input.api-key-revealed {
+  -webkit-text-security: none !important;
 }
 
 .api-secret-toggle:hover,
@@ -4085,6 +4096,10 @@ body.home-page .tool-section[data-home-section] > .tool-grid {
   border-color: var(--line);
   background: rgba(255, 255, 255, 0.07);
   outline: none;
+}
+
+.api-secret-toggle:active {
+  transform: none !important;
 }
 
 .api-secret-toggle svg {

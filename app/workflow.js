@@ -294,33 +294,40 @@ function closeApiModal() {
   resetApiKeyVisibility();
 }
 
+function setApiKeyVisibility(input, button, visible) {
+  if (!input || !button) return;
+  const reveal = Boolean(visible);
+  input.type = reveal ? "text" : "password";
+  input.classList.toggle("api-key-revealed", reveal);
+  input.style.webkitTextSecurity = reveal ? "none" : "";
+  button.setAttribute("aria-pressed", String(reveal));
+  const channel = button.dataset.apiKeyVisibility === "channel-2" ? "渠道 2" : "渠道 1";
+  button.setAttribute("aria-label", `${reveal ? "隐藏" : "显示"}${channel}密钥`);
+  button.title = reveal ? "隐藏密钥" : "显示密钥";
+}
+
 function resetApiKeyVisibility() {
   document.querySelectorAll("[data-api-key-visibility]").forEach((button) => {
     const input = button.dataset.apiKeyVisibility === "channel-2" ? apiKey2Input : apiKeyInput;
-    if (input) input.type = "password";
-    button.setAttribute("aria-pressed", "false");
-    const channel = button.dataset.apiKeyVisibility === "channel-2" ? "渠道 2" : "渠道 1";
-    button.setAttribute("aria-label", `显示${channel}密钥`);
-    button.title = "显示密钥";
+    setApiKeyVisibility(input, button, false);
   });
 }
 
-document.querySelectorAll("[data-api-key-visibility]").forEach((button) => {
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const input = button.dataset.apiKeyVisibility === "channel-2" ? apiKey2Input : apiKeyInput;
-    if (!input) return;
-    const visible = input.type === "password";
-    input.type = visible ? "text" : "password";
-    button.setAttribute("aria-pressed", String(visible));
-    const channel = button.dataset.apiKeyVisibility === "channel-2" ? "渠道 2" : "渠道 1";
-    button.setAttribute("aria-label", `${visible ? "隐藏" : "显示"}${channel}密钥`);
-    button.title = visible ? "隐藏密钥" : "显示密钥";
-    input.focus({ preventScroll: true });
-    input.setSelectionRange(input.value.length, input.value.length);
-  });
-});
+apiModal?.addEventListener("pointerdown", (event) => {
+  if (event.target.closest("[data-api-key-visibility]")) event.stopPropagation();
+}, true);
+apiModal?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-api-key-visibility]");
+  if (!button || !apiModal.contains(button)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const input = button.dataset.apiKeyVisibility === "channel-2" ? apiKey2Input : apiKeyInput;
+  if (!input) return;
+  const visible = button.getAttribute("aria-pressed") !== "true";
+  setApiKeyVisibility(input, button, visible);
+  input.focus({ preventScroll: true });
+  try { input.setSelectionRange(input.value.length, input.value.length); } catch (_error) {}
+}, true);
 
 document.querySelector("[data-api-open]")?.addEventListener("click", openApiModal);
 document.querySelector("[data-api-close]")?.addEventListener("click", closeApiModal);

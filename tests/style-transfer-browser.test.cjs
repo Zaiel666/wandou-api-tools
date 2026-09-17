@@ -138,7 +138,7 @@ const { chromium } = require("../desktop-client/node_modules/playwright");
       };
     });
     assert.deepEqual(lightUnifiedActions.selected, { color: "rgb(19, 170, 114)", background: "rgb(255, 255, 255)", border: "rgb(19, 170, 114)" });
-    assert.deepEqual(lightUnifiedActions.generate, { color: "rgb(19, 170, 114)", background: "rgb(255, 255, 255)", border: "rgb(19, 170, 114)" });
+    assert.deepEqual(lightUnifiedActions.generate, { color: "rgb(8, 121, 88)", background: "rgb(255, 255, 255)", border: "rgb(11, 143, 102)" });
     const restored = await page.evaluate(async () => {
       const snapshot = getCanvasSnapshot();
       nodes = [];

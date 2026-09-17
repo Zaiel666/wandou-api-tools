@@ -1271,7 +1271,7 @@
 
     .settings-popover .field input {
       min-height: 58px;
-      padding: 0 56px 0 18px;
+      padding: 0 76px 0 18px;
       border: 1.5px solid #4adb43;
       border-radius: 16px;
       font-size: 15px;
@@ -1372,24 +1372,45 @@
 
     .api-key-visibility {
       position: absolute;
-      top: 50%;
-      right: 8px;
-      width: 42px;
-      min-width: 42px;
-      min-height: 42px;
+      top: 2px;
+      right: 2px;
+      bottom: 2px;
+      width: 64px;
+      min-width: 64px;
+      min-height: 52px;
       padding: 0;
-      transform: translateY(-50%);
+      transform: none !important;
       display: inline-grid;
       place-items: center;
       border: 0;
-      border-radius: 12px;
+      border-left: 1px solid rgba(82, 96, 90, .12);
+      border-radius: 0 !important;
       color: #52605a;
       background: transparent;
+      cursor: pointer;
+      pointer-events: auto;
+      touch-action: manipulation;
+      z-index: 2;
+    }
+
+    .settings-popover .field input.api-key-revealed {
+      -webkit-text-security: none !important;
     }
 
     .api-key-visibility:hover {
       color: #087958;
       background: rgba(16, 185, 129, .09);
+    }
+
+    .api-key-visibility:active {
+      transform: none !important;
+    }
+
+    .api-key-visibility:focus-visible {
+      color: #087958;
+      background: rgba(16, 185, 129, .12);
+      box-shadow: inset 0 0 0 2px rgba(8, 121, 88, .48);
+      outline: none;
     }
 
     .api-key-visibility svg {
@@ -1400,6 +1421,7 @@
       stroke-width: 1.8;
       stroke-linecap: round;
       stroke-linejoin: round;
+      pointer-events: none;
     }
 
     .api-key-visibility .eye-off-icon,
@@ -5422,6 +5444,34 @@
       border-color:rgba(238,123,123,.42) !important;
       animation:none;
     }
+    body:not(.dark-theme) .topbar-actions > .zoom-pill,
+    body:not(.dark-theme) .topbar-actions > button.ghost,
+    body:not(.dark-theme) .topbar-actions > .folder-home-control {
+      color:#19201c !important;
+      background:#f9faf9 !important;
+      border-color:rgba(25,34,29,.14) !important;
+      box-shadow:0 4px 14px rgba(24,34,29,.08) !important;
+    }
+    body:not(.dark-theme) .topbar-actions > .folder-home-control .folder-name-pill,
+    body:not(.dark-theme) .topbar-actions > .folder-home-control .project-home-button {
+      color:#19201c !important;
+      background:transparent !important;
+      border-color:transparent !important;
+    }
+    body:not(.dark-theme) .topbar-actions > .folder-home-control .folder-name-pill {
+      border-right-color:rgba(25,34,29,.12) !important;
+    }
+    body:not(.dark-theme) .topbar-actions > button.ghost:hover,
+    body:not(.dark-theme) .topbar-actions > .folder-home-control button:hover {
+      color:#087958 !important;
+      background:#edf8f2 !important;
+      border-color:rgba(8,121,88,.28) !important;
+    }
+    body:not(.dark-theme) #autoSaveDirectoryButton.required-warning {
+      color:#a32934 !important;
+      background:#fff7f7 !important;
+      border-color:rgba(163,41,52,.42) !important;
+    }
     @media (max-width:760px) {
       .topbar-actions { gap:5px; }
       .topbar-actions .folder-home-control .folder-name-pill { max-width:78px; padding:0 8px; }
@@ -6064,14 +6114,11 @@
       text-align:left;
       transition:none;
     }
-    .lightbox-image-menu button::before {
-      position:absolute; left:12px; top:50%; width:16px;
-      display:grid; place-items:center; color:#aeb7b2;
-      font-size:14px; transform:translateY(-50%);
+    .lightbox-image-menu button svg {
+      position:absolute; left:11px; top:50%; width:17px; height:17px;
+      fill:none; stroke:currentColor; stroke-width:1.8;
+      stroke-linecap:round; stroke-linejoin:round; transform:translateY(-50%);
     }
-    #lightboxContextCopy::before { content:"⧉"; }
-    #lightboxContextPrompt::before { content:"#"; }
-    #lightboxContextRegenerate::before { content:"↻"; }
     .lightbox-image-menu button:hover,
     .lightbox-image-menu button:focus-visible,
     .lightbox-image-menu button.is-hot,
@@ -6080,9 +6127,6 @@
     body.dark-theme .lightbox-image-menu button.is-hot {
       color:#fff; background:#13aa72 !important; outline:0;
     }
-    .lightbox-image-menu button:hover::before,
-    .lightbox-image-menu button:focus-visible::before,
-    .lightbox-image-menu button.is-hot::before { color:#fff; }
     body:not(.dark-theme) .lightbox-image-menu {
       color:#202824; background:rgba(249,250,249,.98);
       border-color:rgba(24,34,29,.14); box-shadow:0 18px 42px rgba(24,34,29,.2);
@@ -6145,12 +6189,12 @@
     body.node-canvas-page .node .choice-option.active,
     body.node-canvas-page .node .output-option.active,
     body.node-canvas-page .node .auto-split-toggle.active {
-      color:#13aa72 !important;
+      color:#087958 !important;
       -webkit-text-fill-color:currentColor !important;
       background:#fff !important;
       background-image:none !important;
-      border-color:#13aa72 !important;
-      box-shadow:0 0 0 1px rgba(19,170,114,.16) !important;
+      border-color:#0b8f66 !important;
+      box-shadow:0 0 0 1px rgba(8,121,88,.16) !important;
     }
     body.node-canvas-page.dark-theme .node .count-option.active,
     body.node-canvas-page.dark-theme .node .choice-option.active,
@@ -6190,6 +6234,25 @@
       background-image:none !important;
       border-color:#65b72f !important;
       box-shadow:none !important;
+    }
+
+    body.node-canvas-page:not(.dark-theme) .button-grid button[data-add-node="audio"] {
+      color:#14579d;
+      background:#eef5ff;
+      border-color:#8eb8e7;
+    }
+
+    body.node-canvas-page:not(.dark-theme) .node.outpaint button.outpaint-edit-button {
+      color:#087958 !important;
+      background:#effaf5 !important;
+      border-color:#91d4b8 !important;
+    }
+
+    body.node-canvas-page:not(.dark-theme) .node.outpaint button.outpaint-edit-button:hover,
+    body.node-canvas-page:not(.dark-theme) .node.outpaint button.outpaint-edit-button:focus-visible {
+      color:#065f46 !important;
+      background:#ddf5e9 !important;
+      border-color:#4db78d !important;
     }
     html body.node-canvas-page.dark-theme .canvas .node .node-body button.wide-button[data-generate],
     html body.node-canvas-page.dark-theme .node.style .node-body button[data-style-generate][data-generate] {
@@ -6325,8 +6388,11 @@
       box-shadow:inset 0 0 0 1px #c7ffe1,0 0 7px rgba(19,170,114,.22) !important;
     }
     html body.node-canvas-page .canvas .node .node-body button.wide-button[data-generate],
+    html body.node-canvas-page .node.style .node-body button[data-style-generate][data-generate] {
+      color:#087958 !important;
+      border-color:#0b8f66 !important;
+    }
     html body.node-canvas-page.dark-theme .canvas .node .node-body button.wide-button[data-generate],
-    html body.node-canvas-page .node.style .node-body button[data-style-generate][data-generate],
     html body.node-canvas-page.dark-theme .node.style .node-body button[data-style-generate][data-generate] {
       color:#13aa72 !important;
       border-color:#13aa72 !important;
@@ -6722,36 +6788,80 @@
       body.node-canvas-page .prompt-manager-list { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
     }
 
-    .node.audio { width:520px; }
+    .node.audio {
+      --audio-panel:#fff;
+      --audio-panel-soft:#f7f6f4;
+      --audio-stage:#f0eeeb;
+      --audio-border:rgba(31,35,33,.16);
+      --audio-text:#211f1d;
+      --audio-muted:#77736f;
+      --audio-control:#f3f1ef;
+      width:620px;
+    }
+    body.dark-theme .node.audio {
+      --audio-panel:#201d1b;
+      --audio-panel-soft:#191715;
+      --audio-stage:#2b2826;
+      --audio-border:rgba(255,255,255,.14);
+      --audio-text:#f3f1ef;
+      --audio-muted:#9b9691;
+      --audio-control:#2a2725;
+    }
+    .node.audio .node-menu { display:none; }
     .node.audio .node-icon svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
-    .audio-composer { display:grid; gap:12px; padding:14px; border:1px solid rgba(255,255,255,.1); border-radius:18px; background:#151816; }
-    .audio-reference-head { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#e7ece9; font-size:11px; font-weight:700; }
-    .audio-reference-head span:last-child { color:#87928c; font-size:9px; font-weight:500; }
-    .audio-reference-row { display:flex; align-items:stretch; gap:10px; min-height:74px; }
-    .audio-reference-card { position:relative; flex:1 1 auto; min-width:0; padding:10px 38px 10px 12px; border:1px solid rgba(104,164,255,.4); border-radius:14px; background:linear-gradient(135deg,rgba(37,92,172,.18),rgba(13,17,15,.7)); }
-    .audio-reference-card audio { width:100%; height:38px; }
-    .audio-reference-card strong { display:block; overflow:hidden; margin-bottom:5px; color:#eaf2ff; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
-    .audio-reference-remove { position:absolute; top:8px; right:8px; width:24px; min-width:24px; height:24px; padding:0; border-radius:50%; color:#fff; border-color:rgba(255,255,255,.42); background:rgba(12,15,14,.78); }
-    .audio-upload-tile { width:74px; min-width:74px; min-height:74px; display:grid; place-items:center; gap:4px; padding:8px; border:1px dashed rgba(255,255,255,.28); border-radius:14px; color:#f4f7f5; background:rgba(255,255,255,.035); cursor:pointer; text-align:center; }
-    .audio-upload-tile:hover { border-color:#79aaff; background:rgba(65,130,255,.1); }
-    .audio-upload-tile svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .audio-workflow { display:grid; gap:16px; }
+    .audio-quickbar { justify-self:center; display:flex; align-items:center; gap:2px; padding:6px; color:#24211f; border:1px solid rgba(31,27,24,.08); border-radius:24px; background:#fff; box-shadow:0 10px 28px rgba(0,0,0,.18); }
+    .audio-quickbar button,
+    .audio-quickbar label { min-height:36px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; color:#24211f; border:0; border-radius:18px; background:transparent; font-size:12px; font-weight:600; cursor:pointer; }
+    .audio-quickbar button:hover,
+    .audio-quickbar label:hover { background:#f2f0ee; }
+    .audio-quickbar svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .audio-node-label { margin:-10px 0 -10px; color:var(--audio-muted); font-size:11px; font-weight:650; }
+    .audio-stage { min-height:164px; display:grid; place-items:center; overflow:hidden; border:2px solid #287be8; border-radius:28px; color:var(--audio-muted); background:var(--audio-stage); }
+    .audio-stage-empty { display:grid; place-items:center; gap:10px; }
+    .audio-stage-empty svg { width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+    .audio-stage-empty strong { font-size:15px; font-weight:550; }
+    .audio-stage-player { width:100%; padding:24px; display:grid; gap:10px; }
+    .audio-stage-player strong { overflow:hidden; color:var(--audio-text); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+    .audio-stage-player audio { width:100%; }
+    .audio-composer { position:relative; display:grid; gap:14px; min-height:430px; padding:18px; color:var(--audio-text); border:1px solid var(--audio-border); border-radius:24px; background:var(--audio-panel); box-shadow:0 12px 36px rgba(0,0,0,.08); }
+    .audio-reference-head { display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--audio-text); font-size:12px; font-weight:700; }
+    .audio-reference-head span:last-child { color:var(--audio-muted); font-size:10px; font-weight:500; }
+    .audio-reference-row { display:flex; align-items:stretch; gap:10px; min-height:66px; }
+    .audio-reference-card { position:relative; flex:0 1 230px; min-width:0; padding:9px 34px 9px 10px; border:1px solid var(--audio-border); border-radius:14px; background:var(--audio-panel-soft); }
+    .audio-reference-card audio { width:100%; height:34px; }
+    .audio-reference-card strong { display:block; overflow:hidden; margin-bottom:4px; color:var(--audio-text); font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+    .audio-reference-remove { position:absolute; top:7px; right:7px; width:23px; min-width:23px; height:23px; padding:0; border-radius:50%; color:var(--audio-text); border-color:var(--audio-border); background:var(--audio-control); }
+    .audio-upload-tile { width:66px; min-width:66px; min-height:66px; display:grid; place-items:center; gap:3px; padding:8px; border:1px solid var(--audio-border); border-radius:16px; color:var(--audio-text); background:var(--audio-panel-soft); cursor:pointer; text-align:center; }
+    .audio-upload-tile:hover { border-color:#287be8; background:color-mix(in srgb,var(--audio-panel-soft) 86%,#287be8 14%); }
+    .audio-upload-tile svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     .audio-upload-tile span { font-size:9px; }
-    .audio-prompt-shell { overflow:hidden; border:1px solid rgba(255,255,255,.12); border-radius:18px; background:#111412; }
-    .audio-prompt-shell textarea { box-sizing:border-box; width:100%; min-height:150px; padding:17px 18px 10px; resize:vertical; color:#f2f5f3; background:transparent; border:0; outline:0; font-size:13px; line-height:1.65; }
-    .audio-prompt-footer { display:flex; align-items:center; gap:8px; padding:10px 12px; border-top:1px solid rgba(255,255,255,.08); }
-    .audio-prompt-footer select { width:auto; min-width:0; height:34px; padding:0 28px 0 11px; border-radius:17px; color:#e7ece9; border-color:rgba(255,255,255,.13); background:#1a1e1c; font-size:10px; }
-    .audio-model-select { flex:1 1 190px; max-width:none; }
-    .audio-setting-group { flex:0 0 156px; height:34px; display:flex; align-items:center; overflow:hidden; border:1px solid rgba(255,255,255,.13); border-radius:17px; background:#1a1e1c; }
-    .audio-setting-group select { height:32px; padding:0 2px; border:0; border-radius:0; background:transparent; font-size:9px; }
-    .audio-setting-group select + select { border-left:1px solid rgba(255,255,255,.1); }
-    .audio-voice-select { width:60px; }
-    .audio-format-select { width:50px; }
-    .audio-speed-select { width:46px; }
-    .audio-generate { margin-left:auto; width:38px; min-width:38px; height:38px; padding:0; display:grid; place-items:center; border-radius:50%; color:#07110b; border-color:#d9ffe4; background:#effff3; }
-    .audio-generate:hover { background:#d7ffe3; }
+    .audio-prompt-shell { position:relative; min-height:270px; display:flex; flex-direction:column; overflow:hidden; border:0; border-radius:0; background:transparent; }
+    .audio-prompt-shell::before,
+    .audio-prompt-shell::after { content:""; position:absolute; left:-3px; width:9px; height:9px; transform:rotate(45deg); border-radius:2px; background:#c99c08; }
+    .audio-prompt-shell::before { top:10px; }
+    .audio-prompt-shell::after { bottom:55px; }
+    .audio-prompt-shell textarea { box-sizing:border-box; width:100%; min-height:206px; flex:1; padding:14px 18px; resize:vertical; color:var(--audio-text); background:transparent; border:0; outline:0; font-size:14px; line-height:1.65; }
+    .audio-prompt-shell textarea::placeholder { color:var(--audio-muted); }
+    .audio-prompt-footer { display:flex; align-items:center; gap:10px; padding:10px 0 0; border-top:0; }
+    .audio-footer-icon { width:32px; min-width:32px; height:32px; padding:0; display:grid; place-items:center; color:var(--audio-text); border:0; background:transparent; }
+    .audio-footer-icon svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .audio-prompt-footer select { width:auto; min-width:0; height:38px; padding:0 30px 0 12px; border-radius:19px; color:var(--audio-text); border:1px solid var(--audio-border); background:var(--audio-control); font-size:10px; }
+    .audio-prompt-footer select option { color:var(--audio-text); background:var(--audio-panel); }
+    .audio-model-select { flex:1 1 210px; max-width:250px; }
+    .audio-setting-group { flex:0 0 178px; height:38px; display:flex; align-items:center; overflow:hidden; border:1px solid var(--audio-border); border-radius:19px; background:var(--audio-control); }
+    .audio-setting-group select { height:36px; padding:0 3px; border:0; border-radius:0; background:transparent; font-size:9px; }
+    .audio-setting-group select + select { border-left:1px solid var(--audio-border); }
+    .audio-voice-select { width:70px; }
+    .audio-format-select { width:56px; }
+    .audio-speed-select { width:52px; }
+    .audio-generate { margin-left:auto; width:46px; min-width:46px; height:46px; padding:0; display:grid; place-items:center; border-radius:50%; color:#161310; border:1px solid rgba(0,0,0,.09); background:#f8f7f5; box-shadow:0 5px 16px rgba(0,0,0,.16); }
+    .audio-generate:hover { color:#fff; background:#287be8; }
     .audio-generate:disabled { opacity:.45; cursor:wait; }
-    .audio-generate svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    .audio-status { min-height:17px; color:#9ca9a1; font-size:10px; line-height:1.55; }
+    .audio-generate svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .audio-status { min-height:17px; color:var(--audio-muted); font-size:10px; line-height:1.55; }
+    .audio-info-panel { display:none; margin-top:-6px; padding:10px 12px; color:var(--audio-muted); border:1px solid var(--audio-border); border-radius:12px; background:var(--audio-panel-soft); font-size:10px; line-height:1.6; }
+    .audio-info-panel.open { display:block; }
     .node.result.audio-result { width:360px; }
     .node.result.audio-result .preview { min-height:126px; aspect-ratio:auto; display:grid; place-items:center; padding:22px 14px 34px; background:radial-gradient(circle at 50% 0,rgba(54,121,255,.18),transparent 62%),#111513; }
     .node.result.audio-result audio { width:100%; }
@@ -6975,9 +7085,9 @@
     <img id="lightboxImage" class="lightbox-media" alt="效果图预览">
     <video id="lightboxVideo" class="lightbox-media" controls playsinline hidden></video>
     <div id="lightboxImageMenu" class="lightbox-image-menu">
-      <button id="lightboxContextCopy" class="ghost" type="button">复制图片</button>
-      <button id="lightboxContextPrompt" class="ghost" type="button">查看关键词</button>
-      <button id="lightboxContextRegenerate" class="ghost" type="button">重新生成</button>
+      <button id="lightboxContextCopy" class="ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>复制图片</span></button>
+      <button id="lightboxContextPrompt" class="ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span>查看关键词</span></button>
+      <button id="lightboxContextRegenerate" class="ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg><span>重新生成</span></button>
     </div>
     <canvas id="paintCanvas" class="paint-canvas"></canvas>
     <div id="promptPreviewPanel" class="prompt-preview-panel">
@@ -7012,6 +7122,7 @@
       <button id="lightboxZoomReset" class="ghost" type="button">重置</button>
       <button id="lightboxFavorite" class="ghost lightbox-favorite" type="button">☆ 收藏</button>
       <button id="lightboxCopy" class="ghost" type="button">复制图片</button>
+      <button id="lightboxPrompt" class="ghost" type="button">查看关键词</button>
       <button id="lightboxDownload" class="ghost" type="button">下载</button>
       <div id="paintControls" class="paint-controls">
         <span class="paint-mask-hint">绿色区域允许修改</span>
@@ -7165,6 +7276,7 @@
     const lightboxScaleText = document.getElementById("lightboxScaleText");
     const lightboxFavorite = document.getElementById("lightboxFavorite");
     const lightboxCopy = document.getElementById("lightboxCopy");
+    const lightboxPrompt = document.getElementById("lightboxPrompt");
     const lightboxDownload = document.getElementById("lightboxDownload");
     const lightboxImageMenu = document.getElementById("lightboxImageMenu");
     const lightboxContextCopy = document.getElementById("lightboxContextCopy");
@@ -7972,6 +8084,18 @@
       setSettingsOpen(false);
     }
 
+    function setApiKeyVisibility(input, button, visible) {
+      if (!input || !button) return;
+      const reveal = Boolean(visible);
+      input.type = reveal ? "text" : "password";
+      input.classList.toggle("api-key-revealed", reveal);
+      input.style.webkitTextSecurity = reveal ? "none" : "";
+      button.setAttribute("aria-pressed", String(reveal));
+      const channel = button.dataset.apiKeyVisibility === "apiKey2" ? "渠道 2" : "渠道 1";
+      button.setAttribute("aria-label", `${reveal ? "隐藏" : "显示"}${channel}密钥`);
+      button.title = reveal ? "隐藏密钥" : "显示密钥";
+    }
+
     function setSettingsOpen(open) {
       if (settingsBackdrop.parentElement !== document.body) document.body.appendChild(settingsBackdrop);
       if (settingsPopover.parentElement !== document.body) document.body.appendChild(settingsPopover);
@@ -7982,10 +8106,7 @@
       if (!open) {
         settingsPopover.querySelectorAll("[data-api-key-visibility]").forEach((button) => {
           const input = document.getElementById(button.dataset.apiKeyVisibility || "");
-          if (input) input.type = "password";
-          button.setAttribute("aria-pressed", "false");
-          button.setAttribute("aria-label", button.dataset.apiKeyVisibility === "apiKey2" ? "显示渠道 2 密钥" : "显示渠道 1 密钥");
-          button.title = "显示密钥";
+          setApiKeyVisibility(input, button, false);
         });
       }
     }
@@ -8451,7 +8572,11 @@
 
     async function switchProject(projectId) {
       if (!projectId || projectId === activeProjectId) return;
-      saveCanvasState();
+      const saved = await saveCanvasState();
+      if (!saved) {
+        showToast("当前项目仍在保存图片，请稍后再切换", "error", 4200);
+        return;
+      }
       clearPsdRuntimeState();
       activeProjectId = projectId;
       saveProjects();
@@ -11083,27 +11208,44 @@
       const voiceOptions = audioVoiceOptions.map((voice) => `<option value="${escapeHtml(voice)}" ${node.audioVoice === voice ? "selected" : ""}>${escapeHtml(voice)}</option>`).join("");
       const formatOptions = audioFormatOptions.map((format) => `<option value="${format}" ${node.audioFormat === format ? "selected" : ""}>${format.toUpperCase()}</option>`).join("");
       const speedOptions = audioSpeedOptions.map((speed) => `<option value="${speed}" ${Number(node.audioSpeed) === speed ? "selected" : ""}>${speed}×</option>`).join("");
+      const uploadInput = `<input data-audio-upload type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,.mp3,.wav,.m4a,.aac,.ogg,.flac" ${busy ? "disabled" : ""} hidden>`;
       wrap.innerHTML = `
-        <section class="audio-composer">
-          <div class="audio-reference-head"><span>参考音频</span><span>${reference ? "已添加 1 段" : "可选 · 支持上传"}</span></div>
-          <div class="audio-reference-row" data-audio-drop>
-            ${reference ? `<div class="audio-reference-card"><strong>${escapeHtml(reference.name || "参考音频")}</strong><audio src="${escapeHtml(reference.url)}" controls preload="metadata"></audio><button class="audio-reference-remove" data-audio-remove type="button" title="移除参考音频" aria-label="移除参考音频"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button></div>` : ""}
-            <label class="audio-upload-tile" title="上传参考音频"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg><span>${reference ? "更换音频" : "上传音频"}</span><input data-audio-upload type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,.mp3,.wav,.m4a,.aac,.ogg,.flac" ${busy ? "disabled" : ""} hidden></label>
+        <div class="audio-workflow">
+          <div class="audio-quickbar" role="toolbar" aria-label="音频节点操作">
+            <button data-audio-info type="button" aria-pressed="${node.audioInfoVisible ? "true" : "false"}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>信息</span></button>
+            <button data-audio-delete type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></svg><span>删除</span></button>
+            <label><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg><span>上传音频</span>${uploadInput}</label>
           </div>
-          <div class="audio-prompt-shell">
-            <textarea data-audio-prompt data-autogrow placeholder="描述要生成的音频内容" ${busy ? "disabled" : ""}>${escapeHtml(node.prompt || "")}</textarea>
-            <div class="audio-prompt-footer">
-              <select class="audio-model-select" data-audio-model aria-label="音频模型" ${busy ? "disabled" : ""}>${modelOptions}</select>
-              <div class="audio-setting-group">
-                <select class="audio-voice-select" data-audio-voice aria-label="声音" ${busy ? "disabled" : ""}>${voiceOptions}</select>
-                <select class="audio-format-select" data-audio-format aria-label="格式" ${busy ? "disabled" : ""}>${formatOptions}</select>
-                <select class="audio-speed-select" data-audio-speed aria-label="语速" ${busy ? "disabled" : ""}>${speedOptions}</select>
-              </div>
-              <button class="audio-generate" data-audio-generate type="button" title="生成音频" aria-label="生成音频" ${busy ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+          <div class="audio-node-label">音频</div>
+          <section class="audio-stage" data-audio-drop aria-label="音频节点预览">
+            ${reference
+              ? `<div class="audio-stage-player"><strong>${escapeHtml(reference.name || "参考音频")}</strong><audio src="${escapeHtml(reference.url)}" controls preload="metadata"></audio></div>`
+              : `<div class="audio-stage-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg><strong>空音频节点</strong></div>`}
+          </section>
+          <section class="audio-composer">
+            <div class="audio-reference-head"><span>参考内容</span><span>${reference ? "已连接 1 段音频" : "可选"}</span></div>
+            <div class="audio-reference-row" data-audio-drop>
+              ${reference ? `<div class="audio-reference-card"><strong>${escapeHtml(reference.name || "参考音频")}</strong><audio src="${escapeHtml(reference.url)}" controls preload="metadata"></audio><button class="audio-reference-remove" data-audio-remove type="button" title="移除参考音频" aria-label="移除参考音频"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>` : ""}
+              <label class="audio-upload-tile" title="上传参考音频"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>${reference ? "更换" : "添加"}</span>${uploadInput}</label>
             </div>
-          </div>
-          <div class="audio-status status">${escapeHtml(node.status || "输入要朗读的内容，可选上传一段参考音频。")}</div>
-        </section>`;
+            <div class="audio-prompt-shell">
+              <textarea data-audio-prompt data-autogrow placeholder="描述要生成的音频内容" ${busy ? "disabled" : ""}>${escapeHtml(node.prompt || "")}</textarea>
+              <div class="audio-prompt-footer">
+                <button class="audio-footer-icon" type="button" data-audio-expand title="展开输入框" aria-label="展开输入框"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 21h5v-5M3 8l6-6M21 16l-6 6"/></svg></button>
+                <button class="audio-footer-icon" type="button" data-audio-guide title="音频提示" aria-label="音频提示"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H12v18H7.5A3.5 3.5 0 0 0 4 23V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H12v18h4.5A3.5 3.5 0 0 1 20 23V5.5Z"/></svg></button>
+                <select class="audio-model-select" data-audio-model aria-label="音频模型" ${busy ? "disabled" : ""}>${modelOptions}</select>
+                <div class="audio-setting-group">
+                  <select class="audio-voice-select" data-audio-voice aria-label="声音" ${busy ? "disabled" : ""}>${voiceOptions}</select>
+                  <select class="audio-format-select" data-audio-format aria-label="格式" ${busy ? "disabled" : ""}>${formatOptions}</select>
+                  <select class="audio-speed-select" data-audio-speed aria-label="语速" ${busy ? "disabled" : ""}>${speedOptions}</select>
+                </div>
+                <button class="audio-generate" data-audio-generate type="button" title="生成音频" aria-label="生成音频" ${busy ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+              </div>
+            </div>
+            <div class="audio-info-panel ${node.audioInfoVisible ? "open" : ""}" data-audio-info-panel>支持文本生成音频；可上传一段参考音频供兼容的模型使用。参考音频不支持时，接口会返回明确提示。</div>
+            <div class="audio-status status">${escapeHtml(node.status || "输入要生成的音频内容，可选上传一段参考音频。")}</div>
+          </section>
+        </div>`;
 
       const uploadReference = async (file) => {
         if (!file) return;
@@ -11116,10 +11258,10 @@
         render();
         scheduleCanvasSave();
       };
-      wrap.querySelector("[data-audio-upload]").addEventListener("change", async (event) => {
+      wrap.querySelectorAll("[data-audio-upload]").forEach((input) => input.addEventListener("change", async (event) => {
         await uploadReference(event.target.files?.[0]);
         event.target.value = "";
-      });
+      }));
       wrap.querySelector("[data-audio-remove]")?.addEventListener("click", () => {
         pushHistory();
         node.references = [];
@@ -11128,15 +11270,30 @@
         render();
         scheduleCanvasSave();
       });
-      const drop = wrap.querySelector("[data-audio-drop]");
-      drop.addEventListener("dragover", (event) => {
-        if (Array.from(event.dataTransfer?.files || []).some(isAudioFile)) event.preventDefault();
+      wrap.querySelectorAll("[data-audio-drop]").forEach((drop) => {
+        drop.addEventListener("dragover", (event) => {
+          if (Array.from(event.dataTransfer?.files || []).some(isAudioFile)) event.preventDefault();
+        });
+        drop.addEventListener("drop", async (event) => {
+          const file = Array.from(event.dataTransfer?.files || []).find(isAudioFile);
+          if (!file) return;
+          event.preventDefault();
+          await uploadReference(file);
+        });
       });
-      drop.addEventListener("drop", async (event) => {
-        const file = Array.from(event.dataTransfer?.files || []).find(isAudioFile);
-        if (!file) return;
-        event.preventDefault();
-        await uploadReference(file);
+      wrap.querySelector("[data-audio-info]").addEventListener("click", () => {
+        node.audioInfoVisible = !node.audioInfoVisible;
+        render();
+      });
+      wrap.querySelector("[data-audio-delete]").addEventListener("click", () => deleteNode(node.id));
+      wrap.querySelector("[data-audio-expand]").addEventListener("click", () => {
+        const textarea = wrap.querySelector("[data-audio-prompt]");
+        textarea.style.height = textarea.offsetHeight > 300 ? "206px" : "360px";
+        textarea.focus();
+      });
+      wrap.querySelector("[data-audio-guide]").addEventListener("click", () => {
+        node.audioInfoVisible = true;
+        render();
       });
       wrap.querySelector("[data-audio-prompt]").addEventListener("input", (event) => {
         node.prompt = event.target.value;
@@ -15343,7 +15500,7 @@
       if (node.type === "generator") return 520;
       if (node.type === "keyword") return 460;
       if (node.type === "video") return 420;
-      if (node.type === "audio") return 520;
+      if (node.type === "audio") return 620;
       if (node.type === "png") return 420;
       if (node.type === "upscale") return 430;
       if (node.type === "outpaint") return 450;
@@ -17991,6 +18148,7 @@ ${formatInstruction}`;
       lightboxImage.src = isVideo ? "" : src;
       lightboxVideo.src = isVideo ? src : "";
       lightboxCopy.hidden = isVideo;
+      lightboxPrompt.hidden = isVideo || !activeLightboxPromptText();
       lightboxContextPrompt.hidden = isVideo || !activeLightboxPromptText();
       lightboxContextRegenerate.hidden = isVideo || !canRegenerateResult(nodes.find((item) => item.id === activeLightbox.nodeId));
       closeLightboxImageMenu();
@@ -18019,6 +18177,7 @@ ${formatInstruction}`;
       lightboxVideo.load();
       lightboxVideo.hidden = true;
       lightboxCopy.hidden = false;
+      lightboxPrompt.hidden = false;
       closeLightboxImageMenu();
       activeLightbox = { src: "", downloadSrc: "", mode: "image", nodeId: null, refIndex: null };
       activePromptPreview = { zh: "", en: "", negative: "" };
@@ -19984,10 +20143,12 @@ ${formatInstruction}`;
       });
     });
 
-    projectHomeButton.addEventListener("click", () => {
+    projectHomeButton.addEventListener("click", async () => {
+      await saveCanvasState();
       openNamedTab("project-hub.html", "项目文件夹");
     });
-    currentFolderNameEl.addEventListener("click", () => {
+    currentFolderNameEl.addEventListener("click", async () => {
+      await saveCanvasState();
       openNamedTab("project-hub.html", "项目文件夹");
     });
     projectHubButton.addEventListener("click", (event) => {
@@ -20017,22 +20178,21 @@ ${formatInstruction}`;
       projectMenu.classList.remove("confirming");
     });
     document.getElementById("saveApiButton").addEventListener("click", saveApiConfig);
-    settingsPopover.querySelectorAll("[data-api-key-visibility]").forEach((button) => {
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const input = document.getElementById(button.dataset.apiKeyVisibility || "");
-        if (!input) return;
-        const visible = input.type === "password";
-        input.type = visible ? "text" : "password";
-        button.setAttribute("aria-pressed", visible ? "true" : "false");
-        const channel = button.dataset.apiKeyVisibility === "apiKey2" ? "渠道 2" : "渠道 1";
-        button.setAttribute("aria-label", `${visible ? "隐藏" : "显示"}${channel}密钥`);
-        button.title = visible ? "隐藏密钥" : "显示密钥";
-        input.focus({ preventScroll: true });
-        input.setSelectionRange(input.value.length, input.value.length);
-      });
-    });
+    settingsPopover.addEventListener("pointerdown", (event) => {
+      if (event.target.closest("[data-api-key-visibility]")) event.stopPropagation();
+    }, true);
+    settingsPopover.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-api-key-visibility]");
+      if (!button || !settingsPopover.contains(button)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const input = document.getElementById(button.dataset.apiKeyVisibility || "");
+      if (!input) return;
+      const visible = button.getAttribute("aria-pressed") !== "true";
+      setApiKeyVisibility(input, button, visible);
+      input.focus({ preventScroll: true });
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch (_error) {}
+    }, true);
     document.getElementById("clearApiKeyButton").addEventListener("click", () => {
       apiKeyInput.value = "";
       const channelTwoKey = apiKey2Input.value.trim();
@@ -20416,6 +20576,10 @@ ${formatInstruction}`;
       event.stopPropagation();
       await copyActiveLightboxImage(lightboxCopy);
     });
+    lightboxPrompt.addEventListener("click", (event) => {
+      event.stopPropagation();
+      viewActiveLightboxPrompt();
+    });
     lightboxContextCopy.addEventListener("click", async (event) => {
       event.stopPropagation();
       await copyActiveLightboxImage(lightboxContextCopy);
@@ -20444,7 +20608,7 @@ ${formatInstruction}`;
       lightboxImageMenu.classList.add("open");
       setLightboxImageMenuHot(lightboxContextCopy);
     };
-    lightboxImage.addEventListener("contextmenu", (event) => event.preventDefault());
+    lightboxImage.addEventListener("contextmenu", openLightboxImageMenu);
     lightboxImage.addEventListener("dblclick", openLightboxImageMenu);
     lightboxImageMenu.querySelectorAll("button").forEach((button) => {
       button.addEventListener("pointerenter", () => setLightboxImageMenuHot(button));

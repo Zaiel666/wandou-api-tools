@@ -103,7 +103,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：新增双 API 渠道与密钥显隐控制、AI 音频节点和语义化 PSD 分层；修复扩图接缝与图片生成识别问题。"
+            notes = "v${env:VERSION}：扩大 API 密钥显隐按钮热区，恢复效果图操作菜单，修复跨文件夹图片恢复，并统一 AI 音频节点和浅色主题界面。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

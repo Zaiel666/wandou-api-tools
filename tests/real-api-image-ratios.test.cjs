@@ -94,7 +94,10 @@ function sourceFor(width, height, nativeImages) {
 }
 
 (async () => {
-  assert.ok(apiKey, "WANDOU_API_KEY is required");
+  if (!apiKey) {
+    console.log("SKIP: real image-ratio API test requires WANDOU_API_KEY");
+    return;
+  }
   fs.mkdirSync(outputDir, { recursive: true });
 
   const nativeImages = {};

@@ -166,10 +166,13 @@ test("两个 API 渠道独立识别同名模型并按节点选择使用对应密
   assert.equal(await page.locator("#apiChannelOneTitle").textContent(), "渠道 1 必填");
   assert.equal(await page.locator("#apiChannelTwoTitle").textContent(), "渠道 2 选填");
   const channelTwoVisibility = page.locator('[data-api-key-visibility="apiKey2"]');
-  await channelTwoVisibility.click();
+  const channelTwoVisibilityBox = await channelTwoVisibility.boundingBox();
+  assert.ok(channelTwoVisibilityBox.width >= 60 && channelTwoVisibilityBox.height >= 50, JSON.stringify(channelTwoVisibilityBox));
+  await page.mouse.click(channelTwoVisibilityBox.x + 5, channelTwoVisibilityBox.y + 5);
   assert.equal(await page.locator("#apiKey2").getAttribute("type"), "text");
+  assert.equal(await page.locator("#apiKey2").evaluate((input) => getComputedStyle(input).webkitTextSecurity), "none");
   assert.equal(await channelTwoVisibility.getAttribute("aria-pressed"), "true");
-  await channelTwoVisibility.click();
+  await page.mouse.click(channelTwoVisibilityBox.x + channelTwoVisibilityBox.width - 5, channelTwoVisibilityBox.y + channelTwoVisibilityBox.height - 5);
   assert.equal(await page.locator("#apiKey2").getAttribute("type"), "password");
   const settingsBounds = await page.locator("#settingsPopover").boundingBox();
   assert.ok(settingsBounds);

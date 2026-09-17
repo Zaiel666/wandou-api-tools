@@ -60,13 +60,20 @@ test("AI 音频节点可上传参考音频、请求指定 TTS 模型并播放结
   const audioNode = page.locator(".node.audio").last();
   assert.equal(await page.locator('[data-menu-node="audio"]').count(), 1);
   assert.equal(await audioNode.locator("[data-audio-model]").inputValue(), "gemini-3.1-flash-tts-preview");
-  await audioNode.locator("[data-audio-upload]").setInputFiles({ name:"reference.wav", mimeType:"audio/wav", buffer:tinyWav() });
+  assert.deepEqual(await audioNode.locator(".audio-quickbar button, .audio-quickbar label").allTextContents(), ["信息", "删除", "上传音频"]);
+  assert.equal(await audioNode.locator(".audio-stage-empty", { hasText:"空音频节点" }).count(), 1);
+  assert.equal(await audioNode.locator(".audio-composer").count(), 1);
+  await audioNode.locator("[data-audio-upload]").first().setInputFiles({ name:"reference.wav", mimeType:"audio/wav", buffer:tinyWav() });
   await audioNode.locator(".audio-reference-card audio").waitFor();
   assert.equal(await audioNode.locator(".audio-reference-card audio").count(), 1);
+  assert.equal(await audioNode.locator(".audio-stage-player audio").count(), 1);
   await audioNode.locator("[data-audio-prompt]").fill("请用自然清晰的女声朗读：豌豆音频节点测试成功。");
   if (process.env.AUDIO_UI_ARTIFACT_DIR) {
     fs.mkdirSync(process.env.AUDIO_UI_ARTIFACT_DIR, { recursive:true });
-    await audioNode.screenshot({ path:path.join(process.env.AUDIO_UI_ARTIFACT_DIR, "audio-node-preview.png") });
+    await audioNode.screenshot({ path:path.join(process.env.AUDIO_UI_ARTIFACT_DIR, "audio-node-dark.png") });
+    await page.evaluate(() => applyGlobalTheme("light"));
+    await audioNode.screenshot({ path:path.join(process.env.AUDIO_UI_ARTIFACT_DIR, "audio-node-light.png") });
+    await page.evaluate(() => applyGlobalTheme("dark"));
   }
   await audioNode.locator("[data-audio-generate]").click();
   await page.waitForFunction(() => {
