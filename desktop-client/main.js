@@ -199,6 +199,44 @@ function canvasMediaRootDirectory() {
   return path.join(app.getPath("userData"), "canvas-media");
 }
 
+function localDataRootDirectory() {
+  return path.join(app.getPath("userData"), "local-data");
+}
+
+function safeLocalDataPath(value) {
+  const normalized = String(value || "").replace(/\\/g, "/");
+  const parts = normalized.split("/").filter(Boolean);
+  if (!parts.length || parts.some((part) => part === "." || part === ".." || !/^[0-9A-Za-z._-]{1,180}$/.test(part))) return "";
+  const root = path.resolve(localDataRootDirectory());
+  const destination = path.resolve(root, ...parts);
+  return destination.startsWith(`${root}${path.sep}`) ? destination : "";
+}
+
+async function writeLocalData(payload = {}) {
+  const destination = safeLocalDataPath(payload.path);
+  if (!destination) return { success: false, error: "Invalid local data path" };
+  try {
+    await fs.promises.mkdir(path.dirname(destination), { recursive: true });
+    const temporary = `${destination}.${process.pid}-${Date.now()}.tmp`;
+    await fs.promises.writeFile(temporary, String(payload.value ?? ""), "utf8");
+    await fs.promises.rename(temporary, destination);
+    return { success: true, path: destination };
+  } catch (error) {
+    return { success: false, error: error.message, path: destination };
+  }
+}
+
+async function readLocalData(payload = {}) {
+  const source = safeLocalDataPath(payload.path);
+  if (!source) return { success: false, error: "Invalid local data path" };
+  try {
+    return { success: true, value: await fs.promises.readFile(source, "utf8"), path: source };
+  } catch (error) {
+    if (error?.code === "ENOENT") return { success: true, missing: true, value: null, path: source };
+    return { success: false, error: error.message, path: source };
+  }
+}
+
 function projectHubStatePath() {
   return path.join(app.getPath("userData"), "project-hub-state.json");
 }
@@ -590,9 +628,6 @@ async function writeCanvasBackup(payload = {}) {
     state
   };
   const serialized = JSON.stringify(envelope);
-  if (Buffer.byteLength(serialized, "utf8") > 160 * 1024 * 1024) {
-    return { success: false, error: "Canvas backup is larger than 160 MB" };
-  }
   try {
     const directory = canvasBackupDirectory(folderId, projectId);
     await fs.promises.mkdir(directory, { recursive: true });
@@ -640,16 +675,6 @@ async function readCanvasBackupDirectory(directory, stateLimit = 3) {
       if (states.length >= stateLimit) break;
       try {
         const backupPath = path.join(directory, name);
-        const stats = await fs.promises.stat(backupPath);
-        // Old builds could embed every base64 image in every JSON snapshot. Reading
-        // twelve 100+ MB snapshots during project startup blocks Electron's main
-        // process and makes every tab appear frozen. Current saves keep media in
-        // canvas-media, so oversized legacy snapshots remain on disk for manual
-        // recovery but are not parsed during normal startup.
-        if (stats.size > 12 * 1024 * 1024) {
-          skippedLarge += 1;
-          continue;
-        }
         const backup = JSON.parse(await fs.promises.readFile(backupPath, "utf8"));
         if (backup?.format === "wandou-canvas-backup" && Array.isArray(backup.state?.nodes)) {
           states.push(backup.state);
@@ -671,8 +696,7 @@ async function readCanvasBackups(payload = {}) {
     if (payload.allProjects) {
       const folderDirectory = path.join(canvasBackupRootDirectory(), folderId);
       const projectDirectories = (await fs.promises.readdir(folderDirectory, { withFileTypes: true }))
-        .filter((entry) => entry.isDirectory())
-        .slice(0, 100);
+        .filter((entry) => entry.isDirectory());
       const states = [];
       const projectStates = [];
       let skippedLarge = 0;
@@ -1210,6 +1234,18 @@ ipcMain.handle("desktop:read-canvas-backups", (_event, payload = {}) => readCanv
 ipcMain.handle("desktop:has-canvas-media", (_event, payload = {}) => hasCanvasMedia(payload));
 ipcMain.handle("desktop:write-canvas-media", (_event, payload = {}) => writeCanvasMedia(payload));
 ipcMain.handle("desktop:read-canvas-media", (_event, payload = {}) => readCanvasMedia(payload));
+ipcMain.handle("desktop:get-local-data-config", (event) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取本地存储配置" };
+  return { success: true, mode: "disk", directory: localDataRootDirectory() };
+});
+ipcMain.handle("desktop:write-local-data", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以写入本地数据" };
+  return writeLocalData(payload);
+});
+ipcMain.handle("desktop:read-local-data", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取本地数据" };
+  return readLocalData(payload);
+});
 ipcMain.handle("desktop:read-project-hub-state", (event) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取项目文件夹" };
   return readProjectHubState();

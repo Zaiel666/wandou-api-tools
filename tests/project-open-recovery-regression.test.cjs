@@ -57,6 +57,10 @@ const { chromium } = require(path.join(__dirname, "..", "desktop-client", "node_
     const canvasUrl = `${pathToFileURL(path.resolve(__dirname, "../app/ai-node-canvas.html")).href}?project=legacy-folder-recovery`;
     await page.goto(canvasUrl, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => document.body.dataset.canvasReady === "true");
+    await page.waitForFunction(() => {
+      const saved = JSON.parse(localStorage.getItem("aiCanvasStateV1:legacy-folder-recovery:inner-first") || "null");
+      return saved?.external === true;
+    });
 
     const restored = await page.evaluate(() => {
       const nested = JSON.parse(localStorage.getItem("aiCanvasStateV1:legacy-folder-recovery:inner-first"));
@@ -65,8 +69,8 @@ const { chromium } = require(path.join(__dirname, "..", "desktop-client", "node_
         activeProjectId,
         nodeCount: nodes.length,
         firstTitle: nodes[0]?.title,
-        nestedNodeCount: nested.nodes.length,
-        legacyNodeCount: legacy.nodes.length,
+        nested,
+        legacy,
         visible: restoredCanvasHasVisibleContent(),
         view: { ...view },
       };
@@ -74,8 +78,11 @@ const { chromium } = require(path.join(__dirname, "..", "desktop-client", "node_
     assert.equal(restored.activeProjectId, "inner-first", "legacy files should reopen in the first inner project");
     assert.equal(restored.nodeCount, 15);
     assert.equal(restored.firstTitle, "原文件 1");
-    assert.equal(restored.nestedNodeCount, 15, "legacy state should be copied to the scoped project key");
-    assert.equal(restored.legacyNodeCount, 15, "migration must preserve the original folder record");
+    assert.equal(restored.nested.external, true, "the scoped key should become a small external-state pointer after backup");
+    assert.equal(restored.legacy.external, true, "the duplicated legacy folder record should be compacted after backup");
+    assert.equal(restored.nested.nodeCount, 15);
+    assert.equal(restored.nested.nodes, undefined);
+    assert.equal(restored.legacy.nodes, undefined);
     assert.equal(restored.visible, true, "an off-screen saved view should be repaired after restore");
     assert.ok(restored.view.x > -100000 && restored.view.y > -100000);
 

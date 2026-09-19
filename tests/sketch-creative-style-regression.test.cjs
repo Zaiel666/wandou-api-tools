@@ -66,6 +66,12 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
     render();
   });
   await sketch.locator("[data-sketch-open]").click();
+  await page.waitForFunction(() => {
+    const canvas = document.getElementById("sketchEditorCanvas");
+    if (!canvas) return false;
+    const pixel = canvas.getContext("2d").getImageData(15, 15, 1, 1).data;
+    return pixel[0] === 17 && pixel[1] === 24 && pixel[2] === 39 && pixel[3] === 255;
+  });
   assert.deepEqual(
     await board.evaluate((canvas) => {
       const context = canvas.getContext("2d");

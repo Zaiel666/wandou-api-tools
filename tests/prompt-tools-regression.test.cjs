@@ -20,7 +20,7 @@ const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
       window.fetchMaybeProxied = async (url, options = {}) => {
         const body = JSON.parse(String(options.body || "{}"));
         calls.push({ url, body });
-        if (body.model === "gpt-5.4") {
+        if (body.model === "gpt-6-astra") {
           return new Response(JSON.stringify({ error: { message: "model not found" } }), {
             status: 400,
             headers: { "Content-Type": "application/json" }
@@ -73,7 +73,7 @@ const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
     assert.equal(result.calls.length, 3);
     assert.equal(result.calls[0].url, "https://www.zayapi.top/v1/chat/completions");
-    assert.equal(result.calls[0].body.model, "gpt-5.4");
+    assert.equal(result.calls[0].body.model, "gpt-6-astra");
     assert.equal(result.calls[0].body.stream, false);
     assert.equal(result.calls[1].url, "https://www.zayapi.top/v1/chat/completions");
     assert.equal(result.calls[1].body.model, "claude-sonnet-4-6");

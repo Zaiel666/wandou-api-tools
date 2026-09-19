@@ -1,4 +1,6 @@
 const apiStorageKey = "ai-tools-api-config";
+const durableApiConfigKey = "api-config-v1";
+let memoryApiConfig = null;
 const savedTheme = localStorage.getItem("ai-tools-theme");
 const initialTheme = window.WandouLocalCache?.readTheme(savedTheme || "light") || savedTheme || "light";
 let currentImageDataUrl = "";
@@ -14,15 +16,56 @@ document.documentElement.dataset.theme = initialTheme;
 function readApiConfig() {
   try {
     const config = JSON.parse(localStorage.getItem(apiStorageKey) || "{}");
-    return {
+    const localConfig = {
       url: defaultApiBaseUrl(),
       key: config.key || "",
       key2: config.key2 || "",
       savedAt: config.savedAt || ""
     };
+    if ((config.key || config.key2) && (!memoryApiConfig || String(localConfig.savedAt) >= String(memoryApiConfig.savedAt || ""))) {
+      memoryApiConfig = localConfig;
+    }
+    return memoryApiConfig || { url: defaultApiBaseUrl(), key: "", key2: "" };
   } catch {
-    return { url: defaultApiBaseUrl(), key: "", key2: "" };
+    return memoryApiConfig || { url: defaultApiBaseUrl(), key: "", key2: "" };
   }
+}
+
+async function hydrateDurableApiConfig() {
+  try {
+    const config = await window.WandouLocalCache?.readJson?.(durableApiConfigKey);
+    if (config && (config.key || config.key2)) {
+      memoryApiConfig = {
+        url: defaultApiBaseUrl(),
+        key: String(config.key || "").trim(),
+        key2: String(config.key2 || "").trim(),
+        savedAt: String(config.savedAt || "")
+      };
+    }
+  } catch (_error) {}
+  return readApiConfig();
+}
+
+async function persistSharedApiConfig(key, key2) {
+  const savedAt = new Date().toISOString();
+  memoryApiConfig = { url: defaultApiBaseUrl(), key, key2, savedAt };
+  let localSaved = true;
+  try {
+    localStorage.setItem(apiStorageKey, JSON.stringify({ key, key2, savedAt }));
+    localStorage.setItem("aiCanvasApi", JSON.stringify(memoryApiConfig));
+  } catch (error) {
+    localSaved = false;
+    console.warn("API config localStorage write failed; using durable cache", error);
+  }
+  let durableSaved = false;
+  try {
+    const result = await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, memoryApiConfig);
+    durableSaved = result?.ok === true;
+  } catch (error) {
+    console.warn("API config durable cache write failed", error);
+  }
+  if (!localSaved && !durableSaved) throw new Error("本机存储空间不足，API 配置未能保存");
+  return { localSaved, durableSaved };
 }
 
 function defaultApiBaseUrl() {
@@ -331,7 +374,7 @@ apiModal?.addEventListener("click", (event) => {
 
 document.querySelector("[data-api-open]")?.addEventListener("click", openApiModal);
 document.querySelector("[data-api-close]")?.addEventListener("click", closeApiModal);
-apiForm?.addEventListener("submit", (event) => {
+apiForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const key = apiKeyInput?.value.trim() || "";
   const key2 = apiKey2Input?.value.trim() || "";
@@ -340,28 +383,42 @@ apiForm?.addEventListener("submit", (event) => {
     showToast("请先填写渠道 1 API 密钥");
     return;
   }
-  localStorage.setItem(apiStorageKey, JSON.stringify({
-    key,
-    key2,
-    savedAt: new Date().toISOString()
-  }));
-  localStorage.setItem("aiCanvasApi", JSON.stringify({
-    url: defaultApiBaseUrl(),
-    key,
-    key2
-  }));
-  closeApiModal();
-  showToast("API 设置已保存");
+  const submitButton = apiForm.querySelector('[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.setAttribute("aria-busy", "true");
+  }
+  showToast("正在保存 API 设置…");
+  try {
+    const result = await persistSharedApiConfig(key, key2);
+    closeApiModal();
+    showToast(result.localSaved ? "API 设置已保存" : "API 设置已保存到本地数据库");
+  } catch (error) {
+    showToast(`保存失败：${error?.message || "请稍后重试"}`);
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.removeAttribute("aria-busy");
+    }
+  }
 });
-document.querySelector("[data-api-clear]")?.addEventListener("click", () => {
-  localStorage.removeItem(apiStorageKey);
-  localStorage.removeItem("aiCanvasApi");
+document.querySelector("[data-api-clear]")?.addEventListener("click", async () => {
+  memoryApiConfig = { url: defaultApiBaseUrl(), key: "", key2: "", savedAt: new Date().toISOString() };
+  try {
+    localStorage.removeItem(apiStorageKey);
+    localStorage.removeItem("aiCanvasApi");
+  } catch (_error) {}
+  try {
+    await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, memoryApiConfig);
+  } catch (_error) {}
   fillApiForm();
   showToast("API 设置已清除");
 });
 apiModal?.addEventListener("click", (event) => {
   if (event.target === apiModal) closeApiModal();
 });
+
+hydrateDurableApiConfig().then(() => fillApiForm());
 
 function setStatus(text) {
   document.querySelectorAll(".status-pill").forEach((item) => {
@@ -443,7 +500,7 @@ function selectedModelId() {
     .find((button) => button.classList.contains("active"))?.textContent.trim() || "";
   if (/claude/i.test(selected)) return "claude-sonnet-4-6";
   if (/gemini/i.test(selected)) return "gemini-3.1-pro-preview";
-  if (/gpt/i.test(selected)) return "gpt-5.5";
+  if (/gpt/i.test(selected)) return "gpt-6-astra";
   return "gemini-3.1-pro-preview";
 }
 
@@ -491,6 +548,10 @@ async function callTextApi() {
   let baseUrl = config.url.replace(/\/$/, "");
   if (!/\/v1$/i.test(baseUrl)) baseUrl += "/v1";
   const endpoint = baseUrl + "/chat/completions";
+  const model = selectedModelId();
+  const tokenLimit = /^gpt-(?:6|5\.(?:[4-9]|\d{2,}))/i.test(model)
+    ? { max_completion_tokens: 1200 }
+    : { max_tokens: 1200 };
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -498,12 +559,12 @@ async function callTextApi() {
       "Authorization": `Bearer ${config.key}`
     },
     body: JSON.stringify({
-      model: selectedModelId(),
+      model,
       messages: [
         { role: "system", content: "你是专业 AI 创作工具助手。请严格按用户要求输出，不要输出多余解释。" },
         { role: "user", content: buildTextPrompt() }
       ],
-      max_tokens: 1200,
+      ...tokenLimit,
       stream: false
     })
   });

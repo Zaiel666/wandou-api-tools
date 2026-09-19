@@ -101,14 +101,24 @@ const { chromium } = require(path.join(__dirname, "..", "desktop-client", "node_
       });
       const saveContext = createCanvasSaveContext();
       const success = await saveCanvasStateNow(saveContext, { skipDesktopBackup: true });
-      const saved = JSON.parse(localStorage.getItem(saveContext.projectKey));
+      const db = await openLocalMediaDb();
+      const saved = await new Promise((resolve, reject) => {
+        const tx = db.transaction(canvasStateStoreName, "readonly");
+        const request = tx.objectStore(canvasStateStoreName).get(saveContext.projectKey);
+        request.onsuccess = () => resolve(request.result?.state || null);
+        request.onerror = () => reject(request.error);
+      });
+      const pointer = JSON.parse(localStorage.getItem(saveContext.projectKey));
       const node = saved.nodes.find((item) => item.id === 987654);
-      return { success, node };
+      return { success, node, pointer, pointerBytes: localStorage.getItem(saveContext.projectKey).length };
     });
     assert.equal(compactResult.success, true);
     assert.match(compactResult.node.mediaUrl, /^indexed-media:/);
     assert.equal(compactResult.node.mediaUrl, compactResult.node.fullUrl);
     assert.equal(compactResult.node.mediaUrl, compactResult.node.references[0].url);
+    assert.equal(compactResult.pointer.external, true);
+    assert.equal(compactResult.pointer.nodes, undefined);
+    assert.ok(compactResult.pointerBytes < 500, "localStorage should contain only a tiny external-state pointer");
     console.log("PASS: real project cover and compact media references");
   } finally {
     await browser.close();

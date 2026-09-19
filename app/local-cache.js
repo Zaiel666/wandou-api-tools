@@ -11,6 +11,10 @@
     return !!(window.chrome && window.chrome.webview);
   }
 
+  function hasElectronDiskBridge() {
+    return !!(window.wandouShell?.writeLocalData && window.wandouShell?.readLocalData);
+  }
+
   function safeName(value) {
     return String(value || "default")
       .replace(/^[a-z]+:/i, "")
@@ -99,6 +103,17 @@
   async function config() {
     if (!configPromise) {
       configPromise = (async () => {
+        if (hasElectronDiskBridge()) {
+          const electron = await window.wandouShell.getLocalDataConfig?.();
+          if (electron?.success) {
+            return {
+              ok: true,
+              mode: "disk",
+              cacheDir: electron.directory,
+              note: "Data is stored in the local application data directory."
+            };
+          }
+        }
         const desktop = await postDesktop("LOCAL_CACHE_CONFIG");
         if (desktop && desktop.ok) return desktop;
         await openFallbackDb();
@@ -114,6 +129,7 @@
   }
 
   async function setDirectory(path) {
+    if (hasElectronDiskBridge()) return config();
     const desktop = await postDesktop("LOCAL_CACHE_SET_DIR", { path: String(path || "") });
     if (desktop && desktop.ok) {
       configPromise = Promise.resolve(desktop);
@@ -123,12 +139,20 @@
   }
 
   async function writeText(path, value) {
+    if (hasElectronDiskBridge()) {
+      const electron = await window.wandouShell.writeLocalData({ path, value: String(value || "") });
+      if (electron?.success) return { ok: true, mode: "disk", path: electron.path };
+    }
     const desktop = await postDesktop("LOCAL_CACHE_WRITE", { path, value: String(value || "") });
     if (desktop && desktop.ok) return desktop;
     return fallbackWrite(path, String(value || ""));
   }
 
   async function readText(path) {
+    if (hasElectronDiskBridge()) {
+      const electron = await window.wandouShell.readLocalData({ path });
+      if (electron?.success) return typeof electron.value === "string" ? electron.value : null;
+    }
     const desktop = await postDesktop("LOCAL_CACHE_READ", { path });
     if (desktop && desktop.ok && typeof desktop.value === "string") return desktop.value;
     return fallbackRead(path);

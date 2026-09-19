@@ -22,7 +22,7 @@ const { chromium } = require('playwright');
     assert.equal(await page.locator('.node.psd').count(), 1);
     assert.equal(await page.locator('[data-menu-node="psd"]').count(), 1);
     assert.equal(await page.locator('.node.psd [data-psd-upload]').count(), 1);
-    assert.match(await page.locator('.node.psd [data-psd-model-toggle]').innerText(), /gpt-image-2\.5-1k/, 'PSD must default to the configured GPT image model instead of a hardcoded GPT-image-2');
+    assert.match(await page.locator('.node.psd [data-psd-model-toggle]').innerText(), /gpt-image-2\.5-sunburst/, 'PSD must default to the highest verified GPT image edit model');
     const previewSize = await page.locator('.node.psd .psd-source-preview').evaluate((element) => {
       const rect = element.getBoundingClientRect();
       return [rect.width, rect.height, getComputedStyle(element.querySelector('img') || element).objectFit];
@@ -54,10 +54,10 @@ const { chromium } = require('playwright');
         visionRequests += 1;
         await new Promise((resolve) => setTimeout(resolve, 1250));
         return { text:JSON.stringify({ layers:[
-          { name:'人物', category:'subject' },
-          { name:'标题', category:'text' },
-          { name:'角标', category:'element' },
-          { name:'光效', category:'lighting' },
+          { name:'人物', category:'subject', bounds:[100,188,200,312] },
+          { name:'标题', category:'text', bounds:[600,250,250,188] },
+          { name:'角标', category:'element', bounds:[50,63,80,100] },
+          { name:'光效', category:'lighting', bounds:[700,688,200,188] },
         ] }) };
       };
       callApi = async (request) => {
@@ -68,10 +68,14 @@ const { chromium } = require('playwright');
         canvas.width = 100;
         canvas.height = 80;
         const ctx = canvas.getContext('2d');
-        if (request.transparentBackground) {
+        if (request._psdObjectMaskJob) {
           ctx.fillStyle = '#000';
-          if (request.prompt.includes('人物')) ctx.fillRect(10, 15, 20, 25);
-          else if (request.prompt.includes('标题')) ctx.fillRect(60, 20, 25, 15);
+          ctx.fillRect(0, 0, 100, 80);
+          ctx.fillStyle = '#fff';
+          if (request.prompt.includes('人物')) {
+            ctx.fillRect(10, 15, 20, 25);
+            ctx.fillRect(80, 60, 10, 10);
+          } else if (request.prompt.includes('标题')) ctx.fillRect(60, 20, 25, 15);
           else if (request.prompt.includes('角标')) ctx.fillRect(5, 5, 8, 8);
           else ctx.fillRect(70, 55, 20, 15);
         } else {
@@ -116,7 +120,7 @@ const { chromium } = require('playwright');
         size:[psd.width, psd.height],
         bytes:buffer.byteLength,
         subjectPixel:pixel(psd.children[0], 15, 20),
-        subjectOutside:pixel(psd.children[0], 50, 40),
+        subjectOutside:pixel(psd.children[0], 85, 65),
         repairedInside:pixel(psd.children[4], 15, 20),
         originalOutside:pixel(psd.children[4], 50, 40),
       };
@@ -128,7 +132,7 @@ const { chromium } = require('playwright');
     assert.notEqual(result.initialCountdown, result.tickedCountdown, 'the countdown should visibly tick while analysis is pending');
     assert.match(result.plannedCountdown, /图像处理 0\/5/, 'the estimate should update after discovering the layer count');
     assert.equal(result.requests, 5, 'four detected objects and one background repair should be requested');
-    assert.ok(result.requestModels.every((request) => request.model === 'gpt-image-2.5-1k'), 'all PSD image stages should use the selected model');
+    assert.ok(result.requestModels.every((request) => request.model === 'gpt-image-2.5-sunburst'), 'all PSD image stages should use the verified highest-quality edit model');
     assert.equal(result.requestModels.filter((request) => request.masked).length, 1, 'background repair should use the selected model even with a mask');
     assert.deepEqual(result.names, ['人物', '标题', '角标', '光效', '修补背景', '原图备份（隐藏）']);
     assert.deepEqual(result.hidden, [false, false, false, false, false, true]);
@@ -136,7 +140,7 @@ const { chromium } = require('playwright');
     assert.equal(await page.locator('.node.psd .psd-source-preview img').evaluate((element) => getComputedStyle(element).objectFit), 'contain', 'uploaded or linked images must remain fully visible');
     assert.ok(result.bytes > 500, 'PSD must contain actual layer data');
     assert.deepEqual(result.subjectPixel, [237, 35, 60, 255], 'subject layer must retain original pixels');
-    assert.equal(result.subjectOutside[3], 0, 'subject layer must be transparent outside its mask');
+    assert.equal(result.subjectOutside[3], 0, 'subject layer must discard false-positive mask pixels outside GPT bounds');
     assert.deepEqual(result.repairedInside, [39, 125, 161, 255], 'removed subject area should contain repaired background');
     assert.deepEqual(result.originalOutside, [237, 35, 60, 255], 'unmasked background should preserve original pixels');
     assert.equal(await page.locator('.node.psd [data-psd-download]').count(), 1);

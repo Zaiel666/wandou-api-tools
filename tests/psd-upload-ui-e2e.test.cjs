@@ -25,11 +25,7 @@ const { chromium } = require('playwright');
     await page.locator('.node.psd [data-psd-upload]').setInputFiles({ name:'psd-upload-test.png', mimeType:'image/png', buffer:Buffer.from(image, 'base64') });
     assert.equal(await page.locator('.node.psd .psd-source-preview img').count(), 1, 'file selection should create a visible uploaded preview');
     assert.match(await page.locator('.node.psd .status').innerText(), /图片已上传/);
-    await page.locator('.node.psd [data-psd-model-toggle]').click();
-    await page.locator('.node.psd [data-psd-model-option="GPT-image-2"]').click();
-    assert.match(await page.locator('.node.psd [data-psd-model-toggle]').innerText(), /GPT-image-2$/);
-    await page.locator('.node.psd [data-psd-model-toggle]').click();
-    await page.locator('.node.psd [data-psd-model-option="gpt-image-2.5-1k"]').click();
+    assert.match(await page.locator('.node.psd [data-psd-model-toggle]').innerText(), /gpt-image-2\.5-sunburst$/);
     const maskedModel = await page.evaluate(async () => {
       const node = nodes.find((item) => item.type === 'psd');
       const source = psdSourceReference(node);
@@ -38,17 +34,25 @@ const { chromium } = require('playwright');
       const request = await buildApiRequest({ type:'generator', model:node.model, resolution:'1K', count:1, _psdLayerJob:true, _apiTargetSize:'240x160', prompt:'修补背景' }, [maskReference]);
       return request.body.get('model');
     });
-    assert.equal(maskedModel, 'gpt-image-2.5-1k', 'masked background repair must not silently switch back to an unavailable GPT-image-2');
+    assert.equal(maskedModel, 'gpt-image-2.5-sunburst', 'masked background repair must use the verified highest-quality edit model');
     const visionCandidates = await page.evaluate(() => {
       const existing = assistantModelOptions;
-      assistantModelOptions = ['gpt-image-2.5-1k', 'glm-4.6v', 'gpt-4.1'];
+      assistantModelOptions = ['gpt-image-2.5-1k', 'glm-4.6v', 'gpt-5.6-luna', 'gpt-6-astra', 'gpt-5.6-sol'];
       const choices = psdVisionModelCandidates();
       assistantModelOptions = existing;
       return choices;
     });
-    assert.equal(visionCandidates[0], 'gpt-4.1', 'synced chat vision models should be tried before generic fallbacks');
-    assert.ok(visionCandidates.includes('glm-4.6v'), 'other gateway vision models should be eligible');
+    assert.deepEqual(visionCandidates, ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-luna'], 'all synced GPT vision models should be tried from highest quality to fastest tier');
+    assert.ok(!visionCandidates.includes('glm-4.6v'), 'PSD analysis should use GPT vision models only');
     assert.ok(!visionCandidates.includes('gpt-image-2.5-1k'), 'image generation models cannot analyze an image as chat JSON');
+    const visionTimeouts = await page.evaluate(() => ({
+      primary:psdVisionAttemptTimeoutMs('gpt-6-astra', 0),
+      fallback:psdVisionAttemptTimeoutMs('gpt-5.6-sol', 1),
+      stage:psdVisionStageTimeoutMs,
+    }));
+    assert.equal(visionTimeouts.primary, 300000, 'the highest-quality GPT vision request should have up to five minutes');
+    assert.equal(visionTimeouts.fallback, 90000, 'fallback models should still have enough time for a large image');
+    assert.equal(visionTimeouts.stage, 590000, 'the complete vision fallback stage must remain within ten minutes');
 
     await page.evaluate(() => {
       apiKeyInput.value = 'isolated-ui-test-key';
@@ -69,8 +73,10 @@ const { chromium } = require('playwright');
         const canvas = document.createElement('canvas');
         canvas.width = 240; canvas.height = 160;
         const context = canvas.getContext('2d');
-        if (request.transparentBackground) {
+        if (request._psdObjectMaskJob) {
           context.fillStyle = '#000';
+          context.fillRect(0, 0, 240, 160);
+          context.fillStyle = '#fff';
           if (request.prompt.includes('红色主体')) context.fillRect(80, 35, 75, 100);
           else context.fillRect(12, 8, 80, 24);
         } else {
@@ -111,7 +117,7 @@ const { chromium } = require('playwright');
       const payload = route.request().postDataJSON();
       visionModels.push(payload.model);
       receivedVisionImage ||= payload.messages?.[1]?.content?.some((item) => item.type === 'image_url' && item.image_url.url.startsWith('data:image/jpeg;base64,'));
-      if (!rejectAllVision && payload.model === 'gpt-4.1') {
+      if (!rejectAllVision && payload.model === 'gpt-6-astra') {
         return route.fulfill({ status:200, headers, contentType:'application/json', body:JSON.stringify({ choices:[{ message:{ content:'{"layers":[{"name":"红色主体","category":"subject"}]}' } }] }) });
       }
       await route.fulfill({ status:400, headers, contentType:'application/json', body:'{"error":"No available channel for model"}' });
@@ -125,20 +131,20 @@ const { chromium } = require('playwright');
     await fallbackDownload;
     await page.evaluate(() => window.__psdUiJob);
     assert.equal(receivedVisionImage, true, 'vision endpoint should receive an uploaded image in the chat request');
-    assert.deepEqual(visionModels.slice(0, 2), ['gpt-4o', 'gpt-4.1'], 'vision model unavailable should try the next supported candidate');
+    assert.equal(visionModels[0], 'gpt-6-astra', 'PSD analysis should start with the highest GPT vision model');
     assert.match(await page.locator('.node.psd .status').innerText(), /PSD 已生成/);
     rejectAllVision = true;
     await page.locator('.node.psd [data-psd-generate]').click();
     await page.evaluate(() => window.__psdUiJob);
-    assert.match(await page.locator('.node.psd .status').innerText(), /视觉分析接口不可用。已尝试 gpt-4o.*gpt-4\.1.*支持 chat\/completions 图片输入的视觉模型/);
+    assert.match(await page.locator('.node.psd .status').innerText(), /视觉分析接口不可用。已尝试 gpt-6-astra.*gpt-5\.6-sol.*gpt-5\.6.*gpt-5\.6-terra.*支持 chat\/completions 图片输入的视觉模型/);
     assert.equal(await page.locator('.node.psd [data-psd-generate]').isEnabled(), true);
     await page.evaluate(() => {
       postChatCompletion = async () => ({ text:'{"layers":[{"name":"红色主体","category":"subject"}]}' });
-      callApi = async () => { throw new Error('No available channel for model gpt-image-2.5-1k'); };
+      callApi = async () => { throw new Error('No available channel for model gpt-image-2.5-sunburst'); };
     });
     await page.locator('.node.psd [data-psd-generate]').click();
     await page.evaluate(() => window.__psdUiJob);
-    assert.match(await page.locator('.node.psd .status').innerText(), /第 1 层“红色主体”生成（gpt-image-2\.5-1k）失败：接口后台没有开通当前选择的图片模型通道/);
+    assert.match(await page.locator('.node.psd .status').innerText(), /第 1 层“红色主体”遮罩生成（gpt-image-2\.5-sunburst）失败：接口后台没有开通当前选择的图片模型通道/);
     assert.equal(await page.locator('.node.psd [data-psd-generate]').isEnabled(), true);
     assert.deepEqual(errors, []);
     console.log('PASS: actual file upload, UI click, selected GPT model, downloadable PSD, and stage-specific provider errors');
