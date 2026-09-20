@@ -103,7 +103,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：画布数据改用本地磁盘与 IndexedDB 持久化；新增 SVG / Adobe AI 矢量导出；改进 PSD 分层分析与超时；修复 Gemini/OpenAI 音频生成，并重做可折叠音频节点与音频设置弹出层。"
+            notes = "v${env:VERSION}：新增豌豆 AI 网格海报工作台与 18 套可编辑构图；强化 PSD 图层互斥与语义拆分；SVG、Adobe AI 和 EPS 默认生成可编辑分层矢量对象。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 

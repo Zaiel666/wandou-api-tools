@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>GRIDFORM — 网格海报工作台</title>
+  <link rel="icon" href="./wandou-logo-latest.png" type="image/png">
+  <link rel="apple-touch-icon" href="./wandou-logo-latest.png">
+  <link rel="stylesheet" href="./gridform.css">
+  <link rel="stylesheet" href="./gridform.local.css">
+</head>
+<body data-authenticated="true" data-draft-scope="wandou-local" data-points-cost="0" data-authorization-url="">
+  <nav class="platform-bar" aria-label="页面导航">
+    <a href="./ai-node-canvas.html" id="backToCanvas">← 返回 AI 节点画布</a>
+    <span>本地版 · 编辑与导出免费</span>
+  </nav>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="wandou-brand-logo"><img data-gridform-logo src="./wandou-logo-latest.png" alt="豌豆 AI"></span>
+      <strong class="wandou-brand-name">豌豆 AI</strong>
+      <span class="brand-divider"></span>
+      <span class="brand-caption">网格海报工作台</span>
+    </div>
+    <div class="top-actions">
+      <span id="saveStatus" class="save-status"><i></i>草稿已保存</span>
+      <button id="undo" class="icon-button" type="button" title="撤销" aria-label="撤销">↶</button>
+      <button id="redo" class="icon-button" type="button" title="重做" aria-label="重做">↷</button>
+      <span class="divider"></span>
+      <button id="saveDraft" class="quiet-button" type="button">保存草稿</button>
+      <label class="export-choice">
+        <select id="exportFormat" aria-label="导出格式">
+          <option value="png">PNG 高清图片</option>
+          <option value="psd">PSD 分层文件</option>
+        </select>
+        <span id="psdHint" hidden>文字为独立像素图层</span>
+      </label>
+      <button id="export" class="primary-button" type="button"><span>↗</span>导出 PNG</button>
+    </div>
+  </header>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-heading">
+        <h2>设计面板</h2>
+        <span class="micro">GRIDFORM</span>
+      </div>
+      <div class="tabs" role="tablist" aria-label="设计面板">
+        <button type="button" class="active" data-tab="text">文案</button>
+        <button type="button" data-tab="assets">素材</button>
+        <button type="button" data-tab="grid">网格</button>
+        <button type="button" data-tab="canvas">画布</button>
+      </div>
+
+      <div class="sidebar-scroll">
+        <section id="tab-text" class="tab-panel active">
+          <div class="section-heading">
+            <h2>文字内容</h2>
+            <button id="openBulk" class="text-button" type="button">批量编辑</button>
+          </div>
+          <div id="textFields"></div>
+          <button id="addText" class="outline-button full" type="button">＋ 添加文字块</button>
+          <div id="inspector" class="inspector"></div>
+        </section>
+
+        <section id="tab-assets" class="tab-panel">
+          <div class="section-heading">
+            <h2>图片素材</h2>
+            <span id="imageCount" class="micro">0 IMAGES</span>
+          </div>
+          <label id="uploadZone" class="upload-zone" for="imageInput">
+            <span class="upload-icon">＋</span>
+            <strong>上传图片</strong>
+            <span>PNG / JPG / WebP / AVIF · 单张不超过 20MB</span>
+          </label>
+          <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/avif" multiple hidden>
+          <div id="assetList" class="asset-list"></div>
+
+          <div class="section-heading separated"><h2>品牌 Logo</h2><span class="pill">PNG</span></div>
+          <label class="logo-upload" for="logoInput">
+            <span>◎</span>
+            <div><strong id="logoLabel">上传透明 PNG Logo</strong><small>保留透明背景与原始颜色</small></div>
+          </label>
+          <input id="logoInput" type="file" accept="image/png" hidden>
+          <div id="logoInfo"></div>
+          <input id="replaceInput" type="file" accept="image/png,image/jpeg,image/webp,image/avif" hidden>
+        </section>
+
+        <section id="tab-grid" class="tab-panel">
+          <div class="section-heading"><h2>网格设置</h2><button id="toggleGrid" class="text-button" type="button">显示 / 隐藏</button></div>
+          <label class="range-label">列数 <output id="columnsValue">6</output><input id="columns" type="range" min="2" max="16" step="1" value="6"></label>
+          <label class="range-label">行数 <output id="rowsValue">8</output><input id="rows" type="range" min="2" max="20" step="1" value="8"></label>
+          <label class="range-label">页边距 <output id="marginValue">48 px</output><input id="margin" type="range" min="0" max="160" step="2" value="48"></label>
+          <label class="range-label">间距 <output id="gutterValue">16 px</output><input id="gutter" type="range" min="0" max="80" step="1" value="16"></label>
+          <label class="switch-row">显示网格 <input id="showGrid" type="checkbox" checked></label>
+          <label class="switch-row">吸附网格 <input id="snapGrid" type="checkbox" checked></label>
+          <label class="color-row">网格颜色 <input id="gridColor" type="color" value="#c2644c"></label>
+          <p class="hint spaced">拖动元素时自动吸附到网格、画布边界和其他元素。按住 Alt 可临时关闭吸附。</p>
+        </section>
+
+        <section id="tab-canvas" class="tab-panel">
+          <div class="section-heading"><h2>画布比例</h2><span class="micro">CANVAS</span></div>
+          <div class="ratio-options">
+            <button type="button" class="active" data-ratio="3:4"><i style="aspect-ratio:3/4"></i>3:4</button>
+            <button type="button" data-ratio="2:3"><i style="aspect-ratio:2/3"></i>2:3</button>
+            <button type="button" data-ratio="1:1"><i style="aspect-ratio:1/1"></i>1:1</button>
+            <button type="button" data-ratio="3:2"><i style="aspect-ratio:3/2"></i>3:2</button>
+            <button type="button" data-ratio="16:9"><i style="aspect-ratio:16/9"></i>16:9</button>
+          </div>
+          <div class="section-heading separated"><h2>颜色</h2><span class="micro">PALETTE</span></div>
+          <div id="palettes" class="palettes"></div>
+          <label class="color-row">背景 <input id="backgroundColor" type="color" value="#ede9df"></label>
+          <label class="color-row">强调色 <input id="accentColor" type="color" value="#bb533a"></label>
+          <div class="section-heading separated"><h2>布局控制</h2></div>
+          <label class="switch-row">保留手动位置 <input id="preserveManual" type="checkbox" checked></label>
+          <button id="resetPositions" class="secondary-button full" type="button">重置当前位置</button>
+          <button id="restoreDefault" class="outline-button full spaced" type="button">恢复默认海报</button>
+        </section>
+      </div>
+
+      <footer class="sidebar-footer">
+        <span>双击编辑文字</span><b>·</b><span>拖动自由排版</span><b>·</b><span>Alt 临时关闭吸附</span>
+        <span>LOCAL / AUTO SAVE</span>
+      </footer>
+    </aside>
+
+    <main class="studio">
+      <div class="workspace-toolbar">
+        <div><strong id="layoutName">跨栏巨型标题</strong><span id="canvasSize" class="toolbar-note">900 × 1200 px</span></div>
+        <div class="workspace-actions">
+          <button id="resetPositionsTop" class="quiet-button" type="button">重置位置</button>
+          <button id="restoreDefaultTop" class="quiet-button" type="button">默认海报</button>
+          <span class="divider"></span>
+          <button id="toggleGridTop" class="icon-button active" type="button" title="网格" aria-label="显示或隐藏网格">▦</button>
+        </div>
+      </div>
+
+      <section id="viewport" class="viewport" aria-label="海报画布">
+        <div class="canvas-label"><span>ARTBOARD — <b id="artboardIndex">01</b></span><span id="ratioLabel">PORTRAIT / 3:4</span></div>
+        <div id="artboardWrap" class="artboard-wrap">
+          <canvas id="poster" tabindex="0" aria-label="可编辑海报"></canvas>
+          <canvas id="overlay"></canvas>
+          <textarea id="inlineEditor" hidden aria-label="画布文字编辑"></textarea>
+        </div>
+        <div class="canvas-bottom">
+          <span>双击编辑文字 <b>·</b> 拖动自由排版 <b>·</b> Alt 临时关闭吸附</span>
+          <div class="zoom-control">
+            <button id="zoomOut" type="button" aria-label="缩小">−</button>
+            <span id="zoomValue">50%</span>
+            <button id="zoomIn" type="button" aria-label="放大">＋</button>
+            <span class="divider"></span>
+            <button id="fitCanvas" type="button">适合窗口</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="composition-dock">
+        <div class="dock-heading">
+          <div><span class="eyebrow">COMPOSITIONS</span><h2>选择一种秩序 <span>18 种构图，无限种表达。</span></h2></div>
+          <div class="generation-actions">
+            <label><input id="preserveManualDock" type="checkbox" checked> 保留手动位置</label>
+            <button id="variant" class="secondary-button" type="button">↔ 变体</button>
+            <button id="generate" class="primary-button" type="button">✧ 随机生成 ↗</button>
+          </div>
+        </div>
+        <div id="layoutGallery" class="layout-gallery" aria-label="构图选择"></div>
+        <div class="dock-footer"><span id="layoutDescription">标题横跨网格，主视觉沉入下半部，建立鲜明层级。</span><span id="cycleStatus">01 / 18 · 不重复轮换</span></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="bulkDialog">
+    <form method="dialog"><h2>批量编辑文字</h2><p class="hint spaced">用空行分隔每个文字块，第一段作为标题，第二段作为副标题。</p><textarea id="bulkText" rows="12"></textarea><div class="dialog-actions"><button class="secondary-button" value="cancel">取消</button><button id="applyBulk" class="primary-button" type="button">应用文字</button></div></form>
+  </dialog>
+
+  <dialog id="exportConfirm">
+    <h2>导出文件</h2><p>本地版本导出不消耗积分。</p><strong id="confirmFormat">PNG</strong><div class="dialog-actions"><button id="exportLogin" type="button" hidden>登录</button><button value="cancel" onclick="this.closest('dialog').close()">关闭</button></div>
+  </dialog>
+  <div id="exportPending" class="export-pending" hidden><strong>存在未完成导出</strong><p>可继续生成同一个文件。</p><button id="retryExport" type="button">继续导出</button></div>
+  <div id="pointsBalance" hidden>0</div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="./gridform.vendor.js"></script>
+  <script src="./gridform.local.js"></script>
+</body>
+</html>

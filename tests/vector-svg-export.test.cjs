@@ -42,6 +42,8 @@ test("vector node exports SVG and Adobe Illustrator AI in lossless and editable 
   });
 
   const vectorNode = page.locator(".node.vector");
+  assert.equal(await vectorNode.locator("[data-vector-mode]").inputValue(), "trace", "new vector nodes must default to real editable paths");
+  await vectorNode.locator("[data-vector-mode]").selectOption("preserve");
   const preserveDownload = page.waitForEvent("download");
   await vectorNode.locator("[data-vector-generate]").click();
   const preserve = await preserveDownload;
@@ -55,8 +57,10 @@ test("vector node exports SVG and Adobe Illustrator AI in lossless and editable 
   await vectorNode.locator("[data-vector-generate]").click();
   const traceSvg = await downloadText(await traceDownload);
   assert.doesNotMatch(traceSvg, /<image/);
-  assert.match(traceSvg, /<path fill="#ff0000"/);
-  assert.match(traceSvg, /<path fill="#0066ff"/);
+  assert.match(traceSvg, /inkscape:groupmode="layer"/);
+  assert.match(traceSvg, /id="object-\d+-\d+"/);
+  assert.match(traceSvg, /<path[^>]+fill="#ff0000"/);
+  assert.match(traceSvg, /<path[^>]+fill="#0066ff"/);
   assert.match(traceSvg, /shape-rendering="crispEdges"/);
 
   await vectorNode.locator("[data-vector-format]").selectOption("ai");
@@ -75,6 +79,19 @@ test("vector node exports SVG and Adobe Illustrator AI in lossless and editable 
   const aiTraceBytes = await downloadBuffer(await aiTraceDownload);
   assert.equal(aiTraceBytes.subarray(0, 8).toString("ascii"), "%PDF-1.4");
   assert.match(aiTraceBytes.toString("latin1"), /\/ExtGState/);
+  assert.match(aiTraceBytes.toString("latin1"), /\/Type \/OCG/);
+  assert.doesNotMatch(aiTraceBytes.toString("latin1"), /\/Subtype \/Image/);
+
+  await vectorNode.locator("[data-vector-format]").selectOption("eps");
+  const epsDownload = page.waitForEvent("download");
+  await vectorNode.locator("[data-vector-generate]").click();
+  const eps = await epsDownload;
+  const epsText = await downloadText(eps);
+  assert.match(eps.suggestedFilename(), /\.eps$/i);
+  assert.match(epsText, /^%!PS-Adobe-3\.0 EPSF-3\.0/);
+  assert.match(epsText, /%%BeginLayer:/);
+  assert.match(epsText, /%%BeginObject:/);
+  assert.doesNotMatch(epsText, /image|colorimage/i);
   assert.ok(await vectorNode.locator("[data-vector-download]").evaluate((button) => button.getBoundingClientRect().height >= 48), "file download button should remain large and easy to click");
   assert.deepEqual(errors, []);
 });

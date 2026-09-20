@@ -109,6 +109,7 @@ test("AI 音频节点按模型选择 Gemini 原生或 OpenAI Speech 路由并播
   await audioNode.locator("[data-audio-stage]").click();
   assert.equal(await audioNode.locator("[data-audio-upload]").count(), 2, "上传入口应同时出现在快捷工具栏和参考内容区");
   await audioNode.locator("[data-audio-upload]").first().setInputFiles({ name:"node-audio.wav", mimeType:"audio/wav", buffer:tinyWav() });
+  await audioNode.locator(".audio-stage-player audio").waitFor({ state:"attached", timeout:5000 });
   assert.equal(await audioNode.locator(".audio-stage-player audio").count(), 1, "上传音频后紧凑卡片应可直接播放");
   assert.equal(await audioNode.locator('[data-audio-format-option="wav"]').getAttribute("aria-checked"), "true");
   assert.equal(await audioNode.locator(".audio-info-panel, .audio-status").count(), 0, "底部技术说明和状态文字不应再暴露给用户");

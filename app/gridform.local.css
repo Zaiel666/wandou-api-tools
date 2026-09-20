@@ -1,0 +1,89 @@
+:root {
+  --fld-accent: #2f86ff;
+  --fld-accent-soft: color-mix(in srgb, #2f86ff 18%, #111210);
+  --fld-accent-text: #69a8ff;
+  --fld-color-black: #000000;
+  --fld-color-white: #ffffff;
+  --fld-ink: #f2f2ec;
+  --fld-line: #30322e;
+  --fld-muted: #8d8f89;
+  --fld-on-accent: #ffffff;
+  --fld-paper: #090a09;
+  --fld-surface: #111210;
+  --fld-surface-soft: #171816;
+}
+
+.wandou-brand-logo {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+}
+
+.wandou-brand-logo img {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.wandou-brand-name {
+  color: var(--fld-ink);
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -.5px;
+  white-space: nowrap;
+}
+
+.save-status i,
+.tiny-dot,
+.live-dot {
+  background: var(--fld-accent);
+}
+
+.primary-button small {
+  border-color: #155bbb;
+}
+
+.text-block.selected textarea,
+.ratio-options button.active {
+  border-color: var(--fld-accent);
+}
+
+#inlineEditor {
+  border-color: var(--fld-accent);
+  box-shadow: 0 0 0 2px rgba(47, 134, 255, .26);
+}
+
+.workspace-actions {
+  min-width: 0;
+}
+
+.composition-dock {
+  min-height: 215px;
+}
+
+#resetPositionsTop,
+#restoreDefaultTop,
+#toggleGridTop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#preserveManualDock {
+  accent-color: var(--fld-accent);
+}
+
+.local-export-note {
+  color: var(--fld-accent-text);
+}
+
+@media (max-width: 700px) {
+  .wandou-brand-logo,
+  .wandou-brand-logo img { width: 36px; height: 36px; }
+  .wandou-brand-logo { flex-basis: 36px; }
+  .wandou-brand-name { font-size: 17px; }
+  .composition-dock { min-height: 190px; }
+}
