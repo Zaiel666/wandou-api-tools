@@ -154,19 +154,20 @@
         </div>
       </section>
 
-      <section class="composition-dock">
-        <div class="dock-heading">
-          <div><span class="eyebrow">COMPOSITIONS</span><h2>选择一种秩序 <span>18 种构图，无限种表达。</span></h2></div>
-          <div class="generation-actions">
-            <label><input id="preserveManualDock" type="checkbox" checked> 保留手动位置</label>
-            <button id="variant" class="secondary-button" type="button">↔ 变体</button>
-            <button id="generate" class="primary-button" type="button">✧ 随机生成 ↗</button>
-          </div>
-        </div>
-        <div id="layoutGallery" class="layout-gallery" aria-label="构图选择"></div>
-        <div class="dock-footer"><span id="layoutDescription">标题横跨网格，主视觉沉入下半部，建立鲜明层级。</span><span id="cycleStatus">01 / 18 · 不重复轮换</span></div>
-      </section>
     </main>
+
+    <aside class="composition-dock" aria-label="构图选择面板">
+      <div class="dock-heading">
+        <div><span class="eyebrow">COMPOSITIONS</span><h2>选择一种秩序 <span>30 种构图，无限种表达。</span></h2></div>
+        <div class="generation-actions">
+          <label><input id="preserveManualDock" type="checkbox" checked> 保留手动位置</label>
+          <button id="variant" class="secondary-button" type="button">↔ 变体</button>
+          <button id="generate" class="primary-button" type="button">✧ 随机生成 ↗</button>
+        </div>
+      </div>
+      <div id="layoutGallery" class="layout-gallery" aria-label="30 种构图选择"></div>
+      <div class="dock-footer"><span id="layoutDescription">标题横跨网格，主视觉沉入下半部，建立鲜明层级。</span><span id="cycleStatus">01 / 30 · 不重复轮换</span></div>
+    </aside>
   </div>
 
   <dialog id="bulkDialog">
@@ -181,6 +182,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="./gridform.vendor.js"></script>
+  <script src="./gridform.layouts.js"></script>
   <script src="./gridform.local.js"></script>
 </body>
 </html>

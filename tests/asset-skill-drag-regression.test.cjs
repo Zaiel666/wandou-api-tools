@@ -19,7 +19,8 @@ test("homepage removes upscale card and exposes the asset library", () => {
   assert.match(assetHtml, /id="assetSort"/);
   assert.match(assetHtml, /asset-library\.css/);
   assert.match(assetHtml, /asset-library\.js/);
-  assert.match(css, /\.common-tool-grid\s*\{[^}]*max-width:\s*760px/s);
+  assert.match(css, /\.common-tool-grid\s*\{[^}]*max-width:\s*1080px/s);
+  assert.match(css, /\.common-tool-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
   assert.match(css, /\.image-tool-grid\s*\{[^}]*max-width:\s*760px/s);
 });
 

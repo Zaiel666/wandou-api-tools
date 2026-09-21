@@ -60,8 +60,128 @@
   min-width: 0;
 }
 
+.app {
+  grid-template-columns: 300px minmax(0, 1fr) 328px;
+}
+
 .composition-dock {
-  min-height: 215px;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 16px 14px;
+  border-top: 0;
+  border-left: 1px solid var(--fld-line);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dock-heading {
+  display: grid;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.dock-heading h2 {
+  margin-top: 5px;
+  font-size: 17px;
+  line-height: 1.35;
+  letter-spacing: .2px;
+}
+
+.dock-heading h2 span {
+  display: block;
+  margin: 5px 0 0;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.generation-actions {
+  display: grid;
+  grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr);
+  gap: 8px;
+  align-items: stretch;
+}
+
+.generation-actions label {
+  grid-column: 1 / -1;
+  min-height: 30px;
+  margin: 0;
+  padding: 0 2px;
+  font-size: 10px;
+}
+
+.generation-actions .secondary-button,
+.generation-actions .primary-button {
+  min-height: 38px;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.layout-gallery {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 9px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 2px 4px 10px 0;
+}
+
+.layout-card {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 7px;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.layout-card:hover {
+  border-color: color-mix(in srgb, var(--fld-accent) 54%, var(--fld-line));
+  transform: translateY(-1px);
+}
+
+.layout-card:focus-visible {
+  outline: 2px solid var(--fld-accent);
+  outline-offset: 2px;
+}
+
+.layout-card.active {
+  border-color: var(--fld-accent);
+}
+
+.layout-card.active::after {
+  background: var(--fld-accent);
+  color: var(--fld-on-accent);
+}
+
+.layout-card svg {
+  height: 92px;
+  margin-bottom: 7px;
+}
+
+.layout-card span {
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.dock-footer {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 7px;
+  padding-top: 12px;
+  border-top: 1px solid var(--fld-line);
+  line-height: 1.55;
+}
+
+.dock-footer #layoutDescription {
+  min-height: 28px;
+}
+
+.dock-footer #cycleStatus {
+  color: var(--fld-accent-text);
 }
 
 #resetPositionsTop,
@@ -80,10 +200,57 @@
   color: var(--fld-accent-text);
 }
 
+@media (max-width: 1320px) {
+  .app {
+    grid-template-columns: 270px minmax(0, 1fr) 280px;
+  }
+
+  .composition-dock {
+    padding-inline: 13px;
+  }
+
+  .layout-gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .layout-card svg {
+    height: 82px;
+  }
+}
+
+@media (max-width: 920px) {
+  .app {
+    display: flex;
+    height: auto;
+    min-height: calc(100vh - 70px);
+  }
+
+  .sidebar,
+  .studio,
+  .composition-dock {
+    width: 100%;
+  }
+
+  .studio {
+    min-height: 680px;
+  }
+
+  .composition-dock {
+    height: 520px;
+    border-left: 0;
+    border-top: 1px solid var(--fld-line);
+  }
+
+  .layout-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 700px) {
   .wandou-brand-logo,
   .wandou-brand-logo img { width: 36px; height: 36px; }
   .wandou-brand-logo { flex-basis: 36px; }
   .wandou-brand-name { font-size: 17px; }
-  .composition-dock { min-height: 190px; }
+  .composition-dock { min-height: 420px; }
+  .layout-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

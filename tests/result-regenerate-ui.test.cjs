@@ -128,9 +128,13 @@ const { chromium } = require("playwright");
       return {
         favoriteToRegenerate: Math.round(regenerate.left - favorite.right),
         regenerateToDownload: Math.round(download.left - regenerate.right),
+        equalControlSizes: Math.round(favorite.width) === Math.round(regenerate.width)
+          && Math.round(regenerate.width) === Math.round(download.width)
+          && Math.round(favorite.height) === Math.round(regenerate.height)
+          && Math.round(regenerate.height) === Math.round(download.height),
       };
     });
-    assert.deepEqual(controls, { favoriteToRegenerate: 2, regenerateToDownload: 2 });
+    assert.deepEqual(controls, { favoriteToRegenerate: 2, regenerateToDownload: 2, equalControlSizes: true });
 
     console.log("PASS: double-click regeneration keeps the original, appends a selectable result below, and preserves prompt/model/size");
   } finally {

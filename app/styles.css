@@ -4046,9 +4046,58 @@ body.home-page .tool-section[data-home-section] > .tool-grid {
 }
 
 .common-tool-grid {
-  max-width: 760px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 1080px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+.gridform-art {
+  position: relative;
+}
+
+.gridform-sheet {
+  inset: 8px 14px 8px 18px;
+  border: 1px solid rgba(47, 134, 255, .28);
+  border-radius: 8px;
+  background: #f2eee5;
+  box-shadow: 0 14px 30px rgba(24, 48, 83, .2);
+}
+
+.gridform-grid {
+  inset: 16px 22px 16px 26px;
+  opacity: .7;
+  background-image:
+    linear-gradient(rgba(47, 134, 255, .17) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 134, 255, .17) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.gridform-title-line {
+  left: 30px;
+  height: 9px;
+  border-radius: 2px;
+  background: #171b18;
+}
+
+.gridform-title-line.one {
+  top: 30px;
+  width: 74px;
+}
+
+.gridform-title-line.two {
+  top: 43px;
+  width: 56px;
+}
+
+.gridform-image-block {
+  right: 27px;
+  bottom: 22px;
+  width: 60px;
+  height: 46px;
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at 72% 26%, #2f86ff 0 8px, transparent 9px),
+    linear-gradient(145deg, #27312e 0 55%, #829387 56% 100%);
 }
 
 .image-tool-grid {

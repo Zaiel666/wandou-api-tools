@@ -103,7 +103,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：新增豌豆 AI 网格海报工作台与 18 套可编辑构图；强化 PSD 图层互斥与语义拆分；SVG、Adobe AI 和 EPS 默认生成可编辑分层矢量对象。"
+            notes = "v${env:VERSION}：网格海报工作台扩展为 30 套构图并改用右侧纵向选择面板；首页与节点画布入口改为新标签页打开；统一结果节点下载按钮尺寸。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
