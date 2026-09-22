@@ -103,7 +103,7 @@ jobs:
             version = $env:VERSION
             downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
             checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = "v${env:VERSION}：网格海报工作台扩展为 30 套构图并改用右侧纵向选择面板；首页与节点画布入口改为新标签页打开；统一结果节点下载按钮尺寸。"
+            notes = "v${env:VERSION}：修复对话参考图展示与编号、PSD/SVG 节点无响应问题，并新增画笔和橡皮擦尺寸预览。"
           } | ConvertTo-Json
           $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
 
