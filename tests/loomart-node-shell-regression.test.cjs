@@ -618,11 +618,33 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   await page.evaluate(() => { apiKeyInput.value = "test-key"; });
   await page.locator("#assistantImageInput").setInputFiles(path.join(__dirname, "..", "app", "logo.png"));
   await page.waitForFunction(() => assistantAttachments.length === 1);
-  assert.equal(await page.locator(".assistant-attachment").count(), 1);
+  await page.evaluate(() => {
+    const first = assistantAttachments[0];
+    assistantAttachments = Array.from({ length:6 }, (_, index) => ({ ...first, name:`参考图 ${index + 1}` }));
+    renderAssistantAttachments();
+  });
+  assert.equal(await page.locator(".assistant-attachment").count(), 6);
+  assert.equal(await page.locator(".assistant-attachments-label").innerText(), "参考图（6/6）");
+  assert.deepEqual(await page.locator(".assistant-attachment-index").allTextContents(), ["1", "2", "3", "4", "5", "6"]);
+  assert.equal(await page.locator(".assistant-attachment").first().isVisible(), true);
+  assert.ok(await page.locator(".assistant-attachment img").first().evaluate((image) => image.complete && image.naturalWidth > 0));
+  assert.ok(await page.locator(".assistant-attachment").first().evaluate((item) => item.getBoundingClientRect().width >= 56));
   await page.locator("#assistantInput").press("Enter");
   await page.locator(".assistant-message.assistant", { hasText: "这是测试回复。" }).waitFor();
   assert.equal(chatRequest?.model, "chat-a");
   assert.match(chatRequest?.messages?.[0]?.content || "", /创作技能：.*海报设计/s);
   assert.ok(chatRequest?.messages?.some((message) => Array.isArray(message.content) && message.content.some((part) => part.type === "image_url")), JSON.stringify(chatRequest));
+  assert.deepEqual(chatRequest?.messages?.find((message) => Array.isArray(message.content))?.content.filter((part) => part.type === "text" && /^参考图 \d+$/.test(part.text)).map((part) => part.text), ["参考图 1", "参考图 2", "参考图 3", "参考图 4", "参考图 5", "参考图 6"]);
+  await page.waitForFunction(() => {
+    const saved = JSON.parse(localStorage.getItem(assistantConversationStorageKey()) || "[]");
+    return saved.some((message) => message.role === "user" && message.images?.[0]?.startsWith("indexed-media:"));
+  });
+  await page.evaluate(() => {
+    assistantMessages = [];
+    loadAssistantConversation();
+  });
+  await page.waitForFunction(() => document.querySelector(".assistant-message.user img")?.naturalWidth > 0);
+  assert.equal(await page.locator(".assistant-message.user img").first().isVisible(), true);
+  assert.deepEqual(await page.locator(".assistant-message.user .assistant-message-image-index").allTextContents(), ["1", "2", "3", "4", "5", "6"]);
   assert.deepEqual(errors, []);
 });

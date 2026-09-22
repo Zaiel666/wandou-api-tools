@@ -4056,7 +4056,7 @@
       border-radius: 12px;
       box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
       background: #fff;
-      cursor: crosshair;
+      cursor: none;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
@@ -4064,7 +4064,10 @@
     }
 
     .paint-canvas.is-loading { cursor: wait; opacity: .72; }
-    .paint-canvas.eraser-mode { cursor: cell; }
+    .paint-canvas.eraser-mode { cursor: none; }
+    .paint-brush-preview { position:fixed; z-index:58; display:none; box-sizing:border-box; border:2px solid rgba(255,255,255,.96); border-radius:50%; pointer-events:none; transform:translate(-50%,-50%); background:rgba(34,197,94,.16); box-shadow:0 0 0 1px rgba(9,14,12,.88),0 2px 10px rgba(0,0,0,.28); }
+    .paint-brush-preview.visible { display:block; }
+    .paint-brush-preview.eraser { border-style:dashed; background:rgba(255,255,255,.18); box-shadow:0 0 0 1px rgba(9,14,12,.92),inset 0 0 0 1px rgba(255,255,255,.42),0 2px 10px rgba(0,0,0,.28); }
 
     .lightbox-close {
       position: absolute;
@@ -5700,11 +5703,16 @@
     .assistant-starters button { min-height:44px; border-radius:9px; box-shadow:none; }
     .assistant-messages { padding:5px 10px 9px; gap:7px; }
     .assistant-composer { margin:7px; padding:7px; border-radius:12px; box-shadow:none; }
-    .assistant-attachments { display:flex; gap:4px; overflow-x:auto; padding:0 0 5px; }
+    .assistant-attachments { display:flex; flex-wrap:wrap; gap:6px; overflow-x:auto; padding:2px 0 8px; }
     .assistant-attachments:empty { display:none; }
-    .assistant-attachment { position:relative; flex:0 0 42px; width:42px; height:42px; border:1px solid rgba(255,255,255,.16); border-radius:7px; overflow:hidden; }
+    .assistant-attachments-label { flex:0 0 100%; color:#aeb8b3; font-size:9px; line-height:1.35; }
+    .assistant-attachment { position:relative; flex:0 0 58px; width:58px; height:58px; border:1px solid rgba(255,255,255,.2); border-radius:9px; overflow:hidden; background:#101412; }
     .assistant-attachment img { width:100%; height:100%; object-fit:cover; display:block; }
+    .assistant-attachment-index,
+    .assistant-message-image-index { position:absolute; z-index:2; top:3px; left:3px; min-width:18px; height:18px; padding:0 5px; display:grid; place-items:center; border-radius:999px; color:#fff; background:rgba(10,14,12,.82); border:1px solid rgba(255,255,255,.72); box-shadow:0 2px 8px rgba(0,0,0,.26); font-size:10px; font-weight:750; line-height:1; }
     .assistant-attachment button { position:absolute; top:2px; right:2px; width:15px; min-width:15px; height:15px; min-height:15px; padding:0; border-radius:50%; color:#171b19; background:rgba(255,255,255,.9); border:0; font-size:11px; line-height:1; }
+    .assistant-message-image { position:relative; margin-bottom:6px; overflow:hidden; border-radius:7px; }
+    .assistant-message-image img { display:block; width:100%; max-height:150px; object-fit:cover; }
     .assistant-compose-actions { gap:4px; padding-top:5px; border-top:1px solid rgba(255,255,255,.07); }
     .assistant-tool-button { width:27px; min-width:27px; height:27px; min-height:27px; display:grid; place-items:center; padding:0; border-radius:7px; color:#aeb8b3; background:transparent; border:1px solid transparent; }
     .assistant-tool-button:hover { color:#fff; background:#262c29; border-color:rgba(255,255,255,.1); }
@@ -7190,6 +7198,7 @@
       <button id="lightboxContextRegenerate" class="ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg><span>重新生成</span></button>
     </div>
     <canvas id="paintCanvas" class="paint-canvas"></canvas>
+    <div id="paintBrushPreview" class="paint-brush-preview" aria-hidden="true"></div>
     <div id="promptPreviewPanel" class="prompt-preview-panel">
       <div class="prompt-preview-columns">
         <section class="prompt-preview-card">
@@ -7388,6 +7397,7 @@
     const promptPreviewEn = document.getElementById("promptPreviewEn");
     const promptPreviewNegative = document.getElementById("promptPreviewNegative");
     const paintCanvas = document.getElementById("paintCanvas");
+    const paintBrushPreview = document.getElementById("paintBrushPreview");
     const paintSize = document.getElementById("paintSize");
     const paintBrush = document.getElementById("paintBrush");
     const paintErase = document.getElementById("paintErase");
@@ -7532,6 +7542,7 @@
     let paintEraseMode = false;
     let paintReady = false;
     let paintPointerId = null;
+    let paintPointerPosition = null;
     let paintLoadToken = 0;
     let activeSketchNodeId = null;
     let sketchEditorDrawing = false;
@@ -7554,6 +7565,7 @@
     let assistantAttachments = [];
     let assistantModelOptions = [];
     let assistantPanelInteraction = null;
+    const assistantConversationSaveRevisions = new Map();
     const assistantPanelGeometryStorageKey = "aiCanvasAssistantPanelGeometryV1";
       let saveTimer = null;
       let canvasSaveQueue = Promise.resolve();
@@ -8971,36 +8983,74 @@
       return `aiCanvasAssistantV1:${currentFolderId || "default"}:${activeProjectId || "default"}`;
     }
 
-    function saveAssistantConversation() {
+    async function saveAssistantConversation() {
+      const storageKey = assistantConversationStorageKey();
+      const revision = (assistantConversationSaveRevisions.get(storageKey) || 0) + 1;
+      assistantConversationSaveRevisions.set(storageKey, revision);
       try {
-        const compact = assistantMessages.slice(-40).map(({ role, text }) => ({ role, text }));
-        localStorage.setItem(assistantConversationStorageKey(), JSON.stringify(compact));
+        const compact = await Promise.all(assistantMessages.slice(-40).map(async ({ role, text, images }) => ({
+          role,
+          text,
+          images: (await Promise.all((Array.isArray(images) ? images : [])
+            .filter((url) => typeof url === "string" && url)
+            .slice(0, 6)
+            .map((url) => persistMediaValue(url))))
+            .filter((url) => typeof url === "string" && url)
+        })));
+        if (assistantConversationSaveRevisions.get(storageKey) === revision) {
+          localStorage.setItem(storageKey, JSON.stringify(compact));
+        }
       } catch (error) {
         warnCanvasStorageSkipped(error);
       }
     }
 
     function loadAssistantConversation() {
+      const storageKey = assistantConversationStorageKey();
       try {
-        const stored = JSON.parse(localStorage.getItem(assistantConversationStorageKey()) || "[]");
+        const stored = JSON.parse(localStorage.getItem(storageKey) || "[]");
         assistantMessages = Array.isArray(stored)
-          ? stored.filter((item) => item && ["user", "assistant"].includes(item.role) && typeof item.text === "string").slice(-40)
+          ? stored.filter((item) => item && ["user", "assistant"].includes(item.role) && typeof item.text === "string").slice(-40).map((item) => ({
+            role:item.role,
+            text:item.text,
+            images:Array.isArray(item.images) ? item.images.filter((url) => typeof url === "string" && url).slice(0, 6) : []
+          }))
           : [];
       } catch (error) {
         assistantMessages = [];
       }
       renderAssistantConversation();
+      const loadedMessages = assistantMessages;
+      const pending = loadedMessages.map(async (message) => {
+        message.images = (await Promise.all((message.images || []).map(async (url) => {
+          if (!url.startsWith(localMediaPrefix)) return url;
+          return await getLocalMedia(url);
+        }))).filter((url) => isRenderableImageUrl(url));
+      });
+      if (pending.length) Promise.allSettled(pending).then(() => {
+        if (assistantConversationStorageKey() === storageKey && assistantMessages === loadedMessages) renderAssistantConversation();
+      });
     }
 
     function renderAssistantAttachments() {
       if (!assistantAttachmentsEl) return;
       assistantAttachmentsEl.replaceChildren();
+      if (assistantAttachments.length) {
+        const label = document.createElement("span");
+        label.className = "assistant-attachments-label";
+        label.textContent = `参考图（${assistantAttachments.length}/6）`;
+        assistantAttachmentsEl.appendChild(label);
+      }
       assistantAttachments.forEach((item, index) => {
         const wrapper = document.createElement("div");
         wrapper.className = "assistant-attachment";
         const image = document.createElement("img");
         image.src = item.url;
         image.alt = item.name || `图片 ${index + 1}`;
+        const order = document.createElement("span");
+        order.className = "assistant-attachment-index";
+        order.textContent = String(index + 1);
+        order.setAttribute("aria-label", `参考图 ${index + 1}`);
         const remove = document.createElement("button");
         remove.type = "button";
         remove.textContent = "×";
@@ -9009,7 +9059,7 @@
           assistantAttachments.splice(index, 1);
           renderAssistantAttachments();
         });
-        wrapper.append(image, remove);
+        wrapper.append(image, order, remove);
         assistantAttachmentsEl.appendChild(wrapper);
       });
     }
@@ -9116,7 +9166,10 @@
       if (!images.length) return message.text;
       return [
         { type: "text", text: message.text || "请查看这些图片。" },
-        ...images.map((url) => ({ type: "image_url", image_url: { url } }))
+        ...images.flatMap((url, index) => [
+          { type: "text", text: `参考图 ${index + 1}` },
+          { type: "image_url", image_url: { url } }
+        ])
       ];
     }
 
@@ -9169,12 +9222,18 @@
       assistantMessages.forEach((message) => {
         const bubble = document.createElement("div");
         bubble.className = `assistant-message ${message.role}`;
-        (message.images || []).forEach((url) => {
+        (message.images || []).filter(isRenderableImageUrl).forEach((url, index) => {
+          const frame = document.createElement("div");
+          frame.className = "assistant-message-image";
           const image = document.createElement("img");
           image.src = url;
-          image.alt = "对话图片";
-          image.style.cssText = "display:block;width:100%;max-height:150px;object-fit:cover;border-radius:7px;margin-bottom:6px";
-          bubble.appendChild(image);
+          image.alt = `参考图 ${index + 1}`;
+          const order = document.createElement("span");
+          order.className = "assistant-message-image-index";
+          order.textContent = String(index + 1);
+          order.setAttribute("aria-hidden", "true");
+          frame.append(image, order);
+          bubble.appendChild(frame);
         });
         bubble.appendChild(document.createTextNode(message.text));
         assistantMessagesEl.appendChild(bubble);
@@ -12292,7 +12351,11 @@
 
     function psdSourceReference(node) {
       const linked = getInputMediaList(node.id).flatMap((source) => normalizeReferences(source));
-      return [...normalizeReferences(node), ...linked].find((item) => isRenderableImageUrl(item?.url)) || null;
+      return [...normalizeReferences(node), ...linked].find((item) => isRenderableImageUrl(item?.url) || String(item?.url || "").startsWith(localMediaPrefix)) || null;
+    }
+
+    function waitForUiPaint() {
+      return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     }
 
     function vectorSvgAttribute(value) {
@@ -12548,7 +12611,12 @@
       const node = nodes.find((item) => item.id === id && item.type === "vector");
       if (!node || vectorJobs.has(id)) return;
       const source = psdSourceReference(node);
-      if (!source) { node.status = "请先上传图片或连接参考图/效果图。"; render(); return; }
+      if (!source) {
+        node.status = "请先上传图片或连接参考图/效果图节点；当前没有可转换的图片。";
+        render();
+        showToast(node.status, "error", 3600);
+        return;
+      }
       vectorJobs.add(id);
       vectorExportFiles.delete(id);
       try {
@@ -12557,7 +12625,9 @@
         const traceMode = format === "eps" || node.vectorMode === "trace";
         node.status = traceMode ? `正在分析颜色区域并生成可独立编辑的 ${formatLabel} 图层与对象…` : `正在封装原图兼容 ${formatLabel}（非矢量路径）…`;
         render({ skipSave:true });
+        await waitForUiPaint();
         const resolved = await getLocalMedia(source.url);
+        if (!resolved) throw new Error("本地图片数据不存在或尚未保存完成，请重新上传图片");
         const blob = await sourceToBlob(resolved, "image/png");
         if (!blob) throw new Error("无法读取源图片");
         const dataUrl = await blobToDataUrl(blob);
@@ -12602,7 +12672,7 @@
       const busy = vectorJobs.has(node.id);
       wrap.innerHTML = `
         <div class="vector-source-preview" data-vector-drop>${source ? `<img src="${escapeHtml(source.url)}" alt="待转换图片" loading="lazy">` : '<span>连接参考图 / 效果图，或上传一张图片</span>'}</div>
-        <label class="psd-source-upload">${source ? "更换图片" : "上传图片"}<input data-vector-upload type="file" accept="image/*" ${busy ? "disabled" : ""} hidden></label>
+        <label class="psd-source-upload">${source ? "更换图片" : "上传图片"}<input data-vector-upload type="file" accept="image/*,.svg" ${busy ? "disabled" : ""} hidden></label>
         <div class="psd-explain">默认生成真正的路径对象，不嵌入原始位图。SVG 会按颜色建立图层和独立对象；AI 使用 Illustrator 可打开的分层 PDF 兼容格式；EPS 输出标准可编辑路径。照片转换后对象可能较多。</div>
         <div class="form-row"><label>文件格式</label><select data-vector-format ${busy ? "disabled" : ""}><option value="svg" ${node.vectorFormat === "svg" ? "selected" : ""}>SVG (.svg)</option><option value="ai" ${node.vectorFormat === "ai" ? "selected" : ""}>Adobe Illustrator (.ai)</option><option value="eps" ${node.vectorFormat === "eps" ? "selected" : ""}>EPS (.eps)</option></select></div>
         <div class="form-row"><label>输出方式</label><select data-vector-mode ${busy || node.vectorFormat === "eps" ? "disabled" : ""}><option value="trace" ${node.vectorMode === "trace" ? "selected" : ""}>可编辑分层矢量（推荐）</option><option value="preserve" ${node.vectorMode !== "trace" ? "selected" : ""}>嵌入原图（非矢量）</option></select></div>
@@ -12610,17 +12680,27 @@
         <div class="status">${escapeHtml(node.status || "上传或连接图片后生成可编辑 SVG、Adobe AI 或 EPS。所有矢量转换均在本机完成。")}</div>`;
       const uploadFile = async (file) => {
         if (!file) return;
-        const url = await readFileAsDataUrl(file);
-        const size = await getImageDimensions(url);
-        pushHistory();
-        node.references = [{ url, width:size.width, height:size.height, mediaType:"image", name:file.name }];
-        node.mediaUrl = url;
-        node.width = size.width;
-        node.height = size.height;
-        node.status = "图片已上传，可以生成 SVG 或 Adobe AI。";
-        vectorExportFiles.delete(node.id);
-        render();
-        scheduleCanvasSave();
+        try {
+          node.status = "正在读取图片…";
+          render({ skipSave:true });
+          await waitForUiPaint();
+          const url = await readImageFileAsDataUrl(file);
+          const size = await getImageDimensions(url);
+          if (!size.width || !size.height) throw new Error("无法读取图片尺寸");
+          pushHistory();
+          node.references = [{ url, width:size.width, height:size.height, mediaType:"image", mimeType:file.type || inferImageMime(file), name:file.name }];
+          node.mediaUrl = url;
+          node.width = size.width;
+          node.height = size.height;
+          node.status = "图片已上传，可以生成 SVG、Adobe AI 或 EPS。";
+          vectorExportFiles.delete(node.id);
+          render();
+          scheduleCanvasSave();
+        } catch (error) {
+          node.status = `图片读取失败：${friendlyErrorMessage(error)}`;
+          render();
+          showToast(node.status, "error", 4200);
+        }
       };
       wrap.querySelector("[data-vector-upload]").addEventListener("change", (event) => uploadFile(Array.from(event.target.files || []).find(isImageFile)));
       const drop = wrap.querySelector("[data-vector-drop]");
@@ -12628,7 +12708,11 @@
       drop.addEventListener("drop", async (event) => { if (!hasImageFiles(event.dataTransfer?.items || event.dataTransfer?.files)) return; event.preventDefault(); await uploadFile(Array.from(event.dataTransfer.files || []).find(isImageFile)); });
       wrap.querySelector("[data-vector-mode]").addEventListener("change", (event) => { pushHistory(); node.vectorMode = event.target.value; vectorExportFiles.delete(node.id); node.status = "输出方式已切换，请重新生成。"; render(); });
       wrap.querySelector("[data-vector-format]").addEventListener("change", (event) => { pushHistory(); node.vectorFormat = event.target.value; if (node.vectorFormat === "eps") node.vectorMode = "trace"; vectorExportFiles.delete(node.id); node.status = "文件格式已切换，请重新生成。"; render(); });
-      wrap.querySelector("[data-vector-generate]").addEventListener("click", () => generateVectorFromNode(node.id));
+      wrap.querySelector("[data-vector-generate]").addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void generateVectorFromNode(node.id);
+      });
       wrap.querySelector("[data-vector-download]")?.addEventListener("click", () => downloadVectorExport(node.id));
       return wrap;
     }
@@ -12778,7 +12862,11 @@
         event.preventDefault();
         await uploadFile(Array.from(event.dataTransfer.files || []).find(isImageFile));
       });
-      wrap.querySelector("[data-psd-generate]").addEventListener("click", () => generatePsdFromNode(node.id));
+      wrap.querySelector("[data-psd-generate]").addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void generatePsdFromNode(node.id);
+      });
       wrap.querySelector("[data-psd-cancel]")?.addEventListener("click", () => psdJobControllers.get(node.id)?.abort(new Error("用户已取消 PSD 生成")));
       wrap.querySelector("[data-psd-download]")?.addEventListener("click", () => downloadPsdExport(node.id));
       return wrap;
@@ -13055,14 +13143,33 @@
       const node = nodes.find((item) => item.id === id && item.type === "psd");
       if (!node || psdJobs.has(id)) return;
       const source = psdSourceReference(node);
-      if (!source) { node.status = "请先上传图片或连接参考图/效果图。"; render(); return; }
-      if (!apiKeyInput.value.trim()) { setSettingsOpen(true); apiKeyInput.focus(); showToast("智能拆层分析需要先配置渠道 1 API 密钥"); return; }
-      if (!gptImageModelOptions.includes(node.model)) { node.status = "接口模型列表中没有可用的 GPT 图片模型，请先同步模型。"; render(); return; }
+      if (!source) {
+        node.status = "请先上传图片或连接参考图/效果图节点；当前没有可拆分的图片。";
+        render();
+        showToast(node.status, "error", 3600);
+        return;
+      }
+      if (!apiKeyInput.value.trim()) {
+        node.status = "尚未配置渠道 1 API 密钥，无法开始 PSD 智能拆层。";
+        render();
+        setSettingsOpen(true);
+        apiKeyInput.focus();
+        showToast(node.status, "error", 4200);
+        return;
+      }
+      if (!gptImageModelOptions.includes(node.model)) {
+        node.status = "接口模型列表中没有可用的 GPT 图片模型，请先同步模型。";
+        render();
+        showToast(node.status, "error", 4200);
+        return;
+      }
       const psdImageProfile = apiProfileForModel(node.model);
       if (!psdImageProfile.key) {
+        node.status = `尚未配置${psdImageProfile.label} API 密钥，无法使用 ${node.model} 生成 PSD。`;
+        render();
         setSettingsOpen(true);
         (psdImageProfile.id === "channel2" ? apiKey2Input : apiKeyInput).focus();
-        showToast(`PSD 图片生成需要先配置${psdImageProfile.label} API 密钥`);
+        showToast(node.status, "error", 4200);
         return;
       }
       const selectedImageModel = node.model;
@@ -13075,12 +13182,15 @@
       try {
         node.status = "正在读取原图...";
         render({ skipSave:true });
-        const dimensions = await runPsdStage(controller, () => getImageDimensions(source.url), "读取原图", 45000);
+        await waitForUiPaint();
+        const resolvedSourceUrl = await runPsdStage(controller, () => getLocalMedia(source.url), "读取本地原图", 45000);
+        if (!resolvedSourceUrl) throw new Error("本地图片数据不存在或尚未保存完成，请重新上传图片");
+        const dimensions = await runPsdStage(controller, () => getImageDimensions(resolvedSourceUrl), "读取原图", 45000);
         const width = dimensions.width;
         const height = dimensions.height;
         if (!width || !height) throw new Error("无法读取原图尺寸");
         if (width > 3072 || height > 3072 || width * height > 8000000) throw new Error("当前 PSD 拆层上限为 3072px 长边、800 万像素；请先缩小原图。");
-        const original = await runPsdStage(controller, () => psdCanvasFromUrl(source.url, width, height), "读取原图", 45000);
+        const original = await runPsdStage(controller, () => psdCanvasFromUrl(resolvedSourceUrl, width, height), "读取原图", 45000);
         const originalUrl = original.toDataURL("image/png");
         node.status = "正在智能分析主体、文字、元素与光效...";
         setPsdJobMarker(id, "图层分析");
@@ -13884,7 +13994,7 @@
     function isImageFile(file) {
       if (!file) return false;
       if (file.type?.startsWith("image/")) return true;
-      if (/\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(file.name || "")) return true;
+      if (/\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(file.name || "")) return true;
       return !file.type && file.size > 0;
     }
 
@@ -13903,6 +14013,7 @@
       if (/\.gif$/i.test(name)) return "image/gif";
       if (/\.bmp$/i.test(name)) return "image/bmp";
       if (/\.avif$/i.test(name)) return "image/avif";
+      if (/\.svg$/i.test(name)) return "image/svg+xml";
       return "image/png";
     }
 
@@ -19009,6 +19120,7 @@ ${formatInstruction}`;
       paintRedoStack = [];
       paintReady = false;
       paintPointerId = null;
+      hidePaintBrushPreview();
       paintLoadToken += 1;
       paintCanvas.classList.remove("is-loading");
       setPaintEraseMode(false);
@@ -19083,6 +19195,33 @@ ${formatInstruction}`;
       paintErase.classList.toggle("mask-mode-active", paintEraseMode);
       paintErase.setAttribute("aria-pressed", String(paintEraseMode));
       paintCanvas.classList.toggle("eraser-mode", paintEraseMode);
+      updatePaintBrushPreview();
+    }
+
+    function updatePaintBrushPreview(event) {
+      if (event) paintPointerPosition = { x:event.clientX, y:event.clientY };
+      if (!paintPointerPosition || !paintReady || activeLightbox.mode !== "paint" || !lightbox.classList.contains("open")) {
+        paintBrushPreview.classList.remove("visible");
+        return;
+      }
+      const rect = paintCanvas.getBoundingClientRect();
+      const { x, y } = paintPointerPosition;
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+        paintBrushPreview.classList.remove("visible");
+        return;
+      }
+      const diameter = Math.max(2, Number(paintSize.value) || 24);
+      paintBrushPreview.style.left = `${x}px`;
+      paintBrushPreview.style.top = `${y}px`;
+      paintBrushPreview.style.width = `${diameter}px`;
+      paintBrushPreview.style.height = `${diameter}px`;
+      paintBrushPreview.classList.toggle("eraser", paintEraseMode);
+      paintBrushPreview.classList.add("visible");
+    }
+
+    function hidePaintBrushPreview() {
+      paintPointerPosition = null;
+      paintBrushPreview.classList.remove("visible", "eraser");
     }
 
     function renderPaintComposite() {
@@ -21572,6 +21711,7 @@ ${formatInstruction}`;
       if (!paintReady || paintDrawing || event.isPrimary === false || event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
+      updatePaintBrushPreview(event);
       paintDrawing = true;
       paintPointerId = event.pointerId;
       const point = paintPointFromEvent(event);
@@ -21583,7 +21723,9 @@ ${formatInstruction}`;
       }
       drawPaintDot(point);
     });
+    paintCanvas.addEventListener("pointerenter", updatePaintBrushPreview);
     paintCanvas.addEventListener("pointermove", (event) => {
+      updatePaintBrushPreview(event);
       if (!paintDrawing || event.pointerId !== paintPointerId) return;
       event.preventDefault();
       event.stopPropagation();
@@ -21591,10 +21733,21 @@ ${formatInstruction}`;
       const pointerSamples = samples.length ? samples : [event];
       pointerSamples.forEach((sample) => drawPaintLine(paintPointFromEvent(sample)));
     });
+    paintCanvas.addEventListener("pointerleave", () => {
+      if (!paintDrawing) hidePaintBrushPreview();
+    });
     paintCanvas.addEventListener("pointerup", finishPaintStroke);
     paintCanvas.addEventListener("pointercancel", finishPaintStroke);
+    paintCanvas.addEventListener("pointercancel", hidePaintBrushPreview);
     paintCanvas.addEventListener("lostpointercapture", finishPaintStroke);
-    window.addEventListener("blur", () => finishPaintStroke());
+    paintCanvas.addEventListener("lostpointercapture", () => {
+      if (!paintCanvas.matches(":hover")) hidePaintBrushPreview();
+    });
+    window.addEventListener("blur", () => {
+      finishPaintStroke();
+      hidePaintBrushPreview();
+    });
+    paintSize.addEventListener("input", () => updatePaintBrushPreview());
     paintBrush.addEventListener("click", (event) => {
       event.stopPropagation();
       setPaintEraseMode(false);

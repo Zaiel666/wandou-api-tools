@@ -68,14 +68,36 @@ const { chromium } = require("playwright");
     assert.ok(toolbarLayout.sliderWidth >= 130, JSON.stringify(toolbarLayout));
     assert.equal(toolbarLayout.sliderMax, "160");
     assert.equal(await page.locator("#paintBrush").getAttribute("aria-pressed"), "true");
+    const canvas = page.locator("#paintCanvas");
+    const box = await canvas.boundingBox();
+    assert.ok(box, "paint canvas should be visible");
+    await page.locator("#paintSize").evaluate((input) => {
+      input.value = "72";
+      input.dispatchEvent(new Event("input", { bubbles:true }));
+    });
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const brushPreview = await page.locator("#paintBrushPreview").evaluate((preview) => ({
+      visible:preview.classList.contains("visible"),
+      eraser:preview.classList.contains("eraser"),
+      width:preview.getBoundingClientRect().width,
+      height:preview.getBoundingClientRect().height,
+    }));
+    assert.equal(brushPreview.visible, true, "the brush outline should follow the pointer");
+    assert.equal(brushPreview.eraser, false);
+    assert.ok(Math.abs(brushPreview.width - 72) < 1 && Math.abs(brushPreview.height - 72) < 1, JSON.stringify(brushPreview));
     await page.locator("#paintErase").click();
     assert.equal(await page.locator("#paintErase").textContent(), "橡皮擦");
     assert.equal(await page.locator("#paintErase").getAttribute("aria-pressed"), "true");
     assert.equal(await page.locator("#paintBrush").getAttribute("aria-pressed"), "false");
-
-    const canvas = page.locator("#paintCanvas");
-    const box = await canvas.boundingBox();
-    assert.ok(box, "paint canvas should be visible");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const eraserPreview = await page.locator("#paintBrushPreview").evaluate((preview) => ({
+      visible:preview.classList.contains("visible"),
+      eraser:preview.classList.contains("eraser"),
+      width:preview.getBoundingClientRect().width,
+    }));
+    assert.equal(eraserPreview.visible, true);
+    assert.equal(eraserPreview.eraser, true, "eraser mode should use a distinct dashed outline");
+    assert.ok(Math.abs(eraserPreview.width - 72) < 1, JSON.stringify(eraserPreview));
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 
     const alphaAfterTap = await page.evaluate(() => (
