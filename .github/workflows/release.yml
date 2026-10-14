@@ -62,10 +62,12 @@ jobs:
           $env:NODE_PATH = (Resolve-Path "desktop-client\node_modules").Path
           $tests = Get-ChildItem -LiteralPath "tests" -Filter "*.test.cjs" |
             Where-Object { $_.Name -ne "real-api-image-ratios.test.cjs" }
+          $failedTests = @()
           foreach ($test in $tests) {
             node $test.FullName
-            if ($LASTEXITCODE -ne 0) { throw "Regression test failed: $($test.Name)" }
+            if ($LASTEXITCODE -ne 0) { $failedTests += $test.Name }
           }
+          if ($failedTests.Count) { throw "Regression tests failed: $($failedTests -join ', ')" }
 
       - name: Compile and validate portable updater
         shell: pwsh

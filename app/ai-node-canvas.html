@@ -12739,10 +12739,17 @@
       const map = kind === "psd" ? psdExportFiles : vectorExportFiles;
       let cached = map.get(node.id);
       const source = psdSourceReference(node);
+      const sourceChanged = cached?.node === node && cached.sourceUrl !== source?.url;
       if (cached && (cached.node !== node || cached.sourceUrl !== source?.url
         || (kind === "vector" && (cached.mode !== node.vectorMode || cached.format !== node.vectorFormat)))) {
         map.delete(node.id);
         cached = null;
+      }
+      if (sourceChanged) {
+        // A same-session source replacement invalidates both the in-memory
+        // export and its persisted index before the download button is drawn.
+        if (node.exportArtifact?.kind === kind) delete node.exportArtifact;
+        return null;
       }
       if (cached) return cached;
       const saved = node.exportArtifact;
