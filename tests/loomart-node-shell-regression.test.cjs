@@ -593,10 +593,10 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.equal(composerColors.background, "rgb(32, 37, 34)", JSON.stringify(composerColors));
   assert.equal(composerColors.color, "rgb(220, 227, 223)");
   await page.evaluate(() => applySyncedAssistantModels(["chat-a", "chat-b", "gpt-image-2"]));
-  assert.deepEqual(await page.locator("#assistantModelSelect option").allTextContents(), ["自动选择模型", "chat-a", "chat-b", "gpt-image-2"]);
+  assert.deepEqual(await page.locator("#assistantModelSelect option").allTextContents(), ["自动选择模型", "chat-a", "chat-b"]);
   await page.locator(".assistant-select-field.model [data-assistant-picker-trigger]").click();
   assert.equal(await page.locator(".assistant-select-field.model").evaluate((field) => field.classList.contains("open")), true);
-  assert.deepEqual(await page.locator(".assistant-select-field.model .assistant-picker-option").allTextContents(), ["自动选择模型", "chat-a", "chat-b", "gpt-image-2"]);
+  assert.deepEqual(await page.locator(".assistant-select-field.model .assistant-picker-option").allTextContents(), ["自动选择模型", "chat-a", "chat-b"]);
   assert.equal(await page.locator(".assistant-select-field.model .assistant-picker-menu").evaluate((menu) => getComputedStyle(menu).backgroundColor), "rgb(26, 31, 28)");
   await page.locator('.assistant-select-field.model [data-assistant-picker-option="chat-a"]').click();
   assert.equal(await page.locator("#assistantModelSelect").inputValue(), "chat-a");
