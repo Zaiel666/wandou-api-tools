@@ -241,6 +241,42 @@ function projectHubStatePath() {
   return path.join(app.getPath("userData"), "project-hub-state.json");
 }
 
+function exportArtifactPath(id) {
+  if (typeof id !== "string" || !/^[a-f0-9]{64}$/.test(id)) throw new Error("Invalid export artifact id");
+  return path.join(app.getPath("userData"), "export-artifacts", `${id}.bin`);
+}
+
+async function writeExportArtifact(payload = {}) {
+  let temporary;
+  try {
+    const destination = exportArtifactPath(payload.id);
+    const bytes = Buffer.from(payload.bytes);
+    if (!bytes.length || crypto.createHash("sha256").update(bytes).digest("hex") !== payload.id) {
+      throw new Error("Export artifact checksum mismatch");
+    }
+    await fs.promises.mkdir(path.dirname(destination), { recursive:true });
+    temporary = `${destination}.${crypto.randomBytes(8).toString("hex")}.tmp`;
+    await fs.promises.writeFile(temporary, bytes, { flag:"wx" });
+    await fs.promises.rename(temporary, destination);
+    return {success:true};
+  } catch (error) {
+    return {success:false, error:error.message};
+  } finally {
+    // Only our exact temporary file is removed; completed exports are retained.
+    if (temporary) await fs.promises.unlink(temporary).catch(() => {});
+  }
+}
+
+async function readExportArtifact(payload = {}) {
+  try {
+    const bytes = await fs.promises.readFile(exportArtifactPath(payload.id));
+    if (crypto.createHash("sha256").update(bytes).digest("hex") !== payload.id) throw new Error("导出文件校验失败");
+    return {success:true, bytes};
+  } catch (error) {
+    return {success:false, error:error.code === "ENOENT" ? "本地导出文件不存在，请在原设备中下载或重新生成" : error.message};
+  }
+}
+
 async function readProjectHubState() {
   try {
     const state = JSON.parse(await fs.promises.readFile(projectHubStatePath(), "utf8"));
@@ -1234,6 +1270,14 @@ ipcMain.handle("desktop:read-canvas-backups", (_event, payload = {}) => readCanv
 ipcMain.handle("desktop:has-canvas-media", (_event, payload = {}) => hasCanvasMedia(payload));
 ipcMain.handle("desktop:write-canvas-media", (_event, payload = {}) => writeCanvasMedia(payload));
 ipcMain.handle("desktop:read-canvas-media", (_event, payload = {}) => readCanvasMedia(payload));
+ipcMain.handle("desktop:write-export-artifact", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return {success:false, error:"仅本地工具页面可以保存导出文件"};
+  return writeExportArtifact(payload);
+});
+ipcMain.handle("desktop:read-export-artifact", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return {success:false, error:"仅本地工具页面可以读取导出文件"};
+  return readExportArtifact(payload);
+});
 ipcMain.handle("desktop:get-local-data-config", (event) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取本地存储配置" };
   return { success: true, mode: "disk", directory: localDataRootDirectory() };

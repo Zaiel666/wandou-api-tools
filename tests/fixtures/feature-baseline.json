@@ -1,0 +1,30 @@
+{
+  "capturedAt": "2026-10-13",
+  "baseCommit": "f0c5d7d",
+  "scope": "Production entry-point retention only; not a substitute for UI or live-provider acceptance.",
+  "nodeTypes": ["image", "sketch", "generator", "video", "keyword", "png", "outpaint", "style", "psd", "vector", "audio"],
+  "canvasEntryIds": [
+    "projectHubButton", "newProjectButton", "exportProjectButton", "importProjectButton",
+    "autoLayoutButton", "clearButton", "openGalleryButton", "openVideoGalleryButton",
+    "openFavoritesButton", "openPromptFavoritesButton", "openGridformButton",
+    "collapseSidebarButton", "expandSidebarButton", "projectHomeButton", "themeToggleButton",
+    "settingsButton", "saveApiButton", "clearApiKeyButton", "clearApiKey2Button",
+    "assistantAttachButton", "assistantInput", "assistantSkillSelect", "assistantCreativeSkillSelect",
+    "assistantModelSelect", "assistantClearButton", "assistantSendButton", "assistantCloseButton", "assistantRailButton",
+    "lightboxZoomOut", "lightboxZoomIn", "lightboxZoomReset", "lightboxFavorite", "lightboxCopy",
+    "lightboxPrompt", "lightboxDownload", "paintBrush", "paintErase", "paintSize",
+    "paintBrushPreview", "paintUndo", "paintRedo", "paintClear", "paintSave"
+  ],
+  "dynamicActionAttributes": [
+    "data-psd-upload", "data-psd-generate", "data-psd-cancel", "data-psd-download",
+    "data-vector-upload", "data-vector-generate", "data-vector-download",
+    "data-audio-stage", "data-audio-model-option", "data-audio-settings-trigger",
+    "data-audio-voice-option", "data-audio-format-option"
+  ],
+  "pages": [
+    "index.html", "project-hub.html", "ai-node-canvas.html", "asset-library.html",
+    "gridform.html", "image-workbench/index.html", "keyword-reverse.html", "plain-to-pro.html",
+    "png-workflow.html", "upscale-4k.html", "video-prompt-pro.html", "watermark-remove.html",
+    "prompt-mind-map.html", "daily-news/index.html"
+  ]
+}
