@@ -70,7 +70,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.equal(shell.toolbarItems.length, 5);
   assert.ok(shell.toolbarItems.every((item) => item.height === 40), JSON.stringify(shell.toolbarItems));
   assert.ok(shell.toolbarItems.filter((_, index) => index !== 3).every((item) => item.background === "rgb(249, 250, 249)"), JSON.stringify(shell.toolbarItems));
-  assert.equal(shell.toolbarItems[3].background, "rgb(255, 247, 247)");
+  assert.equal(shell.toolbarItems[3].background, "rgb(249, 250, 249)");
   assert.ok(shell.toolbarItems.slice(1).every((item, index) => Math.abs(item.left - shell.toolbarItems[index].right - 8) < 1), JSON.stringify(shell.toolbarItems));
   assert.deepEqual(shell.buttonOrder, [...shell.buttonOrder].sort((a, b) => a - b));
   await page.setViewportSize({ width: 900, height: 700 });
@@ -110,7 +110,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     buttonRadius: "6px",
   });
   await page.locator("#contextMenu button").first().hover();
-  assert.equal(await page.locator("#contextMenu button").first().evaluate((button) => getComputedStyle(button).backgroundColor), "rgb(19, 170, 114)");
+  assert.equal(await page.locator("#contextMenu button").first().evaluate((button) => getComputedStyle(button).backgroundColor), "rgb(60, 62, 66)");
   await page.locator("#contextMenu").evaluate((menu) => menu.classList.remove("open"));
   const canvasMenuTriggers = await page.evaluate(() => {
     const wrap = document.querySelector(".canvas-wrap");
@@ -248,7 +248,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   });
   assert.equal(resultSelectionStyle.outline, "none");
   assert.equal(resultSelectionStyle.nodeShadow, "none");
-  assert.match(resultSelectionStyle.previewShadow, /rgb\(199, 255, 225\) 0px 0px 0px 1px inset/);
+  assert.match(resultSelectionStyle.previewShadow, /rgb\(153, 153, 153\) 0px 0px 0px 1px inset/);
   assert.equal(resultMetaStyle.paddingLeft, "4px");
   const metaAlpha = Number(resultMetaStyle.background.match(/[\d.]+\)$/)?.[0]?.slice(0, -1));
   assert.ok(metaAlpha <= 0.16, JSON.stringify(resultMetaStyle));
@@ -590,7 +590,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
     const style = getComputedStyle(trigger);
     return { background: style.backgroundColor, color: style.color };
   });
-  assert.equal(composerColors.background, "rgb(32, 37, 34)", JSON.stringify(composerColors));
+  assert.equal(composerColors.background, "rgb(39, 39, 39)", JSON.stringify(composerColors));
   assert.equal(composerColors.color, "rgb(220, 227, 223)");
   await page.evaluate(() => applySyncedAssistantModels(["chat-a", "chat-b", "gpt-image-2"]));
   assert.deepEqual(await page.locator("#assistantModelSelect option").allTextContents(), ["自动选择模型", "chat-a", "chat-b"]);

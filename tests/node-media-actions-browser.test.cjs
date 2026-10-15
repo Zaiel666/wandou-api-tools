@@ -119,15 +119,15 @@ const { chromium } = require("playwright");
     assert.match(downloadResult.text, /^下载已开始：/);
     assert.equal(downloadResult.tone, "success");
 
-    const chineseDirectory = await page.evaluate(async () => {
+    const filePreviewSave = await page.evaluate(async () => {
       delete window.wandouShell;
       window.showDirectoryPicker = async () => ({ name: "我的图片", queryPermission: async () => "granted" });
       storeAutoSaveDirectoryHandle = async () => {};
       await chooseAutoSaveDirectory();
       return { name: autoSaveDirectoryHandle?.name, text: toast.textContent };
     });
-    assert.equal(chineseDirectory.name, "我的图片");
-    assert.equal(chineseDirectory.text, "已选择保存位置：我的图片");
+    assert.equal(filePreviewSave.name, undefined);
+    assert.match(filePreviewSave.text, /Codex 预览无法设置自动保存目录/);
 
     console.log("PASS: node model selection, copy, local save, download, and overlay feedback work in Chromium");
   } finally {

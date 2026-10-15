@@ -1,0 +1,22 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const html = fs.readFileSync(path.join(__dirname, '..', 'app', 'ai-node-canvas.html'), 'utf8');
+const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]).join('\n');
+
+test('large canvas and shell surfaces use neutral grayscale', () => {
+  assert.match(styles, /body\.dark-theme\s*\{\s*background:#111;/);
+  assert.match(styles, /\.canvas-wrap\s*\{[\s\S]*?rgba\(65, 65, 65, 0\.19\)[\s\S]*?#f2f2f2;/);
+  assert.match(styles, /body\.dark-theme \.canvas-wrap\s*\{[\s\S]*?rgba\(190, 190, 190, 0\.12\)[\s\S]*?#111;/);
+  assert.match(styles, /body\.node-canvas-page \.sidebar,[\s\S]*?\.assistant-panel,[\s\S]*?\.settings-popover,[\s\S]*?background:var\(--wd-surface-1\) !important;/);
+  assert.match(styles, /body\.node-canvas-page \.assistant-message\.user,[\s\S]*?background:var\(--wd-control\) !important;/);
+});
+
+test('large action states no longer use green fills', () => {
+  assert.match(styles, /button,\s*\.button-like\s*\{[\s\S]*?background:#303030;/);
+  assert.match(styles, /button\.wide-button\[data-generate\]\.generating[\s\S]*?background:#383838 !important;/);
+  assert.match(styles, /\.sidebar-collapse-tab:hover\s*\{[\s\S]*?background:#303030;/);
+  assert.match(styles, /\.node\.outpaint button\.outpaint-edit-button\s*\{[\s\S]*?background-color:#303030 !important;/);
+});

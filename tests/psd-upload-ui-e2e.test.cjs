@@ -65,8 +65,8 @@ const { chromium } = require('playwright');
       postChatCompletion = async () => {
         await new Promise((resolve) => setTimeout(resolve, 1500));
         return { text:JSON.stringify({ layers:[
-          { name:'红色主体', category:'subject' },
-          { name:'TEST 标题', category:'text' },
+          { name:'红色主体', category:'subject', bounds:[333,219,313,625] },
+          { name:'TEST 标题', category:'text', bounds:[63,25,333,150] },
         ] }) };
       };
       callApi = async (request) => {
@@ -86,10 +86,15 @@ const { chromium } = require('playwright');
       };
     });
 
-    const downloadPromise = page.waitForEvent('download', { timeout:30000 });
     await page.locator('.node.psd [data-psd-generate]').click();
     assert.equal(await page.locator('.node.psd [data-psd-cancel]').count(), 1, 'real button click should enter running state');
     assert.match(await page.locator('.node.psd [data-psd-countdown]').innerText(), /图层分析预计剩余/);
+    await page.waitForFunction(() => {
+      const node = nodes.find((item) => item.type === 'psd');
+      return node && psdReviewPlans.has(node.id) && !psdJobs.has(node.id);
+    });
+    const downloadPromise = page.waitForEvent('download', { timeout:30000 });
+    await page.locator('.node.psd [data-psd-generate]').click();
     const download = await downloadPromise;
     await page.evaluate(() => window.__psdUiJob);
     assert.match(download.suggestedFilename(), /\.psd$/i);
@@ -118,7 +123,7 @@ const { chromium } = require('playwright');
       visionModels.push(payload.model);
       receivedVisionImage ||= payload.messages?.[1]?.content?.some((item) => item.type === 'image_url' && item.image_url.url.startsWith('data:image/jpeg;base64,'));
       if (!rejectAllVision && payload.model === 'gpt-6-astra') {
-        return route.fulfill({ status:200, headers, contentType:'application/json', body:JSON.stringify({ choices:[{ message:{ content:'{"layers":[{"name":"红色主体","category":"subject"}]}' } }] }) });
+        return route.fulfill({ status:200, headers, contentType:'application/json', body:JSON.stringify({ choices:[{ message:{ content:'{"layers":[{"name":"红色主体","category":"subject","bounds":[333,219,313,625]}]}' } }] }) });
       }
       await route.fulfill({ status:400, headers, contentType:'application/json', body:'{"error":"No available channel for model"}' });
     });
@@ -126,6 +131,8 @@ const { chromium } = require('playwright');
       postChatCompletion = window.__realPostChatCompletion;
       apiUrlInput.value = 'https://mock-psd.test/v1';
     });
+    await page.evaluate(() => analyzePsdFromNode(nodes.find((item) => item.type === 'psd').id));
+    assert.match(await page.locator('.node.psd .status').innerText(), /请核对位置、名称/);
     const fallbackDownload = page.waitForEvent('download', { timeout:30000 });
     await page.locator('.node.psd [data-psd-generate]').click();
     await fallbackDownload;
@@ -134,14 +141,14 @@ const { chromium } = require('playwright');
     assert.equal(visionModels[0], 'gpt-6-astra', 'PSD analysis should start with the highest GPT vision model');
     assert.match(await page.locator('.node.psd .status').innerText(), /PSD 已生成/);
     rejectAllVision = true;
-    await page.locator('.node.psd [data-psd-generate]').click();
-    await page.evaluate(() => window.__psdUiJob);
+    await page.evaluate(() => analyzePsdFromNode(nodes.find((item) => item.type === 'psd').id));
     assert.match(await page.locator('.node.psd .status').innerText(), /视觉分析接口不可用。已尝试 gpt-6-astra.*gpt-5\.6-sol.*gpt-5\.6.*gpt-5\.6-terra.*支持 chat\/completions 图片输入的视觉模型/);
     assert.equal(await page.locator('.node.psd [data-psd-generate]').isEnabled(), true);
     await page.evaluate(() => {
-      postChatCompletion = async () => ({ text:'{"layers":[{"name":"红色主体","category":"subject"}]}' });
+      postChatCompletion = async () => ({ text:'{"layers":[{"name":"红色主体","category":"subject","bounds":[333,219,313,625]}]}' });
       callApi = async () => { throw new Error('No available channel for model gpt-image-2.5-sunburst'); };
     });
+    await page.evaluate(() => analyzePsdFromNode(nodes.find((item) => item.type === 'psd').id));
     await page.locator('.node.psd [data-psd-generate]').click();
     await page.evaluate(() => window.__psdUiJob);
     assert.match(await page.locator('.node.psd .status').innerText(), /第 1 层“红色主体”遮罩生成（gpt-image-2\.5-sunburst）失败：接口后台没有开通当前选择的图片模型通道/);

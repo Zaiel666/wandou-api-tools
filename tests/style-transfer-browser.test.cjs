@@ -124,8 +124,12 @@ const { chromium } = require("../desktop-client/node_modules/playwright");
       };
       return { selected: read(selected), generate: read(generate) };
     });
-    assert.deepEqual(unifiedActions.selected, { color: "rgb(19, 170, 114)", background: "rgb(27, 31, 29)", border: "rgb(19, 170, 114)" });
-    assert.deepEqual(unifiedActions.generate, { color: "rgb(19, 170, 114)", background: "rgb(27, 31, 29)", border: "rgb(19, 170, 114)" });
+    const isNeutral = (value) => {
+      const [red, green, blue] = (value.match(/\d+/g) || []).map(Number);
+      return Math.max(red, green, blue) - Math.min(red, green, blue) <= 2;
+    };
+    assert.ok(Object.values(unifiedActions.selected).every(isNeutral), JSON.stringify(unifiedActions.selected));
+    assert.ok(Object.values(unifiedActions.generate).every(isNeutral), JSON.stringify(unifiedActions.generate));
     const lightUnifiedActions = await page.evaluate(() => {
       document.body.classList.remove("dark-theme");
       const read = (element) => {
@@ -137,8 +141,8 @@ const { chromium } = require("../desktop-client/node_modules/playwright");
         generate: read(document.querySelector('.node.style [data-generate]')),
       };
     });
-    assert.deepEqual(lightUnifiedActions.selected, { color: "rgb(19, 170, 114)", background: "rgb(255, 255, 255)", border: "rgb(19, 170, 114)" });
-    assert.deepEqual(lightUnifiedActions.generate, { color: "rgb(8, 121, 88)", background: "rgb(255, 255, 255)", border: "rgb(11, 143, 102)" });
+    assert.ok(Object.values(lightUnifiedActions.selected).every(isNeutral), JSON.stringify(lightUnifiedActions.selected));
+    assert.ok(Object.values(lightUnifiedActions.generate).every(isNeutral), JSON.stringify(lightUnifiedActions.generate));
     const restored = await page.evaluate(async () => {
       const snapshot = getCanvasSnapshot();
       nodes = [];

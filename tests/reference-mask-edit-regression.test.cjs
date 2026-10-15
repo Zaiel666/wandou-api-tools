@@ -5,8 +5,8 @@ const path = require("node:path");
 const source = fs.readFileSync(path.resolve(__dirname, "../app/ai-node-canvas.html"), "utf8");
 
 assert.match(source, /width:\s*16px;[\s\S]*?height:\s*16px;/, "reference corner controls should be smaller");
-assert.match(source, /绿色区域允许修改/);
-assert.match(source, /保存遮罩/);
+assert.match(source, /原图独立保留/);
+assert.match(source, /保存编辑/);
 assert.match(source, /let paintOriginalCanvas = document\.createElement\("canvas"\)/);
 assert.match(source, /let paintSelectionCanvas = document\.createElement\("canvas"\)/);
 assert.match(source, /reference\.maskUrl = createApiMaskDataUrl/);

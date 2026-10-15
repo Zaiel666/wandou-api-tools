@@ -14,6 +14,8 @@ function fixture() {
   const node = {id:1, type:'psd', model:'gpt-image-2'};
   const c = {
     AbortController, DOMException, nodes:[node], psdJobs:new Set(), psdJobControllers:new Map(),
+    psdReviewPlans:new Map([[1, {node, projectId:'A', folderId:'folder', sourceKey:'source', width:1024, height:1024,
+      layers:[{name:'主体', category:'subject', bounds:[0,0,500,500], selected:true}]}]]),
     activeProjectId:'A', currentFolderId:'folder', apiKeyInput:{value:'FAKE'}, gptImageModelOptions:['gpt-image-2'],
     apiProfileForModel: () => ({key:'FAKE', id:'channel1'}), psdSourceReference: () => ({url:'source'}),
     invalidateNodeExport() {}, setPsdJobMarker() {}, startPsdCountdown() {}, stopPsdCountdown() {}, takePsdJobMarker() {},
@@ -24,6 +26,7 @@ function fixture() {
   };
   vm.createContext(c);
   vm.runInContext(block('    function abortablePromise(', '    async function fetchMaybeProxied(')
+    + block('    function psdReviewSourceKey(', '    function renderPsdBody(')
     + block('    async function runPsdStage(', '    function outpaintRatioInsets('), c);
   return {c, node, timers};
 }

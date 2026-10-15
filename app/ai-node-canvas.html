@@ -13,19 +13,19 @@
   <style>
     :root {
       color-scheme: light;
-      --bg: #e4e7eb;
-      --grid: rgba(80, 92, 104, 0.1);
-      --panel: rgba(255, 255, 255, 0.72);
-      --panel-soft: rgba(233, 255, 247, 0.52);
+      --bg:#f2f2f2;
+      --grid: rgba(55, 55, 55, 0.09);
+      --panel: rgba(255, 255, 255, 0.94);
+      --panel-soft:rgba(245,245,245,.72);
       --surface: #ffffff;
-      --soft: rgba(19, 170, 114, 0.08);
-      --border: rgba(91, 101, 96, 0.28);
-      --text: #10211d;
-      --muted: #55716a;
+      --soft: rgba(35, 39, 42, 0.06);
+      --border: rgba(90, 90, 90, 0.24);
+      --text:#1c1c1c;
+      --muted:#666;
       --line: rgba(255, 255, 255, 0.7);
-      --blue: #13aa72;
-      --blue-dark: #13aa72;
-      --blue-soft: rgba(19, 170, 114, 0.16);
+      --blue:#292929;
+      --blue-dark:#292929;
+      --blue-soft:rgba(40,40,40,.09);
       --danger: #d92d20;
       --shadow: 0 24px 70px rgba(15, 23, 42, 0.16);
       --radius: 12px;
@@ -33,19 +33,19 @@
 
     body.dark-theme {
       color-scheme: dark;
-      --bg: #030706;
-      --grid: rgba(19, 170, 114, 0.12);
-      --panel: rgba(38, 42, 40, 0.94);
-      --panel-soft: rgba(45, 50, 48, 0.78);
-      --surface: #1b1f1d;
-      --soft: rgba(19, 170, 114, 0.1);
-      --border: rgba(101, 112, 106, 0.42);
-      --text: #eefcf8;
-      --muted: #9fb8b2;
-      --line: rgba(101, 111, 106, 0.28);
-      --blue: #13aa72;
-      --blue-dark: #13aa72;
-      --blue-soft: rgba(19, 170, 114, 0.18);
+      --bg:#111;
+      --grid: rgba(255, 255, 255, 0.07);
+      --panel:rgba(28,28,28,.96);
+      --panel-soft:rgba(38,38,38,.9);
+      --surface:#202020;
+      --soft: rgba(255, 255, 255, 0.06);
+      --border: rgba(130, 130, 130, 0.34);
+      --text:#f2f2f2;
+      --muted:#aaa;
+      --line: rgba(145, 145, 145, 0.22);
+      --blue:#696969;
+      --blue-dark:#bbb;
+      --blue-soft: rgba(255, 255, 255, 0.1);
       --shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
     }
 
@@ -65,19 +65,11 @@
       font-size: 13px;
       font-weight: 400;
       color: var(--text);
-      background:
-        radial-gradient(circle at 14% 8%, rgba(148, 163, 184, 0.32), transparent 32%),
-        radial-gradient(circle at 86% 16%, rgba(203, 213, 225, 0.42), transparent 30%),
-        radial-gradient(circle at 70% 92%, rgba(100, 116, 139, 0.18), transparent 34%),
-        linear-gradient(135deg, rgba(255, 255, 255, 0.42), rgba(226, 232, 240, 0.48)),
-        var(--bg);
+      background:var(--bg);
     }
 
     body.dark-theme {
-      background:
-        radial-gradient(circle at 24% 8%, rgba(118, 185, 0, 0.16), transparent 30%),
-        radial-gradient(circle at 78% 80%, rgba(139, 214, 0, 0.11), transparent 34%),
-        #030706;
+      background:#111;
     }
 
     body.no-select,
@@ -99,14 +91,14 @@
       min-height: 36px;
       padding: 7px 11px;
       cursor: pointer;
-      background: linear-gradient(135deg, #8bd600, #4c7f00);
+      background:#303030;
       color: #fff;
       font-weight: 500;
     }
 
     button:hover,
     .button-like:hover {
-      background: linear-gradient(135deg, #9bef12, #5f9700);
+      background:#454545;
     }
 
     button:disabled,
@@ -196,7 +188,7 @@
 
     .sidebar {
       position: relative;
-      background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(231, 246, 241, .62));
+      background:#f7f7f7;
       border-right: 1px solid rgba(255, 255, 255, 0.82);
       padding: 18px;
       overflow-y: auto;
@@ -208,8 +200,8 @@
     }
 
     body.dark-theme .sidebar {
-      background: rgba(14, 18, 17, 0.72);
-      border-right-color: rgba(77, 87, 82, 0.28);
+      background:#171717;
+      border-right-color:rgba(255,255,255,.12);
     }
 
     .app.sidebar-collapsed .sidebar {
@@ -247,30 +239,30 @@
       min-height: 32px;
       padding: 0 18px;
       border-radius: 999px;
-      color: #76b900;
+      color:#e5e5e5;
       background: #050706;
-      border-color: rgba(118, 185, 0, 0.82);
+      border-color:rgba(180,180,180,.5);
       box-shadow: none;
       font-size: 12px;
     }
 
     .project-hub-button:hover {
-      color: #8bd600;
+      color:#fff;
       background: #050706;
-      border-color: rgba(139, 214, 0, 0.95);
+      border-color:rgba(220,220,220,.7);
     }
 
     body:not(.dark-theme) .project-hub-button {
-      color: #256d00;
+      color:#242424;
       background: #fff;
-      border-color: rgba(37, 109, 0, 0.8);
+      border-color:rgba(80,80,80,.5);
       box-shadow: none;
     }
 
     body:not(.dark-theme) .project-hub-button:hover {
-      color: #1f5f00;
+      color:#111;
       background: #fff;
-      border-color: rgba(37, 109, 0, 0.95);
+      border-color:rgba(60,60,60,.75);
     }
 
     .project-hub-menu {
@@ -676,13 +668,13 @@
       border-radius: 16px;
       padding: 12px;
       margin-bottom: 12px;
-      background: rgba(255, 255, 255, 0.56);
+      background:#fff;
       backdrop-filter: blur(18px);
     }
 
     body.dark-theme .tool-group {
       color: #fff;
-      background: #050706;
+      background:#202020;
       border-color: rgba(255, 255, 255, 0.18);
     }
 
@@ -788,7 +780,7 @@
     }
 
     body.dark-theme .button-grid button {
-      background: #1b1f1d;
+      background:#202020;
       color: rgba(255, 255, 255, 0.92);
       border-color: rgba(92, 102, 97, 0.34);
     }
@@ -796,20 +788,20 @@
     body.dark-theme .sidebar-collapse-tab,
     .sidebar-collapse-tab:hover {
       color: #fff;
-      background: #43cf3a;
-      border-color: rgba(35, 165, 58, 0.58);
+      background:#303030;
+      border-color:rgba(160,160,160,.45);
     }
 
     .button-grid button:hover {
-      color: #76b900;
+      color:#242424;
       background: #fff;
-      border-color: rgba(118, 185, 0, 0.72);
+      border-color:rgba(80,80,80,.55);
     }
 
     body.dark-theme .button-grid button:hover {
-      color: #8bd600;
-      background: #242927;
-      border-color: rgba(118, 185, 0, 0.72);
+      color:#fff;
+      background:#303030;
+      border-color:rgba(180,180,180,.5);
     }
 
     body.dark-theme .png-upload-preview,
@@ -902,8 +894,8 @@
       overflow: hidden;
       cursor: grab;
       background:
-        radial-gradient(circle, rgba(82, 190, 55, 0.24) 1px, transparent 1.4px),
-        #e4e7e8;
+        radial-gradient(circle, rgba(65, 65, 65, 0.19) 1px, transparent 1.4px),
+        #f2f2f2;
       background-size: 24px 24px;
       contain: layout paint;
       isolation: isolate;
@@ -922,8 +914,8 @@
 
     body.dark-theme .canvas-wrap {
       background:
-        radial-gradient(circle, rgba(118, 185, 0, 0.16) 1px, transparent 1.35px),
-        #111514;
+        radial-gradient(circle, rgba(190, 190, 190, 0.12) 1px, transparent 1.35px),
+        #111;
       background-size: 24px 24px;
     }
 
@@ -1891,11 +1883,11 @@
     }
 
     body.dark-theme .node.image {
-      background: #1b1f1d !important;
+      background:#202020 !important;
     }
 
     body.dark-theme .node.image .preview {
-      background: #1b1f1d !important;
+      background:#202020 !important;
       border-color: rgba(148, 163, 184, .52) !important;
     }
 
@@ -2159,6 +2151,28 @@
     .psd-countdown { display:flex; align-items:center; gap:7px; min-height:24px; margin-top:5px; color:#b9ead1; font-size:11px; font-variant-numeric:tabular-nums; }
     .psd-countdown::before { content:""; width:7px; height:7px; flex:none; border-radius:50%; background:#13aa72; box-shadow:0 0 0 3px rgba(19,170,114,.14); }
     .psd-layer-list { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+    .psd-review { margin-top:10px; padding:10px; border:1px solid #777; border-radius:10px; background:#202020; color:#f4f4f4; }
+    .psd-review-title { margin:0 0 7px; font-size:12px; font-weight:700; }
+    .psd-review-note { margin:0 0 8px; color:#bbb; font-size:10px; line-height:1.5; }
+    .psd-review-preview { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1; overflow:hidden; border:1px solid #555; border-radius:7px; background:#111; }
+    .psd-review-stage { position:relative; max-width:100%; max-height:100%; }
+    .psd-review-stage img { display:block; width:100%; height:100%; }
+    .psd-review-box { position:absolute; box-sizing:border-box; display:grid; place-items:start; border:1px solid #fff; background:rgba(255,255,255,.08); color:#fff; font:700 10px/1 sans-serif; pointer-events:none; }
+    .psd-review-box span { padding:2px 4px; background:#111; }
+    .psd-review-box.is-off { opacity:.3; border-style:dashed; }
+    .psd-review-list { display:grid; gap:6px; max-height:260px; margin-top:9px; overflow:auto; }
+    .psd-review-row { display:grid; grid-template-columns:auto 1fr; gap:4px 8px; padding:7px; border:1px solid #555; border-radius:7px; background:#292929; }
+    .psd-review-row > label { display:flex; align-items:center; gap:5px; font-size:11px; }
+    .psd-review-row input[type=text] { min-width:0; width:100%; box-sizing:border-box; padding:5px; border:1px solid #666; border-radius:5px; color:#fff; background:#171717; font-size:11px; }
+    .psd-review-row small { grid-column:2; color:#bbb; font-size:10px; }
+    .psd-review-row details { grid-column:2; font-size:10px; }
+    .psd-review-bounds { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:5px; }
+    .psd-review-bounds label { color:#bbb; }
+    .psd-review-bounds input { width:100%; min-width:0; box-sizing:border-box; padding:4px; border:1px solid #666; border-radius:4px; color:#fff; background:#171717; }
+    .psd-source-upload, .psd-source-upload:hover { border-color:#777; color:var(--text); background:var(--panel); }
+    .psd-actions [data-psd-generate], .psd-actions [data-psd-generate]:hover { border-color:#777; color:var(--text); background:var(--panel); }
+    .psd-countdown { color:var(--muted); }
+    .psd-countdown::before { background:#aaa; box-shadow:none; }
     .psd-layer-list span { padding:3px 6px; border:1px solid rgba(19,170,114,.35); border-radius:5px; color:#13aa72; font-size:10px; }
     .node.psd .status { margin-top:7px; font-size:10px; }
     .node.vector { width:440px; min-width:390px; }
@@ -3465,27 +3479,19 @@
     .count-option.active,
     .choice-option.active,
     .output-option.active {
-      color: #76b900;
-      background: rgba(255, 255, 255, 0.74);
-      border-color: rgba(118, 185, 0, 0.72);
-      box-shadow: 0 0 0 1px rgba(118, 185, 0, 0.34), inset 0 1px 0 rgba(255,255,255,0.45);
-      -webkit-text-fill-color: transparent;
-      background-image: linear-gradient(135deg, #76b900, #8bd600);
-      background-clip: text;
-      -webkit-background-clip: text;
+      color:#242424;
+      background:#fff;
+      border-color:#777;
+      box-shadow:inset 0 0 0 1px rgba(60,60,60,.08);
     }
 
     body.dark-theme .count-option.active,
     body.dark-theme .choice-option.active,
     body.dark-theme .output-option.active {
-      color: #8bd600;
-      background: rgba(0, 0, 0, 0.56);
-      border-color: rgba(118, 185, 0, 0.72);
-      box-shadow: 0 0 0 1px rgba(118, 185, 0, 0.24);
-      -webkit-text-fill-color: transparent;
-      background-image: linear-gradient(135deg, #76b900, #8bd600);
-      background-clip: text;
-      -webkit-background-clip: text;
+      color:#fff;
+      background:#35373a;
+      border-color:#9b9b9b;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
     }
 
     .sidebar-collapse-tab,
@@ -3493,9 +3499,9 @@
     .sidebar-collapse-tab:hover,
     body.dark-theme .sidebar-collapse-tab:hover {
       color: #fff;
-      background: linear-gradient(135deg, #8bd600 0%, #76b900 100%);
-      border-color: rgba(118, 185, 0, 0.58);
-      box-shadow: 0 12px 30px rgba(118, 185, 0, 0.22);
+      background:#303030;
+      border-color:rgba(155,155,155,.48);
+      box-shadow:0 8px 24px rgba(0,0,0,.18);
     }
 
     .sidebar-controls .sidebar-collapse-tab {
@@ -5424,7 +5430,7 @@
     body:not(.dark-theme) .topbar-actions > button.ghost,
     body.dark-theme .topbar-actions > .folder-home-control {
       color:#f5f6f7 !important;
-      background:#202123 !important;
+      background:#202020 !important;
       border:1px solid rgba(255,255,255,.14) !important;
       box-shadow:0 4px 14px rgba(0,0,0,.14) !important;
     }
@@ -5445,7 +5451,7 @@
     body:not(.dark-theme) .topbar-actions > .folder-home-control button:hover,
     body.dark-theme .topbar-actions > .folder-home-control button:hover {
       color:#fff !important;
-      background:#303236 !important;
+      background:#303030 !important;
       border-color:rgba(255,255,255,.24) !important;
       box-shadow:none !important;
     }
@@ -5606,6 +5612,10 @@
       color:transparent !important;
       -webkit-text-fill-color:transparent;
     }
+    .generator-annotation-list { display:grid; gap:6px; margin:0 3px 10px; }
+    .generator-annotation-item { display:flex; align-items:flex-start; gap:8px; padding:7px 9px; border:1px solid rgba(231,189,115,.48); border-radius:8px; background:rgba(231,189,115,.08); color:inherit; font-size:12px; line-height:1.5; }
+    .generator-annotation-number { flex:none; padding:1px 6px; border-radius:5px; background:#e7bd73; color:#171717; font-size:11px; font-weight:800; }
+    .generator-annotation-text { min-width:0; overflow-wrap:anywhere; white-space:pre-wrap; }
     .prompt-composer-footer {
       min-height:39px;
       display:flex;
@@ -6079,7 +6089,7 @@
     body.dark-theme .context-menu button:hover,
     body.dark-theme .context-menu button:focus-visible {
       color:#fff;
-      background:#13aa72 !important;
+      background:#3c3e42 !important;
       outline:0;
     }
     .context-menu button:hover::before,
@@ -6301,20 +6311,20 @@
     }
     html body.node-canvas-page .canvas .node .node-body button.wide-button[data-generate].generating,
     html body.node-canvas-page.dark-theme .canvas .node .node-body button.wide-button[data-generate].generating {
-      color:#fff !important; background:#258f4e !important; border-color:#46b975 !important;
+      color:#fff !important; background:#383838 !important; border-color:#777 !important;
     }
 
     body.node-canvas-page .node.outpaint button.outpaint-edit-button {
       border-radius:10px !important;
-      background-color:#1b3226 !important;
-      color:#e7fff1 !important;
+      background-color:#303030 !important;
+      color:#fff !important;
     }
     body.node-canvas-page .node.outpaint button.outpaint-edit-button:hover,
     body.node-canvas-page .node.outpaint button.outpaint-edit-button:focus-visible {
-      border-color:#81efbc !important;
-      background-color:#235039 !important;
+      border-color:#999 !important;
+      background-color:#454545 !important;
       color:#fff !important;
-      outline:2px solid rgba(19,170,114,.22);
+      outline:2px solid rgba(160,160,160,.22);
       outline-offset:1px;
     }
 
@@ -6962,6 +6972,356 @@
     .node.result.audio-result { width:360px; }
     .node.result.audio-result .preview { min-height:126px; aspect-ratio:auto; display:grid; place-items:center; padding:22px 14px 34px; background:radial-gradient(circle at 50% 0,rgba(54,121,255,.18),transparent 62%),#111513; }
     .node.result.audio-result audio { width:100%; }
+    /* Core interaction surfaces stay monochrome. Brand and status colors remain small accents. */
+    body.node-canvas-page .node:not(.result).selected,
+    body.node-canvas-page .node:not(.result):hover {
+      border-color:#777 !important;
+      box-shadow:0 0 0 1px rgba(120,120,120,.16) !important;
+    }
+    body.node-canvas-page .node.generator .prompt-corner-button,
+    body.node-canvas-page .node.generator .prompt-composer-footer .prompt-corner-button:hover,
+    body.node-canvas-page .assistant-title-mark,
+    body.node-canvas-page .assistant-orb,
+    body.node-canvas-page .assistant-send,
+    body.node-canvas-page .node-icon,
+    body.node-canvas-page .preview-download:hover,
+    body.node-canvas-page .audio-generate,
+    body.node-canvas-page .audio-generate:hover,
+    body.node-canvas-page #newPromptButton {
+      color:#fff !important;
+      background:#303030 !important;
+      border-color:#666 !important;
+    }
+    body.node-canvas-page .reference-upload-plus,
+    body.node-canvas-page .node-select-option.active,
+    body.node-canvas-page .node-select-option:hover {
+      color:var(--text) !important;
+      background:var(--soft) !important;
+      border-color:var(--border) !important;
+    }
+    body.node-canvas-page .node-select-option svg { stroke:currentColor; }
+    body.node-canvas-page .audio-choice.active { color:var(--audio-text); border-color:#999; background:var(--audio-control); }
+    body.node-canvas-page .audio-instruction:focus { border-color:#999; box-shadow:0 0 0 2px rgba(130,130,130,.2); }
+    body.node-canvas-page .sidebar .wide-button:hover,
+    body.node-canvas-page .sidebar .wide-button:active { color:var(--text); border-color:#777; background:var(--panel); }
+    html body.node-canvas-page .canvas .node .node-body button.wide-button[data-generate],
+    html body.node-canvas-page.dark-theme .canvas .node .node-body button.wide-button[data-generate] {
+      color:var(--text) !important;
+      border-color:#777 !important;
+    }
+    html body.node-canvas-page .canvas .node.result:hover .preview,
+    html body.node-canvas-page .canvas .node.result.selected .preview,
+    html body.node-canvas-page .canvas .node.result.box-selected .preview {
+      box-shadow:inset 0 0 0 1px #999 !important;
+    }
+    /* Neutral surfaces: color is reserved for small semantic indicators, not layout blocks. */
+    body.node-canvas-page {
+      --wd-surface-0:#f2f2f2;
+      --wd-surface-1:#fff;
+      --wd-surface-2:#f7f7f7;
+      --wd-control:#eee;
+      --wd-ink:#202020;
+      --wd-edge:#d2d2d2;
+    }
+    body.node-canvas-page.dark-theme {
+      --wd-surface-0:#111;
+      --wd-surface-1:#1c1c1c;
+      --wd-surface-2:#242424;
+      --wd-control:#303030;
+      --wd-ink:#f2f2f2;
+      --wd-edge:#444;
+    }
+    body.node-canvas-page .sidebar,
+    body.node-canvas-page .assistant-panel,
+    body.node-canvas-page .settings-popover,
+    body.node-canvas-page .prompt-manager-modal,
+    body.node-canvas-page .prompt-manager-main,
+    body.node-canvas-page .favorite-panel,
+    body.node-canvas-page .outpaint-editor-panel { background:var(--wd-surface-1) !important; color:var(--wd-ink); }
+    body.node-canvas-page .tool-group,
+    body.node-canvas-page .node:not(.result):not(.image):not(.audio),
+    body.node-canvas-page .assistant-message.assistant,
+    body.node-canvas-page .assistant-composer,
+    body.node-canvas-page .prompt-editor-card,
+    body.node-canvas-page .favorite-card,
+    body.node-canvas-page .outpaint-editor-tools { background:var(--wd-surface-2) !important; }
+    body.node-canvas-page .assistant-message.user,
+    body.node-canvas-page .assistant-starters button,
+    body.node-canvas-page .assistant-rail,
+    body.node-canvas-page .prompt-tags,
+    body.node-canvas-page .prompt-manager-list .prompt-library-item,
+    body.node-canvas-page .outpaint-edit-button,
+    body.node-canvas-page .outpaint-editor-tools button,
+    body.node-canvas-page .api-channel-card,
+    body.node-canvas-page .api-channel-card.optional { background:var(--wd-control) !important; color:var(--wd-ink); border-color:var(--wd-edge); }
+    body.node-canvas-page .assistant-starters button:hover,
+    body.node-canvas-page .prompt-manager-list .prompt-library-item:hover,
+    body.node-canvas-page .outpaint-edit-button:hover { background:var(--wd-surface-1) !important; border-color:#888; }
+    body.node-canvas-page .node [data-generate].generating,
+    body.node-canvas-page .vector-actions [data-vector-download],
+    body.node-canvas-page .outpaint-editor-compose button,
+    body.node-canvas-page .sketch-editor-done { color:#fff !important; background:#383838 !important; border-color:#666 !important; box-shadow:none !important; }
+    body.node-canvas-page .button-grid button[data-add-node="style"],
+    body.node-canvas-page .button-grid button[data-add-node="psd"],
+    body.node-canvas-page .button-grid button[data-add-node="vector"],
+    body.node-canvas-page .button-grid button[data-add-node="audio"] {
+      color:var(--wd-ink) !important;
+      background:var(--wd-surface-1) !important;
+      border-color:var(--wd-edge) !important;
+    }
+    body.node-canvas-page.dark-theme .node.audio {
+      --audio-panel:#1c1c1c;
+      --audio-panel-soft:#222326;
+      --audio-stage:#26272a;
+      --audio-control:#2b2c30;
+    }
+    body.node-canvas-page .node.audio-result .preview { background:var(--wd-surface-1) !important; }
+    body.node-canvas-page .assistant-panel { box-shadow:0 22px 64px rgba(0,0,0,.3) !important; }
+    /* Keep the application surfaces genuinely neutral; reserve color for tiny state markers. */
+    body.node-canvas-page.dark-theme .canvas-wrap { background-color:#101010 !important; }
+    body.node-canvas-page .canvas-wrap.external-image-dragover { box-shadow:inset 0 0 0 2px #aaa !important; }
+    body.node-canvas-page.dark-theme .node,
+    body.node-canvas-page.dark-theme .node.image,
+    body.node-canvas-page.dark-theme .node.result,
+    body.node-canvas-page.dark-theme .assistant-panel,
+    body.node-canvas-page.dark-theme .sidebar { background-color:#1b1b1b !important; }
+    body.node-canvas-page.dark-theme .node .preview,
+    body.node-canvas-page.dark-theme .node .placeholder-art,
+    body.node-canvas-page.dark-theme .reference-empty-visual,
+    body.node-canvas-page.dark-theme .assistant-composer,
+    body.node-canvas-page.dark-theme .assistant-starters button { background:#242424 !important; }
+    body.node-canvas-page.dark-theme .node input,
+    body.node-canvas-page.dark-theme .node textarea,
+    body.node-canvas-page.dark-theme .node select,
+    body.node-canvas-page.dark-theme .node .node-select-trigger { background-color:#292929 !important; color:#eee !important; }
+    body.node-canvas-page.dark-theme #collapseSidebarButton.sidebar-collapse-tab,
+    body.node-canvas-page.dark-theme .floating-sidebar-button.sidebar-collapse-tab { background:#303030 !important; color:#f3f3f3 !important; }
+    body.node-canvas-page #collapseSidebarButton.sidebar-collapse-tab,
+    body.node-canvas-page .floating-sidebar-button.sidebar-collapse-tab { background:#303030 !important; color:#f3f3f3 !important; border-color:#555 !important; }
+    body.node-canvas-page.dark-theme .assistant-title-mark,
+    body.node-canvas-page.dark-theme .assistant-rail::before { background:#3c3c3c !important; color:#fff !important; }
+    body.node-canvas-page.dark-theme .node .wide-button,
+    body.node-canvas-page.dark-theme .node .reference-add-thumb,
+    body.node-canvas-page.dark-theme .reference-upload-trigger { background:#303030 !important; color:#f1f1f1 !important; border-color:#555 !important; }
+    body.node-canvas-page.dark-theme .node .wide-button:hover,
+    body.node-canvas-page.dark-theme .reference-upload-trigger:hover { background:#3a3a3a !important; }
+    body.node-canvas-page.dark-theme .node .count-option.active,
+    body.node-canvas-page.dark-theme .node .choice-option.active,
+    body.node-canvas-page.dark-theme .node .output-option.active,
+    body.node-canvas-page.dark-theme .node .auto-split-toggle.active,
+    body.node-canvas-page.dark-theme .node .count-option.active:hover,
+    body.node-canvas-page.dark-theme .node .choice-option.active:hover,
+    body.node-canvas-page.dark-theme .node .output-option.active:hover,
+    body.node-canvas-page.dark-theme .node .auto-split-toggle.active:hover {
+      color:#fff !important; background:#353535 !important; border-color:#929292 !important; box-shadow:none !important;
+    }
+    body.node-canvas-page.dark-theme .node .node-select-option.active,
+    body.node-canvas-page.dark-theme .node .node-select-option:hover,
+    body.node-canvas-page.dark-theme .node .reference-empty-visual,
+    body.node-canvas-page.dark-theme .node .style-transfer-preview,
+    body.node-canvas-page.dark-theme .project-hub-menu { background-color:#242424 !important; border-color:#4a4a4a !important; }
+    body.node-canvas-page.dark-theme .node .node-select-option.active { color:#fff !important; }
+    body.node-canvas-page.dark-theme .tool-group,
+    body.node-canvas-page.dark-theme .project-hub.tool-group { background:#1b1b1b !important; border-color:#393939 !important; }
+    body.node-canvas-page.dark-theme .node.image .thumb,
+    body.node-canvas-page.dark-theme .project-hub-button,
+    body.node-canvas-page.dark-theme .sidebar .wide-button,
+    body.node-canvas-page.dark-theme .sidebar .button-grid button { background:#242424 !important; border-color:#414141 !important; }
+    body.node-canvas-page.dark-theme .assistant-picker-trigger,
+    body.node-canvas-page.dark-theme .assistant-close { background:#272727 !important; border-color:#444 !important; }
+    body.node-canvas-page.dark-theme .node .form-row,
+    body.node-canvas-page.dark-theme .node .field,
+    body.node-canvas-page.dark-theme .node .style-transfer-slot,
+    body.node-canvas-page.dark-theme .node .style-transfer-slot-label,
+    body.node-canvas-page.dark-theme .node .style-transfer-role-hint { background:#202020 !important; border-color:#3d3d3d !important; }
+    body.node-canvas-page.dark-theme .node .choice-options,
+    body.node-canvas-page.dark-theme .node .count-options,
+    body.node-canvas-page.dark-theme .node .node-select-trigger,
+    body.node-canvas-page.dark-theme .node .style-transfer-empty { background:#282828 !important; border-color:#484848 !important; }
+    body.node-canvas-page.dark-theme .node .choice-option,
+    body.node-canvas-page.dark-theme .node .count-option { background:#252525 !important; border-color:#434343 !important; }
+    body.node-canvas-page:not(.dark-theme) .node .count-option.active,
+    body.node-canvas-page:not(.dark-theme) .node .choice-option.active,
+    body.node-canvas-page:not(.dark-theme) .node .output-option.active,
+    body.node-canvas-page:not(.dark-theme) .node .auto-split-toggle.active { color:#242424 !important; background:#e9e9e9 !important; border-color:#777 !important; box-shadow:none !important; }
+    body.node-canvas-page.dark-theme .node .style-transfer-slot.has-image { box-shadow:none !important; }
+    body.node-canvas-page .node.image .thumb { touch-action:none; }
+    body.node-canvas-page .canvas .node button svg,
+    body.node-canvas-page .canvas .node label svg,
+    body.node-canvas-page .canvas .node .model-provider-icon,
+    body.node-canvas-page .canvas .node .reference-upload-plus,
+    body.node-canvas-page .canvas .node .style-transfer-plus { color:#d8d8d8 !important; }
+    body.node-canvas-page .canvas .node .reference-upload-plus { border-color:#666 !important; }
+    body.node-canvas-page:not(.dark-theme) .canvas .node button svg,
+    body.node-canvas-page:not(.dark-theme) .canvas .node label svg,
+    body.node-canvas-page:not(.dark-theme) .canvas .node .model-provider-icon,
+    body.node-canvas-page:not(.dark-theme) .canvas .node .reference-upload-plus,
+    body.node-canvas-page:not(.dark-theme) .canvas .node .style-transfer-plus { color:#444 !important; }
+    html body.node-canvas-page .canvas .node .node-body button.wide-button[data-generate],
+    html body.node-canvas-page .canvas .node.style .node-body button[data-style-generate][data-generate] { color:var(--wd-ink) !important; background:var(--wd-control) !important; border-color:#777 !important; box-shadow:none !important; }
+    html body.node-canvas-page .canvas .node .node-body button.wide-button[data-generate]:is(:hover,:focus-visible),
+    html body.node-canvas-page .canvas .node.style .node-body button[data-style-generate][data-generate]:is(:hover,:focus-visible) { color:var(--wd-ink) !important; background:#383838 !important; border-color:#999 !important; box-shadow:none !important; }
+    html body.node-canvas-page:not(.dark-theme) .canvas .node .node-body button.wide-button[data-generate]:is(:hover,:focus-visible),
+    html body.node-canvas-page:not(.dark-theme) .canvas .node.style .node-body button[data-style-generate][data-generate]:is(:hover,:focus-visible) { background:#dedede !important; }
+    body.node-canvas-page.dark-theme .sidebar .wide-button:hover,
+    body.node-canvas-page.dark-theme .sidebar .button-grid button:hover { background:#323232 !important; border-color:#777 !important; }
+    body.node-canvas-page.dark-theme .sidebar .project-hub-button,
+    body.node-canvas-page.dark-theme .sidebar button.wide-button.gallery-entry { background:#242424 !important; border-color:#414141 !important; color:#eee !important; }
+    body.node-canvas-page.dark-theme .sidebar #projectHubButton { background:#242424 !important; background-image:none !important; border-color:#414141 !important; }
+    body.node-canvas-page.dark-theme .sidebar .project-hub-button:hover,
+    body.node-canvas-page.dark-theme .sidebar button.wide-button.gallery-entry:hover { background:#323232 !important; border-color:#777 !important; color:#fff !important; }
+    body.node-canvas-page.dark-theme #assistantToggleButton.active { background:#383838 !important; border-color:#666 !important; color:#fff !important; }
+    body.node-canvas-page .node.image .thumb-index { background:#e6e6e6 !important; color:#171717 !important; border-color:#777 !important; }
+    body.node-canvas-page .assistant-rail { background:#303030 !important; border-color:#555 !important; color:#f2f2f2 !important; box-shadow:-8px 0 24px rgba(0,0,0,.24) !important; }
+    body.node-canvas-page .assistant-rail::before { background:#3a3a3a !important; color:#fff !important; }
+    body.node-canvas-page .assistant-rail-arrow { color:#eee !important; }
+    body.node-canvas-page #collapseSidebarButton.sidebar-collapse-tab,
+    body.node-canvas-page .floating-sidebar-button.sidebar-collapse-tab { box-shadow:none !important; outline:none !important; filter:none !important; }
+    body.node-canvas-page .node.image .upload-box.single-reference { position:relative; display:block; padding:2px; overflow:hidden; }
+    body.node-canvas-page .node.image .upload-box.single-reference .thumb { width:100% !important; height:100% !important; }
+    body.node-canvas-page .node.image .upload-box.single-reference .reference-add-thumb { position:absolute; z-index:5; right:12px; bottom:12px; width:34px !important; height:34px !important; min-height:34px; border-radius:9px; opacity:.9; }
+    body.node-canvas-page .node.image .upload-box.single-reference .reference-add-thumb:hover { opacity:1; }
+    body.node-canvas-page .node.image.auto-fit-reference { min-width:230px; min-height:0; }
+    body.node-canvas-page .node.image.auto-fit-reference .preview { aspect-ratio:auto; }
+    body.node-canvas-page.dark-theme .paint-controls .mask-mode-active { background:#555 !important; color:#fff !important; border-color:#999 !important; }
+    body.node-canvas-page .lightbox.paint-mode .lightbox-tools { background:#1d1d1df2 !important; border-color:#555 !important; }
+    body.node-canvas-page .lightbox.paint-mode .lightbox-tools button { background:#303030 !important; color:#f2f2f2 !important; border-color:#555 !important; }
+    body.node-canvas-page .lightbox.paint-mode .lightbox-tools button:hover { background:#444 !important; }
+    body.node-canvas-page .lightbox.paint-mode .paint-controls .mask-mode-active { background:#f1f1f1 !important; color:#171717 !important; border-color:#f1f1f1 !important; }
+    body.node-canvas-page .paint-controls input[type="range"]::-webkit-slider-thumb { background:#f2f2f2 !important; border-color:#303030 !important; }
+    body.node-canvas-page .paint-controls input[type="range"]::-moz-range-thumb { background:#f2f2f2 !important; border-color:#303030 !important; }
+    .image-comment-panel { display:none; position:fixed; z-index:61; top:72px; right:18px; width:min(320px,calc(100vw - 36px)); max-height:min(56vh,520px); overflow:auto; padding:14px; border:1px solid #555; border-radius:14px; background:#1c1c1c; color:#f2f2f2; box-shadow:0 16px 48px #0008; }
+    .lightbox.paint-mode .image-comment-panel { display:block; }
+    .image-comment-head { display:grid; gap:3px; margin-bottom:12px; }
+    .image-comment-head span { color:#aaa; font-size:11px; }
+    .image-comment-list { display:grid; gap:7px; }
+    .image-comment-empty { color:#999; font-size:12px; }
+    .image-comment-item { display:grid; grid-template-columns:24px 1fr auto; align-items:start; gap:8px; padding:8px; border:1px solid #444; border-radius:9px; background:#262626; }
+    .image-comment-item b { display:grid; place-items:center; width:23px; height:23px; border-radius:50%; background:#f4bc55; color:#1a1a1a; font-size:11px; }
+    .image-comment-item span { overflow-wrap:anywhere; font-size:12px; line-height:1.4; }
+    .image-comment-content { min-width:0; padding:0; border:0; background:transparent; color:inherit; text-align:left; overflow-wrap:anywhere; font-size:12px; line-height:1.4; cursor:pointer; }
+    .image-comment-content:hover, .image-comment-content:focus-visible { text-decoration:underline; text-underline-offset:3px; }
+    .image-comment-item.is-editing { border-color:#e7bd73; }
+    .image-comment-item button { min-width:22px; min-height:22px; padding:0; color:#ddd; background:transparent; border:0; }
+    .image-comment-form { display:grid; gap:8px; margin-top:10px; }
+    .image-comment-form[hidden] { display:none; }
+    .image-comment-form label { color:#ddd; font-size:12px; }
+    .image-comment-form textarea { width:100%; min-height:65px; padding:8px; border:1px solid #666; border-radius:8px; background:#111; color:#fff; resize:vertical; }
+    .image-comment-form > div { display:flex; justify-content:flex-end; gap:6px; }
+    .image-comment-marker { position:fixed; z-index:59; display:block; padding:0; border:2px solid #e7bd73; border-radius:7px; background:rgba(231,189,115,.12); color:transparent; font-size:0; pointer-events:auto; cursor:pointer; box-shadow:0 0 0 1px rgba(0,0,0,.65),0 0 0 4px rgba(231,189,115,.1); }
+    .image-comment-marker::after { content:attr(data-comment-number); position:absolute; top:-12px; left:-12px; display:grid; place-items:center; min-width:23px; height:23px; padding:0 5px; border-radius:7px; background:#e7bd73; color:#171717; border:2px solid #171717; font-size:11px; font-weight:800; }
+    .image-comment-marker.point { border-radius:6px; background:#e7bd73; transform:translate(-50%,-50%); }
+    .image-comment-marker.point::after { top:-17px; left:11px; }
+    .image-comment-marker.pending { border-style:dashed; pointer-events:none; }
+    .paint-canvas.comment-mode { cursor:crosshair; }
+    .reference-comment-marker { position:absolute; z-index:4; border:2px solid #e7bd73; border-radius:5px; background:rgba(231,189,115,.13); box-shadow:0 0 0 1px rgba(0,0,0,.65); pointer-events:none; }
+    .reference-comment-marker::after { content:attr(data-comment-number); position:absolute; top:-9px; left:-9px; display:grid; place-items:center; min-width:18px; height:18px; padding:0 3px; border:2px solid #171717; border-radius:6px; background:#e7bd73; color:#171717; font-size:10px; font-weight:800; }
+    .reference-comment-marker.point { border-radius:5px; background:#e7bd73; transform:translate(-50%,-50%); }
+    .reference-comment-marker.point::after { top:-13px; left:8px; }
+    /* Annotation surfaces follow the active monochrome theme. Only compact
+       number badges and thin region outlines keep the annotation accent. */
+    body.node-canvas-page .node.generator .prompt-composer-shell {
+      color:#202020; background:#fff; border-color:#d8d8d8; box-shadow:0 12px 30px rgba(0,0,0,.08);
+    }
+    body.node-canvas-page.dark-theme .node.generator .prompt-composer-shell {
+      color:#f2f2f2; background:#1e1e1e; border-color:#424242; box-shadow:0 12px 30px rgba(0,0,0,.28);
+    }
+    body.node-canvas-page .node.generator .prompt-composer-field .prompt-field-wrap,
+    body.node-canvas-page .node.generator .prompt-composer-footer { border-color:#dedede; }
+    body.node-canvas-page.dark-theme .node.generator .prompt-composer-field .prompt-field-wrap,
+    body.node-canvas-page.dark-theme .node.generator .prompt-composer-footer { border-color:#383838; }
+    body.node-canvas-page .node.generator .prompt-composer-field .prompt-textarea { caret-color:#252525; }
+    body.node-canvas-page.dark-theme .node.generator .prompt-composer-field .prompt-textarea { caret-color:#f2f2f2; }
+    body.node-canvas-page .node.generator .prompt-composer-field .prompt-textarea::placeholder { color:#767676 !important; -webkit-text-fill-color:#767676; }
+    body.node-canvas-page.dark-theme .node.generator .prompt-composer-field .prompt-textarea::placeholder { color:#999 !important; -webkit-text-fill-color:#999; }
+    body.node-canvas-page .generator-annotation-item { background:#f6f6f6; border-color:#d5d5d5; }
+    body.node-canvas-page.dark-theme .generator-annotation-item { background:#272727; border-color:#454545; }
+    body.node-canvas-page .image-comment-panel { background:#fff; color:#202020; border-color:#d6d6d6; box-shadow:0 16px 48px rgba(0,0,0,.16); }
+    body.node-canvas-page.dark-theme .image-comment-panel { background:#1c1c1c; color:#f2f2f2; border-color:#454545; box-shadow:0 16px 48px rgba(0,0,0,.4); }
+    body.node-canvas-page .image-comment-head span,
+    body.node-canvas-page .image-comment-empty { color:#666; }
+    body.node-canvas-page.dark-theme .image-comment-head span,
+    body.node-canvas-page.dark-theme .image-comment-empty { color:#aaa; }
+    body.node-canvas-page .image-comment-item { background:#f5f5f5; border-color:#dedede; }
+    body.node-canvas-page.dark-theme .image-comment-item { background:#272727; border-color:#444; }
+    body.node-canvas-page .image-comment-item.is-editing { border-color:#929292; }
+    body.node-canvas-page.dark-theme .image-comment-item.is-editing { border-color:#aaa; }
+    body.node-canvas-page .image-comment-item button { color:inherit; }
+    body.node-canvas-page .image-comment-form label { color:#333; }
+    body.node-canvas-page.dark-theme .image-comment-form label { color:#ddd; }
+    body.node-canvas-page .image-comment-form textarea,
+    body.node-canvas-page .image-comment-form textarea:focus {
+      background:#fff !important; color:#202020 !important; -webkit-text-fill-color:#202020 !important;
+      border:1px solid #aaa !important; outline:2px solid transparent !important; box-shadow:none !important;
+    }
+    body.node-canvas-page.dark-theme .image-comment-form textarea,
+    body.node-canvas-page.dark-theme .image-comment-form textarea:focus {
+      background:#242424 !important; color:#f2f2f2 !important; -webkit-text-fill-color:#f2f2f2 !important;
+      border-color:#666 !important; outline-color:transparent !important; box-shadow:none !important;
+    }
+    body.node-canvas-page .image-comment-form textarea:focus-visible { border-color:#777 !important; box-shadow:0 0 0 2px rgba(120,120,120,.18) !important; }
+    body.node-canvas-page.dark-theme .image-comment-form textarea:focus-visible { border-color:#bbb !important; box-shadow:0 0 0 2px rgba(220,220,220,.16) !important; }
+    body.node-canvas-page .image-comment-form button { color:#222; background:#f2f2f2; border:1px solid #ccc; }
+    body.node-canvas-page.dark-theme .image-comment-form button { color:#eee; background:#303030; border-color:#555; }
+    body.node-canvas-page .image-comment-marker:not(.point),
+    body.node-canvas-page .reference-comment-marker:not(.point) { background:transparent; }
+    body.node-canvas-page .lightbox { background:rgba(0,0,0,.75); }
+    body.node-canvas-page:not(.dark-theme) .lightbox.paint-mode .lightbox-tools { background:#fff !important; border-color:#d5d5d5 !important; }
+    body.node-canvas-page:not(.dark-theme) .lightbox.paint-mode .lightbox-tools button { background:#f3f3f3 !important; color:#242424 !important; border-color:#d5d5d5 !important; }
+    body.node-canvas-page:not(.dark-theme) .lightbox.paint-mode .lightbox-tools button:hover { background:#e8e8e8 !important; }
+    body.node-canvas-page:not(.dark-theme) .lightbox.paint-mode .paint-controls .mask-mode-active { background:#252525 !important; color:#fff !important; border-color:#252525 !important; }
+    body.node-canvas-page:not(.dark-theme) .paint-mask-hint { color:#555; }
+    body.node-canvas-page:not(.dark-theme) .paint-size-control { background:#f3f3f3; color:#252525; border-color:#d5d5d5; }
+    body.node-canvas-page:not(.dark-theme) .paint-size-control output { color:#444; }
+    body.node-canvas-page:not(.dark-theme) .paint-size-control .paint-size-dot::after { background:#333; }
+    .paint-size-control { display:flex; align-items:center; gap:7px; min-width:218px; height:34px; padding:0 8px; border:1px solid #555; border-radius:9px; background:#262626; color:#eee; }
+    .paint-size-control .paint-size-dot { flex:none; display:grid; place-items:center; width:21px; height:21px; }
+    .paint-size-control .paint-size-dot::after { content:""; width:var(--paint-dot-size,9px); height:var(--paint-dot-size,9px); border-radius:50%; background:#e8e8e8; }
+    .paint-size-control output { min-width:35px; font-size:11px; font-variant-numeric:tabular-nums; text-align:right; color:#dedede; }
+    .paint-size-control #paintSize { width:132px; flex:1; }
+    @media (max-width:1300px) { .paint-controls .paint-mask-hint { display:none; } }
+    #paintComment { display:inline-flex; align-items:center; justify-content:center; gap:5px; white-space:nowrap; }
+    #paintComment svg { flex:none; }
+    .paint-brush-preview.doodle { background:rgba(244,188,85,.22); }
+    .paint-brush-preview:not(.eraser):not(.doodle) { background:rgba(82,154,232,.2); }
+    body.node-canvas-page .reference-mask-overlay { filter:grayscale(1); opacity:.36; }
+    .reference-mask-badge { background:#454545 !important; }
+    .reference-doodle-overlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
+    /* Day mode uses the same neutral surface scale throughout node controls. */
+    body.node-canvas-page:not(.dark-theme) .assistant-rail {
+      background:#ededed !important; color:#242424 !important;
+      border-color:#cfcfcf !important; box-shadow:-8px 0 24px rgba(0,0,0,.1) !important;
+    }
+    body.node-canvas-page:not(.dark-theme) .assistant-rail-arrow { color:#303030 !important; }
+    body.node-canvas-page.dark-theme .assistant-rail {
+      background:#303030 !important; color:#f2f2f2 !important;
+      border-color:#555 !important; box-shadow:-8px 0 24px rgba(0,0,0,.24) !important;
+    }
+    body.node-canvas-page.dark-theme .assistant-rail-arrow { color:#eee !important; }
+    body.node-canvas-page:not(.dark-theme) .node.outpaint .outpaint-visual-preview {
+      background:#f1f1f1 !important; border-color:#d2d2d2 !important;
+    }
+    body.node-canvas-page:not(.dark-theme) .node.outpaint .outpaint-preview-frame,
+    body.node-canvas-page:not(.dark-theme) .outpaint-editor-frame {
+      background-color:#f5f5f5 !important;
+      background-image:linear-gradient(45deg,#e8e8e8 25%,transparent 25%),linear-gradient(-45deg,#e8e8e8 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e8e8e8 75%),linear-gradient(-45deg,transparent 75%,#e8e8e8 75%) !important;
+      border-color:#ccc !important;
+    }
+    body.node-canvas-page:not(.dark-theme) .node.outpaint .outpaint-preview-hint {
+      color:#303030; background:rgba(255,255,255,.9);
+    }
+    body.node-canvas-page:not(.dark-theme) .node.outpaint .outpaint-preview-upload,
+    body.node-canvas-page:not(.dark-theme) .node.outpaint button.outpaint-edit-button {
+      color:#252525 !important; background:#f2f2f2 !important; border-color:#c9c9c9 !important;
+    }
+    body.node-canvas-page:not(.dark-theme) .node.outpaint .outpaint-preview-upload:hover,
+    body.node-canvas-page:not(.dark-theme) .node.outpaint button.outpaint-edit-button:hover {
+      color:#202020 !important; background:#e5e5e5 !important; border-color:#aaa !important;
+    }
+    html body.node-canvas-page:not(.dark-theme) .canvas .node .node-body button.wide-button[data-generate].generating {
+      color:#252525 !important; background:#e4e4e4 !important; border-color:#aaa !important;
+    }
+    @media (max-width:900px) { .image-comment-panel { top:68px; right:10px; width:220px; max-height:30vh; } }
   </style>
 </head>
 <body class="node-canvas-page">
@@ -7199,6 +7559,15 @@
     </div>
     <canvas id="paintCanvas" class="paint-canvas"></canvas>
     <div id="paintBrushPreview" class="paint-brush-preview" aria-hidden="true"></div>
+    <section id="imageCommentPanel" class="image-comment-panel" aria-label="图片批注">
+      <div class="image-comment-head"><strong>批注模式</strong><span>单击或拖动标记区域，填写文字后点“确定批注”；点击已有批注可修改</span></div>
+      <div id="imageCommentList" class="image-comment-list"></div>
+      <form id="imageCommentForm" class="image-comment-form" hidden>
+        <label id="imageCommentPosition" for="imageCommentText">修改位置</label>
+        <textarea id="imageCommentText" rows="3" maxlength="500" placeholder="描述这里需要修改什么"></textarea>
+        <div><button id="imageCommentCancel" type="button" class="ghost">取消</button><button id="imageCommentSubmit" type="submit" class="ghost">确定批注</button></div>
+      </form>
+    </section>
     <div id="promptPreviewPanel" class="prompt-preview-panel">
       <div class="prompt-preview-columns">
         <section class="prompt-preview-card">
@@ -7234,16 +7603,18 @@
       <button id="lightboxPrompt" class="ghost" type="button">查看关键词</button>
       <button id="lightboxDownload" class="ghost" type="button">下载</button>
       <div id="paintControls" class="paint-controls">
-        <span class="paint-mask-hint">绿色区域允许修改</span>
-        <input id="paintSize" type="range" min="2" max="160" value="24" title="拖动调整画笔大小" aria-label="画笔大小">
+        <span class="paint-mask-hint">原图独立保留</span>
+        <label class="paint-size-control" title="调整画笔或橡皮擦大小"><span class="paint-size-dot" aria-hidden="true"></span><input id="paintSize" type="range" min="2" max="160" value="24" aria-label="画笔大小"><output id="paintSizeValue" for="paintSize">24 px</output></label>
         <div class="paint-tool-group" role="group" aria-label="遮罩工具">
           <button id="paintBrush" class="ghost paint-tool-button mask-mode-active" type="button" aria-pressed="true">画笔</button>
           <button id="paintErase" class="ghost paint-tool-button" type="button" aria-pressed="false">橡皮擦</button>
+          <button id="paintDoodle" class="ghost paint-tool-button" type="button" aria-pressed="false">涂鸦</button>
+          <button id="paintComment" class="ghost paint-tool-button" type="button" aria-pressed="false" title="批注模式：单击或拖动标记图片"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v11H9l-5 3v-14Z"/><path d="M8 9h8M8 12.5h5"/></svg><span>批注模式</span></button>
         </div>
         <button id="paintUndo" class="ghost" type="button">撤回</button>
         <button id="paintRedo" class="ghost" type="button">前进</button>
         <button id="paintClear" class="ghost" type="button">清空遮罩</button>
-        <button id="paintSave" class="ghost" type="button">保存遮罩</button>
+        <button id="paintSave" class="ghost" type="button">保存编辑</button>
       </div>
     </div>
   </div>
@@ -7400,8 +7771,17 @@
     const paintCanvas = document.getElementById("paintCanvas");
     const paintBrushPreview = document.getElementById("paintBrushPreview");
     const paintSize = document.getElementById("paintSize");
+    const paintSizeValue = document.getElementById("paintSizeValue");
     const paintBrush = document.getElementById("paintBrush");
     const paintErase = document.getElementById("paintErase");
+    const paintDoodle = document.getElementById("paintDoodle");
+    const paintComment = document.getElementById("paintComment");
+    const imageCommentPanel = document.getElementById("imageCommentPanel");
+    const imageCommentList = document.getElementById("imageCommentList");
+    const imageCommentForm = document.getElementById("imageCommentForm");
+    const imageCommentPosition = document.getElementById("imageCommentPosition");
+    const imageCommentText = document.getElementById("imageCommentText");
+    const imageCommentCancel = document.getElementById("imageCommentCancel");
     const paintUndo = document.getElementById("paintUndo");
     const paintRedo = document.getElementById("paintRedo");
     const paintClear = document.getElementById("paintClear");
@@ -7479,6 +7859,7 @@
     const audioJobs = new Map();
     const vectorJobTokens = new Map();
     const psdJobs = new Set();
+    const psdReviewPlans = new Map();
     const psdJobControllers = new Map();
     const psdCountdowns = new Map();
     const psdJobMarkerKey = (id) => `wandou:psd-job:${currentFolderId}:${activeProjectId}:${id}`;
@@ -7504,6 +7885,7 @@
       psdJobControllers.forEach((controller) => controller.abort());
       psdJobControllers.clear();
       psdJobs.clear();
+      psdReviewPlans.clear();
       psdExportFiles.clear();
       vectorExportFiles.clear();
       vectorJobs.clear();
@@ -7525,6 +7907,8 @@
     let contextMenuWorld = { x: 0, y: 0 };
     let pendingLinkCreate = null;
     let activePasteNodeId = null;
+    let lastCanvasPointer = null;
+    let copiedCanvasImageUrl = "";
     let suppressMenuCloseOnce = false;
     let lightboxScale = 1;
     let lightboxPan = { x: 0, y: 0 };
@@ -7547,6 +7931,12 @@
     let paintRedoStack = [];
     let paintOriginalCanvas = document.createElement("canvas");
     let paintSelectionCanvas = document.createElement("canvas");
+    let paintDoodleCanvas = document.createElement("canvas");
+    let paintTool = "mask";
+    let paintEraseTarget = "mask";
+    let pendingImageComment = null;
+    let editingImageCommentId = null;
+    let paintCommentPointerId = null;
     let paintEraseMode = false;
     let paintReady = false;
     let paintPointerId = null;
@@ -7858,7 +8248,8 @@
     }, 2500);
 
     function autoSaveSupported() {
-      return Boolean(window.wandouShell?.chooseSaveDirectory) || (typeof window.showDirectoryPicker === "function" && typeof window.indexedDB !== "undefined");
+      return Boolean(window.wandouShell?.chooseSaveDirectory)
+        || (location.protocol !== "file:" && typeof window.showDirectoryPicker === "function" && typeof window.indexedDB !== "undefined");
     }
 
     function openAutoSaveDb() {
@@ -7895,6 +8286,10 @@
         updateAutoSaveDirectoryButton();
         return nativeAutoSaveDirectory;
       }
+      if (location.protocol === "file:") {
+        updateAutoSaveDirectoryButton();
+        return null;
+      }
       if (!window.indexedDB) return null;
       const db = await openAutoSaveDb();
       if (!db) return null;
@@ -7923,14 +8318,14 @@
       const button = document.getElementById("autoSaveDirectoryButton");
       if (!button) return;
       const selectedDirectory = nativeAutoSaveDirectory || autoSaveDirectoryHandle;
-      const isMissing = !selectedDirectory;
+      const isMissing = autoSaveSupported() && !selectedDirectory;
       button.classList.toggle("required-warning", isMissing);
       button.setAttribute("aria-invalid", isMissing ? "true" : "false");
       if (!autoSaveSupported()) {
-        button.textContent = "目录保存不可用";
-        button.setAttribute("aria-label", "当前浏览器不支持目录保存");
+        button.textContent = "生成后下载";
+        button.setAttribute("aria-label", "当前预览模式不支持自动保存目录，生成后可下载文件");
         button.disabled = false;
-        button.title = "\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u81ea\u52a8\u4fdd\u5b58\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae";
+        button.title = "Codex 预览无法直接写入指定目录；生成后请使用图片上的下载按钮";
         return;
       }
       const directoryName = selectedDirectory?.name?.trim() || "";
@@ -7948,7 +8343,7 @@
 
     async function chooseAutoSaveDirectory() {
       if (!autoSaveSupported()) {
-        showToast("\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u81ea\u52a8\u4fdd\u5b58\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae", "error");
+        showToast("Codex 预览无法设置自动保存目录；生成后请使用下载按钮", "info", 4000);
         updateAutoSaveDirectoryButton();
         return;
       }
@@ -9622,6 +10017,10 @@
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
         removeDeprecatedSelectionNodes();
         await cleanLoadedNodes(nodes);
+        nodes.filter((node) => node.type === "image" && !node.frameWidth).forEach((node) => {
+          const refs = normalizeReferences(node);
+          if (refs.length === 1) fitReferenceNodeToImage(node, refs[0]);
+        });
         links = Array.isArray(state.links) ? state.links : [];
         pruneBrokenLinks();
         nodeId = Number(state.nodeId) || 1;
@@ -9865,6 +10264,12 @@
 
     function stabilizeMountedNode(nodeEl, node) {
       observeDeferredNodeMedia(nodeEl);
+      new Set([...nodeEl.querySelectorAll(".reference-comment-marker")].map((marker) => marker.closest(".thumb")).filter(Boolean)).forEach((thumb) => {
+        const image = thumb.querySelector("img:not(.reference-mask-overlay):not(.reference-doodle-overlay)");
+        image?.addEventListener("load", () => positionReferenceCommentMarkers(thumb));
+        if (image?.complete) requestAnimationFrame(() => positionReferenceCommentMarkers(thumb));
+        if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => positionReferenceCommentMarkers(thumb)).observe(thumb);
+      });
       requestAnimationFrame(() => {
         nodeEl.querySelectorAll("textarea[data-autogrow]").forEach((field) => {
           autoGrowTextarea(field);
@@ -9963,7 +10368,7 @@
 
     function renderNode(node, renderKey = nodeRenderKey(node)) {
       const el = document.createElement("section");
-      el.className = `node ${node.type}${node.type === "result" && node.mediaType === "audio" ? " audio-result" : ""}${selectedNodeId === node.id ? " selected" : ""}${boxSelectedIds.includes(node.id) ? " box-selected" : ""}`;
+      el.className = `node ${node.type}${node.type === "image" && node.autoFitReference ? " auto-fit-reference" : ""}${node.type === "result" && node.mediaType === "audio" ? " audio-result" : ""}${selectedNodeId === node.id ? " selected" : ""}${boxSelectedIds.includes(node.id) ? " box-selected" : ""}`;
       el.dataset.id = node.id;
       el.dataset.renderKey = renderKey;
       const boxSelectionIndex = boxSelectedIds.indexOf(node.id);
@@ -9990,7 +10395,7 @@
       el.innerHTML = `
         ${isSelection ? "" : '<div class="port in" data-port="in" title="输入"></div><div class="port out" data-port="out" title="输出"></div>'}
         <div class="node-header" data-drag-handle>
-          <div class="node-title"><span class="node-icon">${iconFor(node.type)}</span>${node.title}</div>
+          <div class="node-title"><span class="node-icon">${iconFor(node.type)}</span>${node.type === "image" ? `参考图 ${nodes.filter((item) => item.type === "image").indexOf(node) + 1}` : escapeHtml(node.title)}</div>
           <div class="node-menu">
             ${node.type === "generator" ? `<button class="favorite-button prompt-library-trigger" data-prompt-library type="button" title="提示词" aria-label="提示词">
               <svg class="prompt-bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/><text x="12" y="13.2">文</text></svg>
@@ -11843,6 +12248,7 @@
         ? "多图参考模式可上传多张参考图。"
         : "可上传参考图。";
       const promptReferenceCount = generatorReferenceItems(node).length;
+      const linkedAnnotations = !isVideoNode && node.type === "generator" ? generatorAnnotationItems(node) : [];
       const selectedSkill = installedDrawingSkills.find((skill) => skill.id === node.skillId) || null;
       const selectedSkillName = node.skillName || selectedSkill?.name || "已选 Skill";
       const selectedCreativeStyle = creativeStyleById(node.creativeStyle);
@@ -11882,6 +12288,7 @@
               ${promptReferenceCount ? `<div class="prompt-token-overlay" data-prompt-token-overlay aria-hidden="true">${renderPromptReferenceTokens(node.prompt, promptReferenceCount)}</div>` : ""}
               <textarea class="prompt-textarea${promptReferenceCount ? " prompt-token-input" : ""}" data-field="prompt" data-autogrow style="${node.promptHeight ? `height:${node.promptHeight}px;` : ""}" placeholder="描述要生成的${isVideoNode ? "视频" : "图片"}内容">${escapeHtml(node.prompt)}</textarea>
             </div>
+            ${linkedAnnotations.length ? `<div class="generator-annotation-list" aria-label="关联图片批注">${linkedAnnotations.map((item) => `<div class="generator-annotation-item"><span class="generator-annotation-number">图${item.referenceNumber} · ${item.commentNumber}</span><span class="generator-annotation-text">${escapeHtml(item.text)}</span></div>`).join("")}</div>` : ""}
             ${!isVideoNode ? `<div class="prompt-composer-footer"><div class="prompt-corner-tools"><button class="prompt-corner-button ${node.skillId ? "skill-active" : ""}" data-skill-picker-toggle type="button" data-tooltip="${node.skillId ? `正在使用：${escapeHtml(selectedSkillName)}` : "Skill 工具"}" aria-label="Skill 工具" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8.5h16v10H4z"/><path d="M9 8.5V6h6v2.5"/><path d="M4 12h16"/><path d="M10 12v2h4v-2"/></svg></button><button class="prompt-corner-button" data-prompt-library type="button" data-tooltip="提示词管理" aria-label="提示词管理" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/></svg></button><button class="prompt-corner-button" data-prompt-refine-open type="button" data-tooltip="AI 修改提示词" aria-label="AI 修改提示词"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></button></div><span class="prompt-composer-caption">Skill · 提示词库 · AI 修改</span></div>` : ""}
           </div>
         </section>
@@ -12498,7 +12905,7 @@
     }
 
     function vectorEmbeddedSvg(dataUrl, width, height) {
-      return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>无损保真 SVG</title><image width="${width}" height="${height}" preserveAspectRatio="none" href="${vectorSvgAttribute(dataUrl)}" xlink:href="${vectorSvgAttribute(dataUrl)}"/></svg>`;
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>嵌入原图 SVG（非矢量路径）</title><image width="${width}" height="${height}" preserveAspectRatio="none" href="${vectorSvgAttribute(dataUrl)}" xlink:href="${vectorSvgAttribute(dataUrl)}"/></svg>`;
     }
 
     function vectorRunComponents(runs) {
@@ -12531,6 +12938,25 @@
         components.get(root).push(run);
       });
       return [...components.values()].sort((left, right) => right.reduce((total, run) => total + run[2], 0) - left.reduce((total, run) => total + run[2], 0));
+    }
+
+    function vectorRectanglesFromRuns(runs) {
+      // Join identical horizontal spans on consecutive rows. This keeps the
+      // traced pixels unchanged while producing far fewer editable shapes.
+      const rectangles = [];
+      const active = new Map();
+      runs.forEach(([x, y, width]) => {
+        const key = `${x}:${width}`;
+        const previous = active.get(key);
+        if (previous && previous.y + previous.height === y) {
+          previous.height += 1;
+        } else {
+          const rectangle = { x, y, width, height:1 };
+          rectangles.push(rectangle);
+          active.set(key, rectangle);
+        }
+      });
+      return rectangles;
     }
 
     function vectorPixelRuns(sourceCanvas) {
@@ -12596,12 +13022,12 @@
         const color = `#${[red, green, blue].map((item) => item.toString(16).padStart(2, "0")).join("")}`;
         const opacity = alpha === 255 ? "" : ` fill-opacity="${(alpha / 255).toFixed(4)}"`;
         const objects = components.map((runs, objectIndex) => {
-          const commands = runs.map(([x, y, runWidth]) => `M${x} ${y}h${runWidth}v1H${x}z`).join("");
+          const commands = vectorRectanglesFromRuns(runs).map(({ x, y, width, height }) => `M${x} ${y}h${width}v${height}H${x}z`).join("");
           return `<path id="object-${layerIndex + 1}-${objectIndex + 1}" fill="${color}"${opacity} d="${commands}"/>`;
         }).join("");
         return `<g id="layer-${layerIndex + 1}" inkscape:groupmode="layer" inkscape:label="颜色层 ${layerIndex + 1} ${color}" transform="scale(${scaleX.toFixed(8)} ${scaleY.toFixed(8)})">${objects}</g>`;
       }).join("");
-      return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${outputWidth}" height="${outputHeight}" viewBox="0 0 ${outputWidth} ${outputHeight}" shape-rendering="crispEdges"><title>可编辑分层矢量 SVG</title>${content}</svg>`;
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${outputWidth}" height="${outputHeight}" viewBox="0 0 ${outputWidth} ${outputHeight}" shape-rendering="crispEdges"><title>颜色路径描摹 SVG</title>${content}</svg>`;
     }
 
     function vectorBytes(value) {
@@ -12681,7 +13107,7 @@
       groups.forEach(({ red, green, blue, alpha, components }, layerIndex) => {
         commands.push(`/OC /L${layerIndex + 1} BDC\n${(red / 255).toFixed(6)} ${(green / 255).toFixed(6)} ${(blue / 255).toFixed(6)} rg\n/GS${alpha} gs\n`);
         components.forEach((runs) => {
-          runs.forEach(([x, y, runWidth]) => commands.push(`${x} ${y} ${runWidth} 1 re\n`));
+          vectorRectanglesFromRuns(runs).forEach(({ x, y, width, height }) => commands.push(`${x} ${y} ${width} ${height} re\n`));
           commands.push("f\n");
         });
         commands.push("EMC\n");
@@ -12721,7 +13147,7 @@
         lines.push(`%%BeginLayer: 颜色层 ${layerIndex + 1}`, `${flattened.join(" ")} setrgbcolor`);
         components.forEach((runs, objectIndex) => {
           lines.push(`%%BeginObject: 对象 ${layerIndex + 1}-${objectIndex + 1}`, "newpath");
-          runs.forEach(([x, y, runWidth]) => lines.push(`${x} ${y} m ${x + runWidth} ${y} l ${x + runWidth} ${y + 1} l ${x} ${y + 1} l cp`));
+          vectorRectanglesFromRuns(runs).forEach(({ x, y, width, height }) => lines.push(`${x} ${y} m ${x + width} ${y} l ${x + width} ${y + height} l ${x} ${y + height} l cp`));
           lines.push("f", "%%EndObject");
         });
         lines.push("%%EndLayer");
@@ -12854,7 +13280,7 @@
       invalidateNodeExport(node, "vector");
       try {
         const format = ["svg", "ai", "eps"].includes(node.vectorFormat) ? node.vectorFormat : "svg";
-        const formatLabel = format === "ai" ? "Adobe AI" : format === "eps" ? "EPS" : "SVG";
+        const formatLabel = format === "ai" ? "AI（PDF 兼容）" : format === "eps" ? "EPS" : "SVG";
         const traceMode = format === "eps" || node.vectorMode === "trace";
         node.status = traceMode ? `正在分析颜色区域并生成可独立编辑的 ${formatLabel} 图层与对象…` : `正在封装原图兼容 ${formatLabel}（非矢量路径）…`;
         render({ skipSave:true });
@@ -12874,14 +13300,14 @@
           : format === "eps"
           ? vectorPixelPathEps(sourceCanvas)
           : new Blob([traceMode ? vectorPixelPathSvg(sourceCanvas) : vectorEmbeddedSvg(dataUrl, dimensions.width, dimensions.height)], { type:"image/svg+xml;charset=utf-8" });
-        const name = `${traceMode ? "可编辑分层矢量" : "嵌入原图-非矢量"}-${Date.now()}.${format}`;
+        const name = `${traceMode ? "颜色路径描摹" : "嵌入原图-非矢量"}-${Date.now()}.${format}`;
         if (!isCurrent()) return;
         const exported = { blob:exportBlob, name, sourceUrl:source.url, mode, format, node };
         vectorExportFiles.set(id, exported);
         const persisted = await persistNodeExport(node, "vector", exported, isCurrent);
         if (!isCurrent()) return;
         node.status = traceMode
-          ? `${formatLabel} 已生成：${dimensions.width}×${dimensions.height}，不含嵌入位图；颜色层和独立对象可在矢量软件中选择修改。`
+          ? `${formatLabel} 已生成：${dimensions.width}×${dimensions.height}，不含嵌入位图；按颜色和连通区域描摹，可编辑路径，但文字与物体尚未语义分层。`
           : `${formatLabel} 已生成：${dimensions.width}×${dimensions.height}，该兼容方式包含嵌入位图，不属于可编辑矢量。`;
         node.status += persisted ? " 文件已保存在本机，可重新打开项目下载。" : " 本地文件留存失败，请立即下载；刷新后需重新生成。";
         render();
@@ -12913,9 +13339,9 @@
       wrap.innerHTML = `
         <div class="vector-source-preview" data-vector-drop>${source ? `<img src="${escapeHtml(source.url)}" alt="待转换图片" loading="lazy">` : '<span>连接参考图 / 效果图，或上传一张图片</span>'}</div>
         <label class="psd-source-upload">${source ? "更换图片" : "上传图片"}<input data-vector-upload type="file" accept="image/*,.svg" ${busy ? "disabled" : ""} hidden></label>
-        <div class="psd-explain">默认生成真正的路径对象，不嵌入原始位图。SVG 会按颜色建立图层和独立对象；AI 使用 Illustrator 可打开的分层 PDF 兼容格式；EPS 输出标准可编辑路径。照片转换后对象可能较多。</div>
-        <div class="form-row"><label>文件格式</label><select data-vector-format ${busy ? "disabled" : ""}><option value="svg" ${node.vectorFormat === "svg" ? "selected" : ""}>SVG (.svg)</option><option value="ai" ${node.vectorFormat === "ai" ? "selected" : ""}>Adobe Illustrator (.ai)</option><option value="eps" ${node.vectorFormat === "eps" ? "selected" : ""}>EPS (.eps)</option></select></div>
-        <div class="form-row"><label>输出方式</label><select data-vector-mode ${busy || node.vectorFormat === "eps" ? "disabled" : ""}><option value="trace" ${node.vectorMode === "trace" ? "selected" : ""}>可编辑分层矢量（推荐）</option><option value="preserve" ${node.vectorMode !== "trace" ? "selected" : ""}>嵌入原图（非矢量）</option></select></div>
+        <div class="psd-explain">路径描摹会按颜色和连通区域建立可编辑对象，不嵌入原始位图；它不会自动识别文字、图标和独立设计元素，也不保证颜色无损。AI 文件采用 Illustrator 可打开的分层 PDF 兼容结构，非原生设计稿。</div>
+        <div class="form-row"><label>文件格式</label><select data-vector-format ${busy ? "disabled" : ""}><option value="svg" ${node.vectorFormat === "svg" ? "selected" : ""}>SVG (.svg)</option><option value="ai" ${node.vectorFormat === "ai" ? "selected" : ""}>AI / PDF 兼容 (.ai)</option><option value="eps" ${node.vectorFormat === "eps" ? "selected" : ""}>EPS (.eps)</option></select></div>
+        <div class="form-row"><label>输出方式</label><select data-vector-mode ${busy || node.vectorFormat === "eps" ? "disabled" : ""}><option value="trace" ${node.vectorMode === "trace" ? "selected" : ""}>颜色路径描摹（可编辑，非无损）</option><option value="preserve" ${node.vectorMode !== "trace" ? "selected" : ""}>嵌入原图（非矢量）</option></select></div>
         <div class="vector-actions"><button data-vector-generate type="button" ${busy ? "disabled" : ""}>${busy ? "正在生成…" : `生成 ${node.vectorFormat === "ai" ? "Adobe AI" : node.vectorFormat === "eps" ? "EPS" : "SVG"}`}</button>${exported ? `<button data-vector-download type="button">下载 ${exported.format === "ai" ? "Adobe AI" : exported.format === "eps" ? "EPS" : "SVG"} 文件</button>` : ""}</div>
         <div class="status">${escapeHtml(node.status || "上传或连接图片后生成可编辑 SVG、Adobe AI 或 EPS。所有矢量转换均在本机完成。")}</div>`;
       const uploadFile = async (file) => {
@@ -13024,6 +13450,48 @@
       psdCountdowns.delete(id);
     }
 
+    function psdReviewSourceKey(source) {
+      const url = String(source?.url || "");
+      return url.startsWith("data:") ? mediaStorageId(url) : url;
+    }
+
+    function psdReviewForNode(node, source) {
+      let review = psdReviewPlans.get(node.id);
+      if (!review && node.psdReview && node.psdReview.sourceKey !== psdReviewSourceKey(source)) {
+        delete node.psdReview;
+      }
+      if (!review && node.psdReview?.sourceKey === psdReviewSourceKey(source)) {
+        review = { ...node.psdReview, node, projectId:activeProjectId, folderId:currentFolderId, sourceKey:node.psdReview.sourceKey };
+        psdReviewPlans.set(node.id, review);
+      }
+      if (!review) return null;
+      if (review.node !== node || review.projectId !== activeProjectId || review.folderId !== currentFolderId || review.sourceKey !== psdReviewSourceKey(source)) {
+        psdReviewPlans.delete(node.id);
+        delete node.psdReview;
+        return null;
+      }
+      return review;
+    }
+
+    function psdReviewedLayers(review) {
+      if (!review) throw new Error("请先分析并确认图层");
+      const layers = review.layers.filter((layer) => layer.selected).map((layer) => ({
+        ...layer,
+        name:String(layer.name || "").trim(),
+        bounds:(layer.bounds || []).map(Number)
+      }));
+      if (!layers.length) throw new Error("请至少勾选一个需要拆分的图层");
+      for (const layer of layers) {
+        if (!layer.name) throw new Error("勾选的图层必须填写名称");
+        const [x, y, width, height] = layer.bounds;
+        if (layer.bounds.length !== 4 || ![x, y, width, height].every(Number.isFinite)
+          || x < 0 || y < 0 || width <= 0 || height <= 0 || x + width > 1000 || y + height > 1000) {
+          throw new Error(`图层“${layer.name}”的位置无效，请将 x、y、宽、高调整到 0–1000 范围内`);
+        }
+      }
+      return layers;
+    }
+
     function renderPsdBody(node) {
       const wrap = document.createElement("div");
       if (gptImageModelOptions.length && !gptImageModelOptions.includes(node.model)) node.model = defaultPsdImageModel();
@@ -13031,8 +13499,12 @@
         node.model = preferredPsdImageModel;
       }
       const source = psdSourceReference(node);
+      const review = psdReviewForNode(node, source);
       const exportFile = nodeExportRecord(node, "psd");
       const busy = psdJobs.has(node.id);
+      if (!review && !busy && /^已识别 \d+ 个对象。请核对/.test(node.status || "")) {
+        node.status = "图层检查结果已失效，请重新分析原图。";
+      }
       if (!busy) {
         const marker = takePsdJobMarker(node.id);
         if (marker) node.status = `${marker.unloaded ? "页面离开或刷新" : "页面运行意外停止"}，上次 PSD 生成在“${marker.stage || "准备中"}”阶段中断。页面关闭后任务无法继续，请保持页面打开并重试。`;
@@ -13040,6 +13512,20 @@
       }
       const layerNames = exportFile?.layerNames || [];
       const modelMenu = gptImageModelOptions.map((model) => `<button class="node-select-option ${node.model === model ? "active" : ""}" data-psd-model-option="${escapeHtml(model)}" type="button">${modelValueHtml(model)}${node.model === model ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
+      const reviewHtml = review ? `<section class="psd-review" aria-label="PSD 图层生成前检查">
+        <h3 class="psd-review-title">图层检查 · ${review.layers.length} 个识别对象</h3>
+        <p class="psd-review-note">先核对框选位置和文字；取消勾选错误对象。位置按原图 0–1000 比例填写。确认后才会调用图片模型生成遮罩，仍可能需要人工检查成品。</p>
+        <div class="psd-review-preview"><div class="psd-review-stage" style="${review.width >= review.height ? `width:100%;aspect-ratio:${review.width}/${review.height}` : `height:100%;aspect-ratio:${review.width}/${review.height}`}">
+          <img src="${escapeHtml(source.url)}" alt="识别位置预览">
+          ${review.layers.map((layer, index) => `<div class="psd-review-box ${layer.selected ? "" : "is-off"}" style="left:${layer.bounds[0] / 10}%;top:${layer.bounds[1] / 10}%;width:${layer.bounds[2] / 10}%;height:${layer.bounds[3] / 10}%"><span>${index + 1}</span></div>`).join("")}
+        </div></div>
+        <div class="psd-review-list">${review.layers.map((layer, index) => `<div class="psd-review-row">
+          <label><input type="checkbox" data-psd-review-selected="${index}" ${layer.selected ? "checked" : ""} ${busy ? "disabled" : ""}>${index + 1}</label>
+          <input type="text" data-psd-review-name="${index}" value="${escapeHtml(layer.name)}" aria-label="图层 ${index + 1} 名称" ${busy ? "disabled" : ""}>
+          <small>${escapeHtml(({text:"文字",subject:"主体",element:"元素",lighting:"光效"})[layer.category] || layer.category)}${layer.text ? ` · ${escapeHtml(layer.text)}` : ""}</small>
+          <details><summary>调整识别位置</summary><div class="psd-review-bounds">${["X","Y","宽","高"].map((label, axis) => `<label>${label}<input type="number" data-psd-review-bound="${index}:${axis}" value="${layer.bounds[axis]}" min="0" max="1000" step="1" ${busy ? "disabled" : ""}></label>`).join("")}</div></details>
+        </div>`).join("")}</div>
+      </section>` : "";
       wrap.innerHTML = `
         <div class="psd-source-preview" data-psd-drop>
           ${source ? `<img src="${escapeHtml(source.url)}" alt="待拆层图片" loading="lazy">` : '<span>连接参考图 / 效果图，或上传一张图片</span>'}
@@ -13047,8 +13533,10 @@
         <label class="psd-source-upload">${source ? "更换图片" : "上传图片"}<input data-psd-upload type="file" accept="image/*" ${busy ? "disabled" : ""} hidden></label>
         <div class="psd-explain">自动按完整视觉对象拆层：每个独立文字块、主体、装饰组合和整体光效会分别保留为可移动图层，再生成干净背景。最多 16 个对象，每层需一次图像请求。支持最长边 3072px、最多 800 万像素。文字和光效仍是透明位图层，无法还原原字体与设计参数。</div>
         <div class="form-row"><label>图片模型</label><div class="node-select" data-psd-model-select><button class="node-select-trigger" data-psd-model-toggle type="button" ${busy ? "disabled" : ""} aria-haspopup="listbox" aria-expanded="false">${modelValueHtml(node.model)}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu" role="listbox">${modelMenu}</div></div></div>
+        ${reviewHtml}
         <div class="psd-actions">
-          <button data-psd-generate type="button" ${busy ? "disabled" : ""}>${busy ? "正在智能拆层…" : "智能拆层并生成 PSD"}</button>
+          <button data-psd-generate type="button" ${busy ? "disabled" : ""}>${busy ? "正在处理…" : review ? "确认所选图层并生成 PSD" : "先分析图层"}</button>
+          ${review && !busy ? '<button data-psd-reanalyze type="button">重新分析原图</button>' : ""}
           ${busy ? '<button data-psd-cancel type="button">取消生成</button>' : ""}
           ${exportFile ? '<button data-psd-download type="button">下载 PSD</button>' : ""}
         </div>
@@ -13067,7 +13555,9 @@
           node.mediaUrl = url;
           node.width = size.width;
           node.height = size.height;
-          node.status = "图片已上传。点击生成后将自动识别并拆分图层。";
+          node.status = "图片已上传。请先分析并检查图层，再确认生成 PSD。";
+          psdReviewPlans.delete(node.id);
+          delete node.psdReview;
           invalidateNodeExport(node, "psd");
           render();
           scheduleCanvasSave();
@@ -13103,8 +13593,20 @@
       wrap.querySelector("[data-psd-generate]").addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        void generatePsdFromNode(node.id);
+        void (review ? generatePsdFromNode(node.id) : analyzePsdFromNode(node.id));
       });
+      wrap.querySelector("[data-psd-reanalyze]")?.addEventListener("click", () => void analyzePsdFromNode(node.id));
+      wrap.querySelectorAll("[data-psd-review-selected], [data-psd-review-name], [data-psd-review-bound]").forEach((input) => input.addEventListener("change", () => {
+        if (!review || psdJobs.has(node.id)) return;
+        if (input.dataset.psdReviewSelected !== undefined) review.layers[Number(input.dataset.psdReviewSelected)].selected = input.checked;
+        if (input.dataset.psdReviewName !== undefined) review.layers[Number(input.dataset.psdReviewName)].name = input.value;
+        if (input.dataset.psdReviewBound !== undefined) {
+          const [index, axis] = input.dataset.psdReviewBound.split(":").map(Number);
+          review.layers[index].bounds[axis] = Number(input.value);
+        }
+        scheduleCanvasSave();
+        refreshRenderedNode(node.id);
+      }));
       wrap.querySelector("[data-psd-cancel]")?.addEventListener("click", () => psdJobControllers.get(node.id)?.abort(new Error("用户已取消 PSD 生成")));
       wrap.querySelector("[data-psd-download]")?.addEventListener("click", () => downloadPsdExport(node.id));
       return wrap;
@@ -13145,19 +13647,15 @@
           : [];
         const key = `${normalizedCategory}:${semanticName.toLocaleLowerCase()}`;
         if (seen.has(key)) continue;
+        if (normalizedCategory === "text" && (bounds.length !== 4 || bounds[2] <= 0 || bounds[3] <= 0)) {
+          throw new Error(`文字图层“${semanticName}”缺少有效位置范围，无法安全裁切；请重新分析。`);
+        }
         seen.add(key);
         layers.push({ name:semanticName, category:normalizedCategory, description, text:recognizedText, bounds });
       }
       if (!layers.length) throw new Error("视觉分析未识别到可拆分的对象，请换一张图试试。");
-      if (layers.length <= 16) return layers;
-      const kept = layers.slice(0, 13);
-      const overflow = layers.slice(13);
-      const categoryNames = { subject:"其他主体组合", text:"其他文字组合", element:"其他装饰元素组合", lighting:"整体补充光效" };
-      for (const category of ["subject", "text", "element", "lighting"]) {
-        if (overflow.some((layer) => layer.category === category)) kept.push({ name:categoryNames[category], category });
-        if (kept.length >= 16) break;
-      }
-      return kept.slice(0, 16);
+      if (layers.length > 16) throw new Error(`视觉分析识别到 ${layers.length} 个独立对象，超过当前 16 层上限。请使用较简洁的图片或分区域拆层，避免把多个对象错误合并。`);
+      return layers;
     }
 
     function psdVisionModelCandidates() {
@@ -13235,6 +13733,7 @@
           return psdLayerPlan(vision.text || extractText(vision.data));
         } catch (error) {
           if (signal?.aborted) throw signal.reason || error;
+          if (/超过当前 16 层上限/.test(String(error?.message || ""))) throw error;
           const detail = attemptController.signal.aborted
             ? `${Math.max(1, Math.ceil(attemptTimeoutMs / 1000))} 秒内未响应`
             : String(error?.message || error).slice(0, 170);
@@ -13267,6 +13766,12 @@
       let covered = 0;
       for (let index = 3; index < data.length; index += 4) if (data[index] > 24) covered += 1;
       return covered / (canvas.width * canvas.height);
+    }
+
+    function psdLayerRetainsEnoughPixels(before, after, category) {
+      // Lighting deliberately overlaps other layers; an ordinary object that
+      // nearly disappears after de-duplication is an unreliable separation.
+      return category === "lighting" || before <= 0 || after / before >= .2;
     }
 
     function psdMakeObjectLayersDisjoint(layerCanvases, layers) {
@@ -13379,6 +13884,69 @@
       } finally { clearTimeout(timer); }
     }
 
+    async function analyzePsdFromNode(id) {
+      const node = nodes.find((item) => item.id === id && item.type === "psd");
+      if (!node || psdJobs.has(id)) return;
+      const source = psdSourceReference(node);
+      if (!source) { node.status = "请先上传图片或连接参考图/效果图节点。"; render(); return; }
+      if (!apiKeyInput.value.trim()) {
+        node.status = "请先配置渠道 1 API 密钥，再分析图层。";
+        render(); setSettingsOpen(true); apiKeyInput.focus(); return;
+      }
+      const controller = new AbortController();
+      const projectId = activeProjectId;
+      const folderId = currentFolderId;
+      const current = () => !controller.signal.aborted && psdJobControllers.get(id) === controller
+        && nodes.includes(node) && activeProjectId === projectId && currentFolderId === folderId
+        && psdSourceReference(node)?.url === source.url;
+      psdJobs.add(id);
+      psdJobControllers.set(id, controller);
+      psdReviewPlans.delete(id);
+      delete node.psdReview;
+      const timeout = setTimeout(() => controller.abort(new Error("图层分析已达到 10 分钟时限，请稍后重试。")), 600000);
+      setPsdJobMarker(id, "图层分析");
+      startPsdCountdown(id);
+      try {
+        node.status = "正在读取原图并识别图层，完成后请逐项检查。";
+        render({ skipSave:true });
+        await waitForUiPaint();
+        const resolved = await runPsdStage(controller, () => getLocalMedia(source.url), "读取本地原图", 45000);
+        if (!resolved) throw new Error("本地图片数据不存在，请重新上传图片");
+        const { width, height } = await runPsdStage(controller, () => getImageDimensions(resolved), "读取原图", 45000);
+        if (!width || !height) throw new Error("无法读取原图尺寸");
+        if (width > 3072 || height > 3072 || width * height > 8000000) throw new Error("当前 PSD 拆层上限为 3072px 长边、800 万像素；请先缩小原图。");
+        const original = await runPsdStage(controller, () => psdCanvasFromUrl(resolved, width, height), "读取原图", 45000);
+        const layers = await runPsdStage(controller, () => psdAnalyzeLayers(original, controller.signal, (model, attempt, total) => {
+          node.status = `正在分析原图（视觉模型 ${model}，第 ${attempt}/${total} 次尝试）...`;
+          render({ skipSave:true });
+        }), "图层分析", psdVisionStageTimeoutMs);
+        if (!current()) return;
+        node.psdReview = { sourceKey:psdReviewSourceKey(source), width, height,
+          layers:layers.map((layer) => ({ ...layer, bounds:Array.isArray(layer.bounds) ? [...layer.bounds] : [0,0,0,0], selected:true })) };
+        psdReviewPlans.set(id, { ...node.psdReview, node, projectId, folderId });
+        node.status = `已识别 ${layers.length} 个对象。请核对位置、名称，排除误识别对象后再确认生成。`;
+        render();
+      } catch (error) {
+        if (!nodes.includes(node) || psdJobControllers.get(id) !== controller) return;
+        const reason = controller.signal.aborted ? controller.signal.reason || error : error;
+        const cancelled = reason?.message === "用户已取消 PSD 生成";
+        node.status = cancelled ? "图层分析已取消。" : `图层分析失败：${friendlyErrorMessage(reason)}`;
+        render();
+        if (!cancelled) showToast(node.status, "error", 5000);
+      } finally {
+        clearTimeout(timeout);
+        if (psdJobControllers.get(id) === controller) {
+          stopPsdCountdown(id);
+          psdJobs.delete(id);
+          psdJobControllers.delete(id);
+          takePsdJobMarker(id);
+          refreshRenderedNode(id);
+          render();
+          scheduleCanvasSave();
+        }
+      }
+    }
+
     async function generatePsdFromNode(id) {
       const node = nodes.find((item) => item.id === id && item.type === "psd");
       if (!node || psdJobs.has(id)) return;
@@ -13389,14 +13957,9 @@
         showToast(node.status, "error", 3600);
         return;
       }
-      if (!apiKeyInput.value.trim()) {
-        node.status = "尚未配置渠道 1 API 密钥，无法开始 PSD 智能拆层。";
-        render();
-        setSettingsOpen(true);
-        apiKeyInput.focus();
-        showToast(node.status, "error", 4200);
-        return;
-      }
+      let layers;
+      try { layers = psdReviewedLayers(psdReviewForNode(node, source)); }
+      catch (error) { node.status = friendlyErrorMessage(error); render(); showToast(node.status, "error", 4200); return; }
       if (!gptImageModelOptions.includes(node.model)) {
         node.status = "接口模型列表中没有可用的 GPT 图片模型，请先同步模型。";
         render();
@@ -13438,13 +14001,7 @@
         if (width > 3072 || height > 3072 || width * height > 8000000) throw new Error("当前 PSD 拆层上限为 3072px 长边、800 万像素；请先缩小原图。");
         const original = await runPsdStage(controller, () => psdCanvasFromUrl(resolvedSourceUrl, width, height), "读取原图", 45000);
         const originalUrl = original.toDataURL("image/png");
-        node.status = "正在智能分析主体、文字、元素与光效...";
-        setPsdJobMarker(id, "图层分析");
-        render({ skipSave:true });
-        const layers = await runPsdStage(controller, () => psdAnalyzeLayers(original, controller.signal, (model, attempt, total) => {
-          node.status = `正在分析原图（视觉模型 ${model}，第 ${attempt}/${total} 次尝试）...`;
-          render({ skipSave:true });
-        }), "图层分析", psdVisionStageTimeoutMs);
+        if (width !== psdReviewPlans.get(id)?.width || height !== psdReviewPlans.get(id)?.height) throw new Error("原图尺寸已变化，请重新分析图层");
         planPsdCountdown(id, layers.length);
         const layerCanvases = [];
         for (let index = 0; index < layers.length; index += 1) {
@@ -13482,7 +14039,13 @@
           layerCanvases.push(cutout);
           finishPsdCountdownStep(id);
         }
+        const originalCoverages = layerCanvases.map(psdSubjectCoverage);
         psdMakeObjectLayersDisjoint(layerCanvases, layers);
+        const lostLayerIndex = layerCanvases.findIndex((canvas, index) =>
+          !psdLayerRetainsEnoughPixels(originalCoverages[index], psdSubjectCoverage(canvas), layers[index].category));
+        if (lostLayerIndex >= 0) {
+          throw new Error(`图层“${layers[lostLayerIndex].name}”与其他对象的遮罩大面积重叠，无法可靠拆分。本次未输出错误 PSD；请调整原图或分区域重试。`);
+        }
         const editMask = psdBackgroundEditMask(layerCanvases, width, height);
         const editMaskUrl = editMask.toDataURL("image/png");
         node.status = "正在修补主体移除后的背景...";
@@ -13981,8 +14544,43 @@
         previewImg.addEventListener("load", syncRatio, { once: true });
         if (previewImg.complete) syncRatio();
       }
+      let suppressReferencePreview = false;
       wrap.querySelectorAll("[data-ref-index]").forEach((thumb) => {
+        if (node.type === "image") thumb.addEventListener("pointerdown", (downEvent) => {
+          if (downEvent.button !== 0 || downEvent.target.closest("button, input, label")) return;
+          const startX = downEvent.clientX;
+          const startY = downEvent.clientY;
+          const pointerId = downEvent.pointerId;
+          let moved = false;
+          const cleanup = () => {
+            window.removeEventListener("pointermove", onMove, true);
+            window.removeEventListener("pointerup", onEnd, true);
+            window.removeEventListener("pointercancel", onEnd, true);
+          };
+          const onMove = (moveEvent) => {
+            if (moveEvent.pointerId !== pointerId) return;
+            if (!moved && Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 7) return;
+            if (!moved) {
+              moved = true;
+              suppressReferencePreview = true;
+              startDrag(moveEvent, node.id);
+              if (dragState) {
+                dragState.startX = startX;
+                dragState.startY = startY;
+              }
+            }
+          };
+          const onEnd = (upEvent) => {
+            if (upEvent.pointerId !== pointerId) return;
+            cleanup();
+            if (moved) setTimeout(() => { suppressReferencePreview = false; }, 0);
+          };
+          window.addEventListener("pointermove", onMove, true);
+          window.addEventListener("pointerup", onEnd, true);
+          window.addEventListener("pointercancel", onEnd, true);
+        });
         thumb.addEventListener("click", (event) => {
+          if (suppressReferencePreview) { event.preventDefault(); event.stopPropagation(); return; }
           if (event.target.closest("button")) return;
           const index = Number(thumb.dataset.refIndex);
           const ref = normalizeReferences(node)[index];
@@ -14107,6 +14705,127 @@
       ].filter((item) => isRenderableImageUrl(item?.url)).slice(0, limit);
     }
 
+    function generatorAnnotationItems(node) {
+      return generatorReferenceItems(node).flatMap((reference, referenceIndex) =>
+        (Array.isArray(reference.comments) ? reference.comments : []).flatMap((comment, commentIndex) => {
+          const text = String(comment?.text || "").trim();
+          return text ? [{ referenceNumber:referenceIndex + 1, commentNumber:commentIndex + 1, text, region:imageCommentRegion(comment) }] : [];
+        })
+      );
+    }
+
+    function generatorPromptWithAnnotations(node, prompt, references = []) {
+      if (node.type !== "generator") return prompt;
+      const annotations = generatorAnnotationItems(node);
+      if (!annotations.length) return prompt;
+      const requirements = annotations.map((item) => {
+        const percent = (value) => `${Math.round(value * 100)}%`;
+        const region = item.region;
+        const position = region.point
+          ? `中心位于图片左侧 ${percent(region.x)}、顶部 ${percent(region.y)} 附近`
+          : `区域从图片左侧 ${percent(region.x)}、顶部 ${percent(region.y)} 开始，宽 ${percent(region.w)}、高 ${percent(region.h)}`;
+        return `图${item.referenceNumber} 黄色批注${item.commentNumber}（${position}）：${item.text}`;
+      }).join("\n");
+      const guideNotes = references.flatMap((reference, index) => reference.annotationGuideFor
+        ? [`第 ${index + 1} 张参考图是图${reference.annotationGuideFor}的黄色编号批注定位图，仅用于识别修改位置；编辑底图仍是原图。请逐条完成所有编号批注，不要只执行最后一条。`]
+        : []).join("\n");
+      return `${String(prompt || "").trim()}\n\n局部批注修改要求（只修改标注范围，未标注部分保持原样；必须逐条完成以下所有批注）：\n${requirements}${guideNotes ? `\n${guideNotes}` : ""}`.trim();
+    }
+
+    async function appendGeneratorAnnotationGuide(node, references) {
+      if (node.type !== "generator" || references.length >= 8) return references;
+      const index = references.findIndex((reference) => Array.isArray(reference.comments)
+        && reference.comments.filter((comment) => String(comment?.text || "").trim()).length > 1);
+      if (index < 0) return references;
+      const reference = references[index];
+      let loaded;
+      try {
+        loaded = await loadImageForCanvas(reference.url);
+        const width = loaded.image.naturalWidth || reference.width;
+        const height = loaded.image.naturalHeight || reference.height;
+        if (!width || !height) return references;
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(loaded.image, 0, 0, width, height);
+        const line = Math.max(3, Math.round(Math.min(width, height) * .006));
+        const badge = Math.max(22, Math.round(Math.min(width, height) * .042));
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = `bold ${Math.max(14, Math.round(badge * .55))}px sans-serif`;
+        reference.comments.forEach((comment, commentIndex) => {
+          if (!String(comment?.text || "").trim()) return;
+          const region = imageCommentRegion(comment);
+          const x = region.x * width;
+          const y = region.y * height;
+          const w = region.point ? Math.max(24, Math.min(width, height) * .12) : Math.max(1, region.w * width);
+          const h = region.point ? w : Math.max(1, region.h * height);
+          const left = region.point ? x - w / 2 : x;
+          const top = region.point ? y - h / 2 : y;
+          ctx.fillStyle = "rgba(231,189,115,.16)";
+          ctx.fillRect(left, top, w, h);
+          ctx.strokeStyle = "#e7bd73";
+          ctx.lineWidth = line;
+          ctx.strokeRect(left, top, w, h);
+          const badgeX = Math.max(badge / 2, Math.min(width - badge / 2, left));
+          const badgeY = Math.max(badge / 2, Math.min(height - badge / 2, top));
+          ctx.fillStyle = "#e7bd73";
+          ctx.fillRect(badgeX - badge / 2, badgeY - badge / 2, badge, badge);
+          ctx.fillStyle = "#171717";
+          ctx.fillText(String(commentIndex + 1), badgeX, badgeY);
+        });
+        return [...references, {url:canvas.toDataURL("image/png"), mediaType:"image", width, height, annotationGuideFor:index + 1}];
+      } catch (error) {
+        console.warn("Annotation guide could not be prepared; using region coordinates", error);
+        return references;
+      } finally {
+        loaded?.revoke();
+      }
+    }
+
+    function applyGeneratorAnnotationMask(node, references) {
+      if (node.type !== "generator") return references;
+      const annotated = references.filter((reference) => Array.isArray(reference.comments) && reference.comments.some((comment) => String(comment?.text || "").trim()));
+      // A single image-edit mask can target only one source image. For multiple
+      // annotated references, keep the coordinate instructions without guessing.
+      if (annotated.length !== 1 || annotated[0].maskUrl) return references;
+      const reference = annotated[0];
+      const width = Math.max(1, Math.round(Number(reference.width) || 0));
+      const height = Math.max(1, Math.round(Number(reference.height) || 0));
+      if (width < 2 || height < 2) return references;
+      const selection = document.createElement("canvas");
+      selection.width = width;
+      selection.height = height;
+      const selectionCtx = selection.getContext("2d");
+      selectionCtx.fillStyle = "#e7bd73";
+      reference.comments.forEach((comment) => {
+        if (!String(comment?.text || "").trim()) return;
+        const region = imageCommentRegion(comment);
+        if (region.point) {
+          selectionCtx.beginPath();
+          selectionCtx.arc(region.x * width, region.y * height, Math.max(12, Math.min(width, height) * .06), 0, Math.PI * 2);
+          selectionCtx.fill();
+        } else {
+          selectionCtx.fillRect(region.x * width, region.y * height, Math.max(1, region.w * width), Math.max(1, region.h * height));
+        }
+      });
+      const apiMask = document.createElement("canvas");
+      apiMask.width = width;
+      apiMask.height = height;
+      const maskCtx = apiMask.getContext("2d");
+      maskCtx.fillStyle = "#fff";
+      maskCtx.fillRect(0, 0, width, height);
+      maskCtx.globalCompositeOperation = "destination-out";
+      maskCtx.drawImage(selection, 0, 0);
+      return references.map((item) => item === reference ? {
+        ...item,
+        maskUrl:apiMask.toDataURL("image/png"),
+        maskSelectionUrl:selection.toDataURL("image/png"),
+        maskWidth:width,
+        maskHeight:height
+      } : item);
+    }
+
     function renderPromptReferenceTokens(value, referenceCount) {
       const text = String(value || "");
       const tokenPattern = /(?:关联图|图)\s*([1-9]\d*)/g;
@@ -14134,8 +14853,9 @@
           : `图${index + 1}`;
         return `
         <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" data-generator-ref-index="${index}" role="button" tabindex="0" aria-label="放大查看${label}" title="点击放大查看${label}">
-          <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
+          <img src="${item.url}" alt="参考图 ${index + 1}" draggable="false" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           ${referenceMaskOverlayHtml(item)}
+           ${referenceAnnotationHtml(item)}
           <span class="thumb-index">${label}</span>
         </div>
       `;
@@ -14148,6 +14868,7 @@
       const linkedHtml = linkedRefs.map((item, index) => `
         <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" title="连接参考图 ${index + 1}">
           <img src="${item.url}" alt="连接参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
+           ${referenceAnnotationHtml(item)}
           <span class="thumb-index">连${index + 1}</span>
         </div>
       `).join("");
@@ -14155,6 +14876,7 @@
         <div class="thumb" style="--reference-color:${referenceTokenColor(linkedRefs.length + index + 1)}" draggable="true" data-ref-index="${index}" title="拖动调整顺序，点击放大或涂抹编辑">
           <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           ${referenceMaskOverlayHtml(item)}
+           ${referenceAnnotationHtml(item)}
           <span class="thumb-index">${index + 1}</span>
           <button class="thumb-remove" data-remove-ref="${index}" type="button">×</button>
           ${referenceOrderControls(index, ownRefs.length)}
@@ -14166,6 +14888,42 @@
     function referenceMaskOverlayHtml(item) {
       if (!isRenderableImageUrl(item?.maskSelectionUrl)) return "";
       return `<img class="reference-mask-overlay" src="${item.maskSelectionUrl}" alt="局部修改遮罩"><span class="reference-mask-badge">遮罩</span>`;
+    }
+
+    function referenceAnnotationHtml(item) {
+      const doodle = isRenderableImageUrl(item?.doodleUrl)
+        ? `<img class="reference-doodle-overlay" src="${item.doodleUrl}" alt="图片涂鸦">` : "";
+      const comments = Array.isArray(item?.comments) ? item.comments : [];
+      return doodle + comments.map((comment, index) => {
+        const region = imageCommentRegion(comment);
+        return `<span class="reference-comment-marker${region.point ? " point" : ""}" data-comment-x="${region.x}" data-comment-y="${region.y}" data-comment-width="${region.w}" data-comment-height="${region.h}" data-comment-number="${index + 1}" title="${escapeHtml(comment.text || "图片批注")}"></span>`;
+      }).join("");
+    }
+
+    function imageCommentRegion(comment) {
+      const clamp = (value) => Math.max(0, Math.min(1, Number(value) || 0));
+      if (comment.shape === "point") return { x:clamp(comment.x), y:clamp(comment.y), w:0, h:0, point:true };
+      if (comment.shape === "rect") return { x:clamp(comment.x), y:clamp(comment.y), w:clamp(comment.w), h:clamp(comment.h), point:false };
+      const r = Math.max(.025, Math.min(.45, Number(comment.r) || .08));
+      return { x:clamp(comment.x - r), y:clamp(comment.y - r), w:Math.min(2 * r, 1 - clamp(comment.x - r)), h:Math.min(2 * r, 1 - clamp(comment.y - r)), point:false };
+    }
+
+    function positionReferenceCommentMarkers(thumb) {
+      const img = thumb.querySelector("img:not(.reference-mask-overlay):not(.reference-doodle-overlay)");
+      if (!img?.naturalWidth || !img?.naturalHeight) return;
+      const width = thumb.clientWidth;
+      const height = thumb.clientHeight;
+      const scale = Math.min(width / img.naturalWidth, height / img.naturalHeight);
+      const drawnWidth = img.naturalWidth * scale;
+      const drawnHeight = img.naturalHeight * scale;
+      const left = (width - drawnWidth) / 2;
+      const top = (height - drawnHeight) / 2;
+      thumb.querySelectorAll(".reference-comment-marker").forEach((marker) => {
+        marker.style.left = `${left + Number(marker.dataset.commentX) * drawnWidth}px`;
+        marker.style.top = `${top + Number(marker.dataset.commentY) * drawnHeight}px`;
+        marker.style.width = marker.classList.contains("point") ? "18px" : `${Number(marker.dataset.commentWidth) * drawnWidth}px`;
+        marker.style.height = marker.classList.contains("point") ? "18px" : `${Number(marker.dataset.commentHeight) * drawnHeight}px`;
+      });
     }
 
     function renderReferenceGallery(node) {
@@ -14184,11 +14942,12 @@
           </button>
         </div>`;
       }
-      return `<div class="upload-box">${visibleRefs.map(({ item, index }) => `
-        <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" draggable="true" data-ref-index="${index}" title="拖动调整顺序">
-          <img src="${item.url}" alt="参考图 ${index + 1}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
+      return `<div class="upload-box ${visibleRefs.length === 1 ? "single-reference" : ""}">${visibleRefs.map(({ item, index }) => `
+        <div class="thumb" style="--reference-color:${referenceTokenColor(index + 1)}" draggable="false" data-ref-index="${index}" title="点击放大，拖动移动节点；可用排序按钮调整顺序">
+          <img src="${item.url}" alt="参考图 ${index + 1}" draggable="false" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
           ${referenceMaskOverlayHtml(item)}
-          <span class="thumb-index">${index + 1}</span>
+          ${referenceAnnotationHtml(item)}
+          <span class="thumb-index">${refs.length === 1 ? nodes.filter((entry) => entry.type === "image").indexOf(node) + 1 : index + 1}</span>
           <button class="thumb-remove" data-remove-ref="${index}" type="button">×</button>
           ${referenceOrderControls(index, visibleRefs.length)}
         </div>
@@ -14221,6 +14980,18 @@
       const metrics = referenceGalleryMetrics(node, frameWidth, frameHeight);
       element.style.setProperty("--reference-grid-columns", String(metrics.columns));
       element.style.setProperty("--reference-tile-size", `${metrics.tileSize}px`);
+    }
+
+    function fitReferenceNodeToImage(node, reference) {
+      if (node?.type !== "image" || !reference?.width || !reference?.height || node.frameWidth) return;
+      const ratio = reference.width / reference.height;
+      let width = Math.min(520, 580 * ratio);
+      let height = width / ratio;
+      if (width < 230) { width = 230; height = Math.min(580, width / ratio); }
+      if (height < 160) height = 160;
+      node.frameWidth = Math.round(width);
+      node.frameHeight = Math.round(height);
+      node.autoFitReference = true;
     }
 
     function referenceOrderControls(index, count) {
@@ -14360,6 +15131,7 @@
         added.push({ url, mediaType: "image", name: `剪贴板参考图-${added.length + 1}`, ...dimensions });
       }
       existing.push(...added);
+      if (node.type === "image" && existing.length === 1) fitReferenceNodeToImage(node, existing[0]);
       node.mediaUrl = node.references[0]?.url || "";
       node.mediaType = "image";
       node.width = node.references[0]?.width || node.width;
@@ -14395,6 +15167,7 @@
       }
       if (!added.length) return 0;
       existing.push(...added);
+      if (node.type === "image" && existing.length === 1) fitReferenceNodeToImage(node, existing[0]);
       node.mediaUrl = node.references[0]?.url || "";
       node.mediaType = "image";
       node.width = node.references[0]?.width || node.width;
@@ -14594,9 +15367,7 @@
     async function pasteClipboardImages(event) {
       const active = document.activeElement;
       if (active && active.closest?.("input, textarea, select")) return;
-      const targetId = activePasteNodeId || selectedNodeId;
-      const node = nodes.find((item) => item.id === targetId && ["image", "video", "keyword", "png", "style"].includes(item.type));
-      if (!node) return;
+      if (lightbox.classList.contains("open")) return;
       const clipboard = event.clipboardData;
       const files = Array.from(clipboard?.files || []).filter(isImageFile);
       const itemFiles = Array.from(event.clipboardData?.items || [])
@@ -14610,17 +15381,44 @@
       const plainUrls = /^data:image\//i.test(plain.trim()) || /^https?:\/\/.+\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(plain.trim())
         ? [plain.trim()]
         : [];
-      if (!images.length && !htmlUrls.length && !plainUrls.length) return;
+      const internalUrls = !images.length && !htmlUrls.length && !plainUrls.length && !plain.trim() && copiedCanvasImageUrl
+        ? [copiedCanvasImageUrl] : [];
+      if (!images.length && !htmlUrls.length && !plainUrls.length && !internalUrls.length) return;
+      const pointer = lastCanvasPointer;
+      const hit = pointer ? document.elementFromPoint(pointer.x, pointer.y) : null;
+      const pasteOnBlankCanvas = Boolean(hit && canvasWrap.contains(hit) && !hit.closest(".node, .topbar, .project-hub, .context-menu"));
+      const targetId = activePasteNodeId || selectedNodeId;
+      const node = pasteOnBlankCanvas ? null : nodes.find((item) => item.id === targetId && ["image", "video", "keyword", "png", "style"].includes(item.type));
+      if (!node && !pasteOnBlankCanvas) return;
       event.preventDefault();
       pushHistory();
+      if (pasteOnBlankCanvas) {
+        const origin = screenToWorld(pointer.x, pointer.y);
+        const sources = images.length ? images : [...htmlUrls, ...plainUrls, ...internalUrls];
+        const created = [];
+        for (const [index, source] of sources.entries()) {
+          const reference = createNode("image", origin.x + index * 42, origin.y + index * 42, { _deferRender:true });
+          const count = images.length
+            ? await addFilesToNode(reference, [source])
+            : await addImageUrlsToNode(reference, [source]);
+          if (count) created.push(reference);
+          else nodes = nodes.filter((item) => item !== reference);
+        }
+        if (!created.length) { showToast("剪贴板图片无法读取，请检查图片格式"); return; }
+        selectedNodeId = created.at(-1).id;
+        activePasteNodeId = selectedNodeId;
+        render();
+        showToast(`已在鼠标位置创建 ${created.length} 张参考图`);
+        return;
+      }
       const fileCount = images.length
         ? node.type === "style" ? await addStyleTransferFiles(node, images) : await addFilesToNode(node, images)
         : 0;
       const urlCount = images.length
         ? 0
         : node.type === "style"
-        ? await addStyleTransferUrls(node, [...htmlUrls, ...plainUrls])
-        : await addImageUrlsToNode(node, [...htmlUrls, ...plainUrls]);
+        ? await addStyleTransferUrls(node, [...htmlUrls, ...plainUrls, ...internalUrls])
+        : await addImageUrlsToNode(node, [...htmlUrls, ...plainUrls, ...internalUrls]);
       const total = fileCount + urlCount;
       node.status = node.type === "style"
         ? (total ? `已从剪贴板添加 ${total} 张风格迁移图片。` : "内容图和风格参考图都已存在，可先移除后再粘贴。")
@@ -15474,6 +16272,36 @@
       showToast("已删除所选节点");
     }
 
+    canvasWrap.addEventListener("dragover", (event) => {
+      if (event.target.closest(".node") || !hasImageFiles(event.dataTransfer?.items || event.dataTransfer?.files)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      canvasWrap.classList.add("external-image-dragover");
+    });
+    canvasWrap.addEventListener("dragleave", (event) => {
+      if (!canvasWrap.contains(event.relatedTarget)) canvasWrap.classList.remove("external-image-dragover");
+    });
+    canvasWrap.addEventListener("drop", async (event) => {
+      canvasWrap.classList.remove("external-image-dragover");
+      if (event.target.closest(".node")) return;
+      const files = Array.from(event.dataTransfer?.files || []).filter(isImageFile);
+      if (!files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const origin = screenToWorld(event.clientX, event.clientY);
+      pushHistory();
+      const created = [];
+      for (const [index, file] of files.entries()) {
+        const node = createNode("image", origin.x + index * 42, origin.y + index * 42, { _deferRender:true });
+        if (await addFilesToNode(node, [file])) created.push(node);
+        else nodes = nodes.filter((item) => item !== node);
+      }
+      if (!created.length) { showToast("图片无法读取，请检查文件格式"); return; }
+      selectedNodeId = created.at(-1).id;
+      activePasteNodeId = selectedNodeId;
+      render();
+      showToast(`已创建 ${created.length} 张参考图，可点击图片编辑并使用批注模式`);
+    });
     canvasWrap.addEventListener("pointerdown", (event) => {
       if (beginBoxSelection(event)) return;
       if (event.target.closest(".node") || event.target.closest(".topbar") || event.target.closest(".project-hub") || event.target.closest(".toast") || event.target.closest(".context-menu")) return;
@@ -15493,6 +16321,10 @@
       canvasWrap.classList.add("is-panning");
       document.body.classList.add("no-select");
       canvasWrap.setPointerCapture(event.pointerId);
+    });
+
+    window.addEventListener("pointermove", (event) => {
+      lastCanvasPointer = { x:event.clientX, y:event.clientY };
     });
 
     window.addEventListener("pointermove", (event) => {
@@ -15557,6 +16389,7 @@
       psdJobControllers.get(id)?.abort();
       psdJobControllers.delete(id);
       psdJobs.delete(id);
+      psdReviewPlans.delete(id);
       psdExportFiles.delete(id);
       vectorJobs.delete(id);
       vectorJobTokens.delete(id);
@@ -15730,7 +16563,7 @@
       }
       const saveHandle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
       const saveReady = nativeAutoSaveDirectory || (saveHandle && await hasAutoSaveDirectoryPermission(saveHandle, true));
-      if (!saveReady) {
+      if (!saveReady && window.wandouShell?.chooseSaveDirectory) {
         closeLightboxImageMenu();
         showToast("重新生成前必须先设置保存位置");
         await chooseAutoSaveDirectory();
@@ -15938,7 +16771,7 @@
       }
       const saveHandle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
       const saveReady = nativeAutoSaveDirectory || (saveHandle && await hasAutoSaveDirectoryPermission(saveHandle, true));
-      if (!saveReady) {
+      if (!saveReady && window.wandouShell?.chooseSaveDirectory) {
         showToast("生成前必须先设置保存位置");
         await chooseAutoSaveDirectory();
         return;
@@ -15975,6 +16808,8 @@
       if (node.type === "outpaint") references = collectReferenceItems([node, ...inputMediaList]);
       if (node.type === "upscale" || node.type === "outpaint") references = references.slice(0, 1);
       await ensureReferenceDimensions(references);
+      references = applyGeneratorAnnotationMask(node, references);
+      references = await appendGeneratorAnnotationGuide(node, references);
       if (node.type === "outpaint" && references[0]?.url) {
         const actualSize = await getImageDimensions(references[0].url);
         if (actualSize.width && actualSize.height) Object.assign(references[0], actualSize);
@@ -16114,7 +16949,7 @@
           width: parsed.width,
           height: parsed.height,
           frameWidth: isLandscapeResult ? 360 : 240,
-          prompt: confirmedAutoSplitPlan[index]?.prompt || creativeStylePrompt(node, node.prompt),
+          prompt: generatorPromptWithAnnotations(node, confirmedAutoSplitPlan[index]?.prompt || creativeStylePrompt(node, node.prompt)),
           generationPrompt: "",
           autoSplitIndex: confirmedAutoSplitPlan.length ? index + 1 : 0,
           autoSaveBatchFolder: confirmedAutoSplitPlan.length ? String(node.autoSplitBatchFolder || "") : "",
@@ -16155,9 +16990,9 @@
       // and to reduce provider rate-limit spikes; frame sequences stay serial.
       const batchSource = {
         ...node,
-        prompt: node.type === "outpaint" ? outpaintPromptFor(node, effectiveTargetSize, references[0]) : node.type === "style" ? styleTransferPrompt(node) : creativeStylePrompt(node, node.prompt),
+        prompt: node.type === "outpaint" ? outpaintPromptFor(node, effectiveTargetSize, references[0]) : node.type === "style" ? styleTransferPrompt(node) : generatorPromptWithAnnotations(node, creativeStylePrompt(node, node.prompt), references),
         references: references.map((item) => ({ ...item })),
-        ...(node.type === "style" ? { _directReferencesOnly: true, count: 1 } : node.type === "outpaint" ? { _directReferencesOnly: true } : {})
+        ...(node.type === "style" ? { _directReferencesOnly: true, count: 1 } : ["outpaint", "generator"].includes(node.type) ? { _directReferencesOnly: true } : {})
       };
       let motherReference = null;
       let previousFrameReference = null;
@@ -16177,9 +17012,9 @@
               : [motherReference, ...batchSource.references]
             : batchSource.references;
           const generatedPrompt = planItem
-            ? autoSplitGenerationPrompt(node, planItem, planIndex, confirmedAutoSplitPlan.length, Boolean(motherReference))
+            ? generatorPromptWithAnnotations(node, autoSplitGenerationPrompt(node, planItem, planIndex, confirmedAutoSplitPlan.length, Boolean(motherReference)), references)
             : batchSource.prompt;
-          pending.prompt = planItem?.prompt || batchSource.prompt;
+          pending.prompt = planItem ? generatorPromptWithAnnotations(node, planItem.prompt) : batchSource.prompt;
           pending.generationPrompt = generatedPrompt;
           const sourceForResult = planItem
             ? {
@@ -19402,6 +20237,11 @@ ${formatInstruction}`;
       hidePaintBrushPreview();
       paintLoadToken += 1;
       paintCanvas.classList.remove("is-loading");
+      imageCommentForm.hidden = true;
+      pendingImageComment = null;
+      editingImageCommentId = null;
+      paintCommentPointerId = null;
+      lightbox.querySelectorAll(".image-comment-marker").forEach((marker) => marker.remove());
       setPaintEraseMode(false);
     }
 
@@ -19410,6 +20250,7 @@ ${formatInstruction}`;
       lightbox.style.setProperty("--lightbox-pan-x", `${lightboxPan.x}px`);
       lightbox.style.setProperty("--lightbox-pan-y", `${lightboxPan.y}px`);
       lightboxScaleText.textContent = `${Math.round(lightboxScale * 100)}%`;
+      if (activeLightbox.mode === "paint") requestAnimationFrame(renderImageComments);
     }
 
     function zoomLightbox(factor) {
@@ -19425,6 +20266,9 @@ ${formatInstruction}`;
       paintLastPoint = null;
       paintCanvas.classList.add("is-loading");
       setPaintEraseMode(false);
+      pendingImageComment = null;
+      editingImageCommentId = null;
+      imageCommentForm.hidden = true;
       const node = nodes.find((item) => item.id === activeLightbox.nodeId);
       const reference = node && activeLightbox.refIndex !== null
         ? normalizeReferences(node)[activeLightbox.refIndex]
@@ -19438,7 +20282,7 @@ ${formatInstruction}`;
       const scale = Math.min(1, maxSide / Math.max(original.image.naturalWidth, original.image.naturalHeight));
       const width = Math.max(1, Math.round(original.image.naturalWidth * scale));
       const height = Math.max(1, Math.round(original.image.naturalHeight * scale));
-      for (const canvasLayer of [paintCanvas, paintOriginalCanvas, paintSelectionCanvas]) {
+      for (const canvasLayer of [paintCanvas, paintOriginalCanvas, paintSelectionCanvas, paintDoodleCanvas]) {
         canvasLayer.width = width;
         canvasLayer.height = height;
       }
@@ -19453,27 +20297,48 @@ ${formatInstruction}`;
           const savedSelection = await loadImageForCanvas(reference.maskSelectionUrl);
           if (loadToken === paintLoadToken && activeLightbox.mode === "paint" && activeLightbox.src === src) {
             selectionCtx.drawImage(savedSelection.image, 0, 0, width, height);
+             selectionCtx.globalCompositeOperation = "source-in";
+             selectionCtx.fillStyle = "#529ae8";
+             selectionCtx.fillRect(0, 0, width, height);
+             selectionCtx.globalCompositeOperation = "source-over";
           }
           savedSelection.revoke();
         } catch (error) {
           console.warn("Mask preview could not be restored", error);
         }
       }
+      const doodleCtx = paintDoodleCanvas.getContext("2d");
+      doodleCtx.clearRect(0, 0, width, height);
+      if (reference?.doodleUrl) {
+        try {
+          const savedDoodle = await loadImageForCanvas(reference.doodleUrl);
+          if (loadToken === paintLoadToken && activeLightbox.mode === "paint" && activeLightbox.src === src) doodleCtx.drawImage(savedDoodle.image, 0, 0, width, height);
+          savedDoodle.revoke();
+        } catch (error) { console.warn("Doodle preview could not be restored", error); }
+      }
       if (loadToken !== paintLoadToken || activeLightbox.mode !== "paint" || activeLightbox.src !== src) return;
       renderPaintComposite();
-      paintUndoStack = [selectionCtx.getImageData(0, 0, width, height)];
+      paintUndoStack = [capturePaintState()];
       paintRedoStack = [];
       paintReady = true;
       paintCanvas.classList.remove("is-loading");
+      renderImageComments();
     }
 
     function setPaintEraseMode(enabled) {
-      paintEraseMode = Boolean(enabled);
-      paintBrush.classList.toggle("mask-mode-active", !paintEraseMode);
-      paintBrush.setAttribute("aria-pressed", String(!paintEraseMode));
-      paintErase.classList.toggle("mask-mode-active", paintEraseMode);
-      paintErase.setAttribute("aria-pressed", String(paintEraseMode));
+      setPaintTool(enabled ? "eraser" : "mask");
+    }
+
+    function setPaintTool(tool) {
+      if (tool === "eraser" && paintTool !== "eraser" && paintTool !== "comment") paintEraseTarget = paintTool;
+      paintTool = tool;
+      paintEraseMode = tool === "eraser";
+      [[paintBrush,"mask"],[paintErase,"eraser"],[paintDoodle,"doodle"],[paintComment,"comment"]].forEach(([button, name]) => {
+        button.classList.toggle("mask-mode-active", name === tool);
+        button.setAttribute("aria-pressed", String(name === tool));
+      });
       paintCanvas.classList.toggle("eraser-mode", paintEraseMode);
+      paintCanvas.classList.toggle("comment-mode", tool === "comment");
       updatePaintBrushPreview();
     }
 
@@ -19489,12 +20354,14 @@ ${formatInstruction}`;
         paintBrushPreview.classList.remove("visible");
         return;
       }
+      if (paintTool === "comment") { paintBrushPreview.classList.remove("visible"); return; }
       const diameter = Math.max(2, Number(paintSize.value) || 24);
       paintBrushPreview.style.left = `${x}px`;
       paintBrushPreview.style.top = `${y}px`;
       paintBrushPreview.style.width = `${diameter}px`;
       paintBrushPreview.style.height = `${diameter}px`;
       paintBrushPreview.classList.toggle("eraser", paintEraseMode);
+      paintBrushPreview.classList.toggle("doodle", paintTool === "doodle");
       paintBrushPreview.classList.add("visible");
     }
 
@@ -19511,6 +20378,7 @@ ${formatInstruction}`;
       ctx.globalAlpha = 0.56;
       ctx.drawImage(paintSelectionCanvas, 0, 0);
       ctx.restore();
+      ctx.drawImage(paintDoodleCanvas, 0, 0);
     }
 
     function paintPointFromEvent(event) {
@@ -19529,15 +20397,15 @@ ${formatInstruction}`;
 
     function configurePaintContext(ctx) {
       ctx.globalCompositeOperation = paintEraseMode ? "destination-out" : "source-over";
-      ctx.strokeStyle = "rgba(34, 197, 94, 1)";
-      ctx.fillStyle = "rgba(34, 197, 94, 1)";
+      ctx.strokeStyle = paintTool === "doodle" ? "#f4bc55" : "rgba(82, 154, 232, 1)";
+      ctx.fillStyle = ctx.strokeStyle;
       ctx.lineWidth = paintBrushWidth();
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
     }
 
     function drawPaintDot(point) {
-      const ctx = paintSelectionCanvas.getContext("2d");
+      const ctx = (paintTool === "doodle" || paintTool === "eraser" && paintEraseTarget === "doodle" ? paintDoodleCanvas : paintSelectionCanvas).getContext("2d");
       configurePaintContext(ctx);
       ctx.beginPath();
       ctx.arc(point.x, point.y, ctx.lineWidth / 2, 0, Math.PI * 2);
@@ -19548,7 +20416,7 @@ ${formatInstruction}`;
 
     function drawPaintLine(point) {
       if (!paintLastPoint) paintLastPoint = point;
-      const ctx = paintSelectionCanvas.getContext("2d");
+      const ctx = (paintTool === "doodle" || paintTool === "eraser" && paintEraseTarget === "doodle" ? paintDoodleCanvas : paintSelectionCanvas).getContext("2d");
       configurePaintContext(ctx);
       ctx.beginPath();
       ctx.moveTo(paintLastPoint.x, paintLastPoint.y);
@@ -19576,17 +20444,24 @@ ${formatInstruction}`;
       }
     }
 
+    function capturePaintState() {
+      return {
+        mask:paintSelectionCanvas.getContext("2d").getImageData(0, 0, paintSelectionCanvas.width, paintSelectionCanvas.height),
+        doodle:paintDoodleCanvas.getContext("2d").getImageData(0, 0, paintDoodleCanvas.width, paintDoodleCanvas.height)
+      };
+    }
+
     function pushPaintHistory() {
       if (!paintSelectionCanvas.width || !paintSelectionCanvas.height) return;
-      const ctx = paintSelectionCanvas.getContext("2d");
-      paintUndoStack.push(ctx.getImageData(0, 0, paintSelectionCanvas.width, paintSelectionCanvas.height));
+      paintUndoStack.push(capturePaintState());
       if (paintUndoStack.length > 12) paintUndoStack.shift();
       paintRedoStack = [];
     }
 
     function restorePaintState(state) {
       if (!state) return;
-      paintSelectionCanvas.getContext("2d").putImageData(state, 0, 0);
+      paintSelectionCanvas.getContext("2d").putImageData(state.mask, 0, 0);
+      paintDoodleCanvas.getContext("2d").putImageData(state.doodle, 0, 0);
       renderPaintComposite();
     }
 
@@ -19606,7 +20481,8 @@ ${formatInstruction}`;
 
     function clearPaintMask() {
       if (!paintSelectionCanvas.width || !paintSelectionCanvas.height) return;
-      paintSelectionCanvas.getContext("2d").clearRect(0, 0, paintSelectionCanvas.width, paintSelectionCanvas.height);
+      const layer = paintTool === "doodle" || paintTool === "eraser" && paintEraseTarget === "doodle" ? paintDoodleCanvas : paintSelectionCanvas;
+      layer.getContext("2d").clearRect(0, 0, layer.width, layer.height);
       renderPaintComposite();
       pushPaintHistory();
     }
@@ -19633,6 +20509,79 @@ ${formatInstruction}`;
       return mask.toDataURL("image/png");
     }
 
+    function activePaintReference() {
+      const node = nodes.find((item) => item.id === activeLightbox.nodeId);
+      return node && activeLightbox.refIndex !== null ? normalizeReferences(node)[activeLightbox.refIndex] : null;
+    }
+
+    function renderImageComments() {
+      lightbox.querySelectorAll(".image-comment-marker").forEach((marker) => marker.remove());
+      const reference = activePaintReference();
+      const comments = Array.isArray(reference?.comments) ? reference.comments : [];
+      imageCommentList.innerHTML = comments.length ? comments.map((comment, index) => `
+        <div class="image-comment-item${editingImageCommentId === comment.id ? " is-editing" : ""}" data-comment-id="${escapeHtml(comment.id)}">
+          <b>${index + 1}</b><button class="image-comment-content" type="button" data-edit-comment="${escapeHtml(comment.id)}" aria-label="修改第 ${index + 1} 条批注">${escapeHtml(comment.text || "未填写内容，点击修改")}</button>
+          <button type="button" data-remove-comment="${escapeHtml(comment.id)}" aria-label="删除第 ${index + 1} 条批注">×</button>
+        </div>`).join("") : '<span class="image-comment-empty">还没有图片批注。</span>';
+      if (!paintReady || !lightbox.classList.contains("open")) return;
+      const rect = paintCanvas.getBoundingClientRect();
+      const appendMarker = (comment, index, pending = false) => {
+        const marker = document.createElement("button");
+        marker.type = "button";
+        const region = imageCommentRegion(comment);
+        marker.className = `image-comment-marker${region.point ? " point" : ""}${pending ? " pending" : ""}`;
+        marker.textContent = String(index + 1);
+        marker.dataset.commentNumber = pending ? "+" : String(index + 1);
+        marker.title = pending ? "正在选择批注区域" : comment.text;
+        marker.setAttribute("aria-label", pending ? "待保存的批注区域" : `第 ${index + 1} 条批注：${comment.text}`);
+        marker.style.left = `${rect.left + region.x * rect.width}px`;
+        marker.style.top = `${rect.top + region.y * rect.height}px`;
+        marker.style.width = region.point ? "20px" : `${Math.max(20, region.w * rect.width)}px`;
+        marker.style.height = region.point ? "20px" : `${Math.max(20, region.h * rect.height)}px`;
+        if (!pending) marker.addEventListener("click", () => beginImageCommentEdit(comment.id));
+        lightbox.append(marker);
+      };
+      comments.forEach((comment, index) => appendMarker(comment, index));
+      if (pendingImageComment) appendMarker(pendingImageComment, comments.length, true);
+    }
+
+    function startImageComment(point) {
+      if (!imageCommentForm.hidden) {
+        imageCommentText.focus();
+        showToast("请先确定或取消当前批注，再添加下一条", "info", 3200);
+        return false;
+      }
+      pendingImageComment = {
+        x: Math.max(0, Math.min(1, point.x / paintCanvas.width)),
+        y: Math.max(0, Math.min(1, point.y / paintCanvas.height)),
+        shape:"point"
+      };
+      imageCommentPosition.textContent = "已标记位置；拖动可框选范围";
+      imageCommentForm.hidden = false;
+      imageCommentText.value = "";
+      document.getElementById("imageCommentSubmit").textContent = "确定批注";
+      renderImageComments();
+      return true;
+    }
+
+    function beginImageCommentEdit(id) {
+      const reference = activePaintReference();
+      const comment = reference?.comments?.find((item) => item.id === id);
+      if (!comment) return;
+      if (pendingImageComment) {
+        imageCommentText.focus();
+        showToast("请先确定或取消当前批注，再修改已有批注", "info", 3200);
+        return;
+      }
+      editingImageCommentId = id;
+      imageCommentPosition.textContent = "修改已保存的批注";
+      imageCommentText.value = comment.text || "";
+      document.getElementById("imageCommentSubmit").textContent = "保存修改";
+      imageCommentForm.hidden = false;
+      renderImageComments();
+      imageCommentText.focus();
+    }
+
     function savePaintToReference() {
       const node = nodes.find((item) => item.id === activeLightbox.nodeId);
       if (!node || activeLightbox.refIndex === null) return;
@@ -19654,11 +20603,15 @@ ${formatInstruction}`;
         reference.maskWidth = maskWidth;
         reference.maskHeight = maskHeight;
         reference.maskUpdatedAt = Date.now();
-        node.status = "局部遮罩已保存：绿色区域允许修改，原图仍单独保留。";
+        node.status = "局部遮罩已保存：蓝色区域允许修改，原图仍单独保留。";
       }
+      const doodleData = paintDoodleCanvas.getContext("2d").getImageData(0, 0, paintDoodleCanvas.width, paintDoodleCanvas.height).data;
+      const hasDoodle = doodleData.some((value, index) => index % 4 === 3 && value > 8);
+      if (hasDoodle) reference.doodleUrl = paintDoodleCanvas.toDataURL("image/png");
+      else delete reference.doodleUrl;
       render();
       scheduleCanvasSave();
-      showToast(reference.maskUrl ? "遮罩已保存，原图没有被覆盖" : "遮罩已清空");
+      showToast("遮罩与涂鸦已保存，原图没有被覆盖");
       closeLightbox();
     }
 
@@ -19686,12 +20639,17 @@ ${formatInstruction}`;
             references: normalizeReferences(source).map((item) => ({
               url: compactMediaRenderKey(item?.url),
               maskUrl: compactMediaRenderKey(item?.maskUrl),
-              maskSelectionUrl: compactMediaRenderKey(item?.maskSelectionUrl)
+              maskSelectionUrl: compactMediaRenderKey(item?.maskSelectionUrl),
+              comments: Array.isArray(item?.comments) ? item.comments.map((comment) => ({
+                id:comment?.id, text:comment?.text, shape:comment?.shape,
+                x:comment?.x, y:comment?.y, w:comment?.w, h:comment?.h
+              })) : []
             }))
           };
         });
       return JSON.stringify({
         ...rest,
+        displayOrdinal: node.type === "image" ? nodes.filter((item) => item.type === "image").indexOf(node) + 1 : 0,
         upstream,
         mediaUrl: compactMediaRenderKey(mediaUrl),
         previewUrl: compactMediaRenderKey(previewUrl),
@@ -19852,7 +20810,10 @@ ${formatInstruction}`;
 
     async function createAutoSplitBatchDirectory(node) {
       const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-      if (!handle) throw new Error("请先设置保存位置");
+      if (!handle) {
+        if (!window.wandouShell?.chooseSaveDirectory) return "";
+        throw new Error("请先设置保存位置");
+      }
       const folderName = autoSplitBatchFolderName();
       if (window.wandouShell?.createSaveDirectory && nativeAutoSaveDirectory) {
         const result = await window.wandouShell.createSaveDirectory(folderName);
@@ -20830,7 +21791,8 @@ ${formatInstruction}`;
           ...item,
           url: await persistMediaValue(item.url),
           maskUrl: await persistMediaValue(item.maskUrl),
-          maskSelectionUrl: await persistMediaValue(item.maskSelectionUrl)
+          maskSelectionUrl: await persistMediaValue(item.maskSelectionUrl),
+          doodleUrl: await persistMediaValue(item.doodleUrl)
         })));
       }
       return copy;
@@ -20908,9 +21870,10 @@ ${formatInstruction}`;
           ...item,
           url: await resolveLoadedMedia(item.url, mediaCache),
           maskUrl: await resolveLoadedMedia(item.maskUrl, mediaCache),
-          maskSelectionUrl: await resolveLoadedMedia(item.maskSelectionUrl, mediaCache)
+          maskSelectionUrl: await resolveLoadedMedia(item.maskSelectionUrl, mediaCache),
+          doodleUrl: await resolveLoadedMedia(item.doodleUrl, mediaCache)
         })))).filter((item) => item?.url);
-        await Promise.all(node.references.flatMap((item) => [item.url, item.maskUrl, item.maskSelectionUrl]).filter(Boolean).map(mirrorLargeLoadedMedia));
+        await Promise.all(node.references.flatMap((item) => [item.url, item.maskUrl, item.maskSelectionUrl, item.doodleUrl]).filter(Boolean).map(mirrorLargeLoadedMedia));
       } else {
         node.references = [];
       }
@@ -21989,6 +22952,12 @@ ${formatInstruction}`;
       if (!paintReady || paintDrawing || event.isPrimary === false || event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
+      if (paintTool === "comment") {
+        if (!startImageComment(paintPointFromEvent(event))) return;
+        paintCommentPointerId = event.pointerId;
+        paintCanvas.setPointerCapture(event.pointerId);
+        return;
+      }
       updatePaintBrushPreview(event);
       paintDrawing = true;
       paintPointerId = event.pointerId;
@@ -22004,6 +22973,23 @@ ${formatInstruction}`;
     paintCanvas.addEventListener("pointerenter", updatePaintBrushPreview);
     paintCanvas.addEventListener("pointermove", (event) => {
       updatePaintBrushPreview(event);
+      if (paintTool === "comment" && pendingImageComment && event.pointerId === paintCommentPointerId) {
+        const point = paintPointFromEvent(event);
+        const endX = Math.max(0, Math.min(1, point.x / paintCanvas.width));
+        const endY = Math.max(0, Math.min(1, point.y / paintCanvas.height));
+        const anchorX = pendingImageComment.anchorX ?? pendingImageComment.x;
+        const anchorY = pendingImageComment.anchorY ?? pendingImageComment.y;
+        if (Math.hypot((endX - anchorX) * paintCanvas.width, (endY - anchorY) * paintCanvas.height) > 8) {
+          pendingImageComment = {
+            shape:"rect", anchorX, anchorY,
+            x:Math.min(anchorX, endX), y:Math.min(anchorY, endY),
+            w:Math.abs(endX - anchorX), h:Math.abs(endY - anchorY)
+          };
+          imageCommentPosition.textContent = `已框选区域：${Math.round(pendingImageComment.w * 100)}% × ${Math.round(pendingImageComment.h * 100)}%`;
+        }
+        renderImageComments();
+        return;
+      }
       if (!paintDrawing || event.pointerId !== paintPointerId) return;
       event.preventDefault();
       event.stopPropagation();
@@ -22014,8 +23000,19 @@ ${formatInstruction}`;
     paintCanvas.addEventListener("pointerleave", () => {
       if (!paintDrawing) hidePaintBrushPreview();
     });
-    paintCanvas.addEventListener("pointerup", finishPaintStroke);
+    paintCanvas.addEventListener("pointerup", (event) => {
+      if (event.pointerId === paintCommentPointerId) {
+        paintCommentPointerId = null;
+        if (paintCanvas.hasPointerCapture(event.pointerId)) paintCanvas.releasePointerCapture(event.pointerId);
+        imageCommentText.focus();
+        return;
+      }
+      finishPaintStroke(event);
+    });
     paintCanvas.addEventListener("pointercancel", finishPaintStroke);
+    paintCanvas.addEventListener("pointercancel", (event) => {
+      if (event.pointerId === paintCommentPointerId) paintCommentPointerId = null;
+    });
     paintCanvas.addEventListener("pointercancel", hidePaintBrushPreview);
     paintCanvas.addEventListener("lostpointercapture", finishPaintStroke);
     paintCanvas.addEventListener("lostpointercapture", () => {
@@ -22025,7 +23022,14 @@ ${formatInstruction}`;
       finishPaintStroke();
       hidePaintBrushPreview();
     });
-    paintSize.addEventListener("input", () => updatePaintBrushPreview());
+    const updatePaintSizeControl = () => {
+      const size = Math.max(2, Number(paintSize.value) || 24);
+      paintSizeValue.value = `${size} px`;
+      paintSize.closest(".paint-size-control")?.style.setProperty("--paint-dot-size", `${Math.max(4, Math.min(18, size / 7))}px`);
+      updatePaintBrushPreview();
+    };
+    paintSize.addEventListener("input", updatePaintSizeControl);
+    updatePaintSizeControl();
     paintBrush.addEventListener("click", (event) => {
       event.stopPropagation();
       setPaintEraseMode(false);
@@ -22034,6 +23038,65 @@ ${formatInstruction}`;
       event.stopPropagation();
       setPaintEraseMode(true);
     });
+    paintDoodle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setPaintTool("doodle");
+    });
+    paintComment.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setPaintTool("comment");
+    });
+    imageCommentCancel.addEventListener("click", () => {
+      pendingImageComment = null;
+      editingImageCommentId = null;
+      imageCommentForm.hidden = true;
+      imageCommentText.value = "";
+      renderImageComments();
+    });
+    imageCommentForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const reference = activePaintReference();
+      const text = imageCommentText.value.trim();
+      if (!reference || (!pendingImageComment && !editingImageCommentId)) return;
+      if (!text) {
+        imageCommentText.focus();
+        showToast("请填写批注内容后再确定", "info", 3200);
+        return;
+      }
+      pushHistory();
+      if (!Array.isArray(reference.comments)) reference.comments = [];
+      if (editingImageCommentId) {
+        const existing = reference.comments.find((item) => item.id === editingImageCommentId);
+        if (existing) existing.text = text;
+      } else {
+        const { anchorX, anchorY, ...commentRegion } = pendingImageComment;
+        reference.comments.push({ id:`comment-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, ...commentRegion, text, createdAt:Date.now() });
+      }
+      pendingImageComment = null;
+      editingImageCommentId = null;
+      imageCommentForm.hidden = true;
+      imageCommentText.value = "";
+      renderImageComments();
+      render();
+      scheduleCanvasSave();
+    });
+    imageCommentList.addEventListener("click", (event) => {
+      const editId = event.target.closest("[data-edit-comment]")?.dataset.editComment;
+      if (editId) { beginImageCommentEdit(editId); return; }
+      const id = event.target.closest("[data-remove-comment]")?.dataset.removeComment;
+      const reference = activePaintReference();
+      if (!id || !reference?.comments) return;
+      pushHistory();
+      reference.comments = reference.comments.filter((comment) => comment.id !== id);
+      if (editingImageCommentId === id) {
+        editingImageCommentId = null;
+        imageCommentForm.hidden = true;
+      }
+      renderImageComments();
+      render();
+      scheduleCanvasSave();
+    });
+    window.addEventListener("resize", () => { if (activeLightbox.mode === "paint") renderImageComments(); });
     paintUndo.addEventListener("click", (event) => {
       event.stopPropagation();
       undoPaint();
@@ -22065,6 +23128,18 @@ ${formatInstruction}`;
       const isTyping = active && active.closest?.("input, textarea, select");
       const commandKey = event.ctrlKey || event.metaKey;
       const key = String(event.key || "").toLowerCase();
+      if (commandKey && !event.altKey && !isTyping && key === "c" && !lightbox.classList.contains("open") && !String(window.getSelection()?.toString() || "").trim()) {
+        const selected = nodes.find((item) => item.id === selectedNodeId && (item.type === "image" || item.type === "result") && item.mediaType !== "video" && item.mediaType !== "audio");
+        const source = selected ? favoriteMediaUrl(selected) : "";
+        if (source) {
+          event.preventDefault();
+          copiedCanvasImageUrl = source;
+          void writeImageToClipboard(imageSourceToClipboardBlob(source, false))
+            .then(() => showToast("图片已复制，可在鼠标位置粘贴"))
+            .catch(() => showToast("已复制到画布，可在画布空白处粘贴"));
+          return;
+        }
+      }
       if (commandKey && !event.altKey && !isTyping && (key === "z" || key === "y")) {
         event.preventDefault();
         const redoRequested = key === "y" || (key === "z" && event.shiftKey);

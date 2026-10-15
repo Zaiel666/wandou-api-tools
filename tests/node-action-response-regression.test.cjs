@@ -28,7 +28,7 @@ test("PSD and vector actions always show feedback and accept restored/SVG source
     render();
   });
   await page.locator(".node.psd [data-psd-generate]").click();
-  assert.match(await page.locator(".node.psd .status").innerText(), /尚未配置渠道 1 API 密钥/);
+  assert.match(await page.locator(".node.psd .status").innerText(), /请先配置渠道 1 API 密钥/);
   assert.equal(await page.locator("#settingsPopover").evaluate((item) => item.classList.contains("open")), true);
   await page.evaluate(() => setSettingsOpen(false));
 

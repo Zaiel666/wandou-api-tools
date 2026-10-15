@@ -15,7 +15,7 @@ async function downloadText(download) {
   return (await downloadBuffer(download)).toString("utf8");
 }
 
-test("vector node exports SVG and Adobe Illustrator AI in lossless and editable modes", async (t) => {
+test("vector node exports embedded-image and editable-path SVG/AI modes", async (t) => {
   const browser = await chromium.launch({
     headless: true,
     executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
