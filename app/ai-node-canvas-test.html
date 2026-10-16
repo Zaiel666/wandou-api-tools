@@ -23552,10 +23552,13 @@ ${formatInstruction}`;
     });
 
     (async function initApp() {
-      if (window.wandouShell || window.chrome?.webview) {
-        document.body.textContent = "此独立测试页请在浏览器中打开，以隔离正式桌面版项目数据。";
+      if (canvasStoragePrefix && (window.wandouShell || window.chrome?.webview)) {
+        const productionUrl = new URL(location.href);
+        productionUrl.searchParams.set('workspace', 'production');
+        location.replace(productionUrl.href);
         return;
       }
+      if (!canvasStoragePrefix) document.title = '豌豆 AI · 节点画布';
       await loadApiConfig();
       await syncImageModelsFromApi({ render: false });
       await loadProjects();

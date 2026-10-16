@@ -27,7 +27,7 @@ test('mascot launcher retains button semantics and composer has no reserved foot
 });
 function setup(markup) {
   const {document, window} = parseHTML('<html><body>' + markup + '</body></html>');
-  const context = vm.createContext({document, window, renderNode:()=>document.querySelector('.node'), setTimeout:()=>{}, console});
+  const context = vm.createContext({document, window, canvasStoragePrefix:'wandou:canvas-ui-test:v1:', renderNode:()=>document.querySelector('.node'), setTimeout:()=>{}, console});
   vm.runInContext(script, context);
   return {document, window, ui:window.WandouCanvasTestUI, node:document.querySelector('.node')};
 }
@@ -164,12 +164,13 @@ test('vendored UI icons exist, CSS uses the real composer class and an isolated 
 test('full-page boot wires the bottom toolbar, sidebar icons and single-row assistant controls', () => {
   const {document,window}=parseHTML(page);
   document.body.dataset.canvasReady='true';
+  window.wandouShell = {};
   const canvas=document.getElementById('canvas');
   const canvasWrap=document.querySelector('.canvas-wrap');
   canvasWrap.getBoundingClientRect=()=>({width:1000,height:800});
   const calls=[];
   const view={x:40,y:20,zoom:.75};
-  const context=vm.createContext({document,window,console,
+  const context=vm.createContext({document,window,console,canvasStoragePrefix:'',
     renderNode:()=>document.createElement('section'),render:()=>calls.push('render'),
     setTimeout:()=>{},requestAnimationFrame:fn=>fn(),MutationObserver:window.MutationObserver,
     projectHub:document.getElementById('projectHub'),projectHubButton:document.getElementById('projectHubButton'),

@@ -446,7 +446,7 @@
     document.querySelector('.brand h1').innerHTML = '豌豆 AI<span class="brand-subtitle">绘图节点画布</span>';
     const badge = document.createElement('span');
     badge.className = 'test-version-badge';
-    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.0 · 节点画布' : '测试版 · 独立数据';
+    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.1 · 节点画布' : '测试版 · 独立数据';
     badge.title = '测试项目与正式版隔离；API 设置需要在测试页单独配置。';
     document.querySelector('.sidebar').append(badge);
     const creation = {
@@ -547,5 +547,5 @@
     }
     document.body.dataset.testReady = 'true';
   };
-  if (!window.wandouShell && !window.chrome?.webview) boot();
+  if (!canvasStoragePrefix || (!window.wandouShell && !window.chrome?.webview)) boot();
 })();
