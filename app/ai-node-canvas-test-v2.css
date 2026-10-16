@@ -59,7 +59,8 @@ textarea::placeholder,input::placeholder {color:var(--ui-muted);}
 .project-focus-backdrop {display:none;}
 .canvas-wrap {position:relative;min-width:0;overflow:hidden;background-color:var(--ui-bg);background-image:radial-gradient(#d9d9e1 .7px,transparent .8px);background-size:16px 16px;contain:layout paint;}
 .dark-theme .canvas-wrap {background-color:var(--ui-bg);background-image:radial-gradient(#333 .7px,transparent .8px);}
-.app.assistant-open .canvas-wrap {margin-right:var(--chat-size);}
+/* The assistant overlays the canvas; it never reserves a layout column. */
+.app.assistant-open .canvas-wrap {margin-right:0;}
 .sidebar-controls {left:var(--sidebar-size);}
 .topbar {position:fixed;top:12px;right:12px;left:auto;width:auto;z-index:9;display:block;padding:0;margin:0;background:transparent;border:0;box-shadow:none;pointer-events:none;}
 .topbar-actions {display:flex;gap:8px;align-items:center;pointer-events:auto;}
@@ -254,9 +255,7 @@ textarea::placeholder,input::placeholder {color:var(--ui-muted);}
 .assistant-panel {padding-bottom:0;}
 [data-assistant-resize] {display:block;}
 .test-canvas-toolbar {position:fixed;left:calc((100vw + var(--sidebar-size))/2);bottom:18px;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:5px;padding:7px 10px;border:1px solid var(--ui-line);border-radius:17px;background:var(--ui-surface);box-shadow:0 3px 12px #00000008;white-space:nowrap;}
-body:has(.app.assistant-open) .test-canvas-toolbar {left:calc((100vw + var(--sidebar-size) - var(--chat-size))/2);}
 body:has(.app.sidebar-collapsed) .test-canvas-toolbar {left:50%;}
-body:has(.app.sidebar-collapsed.assistant-open) .test-canvas-toolbar {left:calc((100vw - var(--chat-size))/2);}
 .test-canvas-toolbar button {height:39px;min-height:39px;min-width:34px;padding:8px;border:0;border-radius:9px;font-size:12px;font-weight:500;}
 .test-canvas-toolbar [data-tool=fit],.test-canvas-toolbar [data-tool=arrange] {border:1px solid var(--ui-line);padding:8px 14px;}
 .test-canvas-toolbar button[aria-pressed=true] {background:#e6e6e6;color:#161616;}

@@ -3,6 +3,7 @@ dist/
 desktop-client/dist/
 desktop-client/dist-*/
 backups/
+recovery-backups/
 desktop-client/node_modules/
 .pnpm-store/
 release/

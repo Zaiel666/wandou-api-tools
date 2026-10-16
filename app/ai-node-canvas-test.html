@@ -9877,7 +9877,7 @@
       app?.style.setProperty("--assistant-height", `${next.height}px`);
       const reserved = window.innerWidth - next.left;
       app?.style.setProperty("--chat-size", `${reserved}px`);
-      // The toolbar is outside .app; give it the same occupied canvas width.
+      // Only offset the mascot launcher; the floating panel reserves no canvas width.
       document.documentElement.style.setProperty("--chat-size", `${reserved}px`);
       if (persist) {
         try { canvasTestStorage.setItem(assistantPanelGeometryStorageKey, JSON.stringify(next)); } catch (_error) {}
@@ -22029,6 +22029,9 @@ ${formatInstruction}`;
     }
 
     window.wandouSaveBeforeClose = async () => {
+      if (document.body.dataset.canvasReady !== "true" || !document.querySelector(".app")) {
+        return { success: false, supported: true, error: "画布尚未初始化完成，未写入任何项目数据。请等待加载完成后重试；若持续空白，请保留数据并联系修复。" };
+      }
       clearTimeout(saveTimer);
       saveTimer = null;
       const project = projects.find((item) => item.id === activeProjectId);
