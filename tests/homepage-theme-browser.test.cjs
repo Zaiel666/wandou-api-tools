@@ -46,7 +46,6 @@ test('homepage and linked asset test pages keep large surfaces neutral in both t
             page: background('body'),
             sidebar: background('.home-test-sidebar'),
             topbar: background('.home-topbar'),
-            heroFallback: background('.home-test-hero-panel'),
             card: background('.home-panel.active .info-card, .home-panel.active .blog-entry-card, #home-tools .module-card')
           };
         });
@@ -54,6 +53,7 @@ test('homepage and linked asset test pages keep large surfaces neutral in both t
         if (panel !== 'home') assert.equal(await page.locator(`.home-panel[data-home-panel="${panel}"]`).isVisible(), true);
       }
     }
+    assert.equal(await page.locator('.home-carousel').count(), 1, '新版首页保留品牌轮播，不将海报颜色视为中性色面板');
     await page.locator('.home-test-sidebar [data-home-nav="notice"]').click();
     assert.equal(await page.locator('[data-home-panel="notice"]').isVisible(), true);
     await page.locator('.home-test-sidebar [data-home-nav="blog"]').click();

@@ -1,3 +1,71 @@
+/* Border-reveal interaction adapted from Uiverse.io by Navarog21:
+   https://uiverse.io/Navarog21/loud-bird-67 (user-supplied CSS).
+   Edge-only masks preserve labels, hit targets and existing button dimensions. */
+:is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button,
+.sidebar .gallery-entry,.context-menu .test-create-menu-item {
+  position:relative;--frame-cover:var(--ui-surface);
+  transition:box-shadow .3s ease,border-color .3s ease,background-color .15s ease;
+}
+.sidebar .gallery-entry {--frame-cover:var(--ui-soft);}
+:is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button::before,
+:is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button::after,
+.sidebar .gallery-entry::before,.sidebar .gallery-entry::after,
+.context-menu .test-create-menu-item::before,.context-menu .test-create-menu-item::after {
+  content:"";position:absolute;left:12%;width:76%;height:3px;
+  top:-2px;bottom:auto;background:var(--frame-cover);pointer-events:none;
+  transform:scaleX(1);transform-origin:center;transition:transform .3s ease;
+}
+:is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button::after,
+.sidebar .gallery-entry::after,.context-menu .test-create-menu-item::after {top:auto;bottom:-2px;}
+:is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button:is(:hover,:focus-visible):not(:disabled),
+.sidebar .gallery-entry:is(:hover,:focus-visible),.context-menu .test-create-menu-item:is(:hover,:focus-visible) {
+  border-color:#149cea;background:var(--ui-surface);color:var(--ui-text);
+  box-shadow:inset 0 0 16px #149cea30;transform:none;
+}
+:is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button:is(:hover,:focus-visible)::before,
+:is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button:is(:hover,:focus-visible)::after,
+.sidebar .gallery-entry:is(:hover,:focus-visible)::before,.sidebar .gallery-entry:is(:hover,:focus-visible)::after,
+.context-menu .test-create-menu-item:is(:hover,:focus-visible)::before,
+.context-menu .test-create-menu-item:is(:hover,:focus-visible)::after {transform:scaleX(0);}
+.context-menu {width:248px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);overflow-y:auto;padding:8px;background:var(--ui-surface);color:var(--ui-text);border:1px solid var(--ui-line);border-radius:12px;backdrop-filter:none;}
+.context-menu.open {gap:5px;}
+.context-menu button {display:flex;justify-content:flex-start;gap:10px;width:100%;min-height:38px;height:auto;padding:8px 10px;text-align:left;white-space:normal;line-height:1.4;}
+.context-menu button:not(.test-create-menu-item)::before {position:static;transform:none;flex:0 0 20px;}
+.context-menu .test-create-menu-item {display:grid;grid-template-columns:20px minmax(0,1fr);border:1px solid var(--ui-line);background:var(--ui-surface);color:var(--ui-text);}
+.context-menu .test-create-menu-item .ui-icon {width:20px;height:20px;}
+@media (prefers-reduced-motion:reduce) {
+  :is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button,
+  .sidebar .gallery-entry,.context-menu .test-create-menu-item,
+  :is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button::before,
+  :is(.sidebar .button-grid,.sidebar .project-transfer-actions,.test-canvas-toolbar) button::after,
+  .sidebar .gallery-entry::before,.sidebar .gallery-entry::after,
+  .context-menu .test-create-menu-item::before,.context-menu .test-create-menu-item::after {transition:none;}
+}
+
+/* Image preview menu uses the same Navarog21 edge-reveal treatment. */
+.lightbox-image-menu {background:var(--ui-surface);color:var(--ui-text);border:1px solid var(--ui-line);border-radius:12px;padding:8px;}
+.lightbox-image-menu .test-frame-button {
+  position:relative;display:grid;grid-template-columns:20px minmax(0,1fr);gap:12px;
+  width:100%;height:42px;min-height:42px;padding:8px 14px;text-align:left;
+  border:1px solid var(--ui-line);border-radius:8px;
+  background:var(--ui-surface);color:var(--ui-text);font-size:13px;font-weight:500;
+  box-shadow:none;transition:border-color .3s ease,box-shadow .3s ease;
+}
+.lightbox-image-menu .test-frame-button .ui-icon {width:20px;height:20px;}
+.lightbox-image-menu .test-frame-button::before,.lightbox-image-menu .test-frame-button::after {
+  content:"";position:absolute;left:12%;width:76%;height:3px;top:-2px;bottom:auto;
+  background:var(--ui-surface);pointer-events:none;transform:scaleX(1);transform-origin:center;transition:transform .3s ease;
+}
+.lightbox-image-menu .test-frame-button::after {top:auto;bottom:-2px;}
+.lightbox-image-menu .test-frame-button:is(:hover,:focus-visible):not(:disabled) {
+  background:var(--ui-surface);color:var(--ui-text);border-color:#149cea;box-shadow:inset 0 0 16px #149cea30;transform:none;
+}
+.lightbox-image-menu .test-frame-button:is(:hover,:focus-visible):not(:disabled)::before,
+.lightbox-image-menu .test-frame-button:is(:hover,:focus-visible):not(:disabled)::after {transform:scaleX(0);}
+@media (prefers-reduced-motion:reduce) {
+  .lightbox-image-menu .test-frame-button,.lightbox-image-menu .test-frame-button::before,.lightbox-image-menu .test-frame-button::after {transition:none;}
+}
+
 /* Lucian UX/UI Prompt #002 / #013, MIT (c) 2026 Seokwoooo.
    Adapted to canvas controls; docs/lucian-ui-NOTICE.txt. No page-wide glow. */
 .node .test-generate {
@@ -164,6 +232,38 @@ body:has(.app.assistant-open) #assistantToggleButton:not([data-mascot-positioned
 .node.result.test-image-result .preview {margin:0;padding:0;border:0;border-radius:12px;}
 .node.result.test-image-result .preview > img {display:block;width:100%;height:auto;max-height:none;margin:0;padding:0;border:0;object-fit:contain;}
 .node.result.test-image-result .status {background:transparent;}
+.node.result.test-image-result .node-header {position:absolute;top:8px;left:8px;right:8px;bottom:auto;box-sizing:border-box;width:auto;height:30px;min-height:30px;padding:0;background:transparent;border-radius:0;z-index:8;pointer-events:none;}
+.node.result.test-image-result .node-menu {margin-left:auto;display:flex;gap:2px;padding:2px 4px;border-radius:9px;background:transparent!important;pointer-events:auto;}
+.node.result.test-image-result .node-menu button {color:#fff!important;background:transparent!important;border:0;}
+.node.result.test-image-result .node-menu button svg,.node.result.test-image-result .node-menu button .ui-icon {color:#fff!important;stroke:#fff!important;}
+/* These icons are external SVG images: color/stroke cannot reach their paths. */
+.node.result.test-image-result .node-menu button img.ui-icon {filter:brightness(0) invert(1)!important;}
+.node.result.test-image-result .node-menu button:hover:not(:disabled) {background:transparent!important;}
+.node.result.test-image-result.test-fitted-media .node-header,.node.result.test-image-result.test-fitted-media .result-meta-line {opacity:0;visibility:hidden;transition:opacity .16s ease,visibility .16s ease;}
+.node.result.test-image-result.test-fitted-media:is(:hover,:focus-within,.selected,.box-selected) .node-header,.node.result.test-image-result.test-fitted-media:is(:hover,:focus-within,.selected,.box-selected) .result-meta-line {opacity:1;visibility:visible;}
+/* Keep keyboard access to controls while visually hiding their idle overlay. */
+.node.result.test-image-result.test-fitted-media .node-header {visibility:visible;}
+.node.result.test-image-result.test-fitted-media:not(:hover):not(:focus-within):not(.selected):not(.box-selected) .node-menu {pointer-events:none;}
+@media(prefers-reduced-motion:reduce){.node.result.test-image-result .node-header,.node.result.test-image-result .result-meta-line{transition:none!important}}
+.node.result.test-image-result .node-menu button:focus-visible {outline:2px solid #fff;outline-offset:1px;}
+.node.result.test-image-result.test-fitted-media .node-title {display:none;}
+.node.result.test-image-result .node-title {font-size:18px;overflow:hidden;text-overflow:ellipsis;}
+.node.result.test-image-result .preview {border-radius:12px;overflow:hidden;}
+.node.result .result-meta-line > * {background:rgba(0,0,0,.3);}
+/* Original pixel ghost inspired by BlackisPlay's Pac-Man Ghost Loader:
+   https://uiverse.io/BlackisPlay/sweet-frog-67 (source could not be retrieved). */
+.node.result.test-pending-media .node-header,.node.result.test-pending-media .result-meta-line,.node.result.test-pending-media .status,.node.result.test-pending-media .preview-regenerate-status{display:none!important}
+.node.result.test-pending-media .preview{position:relative;min-height:240px;border-radius:12px;background:var(--ui-surface)}
+.node.result.test-pending-media .preview>:not(.loading-state){display:none!important}
+.node.result.test-pending-media .loading-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;background:transparent;color:var(--ui-text)}
+.node.result.test-pending-media .loading-state strong{font-size:14px;font-weight:500;line-height:1.5}
+.test-ghost-loader{position:relative;display:block;width:64px;height:64px;background:#ed4549;clip-path:polygon(30% 0,70% 0,70% 10%,85% 10%,85% 25%,100% 25%,100% 100%,83% 100%,83% 84%,67% 84%,67% 100%,50% 100%,50% 84%,33% 84%,33% 100%,17% 100%,17% 84%,0 84%,0 25%,15% 25%,15% 10%,30% 10%);animation:test-ghost-hover 1s ease-in-out infinite}
+.test-ghost-eyes{position:absolute;left:12px;top:21px;display:flex;gap:9px;animation:test-ghost-look 2.4s steps(1,end) infinite}
+.test-ghost-eyes i{position:relative;display:block;width:16px;height:21px;background:#fff;clip-path:polygon(25% 0,75% 0,75% 15%,100% 15%,100% 85%,75% 85%,75% 100%,25% 100%,25% 85%,0 85%,0 15%,25% 15%)}
+.test-ghost-eyes i:after{content:'';position:absolute;width:7px;height:10px;top:7px;left:7px;background:#2454bb}
+@keyframes test-ghost-hover{0%,100%{transform:translateY(3px)}50%{transform:translateY(-4px)}}
+@keyframes test-ghost-look{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translate(0,-3px)}75%{transform:translateX(3px)}}
+@media(prefers-reduced-motion:reduce){.test-ghost-loader,.test-ghost-eyes{animation:none!important}}
 .test-launcher-motion-glyph {display:inline-flex;align-items:center;justify-content:center;flex:none;pointer-events:none;transform-origin:center;}
 #expandSidebarButton .test-launcher-motion-glyph,#collapseSidebarButton .test-launcher-motion-glyph,#assistantRailButton .test-launcher-motion-glyph {width:20px;height:24px;}
 #assistantToggleButton .test-launcher-motion-glyph {width:28px;height:28px;}
@@ -250,7 +350,17 @@ body:has(.app.assistant-open) #assistantToggleButton:not([data-mascot-positioned
 #assistantRailButton,#assistantRailButton:hover:not(:disabled),#assistantRailButton:active:not(:disabled),#assistantToggleButton,#assistantToggleButton:hover:not(:disabled),#assistantToggleButton:active:not(:disabled) {transform:none;translate:none;animation:none;}
 #assistantRailButton .assistant-rail-arrow {color:var(--ui-green);transition:translate 220ms var(--motion-ease),scale 120ms ease;}
 #assistantRailButton .assistant-rail-arrow svg {transition:transform 220ms var(--motion-ease);}
+.node .test-switch.test-pill-toggle{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:5px;width:auto;min-width:76px;height:30px;padding:4px 9px;border:1px solid var(--ui-line);border-radius:20px;background:var(--ui-soft);color:var(--ui-text);font-size:12px;transition:background .24s,color .24s}
+.node .test-switch.test-pill-toggle:before{display:none}.node .test-pill-toggle[aria-checked=true]{background:var(--ui-green);border-color:var(--ui-green);color:#14250b}.test-pill-icon{width:16px;height:16px;flex:none;transform-origin:50% 20%}
+.test-pill-toggle.test-switch-changed .test-pill-icon{animation:node-pill-ring .42s ease-out}.test-pill-toggle.test-switch-changed span{animation:node-pill-label .2s ease-out}
+.test-common-ratio{font-size:11px;opacity:.75;white-space:nowrap}
+.test-resolution-menu .node-select-option.active{animation:node-choice-pop .3s ease-out}
+@keyframes node-pill-ring{0%,100%{transform:rotate(0)}25%{transform:rotate(-18deg)}60%{transform:rotate(12deg)}}
+@keyframes node-pill-label{from{opacity:.3;transform:translateX(-3px)}to{opacity:1;transform:none}}
+@keyframes node-choice-pop{0%{transform:scale(.96)}60%{transform:scale(1.02)}100%{transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.test-pill-icon,.test-pill-toggle span,.test-resolution-menu .node-select-option{animation:none!important;transition:none!important}}
 #assistantToggleButton .ui-icon {transition:transform 240ms var(--motion-ease);}
+.node .test-pill-toggle[aria-checked=true]{background:linear-gradient(120deg,#68dfb8,#48bcd5);border-color:#48bcd5;color:#102c30}
 #assistantRailButton[aria-expanded=true],#assistantToggleButton[aria-expanded=true] {border-color:var(--ui-green);background:var(--ui-soft);}
 #assistantToggleButton[aria-expanded=true] .ui-icon {transform:rotate(12deg);}
 #assistantRailButton:active:not(:disabled) .assistant-rail-arrow {scale:.86;}

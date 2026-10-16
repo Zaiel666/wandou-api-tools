@@ -14,6 +14,7 @@ const homeUrl = pathToFileURL(path.join(root, "app", "index.html")).href;
     headless: true,
     executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
   });
+  try {
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1920, height: 1080 } });
   const page = await context.newPage();
   const pageErrors = [];
@@ -42,7 +43,7 @@ const homeUrl = pathToFileURL(path.join(root, "app", "index.html")).href;
   assert.equal((await page.locator("#export").innerText()).replace(/\s+/g, ""), "↗导出PNG", "本地导出按钮不应显示积分");
   assert.equal((await page.locator(".wandou-brand-name").innerText()).trim(), "豌豆 AI", "页头应使用豌豆 AI 品牌名称");
   assert.match(await page.locator("[data-gridform-logo]").getAttribute("src"), /wandou-logo-latest\.png$/, "页头应使用项目现有豌豆 Logo");
-  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--fld-accent").trim()), "#2f86ff", "交互强调色应统一为豌豆蓝");
+  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--fld-accent").trim()), "#78ba28", "交互强调色应匹配当前网格海报主题");
 
   const titleField = page.locator("#textFields textarea").first();
   await titleField.fill("网格测试标题\n自由发生");
@@ -111,8 +112,8 @@ const homeUrl = pathToFileURL(path.join(root, "app", "index.html")).href;
   assert.match(homePopup.url(), /gridform\.html$/);
   assert.match(home.url(), /index\.html$/, "首页卡片应在新标签页打开工作台");
 
-  await browser.close();
   console.log("GRIDFORM_WORKBENCH_PASS");
+  } finally { await browser.close(); }
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

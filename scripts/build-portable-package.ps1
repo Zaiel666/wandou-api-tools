@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
-    [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$BuildDirectory = 'dist'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,8 +11,9 @@ if ($Version -notmatch '^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$') { throw "Invalid
 
 $compiler = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $desktopRoot = Join-Path $RepositoryRoot 'desktop-client'
-$runtimeSource = Join-Path $desktopRoot 'dist\win-unpacked'
-$packageRoot = Join-Path $desktopRoot 'dist\portable-package'
+if ($BuildDirectory -notmatch '^dist(?:-[a-zA-Z0-9.]+)?$') { throw 'Invalid build directory.' }
+$runtimeSource = Join-Path $desktopRoot "$BuildDirectory\win-unpacked"
+$packageRoot = Join-Path $desktopRoot "$BuildDirectory\portable-package"
 $runtimeRoot = Join-Path $packageRoot '程序文件'
 $compatibilityApp = Join-Path $packageRoot 'resources\app'
 $launcher = Join-Path $packageRoot '豌豆AI工具.exe'

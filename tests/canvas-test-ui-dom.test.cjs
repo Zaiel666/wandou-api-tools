@@ -8,6 +8,49 @@ const {parseHTML} = require('../tools/canvas-ui-test/node_modules/linkedom');
 const app = path.resolve(__dirname, '../app');
 const script = fs.readFileSync(path.join(app, 'ai-node-canvas-test.js'), 'utf8');
 const page = fs.readFileSync(path.join(app, 'ai-node-canvas-test.html'), 'utf8');
+
+test('prompt library surfaces use standalone theme tokens and keep controls intact', () => {
+  const css = fs.readFileSync(path.join(app, 'ai-node-canvas-test-v2.css'), 'utf8');
+  const rules = css.slice(0, css.indexOf('/* Confirmed design'));
+  for (const selector of ['.prompt-manager-modal', '.prompt-manager-main', '.prompt-tags', '.prompt-card-body', '.prompt-card-source', '.prompt-search', '.prompt-manager-close svg']) {
+    assert.ok(rules.includes(selector), selector);
+  }
+  assert.ok(rules.includes('background:var(--ui-surface);color:var(--ui-text)'));
+  assert.ok(rules.includes('padding:0 96px 0 43px'));
+  assert.ok(rules.includes('color:#fff;background:rgba(0,0,0,.72)'));
+  assert.ok(!rules.includes('var(--wd-'));
+  const {document} = parseHTML(page);
+  assert.ok(document.querySelector('#closePromptManagerButton[aria-label] svg path'));
+  for (const id of ['promptManagerSearch', 'promptSourceList', 'promptTagList', 'promptManagerList', 'newPromptButton']) {
+    assert.ok(document.getElementById(id));
+  }
+});
+
+test('image menu download follows copy and forwards to existing download without green inline paint', () => {
+  const {document}=parseHTML(page);
+  const button=document.getElementById('lightboxContextDownload');
+  assert.equal(document.getElementById('lightboxContextCopy').nextElementSibling,button);
+  let downloads=0,closed=0;
+  const context=vm.createContext({document,closeLightboxImageMenu:()=>closed++,lightboxDownload:{click:()=>downloads++}});
+  const start=page.indexOf('    document.getElementById("lightboxContextDownload").addEventListener');
+  vm.runInContext(page.slice(start,page.indexOf('    lightboxContextPrompt.addEventListener',start)),context);
+  button.click();
+  assert.equal(downloads,1);assert.equal(closed,1);
+  const hot=page.slice(page.indexOf('    function setLightboxImageMenuHot('),page.indexOf('    function closeLightboxImageMenu('));
+  assert.ok(!hot.includes('#13aa72'));
+  assert.ok(hot.includes('removeProperty("background")'));
+});
+
+test('prompt library secondary text meets AA contrast in both themes', () => {
+  const luminance = hex => {
+    const c = hex.match(/\w\w/g).map(v => parseInt(v, 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+    return c[0] * .2126 + c[1] * .7152 + c[2] * .0722;
+  };
+  for (const [text, surface] of [['62626e','ffffff'], ['62626e','f8f8f9'], ['b0b0ba','1b1b1b'], ['b0b0ba','222222']]) {
+    const a = luminance(text), b = luminance(surface);
+    assert.ok((Math.max(a,b) + .05) / (Math.min(a,b) + .05) >= 4.5);
+  }
+});
 test('mascot launcher retains button semantics and composer has no reserved footer', () => {
   const {document} = parseHTML(page);
   const launcher = document.getElementById('assistantToggleButton');
@@ -42,6 +85,14 @@ const generatorFixture = (count=1, locked=false) => `<section class="node genera
   <div class="form-row generator-count-row"><label>数量</label><div class="count-options">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-count="${n}" ${locked?'disabled':''} class="${count===n?'active':''}">${n}</button>`).join('')}</div></div>
   <button data-generate>生成图片</button></section>`;
 
+test('common ratios are display-only badges preserving original values and actions',()=>{
+ const ratios=['1:1','16:9','9:16','4:3','3:4','21:9','Auto'];
+ const markup=generatorFixture().replace('<div class="ratio-menu"></div>','<div class="ratio-menu">'+ratios.map(r=>`<button class="node-select-option" data-node-ratio="${r}">${r} 示例</button>`).join('')+'</div>');
+ const {node,ui}=setup(markup);let clicks=0;node.querySelector('[data-node-ratio="1:1"]').onclick=()=>clicks++;
+ ui.decorateNode(node,{type:'generator',count:1});assert.equal(node.querySelectorAll('.test-common-ratio').length,5);
+ node.querySelector('[data-node-ratio="1:1"]').click();assert.equal(clicks,1);
+ assert.equal(node.querySelector('[data-node-ratio="21:9"] .test-common-ratio'),null);
+});
 test('generator moves original controls, preserves handlers and selected skill summary', () => {
   const {node, ui} = setup(generatorFixture());
   const library = node.querySelector('.prompt-corner-tools [data-prompt-library]');
@@ -170,6 +221,10 @@ test('full-page boot wires the bottom toolbar, sidebar icons and single-row assi
   canvasWrap.getBoundingClientRect=()=>({width:1000,height:800});
   const calls=[];
   const view={x:40,y:20,zoom:.75};
+  const imageMenuActions=[];
+  for (const id of ['lightboxContextCopy','lightboxContextPrompt','lightboxContextRegenerate']) {
+    document.getElementById(id).addEventListener('click',()=>imageMenuActions.push(id));
+  }
   const context=vm.createContext({document,window,console,canvasStoragePrefix:'',
     renderNode:()=>document.createElement('section'),render:()=>calls.push('render'),
     setTimeout:()=>{},requestAnimationFrame:fn=>fn(),MutationObserver:window.MutationObserver,
@@ -182,9 +237,29 @@ test('full-page boot wires the bottom toolbar, sidebar icons and single-row assi
   });
   vm.runInContext(script,context);
   assert.equal(document.body.dataset.testReady,'true');
+  for (const id of ['lightboxContextCopy','lightboxContextPrompt','lightboxContextRegenerate']) {
+    const button=document.getElementById(id);
+    assert.ok(button.classList.contains('test-frame-button'));
+    assert.equal(button.querySelectorAll('img.ui-icon').length,1);
+    assert.equal(button.children.length,2);
+    assert.equal(button.dataset.wdAction,undefined);
+    button.click();
+  }
+  assert.deepEqual(imageMenuActions,['lightboxContextCopy','lightboxContextPrompt','lightboxContextRegenerate']);
+  assert.ok(fs.readFileSync(path.join(app,'action-motion.js'),'utf8').includes("const excluded='.test-frame-button,"));
   assert.equal(document.querySelector('.topbar').parentElement,document.body);
   assert.equal(document.querySelectorAll('[data-add-node] .ui-icon').length,11);
-  assert.equal(document.querySelectorAll('.assistant-starters .ui-icon').length,3);
+  assert.equal(document.querySelectorAll('[data-menu-node].test-create-menu-item .ui-icon').length,11);
+  for (const button of document.querySelectorAll('[data-menu-node]')) {
+    assert.equal(button.children.length,2);
+    assert.equal(button.lastElementChild.tagName,'SPAN');
+    assert.equal(button.lastElementChild.textContent,button.getAttribute('aria-label'));
+  }
+  const hoverCss=fs.readFileSync(path.join(app,'ai-node-canvas-test-controls.css'),'utf8');
+  assert.ok(hoverCss.includes('grid-template-columns:20px minmax(0,1fr)'));
+  assert.ok(hoverCss.includes('pointer-events:none'));
+  assert.ok(hoverCss.includes('transform:scaleX(0)'));
+  assert.equal(document.querySelectorAll('.assistant-starters .ui-icon').length,4);
   assert.equal(document.querySelectorAll('.assistant-select-field > span').length,0);
   assert.ok(document.querySelector('.assistant-title-mark .green'));
   assert.ok(document.getElementById('clearButton').hidden);
@@ -313,6 +388,18 @@ test('image result shell is edge-to-edge before, during and after generation, ex
   assert.match(css,/\.node\.result\.test-image-result \.node-body \{padding:0/);
 });
 
+test('image result external SVG icons are whitened without changing other icons',()=>{
+ const css=fs.readFileSync(path.join(app,'ai-node-canvas-test-controls.css'),'utf8');
+ assert.match(css,/\.node\.result\.test-image-result \.node-menu button img\.ui-icon \{filter:brightness\(0\) invert\(1\)!important;/);
+});
+test('pending image and video show ghost and single generating label only',()=>{
+ for(const mediaType of ['image','video','audio']){
+ const {node,ui}=setup('<section class="node result"><div class="node-menu"></div><div class="preview"><div class="loading-state">old loading</div><div class="result-meta-line">12s</div></div></section>');
+ ui.decorateNode(node,{type:'result',pending:true,mediaType});
+ assert.equal(node.classList.contains('test-pending-media'),mediaType!=='audio');
+ if(mediaType!=='audio'){assert.equal(node.querySelector('.loading-state').textContent,'正在生成中');assert.equal(node.querySelectorAll('.test-ghost-loader').length,1);}
+ }
+});
 test('motion decorates controls without adding clicks or changing their disabled state', () => {
   const {node,ui}=setup(generatorFixture());
   ui.decorateNode(node,{type:'generator',count:1});

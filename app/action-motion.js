@@ -1,7 +1,7 @@
 /* Shared visual adapter. Never replaces buttons, labels, event handlers or API logic. */
 (()=>{
  const explicit='.generate-button,[data-generate],[data-psd-generate],[data-vector-generate],#generate-btn,#paste-generate-btn,#generate,.director-primary,.director-tools [data-action="frames"]';
- const excluded='[data-add-node],.sidebar .button-grid button,.test-generate,.preview-regenerate,.node-menu button,.preview-download,[data-preview-open],.preview-inner,.product-preview,[data-zoom-in],[data-zoom-out],[data-upload],.upload-zone,[data-action="stop"],[data-action="start"],[data-action="end"]';
+ const excluded='.test-frame-button,.motion-export #cancel,[data-add-node],.sidebar .button-grid button,.test-generate,.preview-regenerate,.node-menu button,.preview-download,[data-preview-open],.preview-inner,.product-preview,[data-zoom-in],[data-zoom-out],[data-upload],.upload-zone,[data-action="stop"],[data-action="start"],[data-action="end"]';
  const pending=new WeakSet(),timers=new WeakMap();
  function sync(button){
   if(!button?.matches?.('button'))return;

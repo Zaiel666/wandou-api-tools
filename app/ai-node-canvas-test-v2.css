@@ -1,3 +1,51 @@
+/* Prompt library owns its surfaces: legacy --wd-neutral-* tokens are not loaded
+   by this standalone page. Keep image overlays separate from themed text. */
+.prompt-manager-modal,.prompt-editor-card {
+  --prompt-muted:#62626e;
+  background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-line);
+}
+.dark-theme .prompt-manager-modal,.dark-theme .prompt-editor-card {--prompt-muted:#b0b0ba;}
+.prompt-manager-main {background:var(--ui-surface);color:var(--ui-text);}
+.prompt-manager-modal .prompt-tags {background:var(--ui-soft);color:var(--ui-text);border-color:var(--ui-line);}
+.prompt-manager-modal .prompt-source-button,.prompt-manager-modal .prompt-tag {
+  background:transparent;color:var(--ui-text);border-color:transparent;
+}
+.prompt-manager-modal .prompt-source-button {justify-content:space-between;text-align:left;}
+.prompt-manager-modal .prompt-source-button.active,.prompt-manager-modal .prompt-tag.active {
+  background:var(--ui-hover);color:var(--ui-text);border-color:var(--ui-line);box-shadow:none;
+}
+.prompt-manager-modal .prompt-source-button:hover,.prompt-manager-modal .prompt-tag:hover {background:var(--ui-hover);}
+.prompt-manager-modal .prompt-search {
+  width:100%;height:46px;margin:0;padding:0 96px 0 43px;
+  background:var(--ui-soft);color:var(--ui-text);border-color:var(--ui-line);caret-color:var(--ui-text);
+}
+.prompt-manager-modal .prompt-search::placeholder {color:var(--prompt-muted);opacity:1;}
+.prompt-manager-modal .prompt-search:focus-visible {outline:2px solid var(--ui-text);outline-offset:2px;}
+.prompt-manager-modal .prompt-manager-close {
+  display:grid;place-items:center;width:36px;min-width:36px;height:36px;min-height:36px;padding:0;
+  color:var(--ui-text);background:var(--ui-soft);border:1px solid var(--ui-line);border-radius:50%;
+}
+.prompt-manager-modal .prompt-manager-close svg {display:block;flex-shrink:0;width:20px;height:20px;stroke:currentColor;fill:none;}
+.prompt-manager-modal .prompt-manager-close:hover {background:var(--ui-hover);}
+.prompt-manager-modal .prompt-library-item,.prompt-manager-modal .prompt-card-body {
+  background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-line);
+}
+.prompt-manager-modal .prompt-library-item:hover,.prompt-manager-modal .prompt-library-item:focus-visible {
+  background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-text);
+}
+.prompt-manager-modal .prompt-card-cover {background:var(--ui-soft);}
+.prompt-manager-modal .prompt-card-placeholder {color:var(--prompt-muted);}
+.prompt-manager-modal .prompt-card-source {color:#fff;background:rgba(0,0,0,.72);}
+.prompt-manager-modal .prompt-card-tags small {background:var(--ui-soft);color:var(--prompt-muted);}
+.prompt-manager-modal .prompt-manager-status,.prompt-manager-modal .prompt-manager-count,
+.prompt-manager-modal .prompt-source-button small,.prompt-manager-modal .prompt-tags h3,
+.prompt-manager-modal .prompt-manager-search-wrap > svg {color:var(--prompt-muted);}
+.prompt-manager-modal .prompt-manager-status.error {color:#cf4545;}
+.prompt-manager-modal .prompt-new-button {background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-line);}
+.prompt-manager-modal .prompt-new-button:hover {background:var(--ui-hover);}
+.prompt-manager-modal .prompt-manager-list,.prompt-manager-modal .prompt-filter-section {scrollbar-color:var(--ui-muted) transparent;}
+.prompt-editor-card input,.prompt-editor-card textarea {background:var(--ui-soft);color:var(--ui-text);border-color:var(--ui-line);}
+
 /* Confirmed design, independent component stylesheet. Old dialog rules live in
    the lower-priority legacy layer; no shared glass skin or specificity patches. */
 :root {--ui-bg:#fff;--ui-surface:#fff;--ui-soft:#f8f8f9;--ui-hover:#f1f1f3;--ui-line:#e7e7ec;--ui-text:#171720;--ui-muted:#858590;--ui-primary:#181818;--ui-on-primary:#fff;--ui-green:#19b328;--ui-shadow:0 2px 7px #18182009;--sidebar-size:232px;--chat-size:316px;}

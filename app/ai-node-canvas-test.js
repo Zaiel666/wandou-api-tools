@@ -93,6 +93,10 @@
       button.setAttribute('aria-label', name);
       button.title = button.disabled ? '当前模型不支持透明背景' : `${name}：${node[property] ? '已开启' : '已关闭'}`;
       button.innerHTML = '<span class="test-switch-knob" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="test-switch-off" d="M7.5 7.5l9 9M16.5 7.5l-9 9"/><path class="test-switch-on" d="M5.5 12.5l4.5 4.5 8.5-9"/></svg></span>';
+      if(node.type === 'generator') {
+        button.classList.add('test-pill-toggle');
+        button.innerHTML='<svg class="test-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">'+(property==='transparentBackground'?'<path d="m4 15 9-10 7 7-7 8H9zM8 11l7 7M13 20h8"/>':'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>')+'</svg><span>'+(node[property]?'已开启':'开启')+'</span>';
+      }
     }
     const hint = element.querySelector('.auto-split-hint');
     if (hint) { hint.title = hint.textContent; hint.textContent = '拆分 1–99 张 · 独立提示词'; }
@@ -110,6 +114,15 @@
     }
   };
   const decorateMediaFrame = (element, node) => {
+    const pendingMedia = node.type === 'result' && !!node.pending && !['audio','text'].includes(node.mediaType);
+    element.classList.toggle('test-pending-media', pendingMedia);
+    if (pendingMedia) {
+      const loading = element.querySelector('.loading-state');
+      if (loading) {
+        loading.setAttribute('role','status');loading.setAttribute('aria-live','polite');
+        loading.innerHTML='<span class="test-ghost-loader" aria-hidden="true"><span class="test-ghost-eyes"><i></i><i></i></span></span><strong>正在生成中</strong>';
+      }
+    }
     if (node.type === 'result' && !['video','audio','text'].includes(node.mediaType)) {
       element.classList.add('test-image-result');
     }
@@ -375,6 +388,11 @@
     }
 
     const ratio = element.querySelector('.ratio-menu')?.closest('.form-row');
+    element.querySelectorAll('.ratio-menu .node-select-option').forEach(option => {
+      if (/^(1:1|16:9|9:16|4:3|3:4)(?:\s|$)/.test(option.textContent.trim()) && !option.querySelector('.test-common-ratio')) {
+        const badge = document.createElement('span');badge.className = 'test-common-ratio';badge.textContent = '（常用）';option.append(badge);
+      }
+    });
     const resolution = element.querySelector('.resolution-row');
     const count = element.querySelector('.generator-count-row');
     if (ratio && resolution && count) {
@@ -446,7 +464,7 @@
     document.querySelector('.brand h1').innerHTML = '豌豆 AI<span class="brand-subtitle">绘图节点画布</span>';
     const badge = document.createElement('span');
     badge.className = 'test-version-badge';
-    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.2 · 节点画布' : '测试版 · 独立数据';
+    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.3 · 节点画布' : '测试版 · 独立数据';
     badge.title = '测试项目与正式版隔离；API 设置需要在测试页单独配置。';
     document.querySelector('.sidebar').append(badge);
     const creation = {
@@ -460,18 +478,39 @@
       labelButton(button, label, name);
       if (color) button.querySelector('.ui-icon').classList.add(color);
     });
+    // Reuse real icons instead of absolutely positioned legacy glyphs, so long
+    // menu labels never collide with their icon. Keep the original buttons/events.
+    document.querySelectorAll('[data-menu-node]').forEach(button => {
+      const entry = creation[button.dataset.menuNode];
+      if (!entry) return;
+      labelButton(button, button.textContent.trim(), entry[0]);
+      button.classList.add('test-create-menu-item');
+    });
     document.querySelector('#newProjectButton').prepend(icon('plus'));
+    for (const [id, name, label] of [
+      ['lightboxContextCopy','copy','复制图片'],
+      ['lightboxContextDownload','download','下载图片'],
+      ['lightboxContextPrompt','clipboard-text','查看关键词'],
+      ['lightboxContextRegenerate','refresh','重新生成']
+    ]) {
+      const button = document.getElementById(id);
+      if (!button) continue;
+      button.classList.add('test-frame-button');
+      delete button.dataset.wdAction;
+      labelButton(button, label, name);
+    }
     document.querySelectorAll('.assistant-title-mark,.assistant-orb').forEach(mark => {
       mark.replaceChildren(icon('sparkles', 'green'));
     });
     document.querySelectorAll('.assistant-starters button').forEach((button, index) => {
       const text = document.createElement('div');
       while (button.firstChild) text.append(button.firstChild);
-      button.append(icon(['bulb','sitemap','compass'][index]), text);
+      button.append(icon(['bulb','sitemap','compass','sparkles'][index]), text);
     });
     labelButton(document.querySelector('#assistantAttachButton'), '上传图片', 'paperclip', true);
     labelButton(document.querySelector('#assistantSendButton'), '发送', 'send', true);
-    labelButton(document.querySelector('#assistantClearButton'), '清空对话', 'trash', true);
+    labelButton(document.querySelector('#assistantClearButton'), '新对话（当前对话将存入历史记录）', 'plus', true);
+    document.querySelector('#assistantClearButton').dataset.tooltip = '新对话 · 自动保存历史';
     // A paint-contained canvas creates a containing block even for fixed children.
     // Move the existing bar out so it stays at the viewport's upper-right corner.
     document.body.append(document.querySelector('.topbar'));

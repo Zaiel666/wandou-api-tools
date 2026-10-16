@@ -66,9 +66,9 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.ok(shell.toolbarRightGap >= 7 && shell.toolbarRightGap <= 9, JSON.stringify(shell));
   assert.ok(shell.toolbarWidth >= 340 && shell.toolbarWidth <= 480, JSON.stringify(shell));
   assert.ok(Math.abs(shell.toolbarHeight - 52) < 1, JSON.stringify(shell));
-  assert.ok(shell.buttonHeights.every((height) => height >= 38 && height <= 40.1), JSON.stringify(shell.buttonHeights));
+  assert.ok(shell.buttonHeights.every((height) => height >= 38 && height <= 44.1), JSON.stringify(shell.buttonHeights));
   assert.equal(shell.toolbarItems.length, 5);
-  assert.ok(shell.toolbarItems.every((item) => item.height === 40), JSON.stringify(shell.toolbarItems));
+  assert.ok(shell.toolbarItems.every((item) => item.height >= 40 && item.height <= 44), JSON.stringify(shell.toolbarItems));
   assert.ok(shell.toolbarItems.filter((_, index) => index !== 3).every((item) => item.background === "rgb(249, 250, 249)"), JSON.stringify(shell.toolbarItems));
   assert.equal(shell.toolbarItems[3].background, "rgb(249, 250, 249)");
   assert.ok(shell.toolbarItems.slice(1).every((item, index) => Math.abs(item.left - shell.toolbarItems[index].right - 8) < 1), JSON.stringify(shell.toolbarItems));

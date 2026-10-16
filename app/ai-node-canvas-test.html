@@ -7382,6 +7382,7 @@
 <link rel="stylesheet" href="./ai-node-canvas-test-v2.css">
 <link rel="stylesheet" href="./ai-node-canvas-test-motion.css">
 <link rel="stylesheet" href="./ai-node-canvas-test-controls.css">
+<link rel="stylesheet" href="./ai-node-canvas-test-assistant.css">
 <link rel="stylesheet" href="./director-test.css"><link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script></head>
 <body class="node-canvas-page canvas-test-page">
   <div class="app assistant-open">
@@ -7576,6 +7577,7 @@
           <button type="button" data-chat-starter="帮我把当前想法整理成一段清晰、可直接生成图片的中文提示词。"><strong>整理生图提示词</strong><span>补全构图、光线与材质</span></button>
           <button type="button" data-chat-starter="请为我规划一套从参考图到最终效果图的节点连接流程。"><strong>规划节点流程</strong><span>安排参考图与生成节点</span></button>
           <button type="button" data-chat-starter="请给我三个简洁、差异明确的视觉创意方向。"><strong>寻找创意方向</strong><span>快速获得三个方案</span></button>
+          <button type="button" data-chat-starter="请和我进行一次灵感头脑风暴，先询问我的主题，再从不同视角提出创意。"><strong>灵感头脑风暴</strong><span>探索更多创意可能</span></button>
         </div>
         <div id="assistantMessages" class="assistant-messages" aria-live="polite"></div>
         <form id="assistantComposer" class="assistant-composer">
@@ -7618,6 +7620,7 @@
     <video id="lightboxVideo" class="lightbox-media" controls playsinline hidden></video>
     <div id="lightboxImageMenu" class="lightbox-image-menu">
       <button id="lightboxContextCopy" class="ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>复制图片</span></button>
+      <button id="lightboxContextDownload" class="ghost test-frame-button" type="button">下载图片</button>
       <button id="lightboxContextPrompt" class="ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span>查看关键词</span></button>
       <button id="lightboxContextRegenerate" class="ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg><span>重新生成</span></button>
     </div>
@@ -9591,7 +9594,12 @@
       }
     }
 
-    function clearAssistantConversation() {
+    async function clearAssistantConversation() {
+      if (assistantSending) { showToast("请等待当前回复完成后再开始新对话。"); return; }
+      const key = assistantConversationStorageKey();
+      if (!window.WandouAssistantHistory) { showToast("历史记录尚未就绪，请稍后重试。"); return; }
+      if (!await window.WandouAssistantHistory.archive()) return;
+      if (key !== assistantConversationStorageKey() || assistantSending) return;
       cancelAssistantRequest();
       assistantMessages = [];
       assistantAttachments = [];
@@ -20425,8 +20433,7 @@ ${formatInstruction}`;
     function setLightboxImageMenuHot(activeButton = null) {
       lightboxImageMenu.querySelectorAll("button").forEach((button) => {
         button.classList.toggle("is-hot", button === activeButton);
-        if (button === activeButton) button.style.setProperty("background", "#13aa72", "important");
-        else button.style.removeProperty("background");
+        button.style.removeProperty("background");
       });
     }
 
@@ -23211,6 +23218,11 @@ ${formatInstruction}`;
       event.stopPropagation();
       await copyActiveLightboxImage(lightboxContextCopy);
     });
+    document.getElementById("lightboxContextDownload").addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeLightboxImageMenu();
+      lightboxDownload.click();
+    });
     lightboxContextPrompt.addEventListener("click", (event) => {
       event.stopPropagation();
       viewActiveLightboxPrompt();
@@ -23228,12 +23240,12 @@ ${formatInstruction}`;
       lightboxContextPrompt.hidden = !activeLightboxPromptText();
       lightboxContextRegenerate.hidden = !canRegenerateResult(nodes.find((item) => item.id === activeLightbox.nodeId));
       const menuWidth = 176;
-      const visibleMenuItems = [lightboxContextCopy, lightboxContextPrompt, lightboxContextRegenerate].filter((item) => !item.hidden).length;
-      const menuHeight = 8 + visibleMenuItems * 40;
+      const visibleMenuItems = [...lightboxImageMenu.querySelectorAll("button")].filter((item) => !item.hidden).length;
+      const menuHeight = 18 + visibleMenuItems * 44;
       lightboxImageMenu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8))}px`;
       lightboxImageMenu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8))}px`;
       lightboxImageMenu.classList.add("open");
-      setLightboxImageMenuHot(lightboxContextCopy);
+      setLightboxImageMenuHot();
     };
     lightboxImage.addEventListener("contextmenu", openLightboxImageMenu);
     lightboxImage.addEventListener("dblclick", openLightboxImageMenu);
@@ -23595,5 +23607,6 @@ ${formatInstruction}`;
   <script src="./director-core.js"></script>
   <script src="./director-test.js"></script>
   <script src="./ai-node-canvas-test.js"></script>
+  <script src="./ai-node-canvas-test-assistant.js"></script>
 </body>
 </html>

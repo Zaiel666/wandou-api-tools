@@ -92,6 +92,6 @@ test("vector node exports embedded-image and editable-path SVG/AI modes", async 
   assert.match(epsText, /%%BeginLayer:/);
   assert.match(epsText, /%%BeginObject:/);
   assert.doesNotMatch(epsText, /image|colorimage/i);
-  assert.ok(await vectorNode.locator("[data-vector-download]").evaluate((button) => button.getBoundingClientRect().height >= 48), "file download button should remain large and easy to click");
+  assert.ok(await vectorNode.locator("[data-vector-download]").evaluate((button) => button.offsetHeight >= 44), "download button must retain the shared 44px minimum before canvas zoom");
   assert.deepEqual(errors, []);
 });

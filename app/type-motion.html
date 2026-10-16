@@ -12,4 +12,4 @@
   <section><h2>项目</h2><button id="saveProject">导出项目</button><label class="motion-file">导入项目<input id="loadProject" type="file" accept=".json,application/json"></label><p class="motion-note">草稿自动保存在本机。导出项目可备份文字和参数。</p></section>
  </aside>
  <section class="motion-stage"><div class="motion-stage-bar"><span>实时预览</span><span id="dimensions">900 × 1200</span></div><div class="motion-viewport"><canvas id="poster" width="900" height="1200" aria-label="动态海报预览"></canvas></div><div class="motion-playbar"><button id="play" aria-pressed="true">暂停</button><input id="timeline" aria-label="动画进度" type="range" min="0" max="1000" value="0"><span id="time">0.0 秒</span></div><div class="motion-export"><button id="png">导出 PNG</button><button id="html">导出动态 HTML</button><button class="primary" id="video">导出动画视频</button><button id="cancel" hidden>取消导出</button></div><p id="status" role="status" aria-live="polite">本地渲染，不上传文字，不消耗 API 额度。</p></section>
-</main></body></html>
+</main><script src="./type-motion-workbench.js" defer></script><script src="./type-motion-transport.js" defer></script><script src="./type-motion-alpha.js" defer></script></body></html>
