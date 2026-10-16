@@ -5,6 +5,7 @@ const os = require("os");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
 const { pathToFileURL, fileURLToPath } = require("url");
+require('./director-ipc.cjs')({app, ipcMain, getAppRoot});
 
 const APP_NAME = "豌豆AI工具";
 const PORTABLE_RUNTIME_DIRECTORY = "程序文件";
@@ -971,7 +972,7 @@ async function startPortableUpdate(updateInfo) {
 function getAppRoot() {
   return app.isPackaged ? path.join(process.resourcesPath, "app") : path.resolve(__dirname, "..", "app");
 }
-function getAppEntryUrl() { return pathToFileURL(path.join(getAppRoot(), "index.html")).href; }
+function getAppEntryUrl() { return pathToFileURL(path.join(getAppRoot(), "homepage-test.html")).href; }
 function getIconPath() {
   const ico = path.join(getAppRoot(), "logo.ico");
   return fs.existsSync(ico) ? ico : path.join(getAppRoot(), "logo.png");
@@ -996,6 +997,9 @@ function titleForUrl(rawUrl) {
     if (parsed.hostname === "www.zayapi.top" || parsed.hostname === "zayapi.top") return "商品中心";
     const names = {
       "index.html": "首页",
+      "homepage-test.html": "首页",
+      "ai-node-canvas-v2.html": "节点画布",
+      "ai-node-canvas-test.html": "节点画布",
       "project-hub.html": "项目文件夹",
       "ai-node-canvas.html": "节点画布",
       "asset-library.html": "资产",

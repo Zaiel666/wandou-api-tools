@@ -202,7 +202,7 @@ function openTab({ url, title = "新标签页", pinned = false }) {
     updateNavigation();
   });
   view.addEventListener("page-title-updated", (event) => {
-    const isCanvasTab = /ai-node-canvas\.html(?:[?#]|$)/i.test(tab.url);
+    const isCanvasTab = isNodeCanvasTab(tab);
     if (tab.title === "新标签页" || tab.title === "豌豆AI" || (isCanvasTab && event.title && event.title !== "豌豆AI节点画布")) {
       tab.title = event.title || tab.title;
       tab.button.querySelector(".tab-label").textContent = tab.title;
@@ -261,7 +261,7 @@ function activateTab(id) {
 }
 
 function isNodeCanvasTab(tab) {
-  try { return new URL(tab?.url || "").pathname.toLowerCase().endsWith("/ai-node-canvas.html"); }
+  try { return /\/ai-node-canvas(?:-v2|-test)?\.html$/i.test(new URL(tab?.url || "").pathname); }
   catch (_error) { return false; }
 }
 

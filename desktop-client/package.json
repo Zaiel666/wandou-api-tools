@@ -22,8 +22,9 @@
     "copyright": "Copyright © 2026 PeaFour",
     "asar": true,
     "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "shell.html", "shell.css", "shell.js", "client-config.json", "package.json"],
+    "files": ["main.js", "preload.js", "director-ipc.cjs", "director-converter.cjs", "shell.html", "shell.css", "shell.js", "client-config.json", "package.json"],
     "extraResources": [
+      { "from": "../tools/director-blender/convert-blend.py", "to": "director/convert-blend.py" },
       { "from": "../app", "to": "app", "filter": ["**/*", "!ui-v2-lab.html", "!gridform-logo.png"] },
       { "from": "portable-updater.ps1", "to": "portable-updater.ps1" },
       { "from": "portable-updater.exe", "to": "portable-updater.exe" }

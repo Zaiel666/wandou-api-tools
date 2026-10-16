@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>节点画布 · 2.0</title><link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script></head>
+<body><p>正在打开新版节点画布…</p><a href="./ai-node-canvas.html">打开旧版画布</a>
+<script>
+const target = new URL('./ai-node-canvas-test.html', location.href);
+target.search = location.search;
+target.searchParams.set('workspace', 'production');
+target.hash = location.hash;
+location.replace(target.href);
+</script></body></html>

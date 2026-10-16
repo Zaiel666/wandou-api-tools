@@ -51,6 +51,14 @@ jobs:
       - name: Validate desktop scripts
         shell: pwsh
         run: |
+          pnpm --dir tools/canvas-ui-test install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'DOM test dependencies failed' }
+          choco install blender --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Blender test dependency failed' }
+
+      - name: Check desktop syntax
+        shell: pwsh
+        run: |
           Get-ChildItem -LiteralPath "desktop-client" -Filter "*.js" | ForEach-Object {
             node --check $_.FullName
             if ($LASTEXITCODE -ne 0) { throw "Desktop script syntax check failed: $($_.Name)" }
@@ -61,7 +69,7 @@ jobs:
         run: |
           $env:NODE_PATH = (Resolve-Path "desktop-client\node_modules").Path
           $tests = Get-ChildItem -LiteralPath "tests" -Filter "*.test.cjs" |
-            Where-Object { $_.Name -ne "real-api-image-ratios.test.cjs" }
+            Where-Object { $_.Name -notin @("real-api-image-ratios.test.cjs", "grok-live-api.test.cjs") }
           $failedTests = @()
           foreach ($test in $tests) {
             node $test.FullName

@@ -27,7 +27,7 @@ function runBlender(exe, args, signal, timeoutMs) {
     child.once('close',code=>finish(signal?.aborted?new Error('转换已取消。'):timedOut?new Error('转换超过两分钟，已停止。请精简模型后重试。'):code!==0?new Error('Blender 转换失败，请确认工程可在 Blender 中打开。'):null));
   });
 }
-async function convertBlend(source, {signal, blender, timeoutMs=120000, tempRoot=os.tmpdir()}={}) {
+async function convertBlend(source, {signal, blender, script:scriptPath, timeoutMs=120000, tempRoot=os.tmpdir()}={}) {
   if(typeof source!=='string'||path.extname(source).toLowerCase()!=='.blend')throw new Error('请选择磁盘上的 .blend 文件。');
   const real=await fs.realpath(source);
   if(path.extname(real).toLowerCase()!=='.blend')throw new Error('文件类型无效。');
@@ -38,7 +38,7 @@ async function convertBlend(source, {signal, blender, timeoutMs=120000, tempRoot
   const directory=await fs.mkdtemp(path.join(tempRoot,'wandou-director-blend-'));
   try {
     const output=path.join(directory,'converted.glb');
-    const script=path.resolve(__dirname,'../tools/director-blender/convert-blend.py');
+    const script=scriptPath || path.resolve(__dirname,'../tools/director-blender/convert-blend.py');
     await runBlender(exe,['--background','--factory-startup','--disable-autoexec','--python-exit-code','1','--python',script,'--',real,output],signal,timeoutMs);
     if(signal?.aborted)throw new Error('转换已取消。');
     const result=await fs.stat(output);

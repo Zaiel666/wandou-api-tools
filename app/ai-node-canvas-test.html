@@ -22953,8 +22953,8 @@ ${formatInstruction}`;
       scheduleCanvasSave();
     });
     window.addEventListener("storage", (event) => {
-      if (event.key === "wandou:canvas-ui-test:v1:" + globalThemeStorageKey) applyGlobalTheme(event.newValue || "light");
-      if (event.key === "wandou:canvas-ui-test:v1:" + homeProjectListStorageKey) updateCurrentFolderName();
+      if (event.key === canvasStoragePrefix + globalThemeStorageKey) applyGlobalTheme(event.newValue || "light");
+      if (event.key === canvasStoragePrefix + homeProjectListStorageKey) updateCurrentFolderName();
     });
     openGalleryButton.addEventListener("click", () => openGallery("image"));
     openVideoGalleryButton.addEventListener("click", () => openGallery("video"));

@@ -31,6 +31,21 @@ function storage() {
   return target;
 }
 
+test('release workspace reads legacy projects and keeps prototype data intact', () => {
+  const localStorage = storage(), sessionStorage = storage();
+  localStorage.setItem('aiCanvasStateV1', 'legacy');
+  localStorage.setItem('wandou:canvas-ui-test:v1:aiCanvasStateV1', 'prototype');
+  const open = () => ({});
+  const indexedDB = {open,deleteDatabase:()=>{}};
+  const window = {localStorage,sessionStorage,indexedDB,location:{search:'?project=old-folder&workspace=production'}};
+  const context = vm.createContext({window,indexedDB});
+  vm.runInContext(read('ai-node-canvas-test-storage.js')+'\nthis.store=canvasTestStorage;', context);
+  assert.equal(context.store.getItem('aiCanvasStateV1'), 'legacy');
+  assert.equal(indexedDB.open,open);
+  context.store.setItem('aiCanvasStateV1','updated');
+  assert.equal(localStorage.getItem('wandou:canvas-ui-test:v1:aiCanvasStateV1'),'prototype');
+});
+
 test('test project, theme, session and database operations cannot hit production namespaces', () => {
   const localStorage = storage(), sessionStorage = storage();
   localStorage.setItem('aiCanvasStateV1', 'production');
