@@ -111,6 +111,18 @@ button, input, select { font: inherit; }
   --green-soft: rgba(39,174,96,.13);
   --shadow: 0 10px 30px rgba(0,0,0,.22);
 }
+/* The page also toggles body.dark; keep its inline legacy variables from restoring a green cast. */
+body.dark {
+  --bg: #0d0f11;
+  --panel: #15171a;
+  --panel-soft: #191c20;
+  --preview: #0a0c0e;
+  --line: #292d32;
+  --line-strong: #3b4047;
+  --text: #f1f3f5;
+  --muted: #9a9fa8;
+  --green-soft: rgba(39,174,96,.13);
+}
 .asset-shell { width:100%; max-width:none; min-height:100dvh; margin:0; padding:clamp(14px,1.35vw,24px) clamp(16px,1.7vw,32px) 40px; }
 .asset-topbar { height:58px; padding:0 16px; border-radius:12px; background:var(--panel) !important; }
 .asset-brand { gap:10px; }

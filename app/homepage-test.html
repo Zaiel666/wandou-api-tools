@@ -1,0 +1,1426 @@
+﻿<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7f7">
+  <meta name="description" content="AI 创作工具综合入口，集中打开 AI 节点画布、AI 生图、抠图 PNG 工作流和关键词生成/反推。">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./logo.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>豌豆 AI · 首页测试版</title>
+  <link rel="stylesheet" href="./fluid-glass.css">
+  <link rel="stylesheet" href="./homepage-test.css">
+  <link rel="stylesheet" href="./home-motion.css">
+  <script defer src="./home-motion.js"></script>
+<link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script></head>
+<body class="home-page home-test-page">
+  <main class="shell home-redesign">
+    <aside class="home-test-sidebar" aria-label="测试版侧边导航">
+      <a class="home-test-brand" href="./homepage-test.html" aria-label="豌豆 AI 测试版首页"><img src="./logo.png" alt=""><strong>豌豆 AI</strong></a>
+      <div class="home-test-side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>工作空间</div>
+      <nav class="home-test-side-nav" aria-label="主要工作空间">
+        <button class="home-test-side-main active" type="button" data-home-nav="home" aria-pressed="true"><span class="home-test-side-icon" aria-hidden="true">⌂</span><span>发现</span></button>
+        <a class="home-test-side-main" href="./project-hub.html" data-tab-title="项目文件夹"><span class="home-test-side-icon" aria-hidden="true">▦</span><span>项目文件夹</span></a>
+        <a class="home-test-side-main" href="./ai-node-canvas.html" data-tab-title="节点无线画布"><span class="home-test-side-icon" aria-hidden="true">◇</span><span>节点画布</span></a>
+        <a class="home-test-side-main" href="./asset-library-test.html" data-tab-title="资产"><span class="home-test-side-icon" aria-hidden="true">□</span><span>资产</span></a>
+      </nav>
+      <div class="home-test-side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></svg>创作空间</div>
+      <nav class="home-test-side-nav home-test-side-nav-nested" aria-label="创作工具">
+        <a href="./image-workbench/index.html" data-tab-title="AI 工作台"><span class="home-test-side-icon" aria-hidden="true">✧</span><span>AI 工作台</span></a>
+        <a href="./gridform.html" target="_blank" data-tab-title="网格海报工作台"><span class="home-test-side-icon" aria-hidden="true">▥</span><span>网格海报</span></a>
+        <a href="https://wandou-video-workbench.netlify.app/" target="_blank" rel="noopener noreferrer" data-tab-title="录音转文字"><span class="home-test-side-icon" aria-hidden="true">◉</span><span>录音转文字</span></a>
+        <a href="./type-motion.html" data-tab-title="文字动态海报"><span class="home-test-side-icon" aria-hidden="true">✦</span><span>文字动态海报</span></a>
+        <a href="#image-tools"><span class="home-test-side-icon" aria-hidden="true">▧</span><span>图片工具</span></a>
+        <a href="#copy-tools"><span class="home-test-side-icon" aria-hidden="true">≡</span><span>提示词工具</span></a>
+      </nav>
+      <div class="home-test-side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5C9 3 5 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15"/></svg>内容与帮助</div>
+      <nav class="home-test-side-nav home-test-side-nav-nested" aria-label="内容与帮助">
+        <button type="button" data-home-nav="blog" aria-pressed="false"><span class="home-test-side-icon" aria-hidden="true">▤</span><span>博客</span></button>
+        <button type="button" data-home-nav="notice" aria-pressed="false"><span class="home-test-side-icon" aria-hidden="true">◌</span><span>公告</span></button>
+        <button type="button" data-home-nav="about" aria-pressed="false"><span class="home-test-side-icon" aria-hidden="true">ⓘ</span><span>关于</span></button>
+      </nav>
+      <p class="home-test-side-foot">把灵感，变成作品。<br>豌豆 AI 创作空间</p>
+    </aside>
+    <header class="home-topbar" aria-label="豌豆AI 首页导航">
+      <a class="home-brand" href="#home-tools" data-home-nav="home" aria-label="返回首页">
+        <img class="home-brand-logo" src="./logo.png" alt="">
+        <span class="home-brand-name">豌豆AI</span>
+      </a>
+
+      <nav class="home-nav" aria-label="页面内容导航">
+        <button class="home-nav-item active" type="button" data-home-nav="home" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>
+          <span>首页</span>
+        </button>
+        <a class="home-nav-item" href="https://www.zayapi.top" rel="noopener noreferrer" data-tab-title="商品中心">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6H4z"/><path d="M14 14h6v6h-6z"/></svg>
+          <span>商品中心</span>
+        </a>
+        <a class="home-nav-item" href="./asset-library-test.html" rel="noopener noreferrer" data-tab-title="资产">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.8-2H20v13H4z"/><path d="M4 9h16"/></svg>
+          <span>资产</span>
+        </a>
+        <button class="home-nav-item" type="button" data-home-nav="blog" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h10l2 2v14H6z"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+          <span>博客</span>
+        </button>
+        <button class="home-nav-item" type="button" data-home-nav="notice" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Z"/><path d="M18 16H6l1.5-2V10a4.5 4.5 0 0 1 9 0v4z"/></svg>
+          <span>公告</span>
+        </button>
+        <button class="home-nav-item" type="button" data-home-nav="about" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>
+          <span>关于</span>
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <div class="contact-menu">
+          <button class="contact-button" type="button" aria-label="查看联系方式">
+            <svg class="contact-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7.1 4.75 9.9 4l2.05 4.1-1.55 1.15a11.2 11.2 0 0 0 4.35 4.35l1.15-1.55 4.1 2.05-.75 2.8c-.23.88-1.08 1.46-1.98 1.36C11.25 17.58 6.42 12.75 5.74 6.73c-.1-.9.48-1.75 1.36-1.98Z"/>
+            </svg>
+            <span>联系</span>
+          </button>
+          <div class="contact-card">
+            <span>微信：peafour1111</span>
+            <div class="qr-placeholder">
+              <img class="qr-image" src="./assets/wechat-qr.png" alt="微信二维码" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+              <span hidden>二维码待替换</span>
+            </div>
+          </div>
+        </div>
+        <button class="api-settings-button" type="button" aria-label="打开 API 设置" data-api-open>
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/>
+            <path d="M19.25 12a7.58 7.58 0 0 0-.08-1.1l2.03-1.56-1.9-3.28-2.42.98a7.36 7.36 0 0 0-1.92-1.1L14.58 3h-5.16l-.38 2.94a7.36 7.36 0 0 0-1.92 1.1L4.7 6.06 2.8 9.34l2.03 1.56a7.58 7.58 0 0 0 0 2.2L2.8 14.66l1.9 3.28 2.42-.98c.58.46 1.23.83 1.92 1.1l.38 2.94h5.16l.38-2.94a7.36 7.36 0 0 0 1.92-1.1l2.42.98 1.9-3.28-2.03-1.56c.05-.36.08-.73.08-1.1Z"/>
+          </svg>
+        </button>
+        <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
+          <svg class="toolbar-icon theme-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2"/>
+            <path d="M12 20v2"/>
+            <path d="m4.93 4.93 1.41 1.41"/>
+            <path d="m17.66 17.66 1.41 1.41"/>
+            <path d="M2 12h2"/>
+            <path d="M20 12h2"/>
+            <path d="m4.93 19.07 1.41-1.41"/>
+            <path d="m17.66 6.34 1.41-1.41"/>
+          </svg>
+          <span data-theme-icon hidden>☾</span>
+          <span data-theme-label>暗色</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="home-content-divider" aria-hidden="true"></div>
+
+    <section class="home-test-hero" data-home-section aria-label="开始创作">
+      <div class="home-test-eyebrow">A SPACE FOR IDEAS</div>
+      <div class="home-test-hero-panel">
+        <div class="home-test-hero-copy">
+          <span class="home-test-hero-kicker">WANDOU AI / CREATIVE SPACE</span>
+          <h1>把想法，<br>做成作品。</h1>
+          <p>从第一张参考图，到完整的视觉表达。<br>让每一步创作都有迹可循。</p>
+          <a href="./project-hub.html" data-tab-title="项目文件夹">打开节点画布 <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="tool-section" id="home-tools" data-home-section aria-label="常用绘图工具">
+      <div class="home-test-section-title"><h2>选择你的工作方式</h2><p>熟悉的功能，一个都不丢。</p></div>
+      <div class="tool-grid module-grid common-tool-grid">
+      <a class="tool-card module-card module-canvas" href="./project-hub.html" rel="noopener noreferrer" data-tab-title="项目文件夹">
+        <span class="home-test-card-index">01 / WORKFLOW</span>
+        <span class="module-copy">
+          <span class="tool-label">节点无线画布</span>
+          <span class="tool-desc">灵感、素材与 AI 生成，在一张画布里自由连接。</span>
+          <span class="module-enter" aria-hidden="true">↗</span>
+        </span>
+        <span class="module-art" aria-hidden="true">
+          <span class="glass-card one"></span>
+          <span class="glass-card two"></span>
+          <span class="cursor-shape"></span>
+        </span>
+      </a>
+
+      <a class="tool-card module-card module-gridform" href="./gridform.html" target="_blank" rel="noopener noreferrer" data-tab-title="网格海报工作台">
+        <span class="home-test-card-index">02 / DESIGN</span>
+        <span class="module-copy">
+          <span class="tool-label">网格海报工作台</span>
+          <span class="tool-desc">30 种构图，自由编辑文字、图片与品牌 Logo。</span>
+          <span class="module-enter" aria-hidden="true">↗</span>
+        </span>
+        <span class="module-art gridform-art" aria-hidden="true">
+          <span class="gridform-sheet"></span>
+          <span class="gridform-grid"></span>
+          <span class="gridform-title-line one"></span>
+          <span class="gridform-title-line two"></span>
+          <span class="gridform-image-block"></span>
+        </span>
+      </a>
+
+      <a class="tool-card module-card module-transcribe" href="https://wandou-video-workbench.netlify.app/" target="_blank" rel="noopener noreferrer" data-tab-title="录音转文字">
+        <span class="home-test-card-index">03 / AUDIO</span>
+        <span class="module-copy">
+          <span class="tool-label">录音转文字</span>
+          <span class="tool-desc">上传录音，快速识别并整理为可编辑文字。</span>
+          <span class="module-enter" aria-hidden="true">↗</span>
+        </span>
+        <span class="module-art transcribe-art" aria-hidden="true">
+          <span class="transcribe-mic"></span>
+          <span class="transcribe-wave"><i></i><i></i><i></i><i></i><i></i></span>
+        </span>
+      </a>
+
+      </div>
+    </section>
+
+    <div class="home-test-section-title home-test-lower-title" data-home-section><h2>继续创作</h2><p>图片 · 提示词 · 音视频</p></div>
+    <div class="home-test-tool-groups">
+    <section class="tool-section" id="image-tools" data-home-section>
+      <h2>图片工具箱</h2>
+      <div class="tool-grid module-grid image-tool-grid" aria-label="图片工具箱">
+        <a class="tool-card module-card module-image" href="./image-workbench/index.html" rel="noopener noreferrer" data-tab-title="AI 工作台">
+          <span class="home-test-small-icon" aria-hidden="true">▣</span>
+          <span class="module-copy"><span class="tool-label">AI 工作台</span><span class="tool-desc">生成与编辑创意图片</span></span>
+        </a>
+        <a class="tool-card module-card module-motion" href="./type-motion.html" data-tab-title="文字动态海报"><span class="module-copy"><span class="tool-label">文字动态海报</span><span class="tool-desc">编辑文字与节奏，本地导出动态作品。</span><span class="module-enter" aria-hidden="true">↗</span></span></a>
+        <a class="tool-card module-card module-cutout" href="./png-workflow.html" rel="noopener noreferrer" data-tab-title="抠图PNG工作流">
+          <span class="module-copy">
+            <span class="tool-label">AI抠图</span>
+            <span class="tool-desc">自动去背景，透明 PNG 预览与下载。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="png-board"></span>
+            <span class="cutout-subject"></span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-watermark" href="./watermark-remove.html" rel="noopener noreferrer" data-tab-title="AI消除水印工作流">
+          <span class="module-copy">
+            <span class="tool-label">AI消除水印</span>
+            <span class="tool-desc">上传图片，标记水印区域，生成干净修复图。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="watermark-photo"></span>
+            <span class="eraser-tool"></span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <section class="tool-section" id="copy-tools" data-home-section>
+      <h2>文案提示词专业术语</h2>
+      <div class="tool-grid module-grid copy-tool-grid" aria-label="文案提示词专业术语">
+        <a class="tool-card module-card module-keyword" href="./keyword-reverse.html" rel="noopener noreferrer" data-tab-title="关键词生成/图片反推文字">
+          <span class="module-copy">
+            <span class="tool-label">关键词生成<br>图片反推文字</span>
+            <span class="tool-desc">图片反推关键词，中英文提示词复制下载。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="prompt-lines"></span>
+            <span class="language-bubble">AI</span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-copywriter" href="./plain-to-pro.html" rel="noopener noreferrer" data-tab-title="白话转专业语言">
+          <span class="module-copy">
+            <span class="tool-label">大白话转换<br>专业语言</span>
+            <span class="tool-desc">把大白话需求转换成文案、品牌、电商专业表达。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="copy-doc"></span>
+            <span class="pro-badge">Pro</span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-video-prompt" href="./video-prompt-pro.html" rel="noopener noreferrer" data-tab-title="视频提示词专业语言">
+          <span class="module-copy">
+            <span class="tool-label">视频提示词转<br>专业语言</span>
+            <span class="tool-desc">把视频想法整理成可用于生成模型的专业提示词。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="video-board"></span>
+            <span class="play-chip"></span>
+          </span>
+        </a>
+
+      </div>
+    </section>
+
+    <section class="tool-section" id="audio-video-tools" data-home-section>
+      <h2>音视频转文字</h2>
+      <div class="tool-grid module-grid media-text-tool-grid" aria-label="音视频转文字">
+        <a class="tool-card module-card module-transcribe" href="https://wandou-video-workbench.netlify.app/" target="_blank" rel="noopener noreferrer" data-tab-title="录音视频转文字">
+          <span class="module-copy">
+            <span class="tool-label">视频转文字</span>
+            <span class="tool-desc">上传视频，识别并整理可编辑文字。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art transcribe-art" aria-hidden="true">
+            <span class="transcribe-mic"></span>
+            <span class="transcribe-wave"><i></i><i></i><i></i><i></i><i></i></span>
+          </span>
+        </a>
+
+        <a class="tool-card module-card module-mind-map" href="./prompt-mind-map.html" rel="noopener noreferrer" data-tab-title="文案转 XMind 思维导图">
+          <span class="module-copy">
+            <span class="tool-label">文案转 XMind<br>思维导图</span>
+            <span class="tool-desc">粘贴文案，自动整理为可编辑的 XMind 式思维导图，并支持导出图片。</span>
+            <span class="module-enter" aria-hidden="true">→</span>
+          </span>
+          <span class="module-art" aria-hidden="true">
+            <span class="mind-map-node core"></span>
+            <span class="mind-map-node left"></span>
+            <span class="mind-map-node right"></span>
+            <span class="mind-map-line a"></span>
+            <span class="mind-map-line b"></span>
+          </span>
+        </a>
+      </div>
+    </section>
+    </div>
+
+    <section class="tool-section home-panel blank-panel" id="market" data-home-panel="market" aria-label="商品中心"></section>
+
+    <section class="tool-section home-panel blank-panel blog-panel" id="blog" data-home-panel="blog" aria-label="博客">
+      <div class="home-test-panel-heading"><span>内容中心 / 01</span><h2>博客</h2><p>创作资讯与每日简报，集中在这里阅读。</p></div>
+      <div class="blog-card-list">
+        <a class="blog-entry-card" href="./daily-news/index.html" rel="noopener noreferrer" data-tab-title="豌豆今日简报">
+          <span class="blog-entry-visual" aria-hidden="true">
+            <img src="./daily-news/assets/newspaper-hero.png" alt="">
+            <span class="blog-entry-date">每日更新</span>
+          </span>
+          <span class="blog-entry-copy">
+            <span class="blog-entry-kicker">AI 科技 · 金融</span>
+            <strong>豌豆今日简报</strong>
+            <span class="blog-entry-description">5 分钟掌握国内外关键新闻与影响分析。</span>
+            <span class="blog-entry-action">打开今日新闻 <span aria-hidden="true">→</span></span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <section class="tool-section home-panel info-panel" id="announcement" data-home-panel="notice">
+      <div class="home-test-panel-heading"><span>内容中心 / 02</span><h2>公告</h2><p>查看更新说明、服务信息与历史发布记录。</p></div>
+      <div class="info-grid">
+        <details class="info-card notice-card notice-card-latest">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.84 多渠道、音频与分层更新</span>
+              <time datetime="2026-09-16">2026 年 9 月 16 日</time>
+            </span>
+            <h3>双 API 渠道、AI 音频与语义 PSD 分层</h3>
+            <p>两组 API 密钥可独立识别模型，新增 AI 音频节点，并减少 PSD 分层碎片。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>API 设置支持眼睛按钮查看两组密钥；渠道 2 模型带独立标识。AI 音频支持文本生成、参考音频和下载，PSD 按主体、文字、装饰与光效等完整语义元素分层。</p>
+            <nav class="notice-links" aria-label="v1.0.84 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.84" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.84/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.73 模型同步与尺寸控制</span>
+              <time datetime="2026-09-09">2026 年 9 月 9 日</time>
+            </span>
+            <h3>自动同步绘图模型，补齐自定义尺寸与笔刷预览</h3>
+            <p>节点画布和绘图工作台会按当前 API 模型列表更新，并保持各绘图流程的模型选择一致。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>移除静态的 gpt-image-2-high；1K 专用模型仍可选择 2K/4K，并在返回后等比放大。比例菜单新增自定义宽高与 3:1，1K 预设保证短边至少 1024。</p>
+            <p>创作技能新增“无选择”，画板指针显示实际粗细；节点端口缩小，连接虚线更紧密。</p>
+            <nav class="notice-links" aria-label="v1.0.73 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.73" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.73/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.58 自动拆分关键词持续保留</span>
+              <time datetime="2026-08-31">2026 年 8 月 31 日</time>
+            </span>
+            <h3>图片失败后仍能找到对应的自动拆分关键词</h3>
+            <p>自动拆分确认并开始生图后，关键词列表会继续保留在原节点下方，不再自动关闭。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>每条关键词会显示等待、生成中、成功或失败状态，并可单独复制；失败图片可以直接按序号找到原关键词并重新生成。</p>
+            <p>同时优化项目与资产页面的全屏布局、通用界面中性色、离屏效果图加载和超大历史备份恢复性能。</p>
+            <nav class="notice-links" aria-label="v1.0.58 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.58" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.58/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.51 自动更新目录切换修复</span>
+              <time datetime="2026-08">2026 年 8 月</time>
+            </span>
+            <h3>修复更新重启后仍停留旧版本</h3>
+            <p>针对 v1.0.47 的退出时间窗修复资源文件占用，保证新文件真正覆盖后再重启。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>更新器会在旧主程序 0.9 秒退出之前结束完整进程树，同时清理此前失败更新遗留的孤立进程。</p>
+            <p>解决 chrome_100_percent.pak、app.asar 被 Chromium 子进程持续占用，下载成功却反复启动旧版本的问题。</p>
+            <nav class="notice-links" aria-label="v1.0.51 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.51" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.51/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.49 更新与保存专项修复</span>
+              <time datetime="2026-08">2026 年 8 月</time>
+            </span>
+            <h3>解除更新文件占用并增加桌面保存终极兜底</h3>
+            <p>修复下载完成后仍停留旧版本，以及复杂节点工作流因遗漏图片字段而无法保存的问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>更新器会在旧程序主进程仍存在时结束完整 Electron 进程树，避免渲染和 GPU 子进程继续占用 app.asar。</p>
+            <p>桌面备份会再次扫描整个工作流，自动抽取任意字段内的大图片，不再依赖页面提前列出全部图片字段。</p>
+            <nav class="notice-links" aria-label="v1.0.49 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.49" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.49/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.48 多画布保存修复</span>
+              <time datetime="2026-08">2026 年 8 月</time>
+            </span>
+            <h3>旧画布图片迁移与磁盘保存兜底</h3>
+            <p>修复包含多张生成图或旧版 Base64 图片的工作流无法保存、无法关闭的问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>保存时会把旧画布的大图片自动迁移到独立磁盘文件，避免同一张图在节点数据中重复占用几十兆内存。</p>
+            <p>浏览器图片数据库被占用或不可用时自动改用桌面磁盘保存，并在失败时显示具体字段，方便准确排查。</p>
+            <nav class="notice-links" aria-label="v1.0.48 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.48" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.48/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.47 画布保存与预览修复</span>
+              <time datetime="2026-08">2026 年 8 月</time>
+            </span>
+            <h3>大型画布保存降载与结果比例修复</h3>
+            <p>减少桌面端大画布卡顿和关闭时保存失败，并修复生成中的横图下方多出大块空白。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>图片数据改为独立持久化并保留磁盘恢复副本；后台画布标签安全降载，避免多个项目同时占用大量资源。</p>
+            <p>项目文件夹现在使用画布内真实生成图作为封面，生成中与生成完成的效果图保持相同宽高比例。</p>
+            <nav class="notice-links" aria-label="v1.0.47 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.47" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.47/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.46 扩图工作流</span>
+              <time datetime="2026-08">2026 年 8 月</time>
+            </span>
+            <h3>新增扩图节点与图片完整预览</h3>
+            <p>支持左右、上下及四周扩图，并修复扩图和 4K 放大节点上传图片显示不完整的问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>扩图完成后会把原图原位覆盖回输出，保护人物、产品、文字、Logo、颜色和构图不被接口重绘。</p>
+            <p>生成等待时间只在底部尺寸栏显示；修复暗色更新公告、卡片高光、空白框文字居中及扩图选中状态。</p>
+            <nav class="notice-links" aria-label="v1.0.46 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.46" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.46/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.45 画布显示修复</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>提示词文字与节点间距修复</h3>
+            <p>修复缩放画布时提示词文字显示不全，并统一节点上下文字与工具栏的紧凑间距。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>提示词高亮层改为跟随真实输入框布局，避免缩放或恢复画布后文字被顶部裁切。</p>
+            <p>节点标题、复制和删除按钮距离主体 2px；参考图说明及效果图尺寸、用时距离内容 2px。</p>
+            <nav class="notice-links" aria-label="v1.0.45 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.45" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.45/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.44 紧急修复</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>大画布保存与关闭校验修复</h3>
+            <p>修复完整备份已经写入磁盘，但软件仍提示保存失败、无法关闭的问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>关闭时不再重复写入同一份大型备份；多个画布改为逐个保存，避免同时处理大量图片数据造成卡顿。</p>
+            <p>大画布保存等待时间由 20 秒延长到 120 秒；完整磁盘备份成功后即可通过关闭校验。</p>
+            <nav class="notice-links" aria-label="v1.0.44 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.44" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.44/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.43 画布体验更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>效果图紧凑排列与节点显示修复</h3>
+            <p>缩小连续效果图间距，并修复参考图、效果图和提示词编辑区的显示问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>连续生成的效果图改用真实节点高度排列，上下空白间距为 3px；参考图增加清晰灰色细描边，效果图保留圆角并移除绿色外圈。</p>
+            <p>修复画布缩放后提示词编辑区字体被裁切的问题，同时移除无法关闭的页面卡顿提示。</p>
+            <nav class="notice-links" aria-label="v1.0.43 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.43" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.43/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.42 紧急更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>节点画布历史保护与更新前强制保存</h3>
+            <p>修复更新后打开默认画布、历史读取失败后被默认节点覆盖的问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>自动恢复误切换的有效项目；读取异常时停止自动覆盖。每个项目在软件数据目录额外保留最近 12 份独立 JSON 快照。</p>
+            <p>关闭软件或安装更新前会强制保存并校验全部节点工作流；任一画布保存失败时立即停止关闭或更新，并显示实际备份位置。</p>
+            <nav class="notice-links" aria-label="v1.0.42 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.42" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.42/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.40 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>节点画布历史与交互稳定版</h3>
+            <p>修复画布历史丢失、参考图重复，并完善双向连线和图片节点布局。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>增加画布媒体备份与恢复、参考图拖动排序、提示词图号联动、双向端点连接和断联，并优化效果图尺寸与下载收藏布局。</p>
+            <nav class="notice-links" aria-label="v1.0.40 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.40" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.40/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.39 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>图片比例与尺寸输出稳定版</h3>
+            <p>按所选画幅生成，修复固定比例、补白和尺寸不对应。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>11 种比例的 1K、2K、4K 均按目标尺寸输出，不再添加白边。</p>
+            <nav class="notice-links" aria-label="v1.0.39 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.39" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.39/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.38 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>图片尺寸与画布性能优化</h3>
+            <p>图片按所选尺寸准确输出，画布移动缩放更流畅。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>支持 11 种比例的 1K、2K、4K 准确输出，并优化画布平移与缩放性能。</p>
+            <nav class="notice-links" aria-label="v1.0.38 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.38" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.38/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.35 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>图片比例与尺寸修复</h3>
+            <p>按所选比例直接生成，完整保留画面内容。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>横图、竖图和超宽图不再使用固定画布裁边。</p>
+            <nav class="notice-links" aria-label="v1.0.35 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.35" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.35/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.34 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>本地数据持久化修复</h3>
+            <p>节点、生成图片和工作流关闭重开后继续保留。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>软件关闭与更新前自动完成本地保存。</p>
+            <nav class="notice-links" aria-label="v1.0.34 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.34" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.34/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.33 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>项目菜单宽度修复</h3>
+            <p>统一项目合集按钮与下方面板宽度，修复右侧内容裁切。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>项目菜单完整显示在窗口范围内。</p>
+            <nav class="notice-links" aria-label="v1.0.33 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.33" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.33/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.32 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>项目菜单位置修复</h3>
+            <p>固定新建项目、图钉、导入和导出的两行位置。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>新建项目与图钉保持第一行。</p>
+            <p>导出项目与导入项目紧贴第二行。</p>
+            <nav class="notice-links" aria-label="v1.0.32 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.32" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.32/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.31 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>项目菜单间距优化</h3>
+            <p>保持两行布局，缩短新建项目与导入导出之间的距离。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>第一行仍为新建项目和图钉。</p>
+            <p>第二行仍为导出项目和导入项目。</p>
+            <nav class="notice-links" aria-label="v1.0.31 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.31" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.31/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.30 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>项目菜单布局与暗色横杠修复</h3>
+            <p>恢复项目菜单两行布局，移除暗色画布顶部横杠。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>第一行保留新建项目和图钉。</p>
+            <p>第二行对齐导出项目和导入项目。</p>
+            <nav class="notice-links" aria-label="v1.0.30 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.30" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.30/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.29 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>项目界面与暗色显示修复</h3>
+            <p>优化项目文件夹界面，修复暗色模式顶部横杠。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>项目管理操作改为同排布局。</p>
+            <p>项目文件夹采用两级轻量材质设计。</p>
+            <nav class="notice-links" aria-label="v1.0.29 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.29" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.29/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.28 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>保存位置与项目迁移</h3>
+            <p>保存位置跨版本保留，并支持旧项目导入新版本。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>保存目录仅在首次使用或目录被删除时重新设置。</p>
+            <p>项目合集新增导出项目与导入项目。</p>
+            <nav class="notice-links" aria-label="v1.0.28 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.28" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.28/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.27 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>商品中心与画布流畅度修复</h3>
+            <p>修复商品中心无响应，降低画布移动和缩放时的 GPU 绘制负担。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>商品中心改用系统浏览器可靠打开。</p>
+            <p>移动缩放时暂停图片与连线绘制。</p>
+            <p>显示预览轻量化，原图下载质量不变。</p>
+            <nav class="notice-links" aria-label="v1.0.27 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.27" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.27/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.26 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>更新检测与公告同步稳定版</h3>
+            <p>增加三路版本检测、超时重试和独立版本清单，修复更新提示与公告不同步。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>更新检测增加三路兜底。</p>
+            <p>网络失败后自动重试并显示错误。</p>
+            <p>公告随版本安装包同步更新。</p>
+            <nav class="notice-links" aria-label="v1.0.26 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.26" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.26/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.25 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>批量绘图性能稳定版</h3>
+            <p>画布交互提速，批量生成自动重试，商品中心直接打开，保存位置持续保留。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>轻量预览与自动缩放。</p>
+            <p>单张失败自动重试。</p>
+            <p>商品中心改用系统浏览器。</p>
+            <p>更新不清理本地保存设置。</p>
+            <nav class="notice-links" aria-label="v1.0.25 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.25" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.25/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.22 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>节点画布顶部与数量布局修复</h3>
+            <p>移除暗色画布顶部的毛玻璃合成色带，并重新整理 1–9 数量按钮的紧凑右对齐布局。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>顶部控制区停止使用可能产生整行 GPU 合成伪影的背景采样模糊。</p>
+            <p>九个数量按钮缩小尺寸和间距，确保完整位于节点边框内。</p>
+            <nav class="notice-links" aria-label="v1.0.22 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.22" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.22/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.21 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>商品中心跳转与绘图数量修复</h3>
+            <p>修复商品中心点击无响应和导航文字下划线问题，节点绘图数量扩展至 9 张。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>桌面端已允许安全打开 zayapi.top，并在软件内显示“商品中心”标签。</p>
+            <p>AI 绘图节点数量选择、生成队列和请求参数上限统一扩展为 9。</p>
+            <nav class="notice-links" aria-label="v1.0.21 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.21" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.21/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.20 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>商品中心与会员服务信息更新</h3>
+            <p>商品中心现可直接打开官方网站，并补充会员代充服务的微信联系方式。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>点击首页“商品中心”，将在软件标签页中打开 https://www.zayapi.top。</p>
+            <p>会员代充服务微信联系方式更新为 Sunflower-talk。</p>
+            <nav class="notice-links" aria-label="v1.0.20 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.20" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.20/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.19 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>每日新闻页面修复</h3>
+            <p>修复“豌豆今日简报”标签打开后显示空白的问题，完整内置新闻页面、脚本、样式和图片资源。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>将每日新闻从独立目录调整为主程序正式资源，避免 GitHub 构建时遗漏文件。</p>
+            <p>恢复原始中文页面并校验新闻脚本、样式表、Logo 与报纸主视觉资源。</p>
+            <nav class="notice-links" aria-label="v1.0.19 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.19" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.19/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.18 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>全站视觉与服务说明优化</h3>
+            <p>统一首页、节点画布、AI 绘图工作台和项目文件夹的明暗主题，并新增开票与会员代充服务说明。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>页面背景统一使用中性白灰与黑灰，绿色仅用于图标、操作和选中状态，修复主题色块及控件颜色冲突。</p>
+            <p>节点画布补充分辨率、数量和新建项目的明确选中状态，并优化工作台与项目文件夹的主题一致性。</p>
+            <p>公告页新增“开票服务说明”和“会员代充服务”卡片，点击后可查看对应资料与客服说明。</p>
+            <nav class="notice-links" aria-label="v1.0.18 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.18" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.18/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.17 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>每日新闻加入博客</h3>
+            <p>博客页新增“豌豆今日简报”卡片，点击后可在软件标签页中直接阅读每日新闻。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>桌面的每日新闻网页及其样式、脚本和图片资源已完整内置到软件，不依赖桌面原文件路径。</p>
+            <p>新闻内容在本地页面展示；点击新闻来源时，由系统浏览器打开对应官方网站。</p>
+            <p>保留右键框选坐标、画布性能、本地记录、自动更新和 EXE 图标等既有修复。</p>
+            <nav class="notice-links" aria-label="v1.0.17 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.17" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.17/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <button class="info-card service-card" type="button" data-service-card="invoice" aria-haspopup="dialog">
+          <span class="service-card-icon" aria-hidden="true">票</span>
+          <span class="info-kicker">订单服务</span>
+          <strong>开票服务说明</strong>
+          <span class="service-card-description">部分订单支持开具发票，点击查看开票准备资料与联系说明。</span>
+          <span class="service-card-action">查看详情 <span aria-hidden="true">→</span></span>
+        </button>
+        <button class="info-card service-card" type="button" data-service-card="membership" aria-haspopup="dialog">
+          <span class="service-card-icon" aria-hidden="true">充</span>
+          <span class="info-kicker">客服服务</span>
+          <strong>会员代充服务</strong>
+          <span class="service-card-description">提供部分国外会员代充及账号购买咨询，点击查看联系方式与在线时间。</span>
+          <span class="service-card-action">查看详情 <span aria-hidden="true">→</span></span>
+        </button>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.16 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>右键框选坐标修复版</h3>
+            <p>修复节点画布右键拖动框选时，框选区域与鼠标实际位置存在明显偏移的问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>框选矩形、框选操作菜单、空白处右键菜单和连线创建菜单统一使用画布容器坐标。</p>
+            <p>在侧栏展开、画布缩放和平移后，右键按下位置与框选起点仍保持准确一致。</p>
+            <p>公告主页只保留最新版本大卡片；点击后可在同一个弹窗中向下滚动查看所有历史版本。</p>
+            <nav class="notice-links" aria-label="v1.0.16 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.16" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.16/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.15 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>节点画布性能与本地记录稳定版</h3>
+            <p>大幅优化节点画布缩放、移动和框选性能，生成记录改为永久本地保存，并支持鼠标右键拖动框选。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>公告主页只保留最新版本大卡片；点击后可在同一个弹窗中向下滚动查看所有历史版本。</p>
+            <p>GitHub 发布页和 Windows ZIP 下载链接统一使用绿色交互，并由桌面客户端直接交给系统浏览器打开。</p>
+            <p>首页明确恢复“录音转文字 / 视频转文字”和“文案转 XMind 思维导图”入口。</p>
+            <p>移除画布状态的 7 天过期限制，并增加 IndexedDB 本地备份；即使主存储异常，重新打开后也会自动恢复生成记录。</p>
+            <p>画布使用 GPU 合成移动，停止逐帧重绘点阵背景并移除节点毛玻璃开销；右键拖动框选不再反复测量所有节点。</p>
+            <p>自动更新不再经过容易失效的 cmd start 中转，改为主程序直接启动独立更新器，并增加 15 秒握手与明确的退出错误提示。</p>
+            <p>离线构建现在会把绿色豌豆 Logo 直接写入最终 EXE，并同步写入 v1.0.15 文件版本，文件夹中不再显示 Electron 默认图标。</p>
+            <nav class="notice-links" aria-label="v1.0.15 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.15" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.15/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.14 更新</span>
+              <time datetime="2026-07">2026 年 7 月</time>
+            </span>
+            <h3>完整更新历史与下载直达入口</h3>
+            <p>公告页现在保留每个已发布版本的更新内容，并提供对应的 GitHub 发布页和 Windows ZIP 直接下载入口。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>最新版本始终占满公告页第一行，较早版本按发布时间倒序排列在下方。</p>
+            <p>点击任意版本卡片即可查看完整说明；历史内容随软件保存在本地，无需联网后再加载。</p>
+            <p>每个版本都附有 GitHub 发布页和 Windows ZIP 直达下载地址。</p>
+            <nav class="notice-links" aria-label="v1.0.14 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.14" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.14/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.13 更新</span>
+              <time datetime="2026-07-19">2026 年 7 月 19 日</time>
+            </span>
+            <h3>更新检测与独立更新器稳定版</h3>
+            <p>更新前重新查询 GitHub，并由独立更新器完成覆盖、版本校验和自动重启。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>每次点击更新按钮时重新查询 GitHub 最新版本，避免安装缓存的旧版本。</p>
+            <p>独立更新器负责文件覆盖、双版本校验和自动重启，EXE 内嵌绿色豌豆 Logo。</p>
+            <p>保留节点画布连线刷新与拖动缩放性能修复。</p>
+            <nav class="notice-links" aria-label="v1.0.13 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.13" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.13/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary>
+            <span class="info-meta">
+              <span class="info-kicker">v1.0.12 更新</span>
+              <time datetime="2026-07-19">2026 年 7 月 19 日</time>
+            </span>
+            <h3>原生独立更新器与画布性能修复</h3>
+            <p>更新不再依赖容易卡住的 PowerShell 窗口，并修复画布持续重绘问题。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>使用独立 portable-updater.exe 接管更新，失败时写入日志并尝试重新打开原程序。</p>
+            <p>修复节点画布连线刷新无限循环，优化拖动和缩放期间的图片与模糊效果绘制。</p>
+            <nav class="notice-links" aria-label="v1.0.12 下载链接">
+              <a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.12" target="_blank" rel="noopener noreferrer">GitHub 发布页</a>
+              <a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.12/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a>
+            </nav>
+          </div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.11 更新</span><time datetime="2026-07-19">2026 年 7 月 19 日</time></span><h3>节点画布交互性能优化</h3><p>减少连线刷新占用，并在拖动缩放期间降低高成本视觉效果负担。</p></summary>
+          <div class="notice-detail"><p>修复连线刷新持续占用渲染线程的问题。</p><p>拖动和缩放时临时降低预览图与玻璃效果的绘制负担，停止后立即恢复。</p><nav class="notice-links" aria-label="v1.0.11 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.11" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.11/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.10 更新</span><time datetime="2026-07-19">2026 年 7 月 19 日</time></span><h3>自动更新流程验证版</h3><p>集中验证更新下载、文件替换、版本识别和程序重启流程。</p></summary>
+          <div class="notice-detail"><p>该版本用于继续验证便携版自动更新的完整流程，并保留上一版本的 Logo、画布和本地缓存修复。</p><nav class="notice-links" aria-label="v1.0.10 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.10" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.10/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.9 更新</span><time datetime="2026-07-19">2026 年 7 月 19 日</time></span><h3>应用 Logo 与连线复用优化</h3><p>修复 EXE 默认图标，并减少节点拖动时的 DOM 重建和布局计算。</p></summary>
+          <div class="notice-detail"><p>Windows 文件夹中的豌豆AI工具.exe 使用绿色豌豆 Logo。</p><p>连线元素改为复用并只更新坐标；媒体保存在本机 IndexedDB，下载写入本地目录。</p><nav class="notice-links" aria-label="v1.0.9 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.9" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.9/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.8 更新</span><time datetime="2026-07-18">2026 年 7 月 18 日</time></span><h3>本地缓存与公告提醒</h3><p>优化画布操作，媒体和下载改为本地保存，并加入历史公告与铃铛红点。</p></summary>
+          <div class="notice-detail"><p>优化节点画布缩放、移动和拖动性能，减少连线重绘卡顿。</p><p>图片和媒体保存在本机 IndexedDB；公告保留历史内容，最新更新置顶，铃铛红点在阅读后消失。</p><nav class="notice-links" aria-label="v1.0.8 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.8" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.8/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.7 更新</span><time datetime="2026-07-18">2026 年 7 月 18 日</time></span><h3>更新锁定与版本校验</h3><p>修复更新后循环提示，更新期间锁定页面并增强文件替换校验。</p></summary>
+          <div class="notice-detail"><p>修复便携版自动更新后仍循环提示新版本的问题。</p><p>更新期间锁定软件页面，等待安装完成并自动重启后才能继续操作。</p><nav class="notice-links" aria-label="v1.0.7 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.7" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.7/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.6 更新</span><time datetime="2026-07-18">2026 年 7 月 18 日</time></span><h3>可见安装进度</h3><p>下载、校验、解压、安装和验证过程加入明确的状态提示。</p></summary>
+          <div class="notice-detail"><p>主程序关闭后由独立安装窗口显示解压、安装和验证状态。</p><p>安装完成后自动关闭窗口并打开新版本；失败时显示错误并重新打开软件。</p><nav class="notice-links" aria-label="v1.0.6 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.6" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.6/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.5 更新</span><time datetime="2026-07-18">2026 年 7 月 18 日</time></span><h3>视频选项与图片复制</h3><p>整理视频时长和分辨率选项，图片预览增加复制操作。</p></summary>
+          <div class="notice-detail"><p>视频时长按钮简化为“默认时长”，Veo 分辨率保留 720P、1080P 并靠右排列。</p><p>图片预览新增底部复制按钮和右键复制菜单，同时修复便携版替换重启问题。</p><nav class="notice-links" aria-label="v1.0.5 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.5" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.5/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.4 更新</span><time datetime="2026-07-17">2026 年 7 月 17 日</time></span><h3>AI 视频默认参数整理</h3><p>根据模型能力整理模式、时长、分辨率、比例和参考图状态。</p></summary>
+          <div class="notice-detail"><p>AI 视频默认使用文生视频模式，参考图按钮按图片状态自动启用。</p><p>Veo 默认 8 秒、Omni 默认 10 秒，并统一模型、比例下拉菜单的明暗主题样式。</p><nav class="notice-links" aria-label="v1.0.4 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.4" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.4/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card">
+          <summary><span class="info-meta"><span class="info-kicker">v1.0.3 更新</span><time datetime="2026-07-17">2026 年 7 月 17 日</time></span><h3>早期稳定版本</h3><p>保留 v1.0.3 的 GitHub 发布记录与安装包下载入口。</p></summary>
+          <div class="notice-detail"><p>这是当前 GitHub Release 中保留的最早版本，可从下方查看提交记录或下载原始安装包。</p><nav class="notice-links" aria-label="v1.0.3 下载链接"><a href="https://github.com/Zaiel666/wandou-api-tools/releases/tag/v1.0.3" target="_blank" rel="noopener noreferrer">GitHub 发布页</a><a class="notice-download-link" href="https://github.com/Zaiel666/wandou-api-tools/releases/download/v1.0.3/wandou-ai-tools-windows-x64.zip" target="_blank" rel="noopener noreferrer">下载 Windows ZIP</a></nav></div>
+        </details>
+        <details class="info-card notice-card notice-card-archive">
+          <summary>
+            <span class="info-meta"><span class="info-kicker">历史公告</span><time datetime="2026-06">2026 年 6 月</time></span>
+            <h3>稳定版已加入提示词思维导图</h3>
+            <p>文案提示词专业术语新增思维导图入口，API 设置只保留密钥输入，默认接口地址由工具内部统一保存。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>本次更新把“AI 提示词思维导图”加入首页文案提示词专业术语区域，方便快速打开并查看分类内容。</p>
+            <p>API 配置界面只保留密钥输入，接口地址不再展示给客户，减少误改配置的情况。</p>
+          </div>
+        </details>
+        <details class="info-card notice-card notice-card-archive">
+          <summary>
+            <span class="info-meta"><span class="info-kicker">历史公告</span><time datetime="2026-06">2026 年 6 月</time></span>
+            <h3>先保存密钥，再打开各功能模块</h3>
+            <p>密钥保存一次后，首页内的绘图、关键词、文案和图片处理功能会共用同一份本地配置。</p>
+          </summary>
+          <div class="notice-detail">
+            <p>建议第一次使用时先进入右上角设置保存 API 密钥，再打开各个功能模块。</p>
+            <p>如果更换密钥或清理浏览器缓存，需要重新保存一次密钥后再继续使用。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <dialog class="notice-dialog" data-notice-dialog aria-labelledby="notice-dialog-title">
+      <article class="notice-dialog-card">
+        <button class="notice-dialog-close" type="button" data-notice-close aria-label="关闭公告">×</button>
+        <p class="info-kicker">更新公告</p>
+        <h2 id="notice-dialog-title">全部更新记录</h2>
+        <p class="notice-dialog-intro">最新内容在最上方，向下滚动可查看全部历史版本和原有公告。</p>
+        <div class="notice-dialog-history" data-notice-history></div>
+      </article>
+    </dialog>
+
+    <dialog class="service-dialog" data-service-dialog aria-labelledby="service-dialog-title">
+      <article class="service-dialog-card">
+        <button class="service-dialog-close" type="button" data-service-close aria-label="关闭服务说明">×</button>
+        <p class="info-kicker" data-service-kicker>服务说明</p>
+        <h2 id="service-dialog-title" data-service-title></h2>
+        <div class="service-dialog-content" data-service-content></div>
+      </article>
+    </dialog>
+
+    <section class="tool-section home-panel info-panel" id="about" data-home-panel="about">
+      <div class="home-test-panel-heading"><span>内容中心 / 03</span><h2>关于</h2><p>了解豌豆 AI 的功能、数据保存方式和使用教程。</p></div>
+      <div class="info-grid">
+        <article class="info-card announcement-intro-card" aria-labelledby="about-intro-title">
+          <span class="info-kicker">使用说明</span>
+          <h3 id="about-intro-title">关于这个软件</h3>
+          <div class="announcement-intro-copy">
+            <p>这个软件程序只是为了方便大家绘图而设计的，它主要是一个中转站，有很多问题处理得不够好，大家敬请见谅。</p>
+
+            <div class="announcement-intro-section">
+              <h4>软件的主要功能和用户群体如下</h4>
+              <ol>
+                <li><strong>主要功能：</strong>对话、生图处理。</li>
+                <li><strong>主要用户群体：</strong>很大一部分群体是用来做智能体或者“养小龙虾”，因为他们主要是消耗 token。</li>
+              </ol>
+            </div>
+
+            <div class="announcement-intro-section">
+              <h4>关于专业内容的处理</h4>
+              <p>这边有很多图片上的内容，请大家自行解决。我们是做设计的，所以很多你们专业的问题我不是太清楚，我也不是做文案的，这些需要你们专业的部分请自行解决。</p>
+            </div>
+
+            <p class="announcement-intro-note">最后，软件还有很多小 bug 的地方，请大家谅解，毕竟它很便宜。</p>
+          </div>
+        </article>
+
+        <article class="info-card">
+          <span class="info-kicker">数据说明</span>
+          <h3>配置保存在本机浏览器</h3>
+          <p>API 密钥和主题配置保存在本地浏览器中；客户可以自行清理缓存，功能页面仍保持独立打开。</p>
+        </article>
+        <article class="info-card guide-card" role="button" tabindex="0" data-guide-open aria-label="打开使用教程">
+          <span class="info-kicker">使用教程</span>
+          <h3>从注册 API 到生成图片</h3>
+          <p>点开查看完整流程：注册 API 平台、填写密钥、打开绘图工具、生成图片并下载保存。</p>
+          <span class="guide-card-action" aria-hidden="true">查看教程</span>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <div class="api-modal" data-api-modal hidden>
+    <form class="api-dialog" data-api-form>
+      <div class="api-dialog-header">
+        <div>
+          <p class="eyebrow">全局配置</p>
+          <h2>API 设置</h2>
+          <p>两个渠道独立保存和识别；渠道 1 必填，渠道 2 可按需添加。</p>
+        </div>
+        <button class="icon-button" type="button" aria-label="关闭 API 设置" data-api-close>×</button>
+      </div>
+
+      <label class="api-field">
+        <span>渠道 1 · 必填</span>
+        <span class="api-secret-control">
+          <input type="password" data-api-key placeholder="粘贴渠道 1 API Key" required autocomplete="off">
+          <button class="api-secret-toggle" type="button" data-api-key-visibility="channel-1" aria-label="显示渠道 1 密钥" title="显示密钥" aria-pressed="false">
+            <svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+            <svg class="eye-off-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 6.15A10.7 10.7 0 0 1 12 6c6 0 9.5 6 9.5 6a15.8 15.8 0 0 1-2.1 2.75M6.2 6.2C3.8 7.75 2.5 12 2.5 12s3.5 6 9.5 6a9.9 9.9 0 0 0 3.1-.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+        </span>
+      </label>
+
+      <label class="api-field">
+        <span>渠道 2 · 选填</span>
+        <span class="api-secret-control">
+          <input type="password" data-api-key-2 placeholder="选填：粘贴渠道 2 API Key" autocomplete="off">
+          <button class="api-secret-toggle" type="button" data-api-key-visibility="channel-2" aria-label="显示渠道 2 密钥" title="显示密钥" aria-pressed="false">
+            <svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+            <svg class="eye-off-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 6.15A10.7 10.7 0 0 1 12 6c6 0 9.5 6 9.5 6a15.8 15.8 0 0 1-2.1 2.75M6.2 6.2C3.8 7.75 2.5 12 2.5 12s3.5 6 9.5 6a9.9 9.9 0 0 0 3.1-.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+        </span>
+      </label>
+
+      <p class="api-note">两个密钥独立保存。渠道 2 的模型会在名称后显示“渠道 2”，避免同名模型混淆。</p>
+
+      <div class="api-dialog-actions">
+        <button class="secondary" type="button" data-api-clear>清除</button>
+        <button class="primary" type="submit">保存设置</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="guide-modal" data-guide-modal hidden>
+    <section class="guide-dialog" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <div class="guide-dialog-header">
+        <div>
+          <p class="eyebrow">使用教程</p>
+          <h2 id="guide-title">豌豆AI 使用流程</h2>
+          <p>按顺序完成 API 注册、密钥保存和图片生成。密钥只保存在本机浏览器里。</p>
+        </div>
+        <button class="icon-button" type="button" aria-label="关闭使用教程" data-guide-close>×</button>
+      </div>
+
+      <div class="guide-steps">
+        <article class="guide-step">
+          <span class="guide-step-number">1</span>
+          <div>
+            <h3>注册 API 平台账号</h3>
+            <p>打开你的 API 平台网站，使用手机号、邮箱或微信方式注册并登录。进入控制台后，根据平台提示完成充值或开通模型权限。</p>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-number">2</span>
+          <div>
+            <h3>复制 API 密钥</h3>
+            <p>在 API 平台的“令牌管理 / API Key / 密钥管理”里创建密钥，复制以 sk- 开头的完整密钥。不要把密钥发给无关人员。</p>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-number">3</span>
+          <div>
+            <h3>回到豌豆AI 填写密钥</h3>
+            <p>点击首页右上角齿轮按钮，打开 API 设置，把复制的密钥粘贴进去并保存。保存后，绘图、关键词和文案工具会共用这份配置。</p>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-number">4</span>
+          <div>
+            <h3>生成图片</h3>
+            <p>回到首页，打开“工作台模式 AI 绘图”。输入提示词，也可以上传参考图；选择模型、尺寸、分辨率和数量后点击生成。</p>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-number">5</span>
+          <div>
+            <h3>查看和下载结果</h3>
+            <p>生成完成后，点击图片卡片可以查看详情；点击下载按钮即可保存生成结果。若浏览器要求选择保存位置，按提示选择本地文件夹。</p>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    document.querySelectorAll("[data-home-nav]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        const target = button.dataset.homeNav;
+        if (!target) return;
+        event.preventDefault();
+        document.querySelectorAll("[data-home-nav]").forEach((item) => {
+          const active = item.dataset.homeNav === target;
+          item.classList.toggle("active", active);
+          if (item.tagName === "BUTTON") item.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        const isHome = target === "home";
+        document.querySelectorAll("[data-home-section]").forEach((section) => {
+          section.hidden = !isHome;
+        });
+        document.querySelectorAll("[data-home-panel]").forEach((panel) => {
+          panel.classList.toggle("active", !isHome && panel.dataset.homePanel === target);
+        });
+        const anchorMap = {
+          home: "home-tools",
+          market: "market",
+          blog: "blog",
+          notice: "announcement",
+          about: "about"
+        };
+        const anchor = document.getElementById(anchorMap[target]);
+        if (anchor) anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    const guideModal = document.querySelector("[data-guide-modal]");
+    const openGuide = () => {
+      if (!guideModal) return;
+      guideModal.hidden = false;
+      const closeButton = guideModal.querySelector("[data-guide-close]");
+      if (closeButton) closeButton.focus();
+    };
+    const closeGuide = () => {
+      if (!guideModal) return;
+      guideModal.hidden = true;
+    };
+    document.querySelectorAll("[data-guide-open]").forEach((trigger) => {
+      trigger.addEventListener("click", openGuide);
+      trigger.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openGuide();
+        }
+      });
+    });
+    document.querySelectorAll("[data-guide-close]").forEach((button) => {
+      button.addEventListener("click", closeGuide);
+    });
+    guideModal?.addEventListener("click", (event) => {
+      if (event.target === guideModal) closeGuide();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && guideModal && !guideModal.hidden) closeGuide();
+    });
+
+    const noticeDialog = document.querySelector("[data-notice-dialog]");
+    const noticeDialogCard = noticeDialog?.querySelector(".notice-dialog-card");
+    const noticeHistory = noticeDialog?.querySelector("[data-notice-history]");
+    const noticeCards = [...document.querySelectorAll(".notice-card")];
+    const closeNoticeDialog = () => noticeDialog?.close();
+
+    const renderNoticeHistory = (selectedCard) => {
+      if (!noticeHistory) return null;
+      noticeHistory.replaceChildren();
+      let selectedEntry = null;
+      noticeCards.forEach((card, index) => {
+        const entry = document.createElement("section");
+        entry.className = "notice-history-entry";
+        if (index === 0) entry.classList.add("is-latest");
+        if (card === selectedCard) {
+          entry.classList.add("is-selected");
+          selectedEntry = entry;
+        }
+
+        const meta = card.querySelector(".info-meta")?.cloneNode(true);
+        const title = card.querySelector("h3")?.cloneNode(true);
+        const detail = card.querySelector(".notice-detail")?.cloneNode(true);
+        if (meta) entry.append(meta);
+        if (title) entry.append(title);
+        if (detail) entry.append(detail);
+        noticeHistory.append(entry);
+      });
+      return selectedEntry;
+    };
+
+    const openNoticeDialog = (card) => {
+      if (!noticeDialog || !noticeDialogCard) return;
+      const selectedEntry = renderNoticeHistory(card);
+      noticeDialog.showModal();
+      requestAnimationFrame(() => {
+        noticeDialogCard.scrollTop = card === noticeCards[0] || !selectedEntry
+          ? 0
+          : Math.max(0, selectedEntry.offsetTop - 30);
+      });
+    };
+
+    noticeCards.forEach((card) => {
+      card.querySelector("summary")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        openNoticeDialog(card);
+      });
+    });
+
+    document.addEventListener("click", async (event) => {
+      const link = event.target?.closest?.(".notice-links a");
+      if (!link) return;
+      event.preventDefault();
+      event.stopPropagation();
+      document.querySelectorAll(".notice-links a.is-selected").forEach((item) => item.classList.remove("is-selected"));
+      link.classList.add("is-selected");
+      const url = link.href;
+      try {
+        if (window.wandouShell?.openExternal && await window.wandouShell.openExternal(url)) return;
+      } catch (_error) {
+        // Fall back to the browser's normal external-window handling.
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    });
+    document.querySelector("[data-notice-close]")?.addEventListener("click", closeNoticeDialog);
+    noticeDialog?.addEventListener("click", (event) => {
+      if (event.target === noticeDialog) closeNoticeDialog();
+    });
+
+    const serviceDialog = document.querySelector("[data-service-dialog]");
+    const serviceTitle = serviceDialog?.querySelector("[data-service-title]");
+    const serviceKicker = serviceDialog?.querySelector("[data-service-kicker]");
+    const serviceContent = serviceDialog?.querySelector("[data-service-content]");
+    const serviceDetails = {
+      invoice: {
+        kicker: "订单服务",
+        title: "开票服务说明",
+        content: `
+          <p>本单支持部分订单开具发票。如需开发票，请联系微信客服，系统会根据实际情况进行沟通。</p>
+          <section class="service-dialog-section">
+            <h3>开票前请准备</h3>
+            <ul>
+              <li>开票抬头</li>
+              <li>税号</li>
+              <li>订单号</li>
+              <li>接收邮箱</li>
+            </ul>
+          </section>
+          <p class="service-dialog-note">详细情况以跟客服确认为止。</p>
+        `
+      },
+      membership: {
+        kicker: "客服服务",
+        title: "会员代充服务",
+        content: `
+          <p>欢迎每一位使用豌豆 AI 工具的朋友。因为我们提供一些国外会员代充购买账号的服务，可能不方便宣传，有用到此服务的话，请在微信联系我们。</p>
+          <section class="service-dialog-section">
+            <h3>联系信息</h3>
+            <dl class="service-contact-list">
+              <div><dt>微信联系方式</dt><dd>Sunflower-talk</dd></div>
+              <div><dt>客服在线时间</dt><dd>早上 8 点到晚上 24 点</dd></div>
+            </dl>
+          </section>
+          <p class="service-dialog-note">回复较慢，请尽情谅解。</p>
+        `
+      }
+    };
+    const closeServiceDialog = () => serviceDialog?.close();
+    document.querySelectorAll("[data-service-card]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const detail = serviceDetails[card.dataset.serviceCard];
+        if (!detail || !serviceDialog || !serviceTitle || !serviceKicker || !serviceContent) return;
+        serviceKicker.textContent = detail.kicker;
+        serviceTitle.textContent = detail.title;
+        serviceContent.innerHTML = detail.content;
+        serviceDialog.showModal();
+      });
+    });
+    serviceDialog?.querySelector("[data-service-close]")?.addEventListener("click", closeServiceDialog);
+    serviceDialog?.addEventListener("click", (event) => {
+      if (event.target === serviceDialog) closeServiceDialog();
+    });
+
+    const hasDesktopTabs = Boolean(window.wandouDesktopTabs && typeof window.wandouDesktopTabs.open === "function");
+    if (!(window.chrome && window.chrome.webview) && !hasDesktopTabs) {
+      document.querySelectorAll("a[data-tab-title]").forEach((link) => {
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      });
+    }
+    document.addEventListener("click", (event) => {
+      const link = event.target && event.target.closest ? event.target.closest("a[data-tab-title]") : null;
+      if (!link || !link.href) return;
+      const title = link.dataset.tabTitle || document.title || "新标签";
+      if (hasDesktopTabs) {
+        event.preventDefault();
+        window.wandouDesktopTabs.open(link.href, title);
+        return;
+      }
+      if (window.chrome && window.chrome.webview) {
+        event.preventDefault();
+        window.chrome.webview.postMessage(`OPEN_TAB|${encodeURIComponent(title)}|${encodeURIComponent(link.href)}`);
+        return;
+      }
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    }, true);
+  </script>
+  <script src="./local-cache.js"></script>
+  <script src="./workflow.js"></script>
+</body>
+</html>

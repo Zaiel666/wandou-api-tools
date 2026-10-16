@@ -1,6 +1,6 @@
 :root {
   --background: #f5f5f7;
-  --background-subtle: #eef3f9;
+  --background-subtle: #eeeeef;
   --foreground: #1d1d1f;
   --card: rgba(255, 255, 255, 0.72);
   --card-solid: #ffffff;
@@ -38,7 +38,7 @@
 
 html[data-theme="dark"] {
   --background: #050506;
-  --background-subtle: #11151b;
+  --background-subtle: #17181a;
   --foreground: #f5f5f7;
   --card: rgba(28, 28, 30, 0.72);
   --card-solid: #1c1c1e;
@@ -62,7 +62,7 @@ html[data-theme="dark"] {
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; font: 100%/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Segoe UI", system-ui, sans-serif; }
-body { margin: 0; color: var(--foreground); background: radial-gradient(circle at 90% 7%, rgba(129,185,255,.30), transparent 27rem), radial-gradient(circle at 5% 45%, rgba(255,209,153,.22), transparent 30rem), var(--background); -webkit-font-smoothing: antialiased; transition: background-color var(--duration-base) var(--ease-out), color var(--duration-fast) var(--ease-out); }
+body { margin: 0; color: var(--foreground); background: var(--background); -webkit-font-smoothing: antialiased; transition: background-color var(--duration-base) var(--ease-out), color var(--duration-fast) var(--ease-out); }
 button, a { color: inherit; font: inherit; }
 button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 a { text-decoration: none; }

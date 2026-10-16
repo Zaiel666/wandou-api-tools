@@ -1,0 +1,77 @@
+/* Motion direction inspired by Lucian UX/UI Prompt (#002, #012, #018, #031).
+   https://lucianlabs.dev/uxui-prompt/
+   Original, scoped implementation: no demo timers, fake success or API calls.
+   Only controls/icons move; canvas, node positions and hit targets stay stable. */
+:root {--motion-fast:120ms;--motion-settle:220ms;--motion-ease:cubic-bezier(.2,.8,.2,1);}
+.test-motion-button {
+  transition:transform var(--motion-fast) var(--motion-ease),background-color 140ms ease,border-color 140ms ease,opacity 140ms ease;
+  transform-origin:center;
+}
+.test-motion-button .ui-icon {
+  transition:transform var(--motion-settle) var(--motion-ease),opacity var(--motion-fast) ease;
+}
+/* Pointer-down feedback; never wait for an animation before running an action. */
+.test-motion-button:active:not(:disabled):not([aria-disabled=true]) {transform:scale(.965);transition-duration:60ms;}
+.test-motion-button:disabled,.test-motion-button[aria-disabled=true] {transform:none;}
+.test-motion-button:focus-visible {outline:2px solid var(--ui-text);outline-offset:3px;}
+
+@media (hover:hover) and (pointer:fine) {
+  .test-motion-button:hover:not(:disabled):not([aria-disabled=true]) {transform:translateY(-1px);}
+  .test-motion-button:active:hover:not(:disabled):not([aria-disabled=true]) {transform:scale(.965);}
+  /* Directional affordances, not magnetic movement of the button's hit box. */
+  [data-generate].test-motion-button:not(.generating):hover:not(:disabled) > .ui-icon {transform:translateX(4px);}
+  #newProjectButton.test-motion-button:hover:not(:disabled) .ui-icon {transform:rotate(90deg);}
+  .node-menu [data-download].test-motion-button:hover:not(:disabled) .ui-icon {transform:translateY(2px);}
+  .node-menu [data-regenerate].test-motion-button:not(.generating):hover:not(:disabled) .ui-icon {transform:rotate(38deg);}
+  .node-menu [data-favorite].test-motion-button:hover:not(:disabled) .ui-icon {transform:scale(1.12);}
+  #assistantSendButton.test-motion-button:hover:not(:disabled) .ui-icon {transform:translate(2px,-2px);}
+  .assistant-launcher.test-motion-button:hover .ui-icon {transform:rotate(-10deg) scale(1.06);}
+  .prompt-corner-tools .test-motion-button:hover:not(:disabled) > .ui-icon:first-child {transform:translateY(-2px);}
+}
+[data-generate].test-motion-button:focus-visible:not(.generating) > .ui-icon {transform:translateX(4px);}
+.test-motion-button[aria-expanded=true] {background:var(--ui-soft);border-color:var(--ui-line);}
+
+/* Only changed state animates. Existing favorites/counts do not animate on load. */
+.test-motion-toggled > .ui-icon {animation:wandou-selection-pop 260ms var(--motion-ease);}
+.test-stepper output.test-count-up {animation:wandou-count-up 180ms var(--motion-ease);}
+.test-stepper output.test-count-down {animation:wandou-count-down 180ms var(--motion-ease);}
+@keyframes wandou-selection-pop {0%{transform:scale(.8);}55%{transform:scale(1.18);}100%{transform:scale(1);}}
+@keyframes wandou-count-up {from{transform:translateY(5px);opacity:.35;}to{transform:translateY(0);opacity:1;}}
+@keyframes wandou-count-down {from{transform:translateY(-5px);opacity:.35;}to{transform:translateY(0);opacity:1;}}
+
+/* Busy feedback follows existing generating/assistantSending state exclusively. */
+[data-generate].generating {position:relative;}
+[data-generate].generating > .ui-icon {opacity:0;}
+[data-generate].generating::after,#assistantSendButton[aria-busy=true]::after {
+  content:"";position:absolute;right:15px;top:calc(50% - 7px);width:14px;height:14px;
+  box-sizing:border-box;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;
+  pointer-events:none;animation:wandou-busy-spin 900ms linear infinite;
+}
+#assistantSendButton {position:relative;}
+#assistantSendButton[aria-busy=true]::after {right:calc(50% - 7px);}
+#assistantSendButton[aria-busy=true] .ui-icon {opacity:0;}
+.node-menu [data-regenerate].generating > .ui-icon {animation:wandou-busy-spin 900ms linear infinite;}
+@keyframes wandou-busy-spin {to{transform:rotate(360deg);}}
+
+/* Small menus appear from their trigger, without animating layout dimensions. */
+.node-select.open > .node-select-menu,
+.generator-skill-popover.open,
+.creative-style-control.open > .creative-style-popover {
+  transform-origin:top left;animation:wandou-menu-in 160ms var(--motion-ease);
+}
+.creative-style-control.open-up > .creative-style-popover {transform-origin:bottom left;animation-name:wandou-menu-up;}
+.creative-style-control.align-right > .creative-style-popover {transform-origin:top right;}
+.creative-style-control.open-up.align-right > .creative-style-popover {transform-origin:bottom right;}
+.assistant-select-field.open .assistant-picker-menu {transform-origin:bottom center;animation:wandou-menu-up 160ms var(--motion-ease);}
+@keyframes wandou-menu-in {from{opacity:0;transform:translateY(-4px) scale(.985);}to{opacity:1;transform:none;}}
+@keyframes wandou-menu-up {from{opacity:0;transform:translateY(4px) scale(.985);}to{opacity:1;transform:none;}}
+
+/* No movement for reduced motion; keep real busy state and focus visible. */
+@media (prefers-reduced-motion:reduce) {
+  .test-motion-button,.test-motion-button .ui-icon,.test-stepper output,
+  .node-select-menu,.generator-skill-popover,.creative-style-popover,.assistant-picker-menu {
+    animation:none!important;transition:none!important;
+  }
+  .test-motion-button,.test-motion-button .ui-icon {transform:none!important;}
+  [data-generate].generating::after,#assistantSendButton[aria-busy=true]::after {animation:none!important;}
+}

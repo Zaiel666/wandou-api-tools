@@ -100,11 +100,15 @@ test("画板节点、创作技能和结果图信息采用同一节点工作流",
   const modelTriggerBox = await generator.locator("[data-node-select-toggle]").first().boundingBox();
   assert.ok(Math.abs(creativeTriggerBox.height - modelTriggerBox.height) < 1, "creative style control should match neighboring control height");
   await generator.locator("[data-creative-style-toggle]").click();
-  assert.equal(await generator.locator("[data-creative-style]").count(), 17);
+  assert.equal(await generator.locator("[data-creative-style]").count(), 55);
+  await generator.locator("[data-creative-style-search]").fill("航拍");
+  assert.equal(await generator.locator('[data-creative-style]:visible').count(), 2, "search keeps the no-selection card and one matching skill");
+  await generator.locator("[data-creative-style-search]").fill("");
   assert.match(await generator.locator('[data-creative-style="poster"] .creative-style-preview').evaluate((element) => getComputedStyle(element).backgroundImage), /creative-styles-grid\.png/);
+  assert.match(await generator.locator('[data-creative-style="aerial-view"] .creative-style-preview').evaluate((element) => getComputedStyle(element).backgroundImage), /creative-styles-reference\.png/);
   assert.equal(await generator.locator('[data-creative-style="poster"]').evaluate((element) => getComputedStyle(element).borderRadius), "8px");
   const styleCardBox = await generator.locator('[data-creative-style="poster"]').boundingBox();
-  assert.ok(Math.abs(styleCardBox.width - styleCardBox.height) < 1, "creative style card should be square");
+  assert.ok(Math.abs(styleCardBox.width / styleCardBox.height - 394 / 492) < .02, "creative style cards should match the reference proportions");
   await generator.locator('[data-creative-style="poster"]').click();
   assert.match(await generator.locator("[data-creative-style-toggle]").innerText(), /海报/);
   await generator.locator("[data-creative-style-toggle]").click();

@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f5f7">
+  <meta name="description" content="豌豆 UI v2 音频节点视觉实验室。">
+  <link rel="icon" href="./wandou-logo-latest.png" type="image/png">
+  <title>豌豆 UI v2 · 音频节点母版</title>
+  <style>
+    /* Primitive tokens: raw values only. */
+    :root {
+      color-scheme: light;
+      --p-white: #ffffff;
+      --p-black: #0b0d0f;
+      --p-neutral-25: #fbfbfc;
+      --p-neutral-50: #f6f7f8;
+      --p-neutral-100: #eff1f3;
+      --p-neutral-200: #e2e5e9;
+      --p-neutral-300: #cbd0d6;
+      --p-neutral-400: #969da7;
+      --p-neutral-500: #6e7681;
+      --p-neutral-600: #505761;
+      --p-neutral-700: #383e46;
+      --p-neutral-800: #24282e;
+      --p-neutral-850: #1d2126;
+      --p-neutral-900: #16191d;
+      --p-neutral-950: #101215;
+      --p-blue-50: #eef6ff;
+      --p-blue-100: #dbeafe;
+      --p-blue-500: #2f7ff7;
+      --p-blue-600: #2169d6;
+      --p-blue-700: #1c55ad;
+      --p-green-50: #eaf8f2;
+      --p-green-500: #149b68;
+      --p-green-600: #0e8156;
+      --p-green-700: #0a6845;
+      --p-red-50: #fff1f1;
+      --p-red-500: #df4242;
+      --p-red-600: #bf3030;
+      --p-amber-50: #fff7e8;
+      --p-amber-500: #c97a12;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-pill: 999px;
+      --font-xs: 12px;
+      --font-sm: 13px;
+      --font-md: 14px;
+      --font-lg: 16px;
+      --font-xl: 20px;
+      --font-2xl: 24px;
+      --duration-fast: 150ms;
+      --duration-normal: 220ms;
+      --ease-out: cubic-bezier(.16, 1, .3, 1);
+
+      /* Semantic tokens: meaning and theme. */
+      --color-canvas: var(--p-neutral-50);
+      --color-canvas-grid: rgba(46, 56, 68, .075);
+      --color-surface: var(--p-white);
+      --color-surface-raised: var(--p-white);
+      --color-surface-subtle: var(--p-neutral-50);
+      --color-surface-hover: var(--p-neutral-100);
+      --color-text: var(--p-neutral-900);
+      --color-text-secondary: var(--p-neutral-600);
+      --color-text-tertiary: var(--p-neutral-500);
+      --color-border: var(--p-neutral-200);
+      --color-border-strong: var(--p-neutral-300);
+      --color-selection: var(--p-blue-500);
+      --color-selection-soft: var(--p-blue-50);
+      --color-brand: var(--p-green-500);
+      --color-brand-hover: var(--p-green-600);
+      --color-brand-active: var(--p-green-700);
+      --color-danger: var(--p-red-500);
+      --color-danger-soft: var(--p-red-50);
+      --color-warning: var(--p-amber-500);
+      --color-warning-soft: var(--p-amber-50);
+      --color-scrim: rgba(16, 18, 21, .32);
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, .06), 0 2px 8px rgba(15, 23, 42, .04);
+      --shadow-md: 0 12px 30px rgba(15, 23, 42, .10), 0 2px 8px rgba(15, 23, 42, .06);
+      --shadow-lg: 0 24px 64px rgba(15, 23, 42, .15), 0 4px 16px rgba(15, 23, 42, .08);
+      --focus-ring: 0 0 0 3px rgba(47, 127, 247, .24);
+
+      /* Component tokens: single source for this prototype. */
+      --control-height: 44px;
+      --button-radius: var(--radius-md);
+      --node-width: 468px;
+      --node-height: 176px;
+      --node-radius: var(--radius-xl);
+      --node-bg: var(--color-surface);
+      --node-border: var(--color-border-strong);
+      --node-selected-border: var(--color-selection);
+      --inspector-width: 760px;
+      --inspector-radius: var(--radius-lg);
+    }
+
+    body[data-theme="dark"] {
+      color-scheme: dark;
+      --color-canvas: var(--p-neutral-950);
+      --color-canvas-grid: rgba(255, 255, 255, .055);
+      --color-surface: var(--p-neutral-900);
+      --color-surface-raised: var(--p-neutral-850);
+      --color-surface-subtle: var(--p-neutral-950);
+      --color-surface-hover: var(--p-neutral-800);
+      --color-text: #f2f4f6;
+      --color-text-secondary: #b7bdc5;
+      --color-text-tertiary: #8f97a2;
+      --color-border: #2d3239;
+      --color-border-strong: #3d434c;
+      --color-selection: #4b91ff;
+      --color-selection-soft: rgba(75, 145, 255, .14);
+      --color-brand: #20ad78;
+      --color-brand-hover: #2abb84;
+      --color-brand-active: #159563;
+      --color-danger: #ef6666;
+      --color-danger-soft: rgba(239, 102, 102, .12);
+      --color-warning: #e8a23b;
+      --color-warning-soft: rgba(232, 162, 59, .12);
+      --color-scrim: rgba(0, 0, 0, .56);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .18);
+      --shadow-md: 0 16px 34px rgba(0, 0, 0, .34), 0 3px 10px rgba(0, 0, 0, .24);
+      --shadow-lg: 0 28px 80px rgba(0, 0, 0, .48), 0 6px 18px rgba(0, 0, 0, .3);
+      --focus-ring: 0 0 0 3px rgba(75, 145, 255, .28);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-width: 320px; min-height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Inter, "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      font-size: var(--font-md);
+      line-height: 1.5;
+      color: var(--color-text);
+      background: var(--color-canvas);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    button, textarea { font: inherit; }
+    button { color: inherit; }
+    svg { display: block; }
+    [hidden] { display: none !important; }
+
+    .app-shell {
+      display: grid;
+      grid-template-rows: 72px 1fr;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+      padding: 0 var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand { display: flex; align-items: center; min-width: 0; gap: var(--space-3); }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: var(--radius-md);
+      color: var(--p-white);
+      background: var(--color-brand);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+    }
+    .brand-copy { min-width: 0; }
+    .brand-copy strong { display: block; font-size: var(--font-lg); line-height: 1.3; letter-spacing: -.01em; }
+    .brand-copy span { display: block; margin-top: 2px; color: var(--color-text-tertiary); font-size: var(--font-xs); }
+
+    .lab-controls { display: flex; align-items: center; gap: var(--space-2); }
+    .segmented {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 3px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface-subtle);
+    }
+    .segment,
+    .icon-button,
+    .toolbar-button,
+    .chip,
+    .select-trigger,
+    .setting-trigger,
+    .send-button,
+    .reference-button {
+      min-height: 40px;
+      border: 0;
+      border-radius: var(--button-radius);
+      background: transparent;
+      cursor: pointer;
+      transition: color var(--duration-fast), background-color var(--duration-fast), border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
+    }
+    .segment { min-height: 34px; padding: 0 12px; color: var(--color-text-secondary); font-size: var(--font-sm); font-weight: 600; }
+    .segment:hover { color: var(--color-text); background: var(--color-surface-hover); }
+    .segment[aria-pressed="true"] { color: var(--color-text); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+    .icon-button { display: grid; place-items: center; width: 40px; padding: 0; color: var(--color-text-secondary); border: 1px solid var(--color-border); background: var(--color-surface); }
+    .icon-button:hover { color: var(--color-text); background: var(--color-surface-hover); }
+
+    button:focus-visible,
+    textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    button:active:not(:disabled) { transform: scale(.97); }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+
+    .workspace {
+      position: relative;
+      min-height: 0;
+      overflow: auto;
+      isolation: isolate;
+      background-color: var(--color-canvas);
+      background-image: radial-gradient(circle, var(--color-canvas-grid) 1.2px, transparent 1.2px);
+      background-size: 22px 22px;
+    }
+    .workspace::before {
+      content: "";
+      position: fixed;
+      inset: 72px 0 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(47, 127, 247, .055), transparent 34%),
+        radial-gradient(circle at 38% 80%, rgba(20, 155, 104, .035), transparent 32%);
+    }
+
+    .canvas-hint {
+      position: fixed;
+      left: var(--space-6);
+      bottom: var(--space-6);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 8px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill);
+      color: var(--color-text-tertiary);
+      background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(12px);
+      font-size: var(--font-xs);
+    }
+
+    .canvas-stage {
+      position: relative;
+      width: min(1100px, calc(100vw - 48px));
+      min-height: 920px;
+      margin: 0 auto;
+      padding: 108px 24px 100px;
+    }
+    .node-stack { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); }
+
+    .context-toolbar {
+      position: absolute;
+      top: -64px;
+      left: 50%;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 5px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-raised);
+      box-shadow: var(--shadow-md);
+      transform: translateX(-50%);
+      animation: toolbar-in var(--duration-normal) var(--ease-out);
+    }
+    .toolbar-button { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 11px; color: var(--color-text-secondary); font-size: var(--font-sm); font-weight: 600; white-space: nowrap; }
+    .toolbar-button:hover { color: var(--color-text); background: var(--color-surface-hover); }
+    .toolbar-button.danger:hover { color: var(--color-danger); background: var(--color-danger-soft); }
+    .toolbar-divider { width: 1px; height: 24px; margin: 0 3px; background: var(--color-border); }
+
+    .node-wrap { position: relative; width: var(--node-width); max-width: 100%; }
+    .node-kicker { margin: 0 0 var(--space-2) 12px; color: var(--color-text-secondary); font-size: var(--font-sm); font-weight: 650; }
+    .node-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 64px 1fr auto;
+      align-items: center;
+      gap: var(--space-4);
+      width: 100%;
+      min-height: var(--node-height);
+      padding: var(--space-6);
+      border: 1px solid var(--node-border);
+      border-radius: var(--node-radius);
+      background: var(--node-bg);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: border-color var(--duration-fast), box-shadow var(--duration-normal), background-color var(--duration-fast), transform var(--duration-normal) var(--ease-out);
+    }
+    .node-card:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-md); }
+    .node-card.selected { border: 2px solid var(--node-selected-border); padding: calc(var(--space-6) - 1px); box-shadow: 0 0 0 3px var(--color-selection-soft), var(--shadow-md); }
+    .node-card.running { border-color: var(--color-selection); }
+    .node-card.error { border-color: var(--color-danger); box-shadow: 0 0 0 3px var(--color-danger-soft), var(--shadow-md); }
+    .node-card.success .node-icon { color: var(--p-white); background: var(--color-brand); }
+    .node-icon {
+      display: grid;
+      place-items: center;
+      width: 64px;
+      height: 64px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      color: var(--color-text-secondary);
+      background: var(--color-surface-subtle);
+      transition: color var(--duration-fast), background-color var(--duration-fast), border-color var(--duration-fast);
+    }
+    .node-copy { min-width: 0; }
+    .node-title { margin: 0; font-size: 18px; line-height: 1.35; letter-spacing: -.012em; }
+    .node-description { margin: 6px 0 0; color: var(--color-text-tertiary); font-size: var(--font-sm); }
+    .node-status { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: var(--radius-pill); color: var(--color-text-secondary); background: var(--color-surface-subtle); font-size: var(--font-xs); font-weight: 650; white-space: nowrap; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-text-tertiary); }
+    .node-card.running .status-dot { background: var(--color-selection); animation: pulse 1.2s ease-in-out infinite; }
+    .node-card.success .status-dot { background: var(--color-brand); }
+    .node-card.error .status-dot { background: var(--color-danger); }
+    .handle { position: absolute; top: 50%; width: 16px; height: 16px; border: 3px solid var(--color-canvas); border-radius: 50%; background: var(--color-text-secondary); transform: translateY(-50%); box-shadow: 0 0 0 1px var(--color-border-strong); }
+    .handle.in { left: -9px; }
+    .handle.out { right: -9px; }
+    .node-card.selected .handle { background: var(--color-selection); }
+    .progress-track { position: absolute; left: 24px; right: 24px; bottom: 14px; height: 3px; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-border); }
+    .progress-bar { width: 46%; height: 100%; border-radius: inherit; background: var(--color-selection); animation: progress-slide 1.4s ease-in-out infinite alternate; }
+
+    .inspector {
+      position: relative;
+      z-index: 10;
+      width: var(--inspector-width);
+      max-width: 100%;
+      border: 1px solid var(--color-border);
+      border-radius: var(--inspector-radius);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-md);
+      animation: inspector-in var(--duration-normal) var(--ease-out);
+    }
+    .inspector-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-5) var(--space-5) var(--space-4); border-bottom: 1px solid var(--color-border); }
+    .inspector-title { margin: 0; font-size: var(--font-lg); line-height: 1.4; letter-spacing: -.01em; }
+    .inspector-subtitle { margin: 4px 0 0; color: var(--color-text-tertiary); font-size: var(--font-sm); }
+    .reference-button { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 0 13px; border: 1px solid var(--color-border); color: var(--color-text-secondary); background: var(--color-surface); font-size: var(--font-sm); font-weight: 600; }
+    .reference-button:hover { color: var(--color-text); border-color: var(--color-border-strong); background: var(--color-surface-hover); }
+
+    .composer { padding: var(--space-4) var(--space-5) var(--space-5); }
+    .prompt-field { position: relative; overflow: visible; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-subtle); transition: border-color var(--duration-fast), box-shadow var(--duration-fast); }
+    .prompt-field:focus-within { border-color: var(--color-selection); box-shadow: var(--focus-ring); }
+    .prompt-textarea { display: block; width: 100%; min-height: 154px; padding: var(--space-4); resize: vertical; border: 0; outline: 0; color: var(--color-text); background: transparent; line-height: 1.65; }
+    .prompt-textarea::placeholder { color: var(--color-text-tertiary); }
+    .composer-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 10px; border-top: 1px solid var(--color-border); }
+    .composer-tools { position: relative; display: flex; align-items: center; min-width: 0; gap: var(--space-2); }
+    .tool-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-md); color: var(--color-text-tertiary); }
+    .select-trigger,
+    .setting-trigger { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid var(--color-border); color: var(--color-text-secondary); background: var(--color-surface); font-size: var(--font-sm); font-weight: 600; white-space: nowrap; }
+    .select-trigger { max-width: 240px; }
+    .select-trigger:hover,
+    .setting-trigger:hover,
+    .select-trigger[aria-expanded="true"],
+    .setting-trigger[aria-expanded="true"] { color: var(--color-text); border-color: var(--color-border-strong); background: var(--color-surface-hover); }
+    .select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .send-button { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 auto; color: var(--p-white); background: var(--color-brand); box-shadow: 0 6px 18px rgba(20, 155, 104, .22); }
+    .send-button:hover { background: var(--color-brand-hover); }
+    .send-button:active { background: var(--color-brand-active); }
+    .send-button.loading { cursor: wait; }
+    .spinner { width: 18px; height: 18px; border: 2px solid rgba(255, 255, 255, .35); border-top-color: var(--p-white); border-radius: 50%; animation: spin .8s linear infinite; }
+
+    .menu,
+    .settings-popover {
+      position: absolute;
+      z-index: 50;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-raised);
+      box-shadow: var(--shadow-lg);
+      animation: popover-in var(--duration-normal) var(--ease-out);
+      transform-origin: bottom left;
+    }
+    .menu { left: 48px; bottom: 50px; width: 272px; padding: 6px; border-radius: var(--radius-md); }
+    .menu-label { padding: 8px 10px 6px; color: var(--color-text-tertiary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .menu-option { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 42px; padding: 0 10px; border: 0; border-radius: var(--radius-sm); color: var(--color-text-secondary); background: transparent; cursor: pointer; text-align: left; }
+    .menu-option:hover,
+    .menu-option[aria-selected="true"] { color: var(--color-text); background: var(--color-surface-hover); }
+    .menu-option[aria-selected="true"] { font-weight: 650; }
+    .menu-meta { color: var(--color-text-tertiary); font-size: var(--font-xs); }
+
+    .settings-popover { left: 296px; bottom: 50px; width: 430px; max-width: calc(100vw - 48px); padding: var(--space-5); border-radius: var(--radius-lg); }
+    .popover-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+    .popover-head h3 { margin: 0; font-size: var(--font-lg); }
+    .popover-close { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--radius-sm); color: var(--color-text-tertiary); background: transparent; cursor: pointer; }
+    .popover-close:hover { color: var(--color-text); background: var(--color-surface-hover); }
+    .settings-group + .settings-group { margin-top: var(--space-4); }
+    .settings-label { display: block; margin: 0 0 var(--space-2); color: var(--color-text-secondary); font-size: var(--font-xs); font-weight: 700; }
+    .chip-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+    .chip { min-height: 40px; padding: 0 10px; border: 1px solid var(--color-border); color: var(--color-text-secondary); background: var(--color-surface); font-size: var(--font-sm); font-weight: 600; }
+    .chip:hover { color: var(--color-text); border-color: var(--color-border-strong); background: var(--color-surface-hover); }
+    .chip[aria-pressed="true"] { color: var(--color-selection); border-color: var(--color-selection); background: var(--color-selection-soft); }
+    .instruction { width: 100%; min-height: 82px; padding: 12px; resize: vertical; border: 1px solid var(--color-border); border-radius: var(--radius-md); outline: 0; color: var(--color-text); background: var(--color-surface-subtle); }
+    .instruction::placeholder { color: var(--color-text-tertiary); }
+    .instruction:focus { border-color: var(--color-selection); box-shadow: var(--focus-ring); }
+
+    .spec-strip { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+    .spec-item { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid var(--color-border); border-radius: var(--radius-pill); color: var(--color-text-tertiary); background: color-mix(in srgb, var(--color-surface) 76%, transparent); font-size: var(--font-xs); }
+    .swatch { width: 9px; height: 9px; border-radius: 50%; background: var(--color-selection); }
+    .swatch.brand { background: var(--color-brand); }
+    .swatch.neutral { background: var(--color-border-strong); }
+
+    .toast { position: fixed; right: var(--space-6); bottom: var(--space-6); z-index: 200; display: flex; align-items: center; gap: var(--space-3); max-width: 360px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); background: var(--color-surface-raised); box-shadow: var(--shadow-lg); animation: toast-in var(--duration-normal) var(--ease-out); }
+    .toast-icon { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; border-radius: 50%; color: var(--p-white); background: var(--color-brand); }
+    .toast strong { display: block; font-size: var(--font-sm); }
+    .toast span { display: block; margin-top: 2px; color: var(--color-text-tertiary); font-size: var(--font-xs); }
+
+    @keyframes toolbar-in { from { opacity: 0; transform: translate(-50%, 8px) scale(.98); } }
+    @keyframes inspector-in { from { opacity: 0; transform: translateY(-8px) scale(.992); } }
+    @keyframes popover-in { from { opacity: 0; transform: translateY(7px) scale(.98); } }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 50% { opacity: .34; transform: scale(.75); } }
+    @keyframes progress-slide { from { transform: translateX(-20%); } to { transform: translateX(120%); } }
+
+    @media (max-width: 820px) {
+      .topbar { padding: 0 var(--space-4); }
+      .brand-copy span, .state-control { display: none; }
+      .canvas-stage { width: 100%; padding: 100px 16px 80px; }
+      :root { --node-width: min(468px, calc(100vw - 32px)); --inspector-width: calc(100vw - 32px); }
+      .inspector-head { padding: var(--space-4); }
+      .composer { padding: var(--space-3) var(--space-4) var(--space-4); }
+      .composer-tools { gap: 4px; }
+      .setting-trigger span, .tool-icon { display: none; }
+      .settings-popover { left: 0; width: min(430px, calc(100vw - 48px)); }
+      .canvas-hint { display: none; }
+    }
+    @media (max-width: 540px) {
+      .brand-copy strong { font-size: var(--font-md); }
+      .theme-label { display: none; }
+      .node-card { grid-template-columns: 52px 1fr; min-height: 152px; padding: var(--space-4); }
+      .node-card.selected { padding: calc(var(--space-4) - 1px); }
+      .node-icon { width: 52px; height: 52px; }
+      .node-status { grid-column: 2; justify-self: start; }
+      .context-toolbar { max-width: calc(100vw - 32px); overflow-x: auto; }
+      .toolbar-button span { display: none; }
+      .toolbar-button { width: 40px; justify-content: center; padding: 0; }
+      .reference-button span { display: none; }
+      .prompt-textarea { min-height: 132px; }
+      .select-trigger { max-width: 170px; }
+      .settings-popover { position: fixed; left: 16px; right: 16px; bottom: 16px; width: auto; max-width: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.5c.7 4.5 2.8 6.6 7.3 7.3-4.5.7-6.6 2.8-7.3 7.3-.7-4.5-2.8-6.6-7.3-7.3 4.5-.7 6.6-2.8 7.3-7.3Z"/><path d="M18.5 2v4M20.5 4h-4"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V6.7l10-2.2v10.7"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15.2" r="2.5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.5A8 8 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m7 11 5-5 5 5M12 6v12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 2.3 7.7M4 4v6h6"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-spark"/></svg></div>
+        <div class="brand-copy">
+          <strong>豌豆 UI v2 · 音频节点母版</strong>
+          <span>独立视觉实验页，不影响正式画布</span>
+        </div>
+      </div>
+      <div class="lab-controls">
+        <div class="segmented state-control" aria-label="预览状态">
+          <button class="segment" type="button" data-preview-state="idle" aria-pressed="true">默认</button>
+          <button class="segment" type="button" data-preview-state="running" aria-pressed="false">运行</button>
+          <button class="segment" type="button" data-preview-state="success" aria-pressed="false">成功</button>
+          <button class="segment" type="button" data-preview-state="error" aria-pressed="false">错误</button>
+        </div>
+        <button class="icon-button" id="themeToggle" type="button" aria-label="切换到深色主题" title="切换主题">
+          <svg id="themeIcon" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-moon"/></svg>
+        </button>
+        <button class="icon-button" id="resetButton" type="button" aria-label="恢复默认预览" title="恢复默认">
+          <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-reset"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace" id="workspace">
+      <div class="canvas-stage">
+        <section class="node-stack" aria-label="音频节点交互母版">
+          <nav class="context-toolbar" id="contextToolbar" aria-label="节点操作">
+            <button class="toolbar-button" type="button"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-info"/></svg><span>信息</span></button>
+            <button class="toolbar-button" type="button"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-copy"/></svg><span>复制</span></button>
+            <button class="toolbar-button" type="button"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-upload"/></svg><span>上传音频</span></button>
+            <span class="toolbar-divider" aria-hidden="true"></span>
+            <button class="toolbar-button danger" type="button"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-trash"/></svg><span>删除</span></button>
+          </nav>
+
+          <div class="node-wrap">
+            <p class="node-kicker">音频</p>
+            <article class="node-card selected" id="audioNode" tabindex="0" role="button" aria-label="音频节点，已选中" aria-expanded="true">
+              <span class="handle in" aria-hidden="true"></span>
+              <div class="node-icon"><svg width="31" height="31" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-music"/></svg></div>
+              <div class="node-copy">
+                <h1 class="node-title">空音频节点</h1>
+                <p class="node-description">输入文字，生成清晰自然的语音</p>
+              </div>
+              <div class="node-status"><span class="status-dot"></span><span id="statusText">等待输入</span></div>
+              <div class="progress-track" id="progressTrack" hidden><div class="progress-bar"></div></div>
+              <span class="handle out" aria-hidden="true"></span>
+            </article>
+          </div>
+
+          <section class="inspector" id="inspector" aria-label="节点详情面板">
+            <header class="inspector-head">
+              <div>
+                <h2 class="inspector-title">音频内容</h2>
+                <p class="inspector-subtitle">描述想要生成的声音，复杂选项按需展开。</p>
+              </div>
+              <button class="reference-button" type="button"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-upload"/></svg><span>添加参考</span></button>
+            </header>
+            <div class="composer">
+              <div class="prompt-field">
+                <textarea class="prompt-textarea" id="promptInput" aria-label="音频内容" placeholder="例如：用自然、温暖、节奏舒缓的语气，朗读这段产品介绍……"></textarea>
+                <div class="composer-footer">
+                  <div class="composer-tools">
+                    <span class="tool-icon" title="关键词"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-book"/></svg></span>
+                    <button class="select-trigger" id="modelTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+                      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-spark"/></svg>
+                      <span class="select-label" id="modelLabel">gpt-4o-mini-tts</span>
+                      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chevron"/></svg>
+                    </button>
+                    <button class="setting-trigger" id="settingsTrigger" type="button" aria-haspopup="dialog" aria-expanded="false">
+                      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-sliders"/></svg>
+                      <span id="settingsSummary">Alloy · MP3 · 1×</span>
+                    </button>
+
+                    <div class="menu" id="modelMenu" role="listbox" aria-label="选择音频模型" hidden>
+                      <div class="menu-label">OpenAI 音频模型</div>
+                      <button class="menu-option" type="button" role="option" aria-selected="true" data-model="gpt-4o-mini-tts"><span>gpt-4o-mini-tts</span><svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></button>
+                      <button class="menu-option" type="button" role="option" aria-selected="false" data-model="tts-1-hd"><span>tts-1-hd</span><span class="menu-meta">高清</span></button>
+                      <div class="menu-label">Gemini 音频模型</div>
+                      <button class="menu-option" type="button" role="option" aria-selected="false" data-model="gemini-2.5-flash-preview-tts"><span>Gemini Flash TTS</span><span class="menu-meta">快速</span></button>
+                    </div>
+
+                    <section class="settings-popover" id="settingsPopover" role="dialog" aria-modal="false" aria-labelledby="audioSettingsTitle" hidden>
+                      <header class="popover-head">
+                        <h3 id="audioSettingsTitle">音频设置</h3>
+                        <button class="popover-close" id="settingsClose" type="button" aria-label="关闭音频设置"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-x"/></svg></button>
+                      </header>
+                      <div class="settings-group">
+                        <span class="settings-label">声音</span>
+                        <div class="chip-grid" data-chip-group="voice">
+                          <button class="chip" type="button" aria-pressed="true" data-value="Alloy">Alloy</button>
+                          <button class="chip" type="button" aria-pressed="false" data-value="Ash">Ash</button>
+                          <button class="chip" type="button" aria-pressed="false" data-value="Coral">Coral</button>
+                          <button class="chip" type="button" aria-pressed="false" data-value="Echo">Echo</button>
+                          <button class="chip" type="button" aria-pressed="false" data-value="Fable">Fable</button>
+                          <button class="chip" type="button" aria-pressed="false" data-value="Nova">Nova</button>
+                        </div>
+                      </div>
+                      <div class="settings-group">
+                        <span class="settings-label">格式</span>
+                        <div class="chip-grid" data-chip-group="format">
+                          <button class="chip" type="button" aria-pressed="true" data-value="MP3">MP3</button>
+                          <button class="chip" type="button" aria-pressed="false" data-value="WAV">WAV</button>
+                          <button class="chip" type="button" aria-pressed="false" data-value="Opus">Opus</button>
+                        </div>
+                      </div>
+                      <div class="settings-group">
+                        <span class="settings-label">语速</span>
+                        <div class="chip-grid" data-chip-group="speed">
+                          <button class="chip" type="button" aria-pressed="false" data-value="0.75×">0.75×</button>
+                          <button class="chip" type="button" aria-pressed="true" data-value="1×">1×</button>
+                          <button class="chip" type="button" aria-pressed="false" data-value="1.25×">1.25×</button>
+                        </div>
+                      </div>
+                      <div class="settings-group">
+                        <label class="settings-label" for="instructionInput">声音指令</label>
+                        <textarea class="instruction" id="instructionInput" placeholder="例如：自然、温暖，适合旁白。"></textarea>
+                      </div>
+                    </section>
+                  </div>
+                  <button class="send-button" id="sendButton" type="button" aria-label="生成音频"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-arrow-up"/></svg></button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="spec-strip" aria-label="本页核心设计规则">
+            <span class="spec-item"><span class="swatch neutral"></span>中性色为主体</span>
+            <span class="spec-item"><span class="swatch"></span>蓝色只表示选择</span>
+            <span class="spec-item"><span class="swatch brand"></span>绿色只表示主操作</span>
+            <span class="spec-item">4 / 8px 间距体系</span>
+            <span class="spec-item">统一 1.7px 图标</span>
+          </div>
+        </section>
+      </div>
+      <div class="canvas-hint"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-info"/></svg>点击空白处收起；点击节点展开；双击节点保持详情</div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <div class="toast-icon"><svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></div>
+    <div><strong>音频生成完成</strong><span>下载操作会在正式节点中显示。</span></div>
+  </div>
+
+  <script>
+    (() => {
+      const body = document.body;
+      const workspace = document.getElementById('workspace');
+      const node = document.getElementById('audioNode');
+      const toolbar = document.getElementById('contextToolbar');
+      const inspector = document.getElementById('inspector');
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIconUse = document.querySelector('#themeIcon use');
+      const resetButton = document.getElementById('resetButton');
+      const modelTrigger = document.getElementById('modelTrigger');
+      const modelMenu = document.getElementById('modelMenu');
+      const modelLabel = document.getElementById('modelLabel');
+      const settingsTrigger = document.getElementById('settingsTrigger');
+      const settingsPopover = document.getElementById('settingsPopover');
+      const settingsClose = document.getElementById('settingsClose');
+      const settingsSummary = document.getElementById('settingsSummary');
+      const sendButton = document.getElementById('sendButton');
+      const statusText = document.getElementById('statusText');
+      const progressTrack = document.getElementById('progressTrack');
+      const toast = document.getElementById('toast');
+      const stateButtons = [...document.querySelectorAll('[data-preview-state]')];
+      let toastTimer = 0;
+      let runTimer = 0;
+
+      const icon = (name, size = 22) => `<svg width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-${name}"/></svg>`;
+
+      function setSelected(selected) {
+        node.classList.toggle('selected', selected);
+        node.setAttribute('aria-label', `音频节点，${selected ? '已选中' : '未选中'}`);
+        node.setAttribute('aria-expanded', String(selected));
+        toolbar.hidden = !selected;
+        inspector.hidden = !selected;
+        if (!selected) closeFloating();
+      }
+
+      function closeFloating(except) {
+        if (except !== 'model') {
+          modelMenu.hidden = true;
+          modelTrigger.setAttribute('aria-expanded', 'false');
+        }
+        if (except !== 'settings') {
+          settingsPopover.hidden = true;
+          settingsTrigger.setAttribute('aria-expanded', 'false');
+        }
+      }
+
+      function setPreviewState(state) {
+        clearTimeout(runTimer);
+        node.classList.remove('running', 'success', 'error');
+        sendButton.classList.remove('loading');
+        sendButton.disabled = false;
+        sendButton.innerHTML = icon('arrow-up');
+        progressTrack.hidden = true;
+        const copy = {
+          idle: '等待输入',
+          running: '正在生成',
+          success: '生成完成',
+          error: '生成失败'
+        };
+        if (state !== 'idle') node.classList.add(state);
+        if (state === 'running') {
+          progressTrack.hidden = false;
+          sendButton.classList.add('loading');
+          sendButton.disabled = true;
+          sendButton.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+        }
+        statusText.textContent = copy[state];
+        stateButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.previewState === state)));
+      }
+
+      function showToast() {
+        clearTimeout(toastTimer);
+        toast.hidden = false;
+        toastTimer = window.setTimeout(() => { toast.hidden = true; }, 3600);
+      }
+
+      function updateSummary() {
+        const value = (group) => document.querySelector(`[data-chip-group="${group}"] .chip[aria-pressed="true"]`)?.dataset.value || '';
+        settingsSummary.textContent = `${value('voice')} · ${value('format')} · ${value('speed')}`;
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const dark = body.dataset.theme !== 'dark';
+        body.dataset.theme = dark ? 'dark' : 'light';
+        themeToggle.setAttribute('aria-label', dark ? '切换到浅色主题' : '切换到深色主题');
+        themeIconUse.setAttribute('href', dark ? '#i-sun' : '#i-moon');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#101215' : '#f4f5f7');
+      });
+
+      node.addEventListener('click', (event) => { event.stopPropagation(); setSelected(true); });
+      node.addEventListener('dblclick', (event) => { event.stopPropagation(); setSelected(true); inspector.hidden = false; });
+      node.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected(true); }
+      });
+      workspace.addEventListener('click', (event) => {
+        if (event.target === workspace || event.target.classList.contains('canvas-stage')) setSelected(false);
+      });
+
+      modelTrigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const opening = modelMenu.hidden;
+        closeFloating(opening ? 'model' : undefined);
+        modelMenu.hidden = !opening;
+        modelTrigger.setAttribute('aria-expanded', String(opening));
+      });
+      document.querySelectorAll('.menu-option').forEach((option) => option.addEventListener('click', () => {
+        document.querySelectorAll('.menu-option').forEach((item) => item.setAttribute('aria-selected', 'false'));
+        option.setAttribute('aria-selected', 'true');
+        modelLabel.textContent = option.dataset.model;
+        closeFloating();
+      }));
+
+      settingsTrigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const opening = settingsPopover.hidden;
+        closeFloating(opening ? 'settings' : undefined);
+        settingsPopover.hidden = !opening;
+        settingsTrigger.setAttribute('aria-expanded', String(opening));
+      });
+      settingsClose.addEventListener('click', () => closeFloating());
+      document.querySelectorAll('[data-chip-group]').forEach((group) => group.addEventListener('click', (event) => {
+        const chip = event.target.closest('.chip');
+        if (!chip) return;
+        group.querySelectorAll('.chip').forEach((item) => item.setAttribute('aria-pressed', 'false'));
+        chip.setAttribute('aria-pressed', 'true');
+        updateSummary();
+      }));
+
+      stateButtons.forEach((button) => button.addEventListener('click', () => setPreviewState(button.dataset.previewState)));
+      sendButton.addEventListener('click', () => {
+        setSelected(true);
+        setPreviewState('running');
+        runTimer = window.setTimeout(() => { setPreviewState('success'); showToast(); }, 1800);
+      });
+
+      resetButton.addEventListener('click', () => {
+        clearTimeout(runTimer);
+        body.dataset.theme = 'light';
+        themeIconUse.setAttribute('href', '#i-moon');
+        themeToggle.setAttribute('aria-label', '切换到深色主题');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f4f5f7');
+        document.getElementById('promptInput').value = '';
+        document.getElementById('instructionInput').value = '';
+        setSelected(true);
+        setPreviewState('idle');
+        closeFloating();
+        toast.hidden = true;
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!event.target.closest('.menu') && !event.target.closest('#modelTrigger') && !event.target.closest('.settings-popover') && !event.target.closest('#settingsTrigger')) closeFloating();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeFloating();
+      });
+    })();
+  </script>
+</body>
+</html>

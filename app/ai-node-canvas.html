@@ -5165,23 +5165,42 @@
     .creative-style-row { align-items:center; }
     .skill-row-control,.creative-style-control { position:relative; width:min(100%, 216px); }
     .skill-row-control > .node-select-trigger { width:100%; }
-    .node .creative-style-trigger { width:100%; min-height:30px; height:30px; padding:0 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text); background:rgba(238,243,244,.92); border:1px solid rgba(15,23,42,.12); border-radius:9px !important; font-size:11px; font-weight:600; text-align:left; box-shadow:none; }
+    .node .creative-style-trigger { width:100%; min-height:30px; height:30px; padding:0 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text); background:#f3f3f3; border:1px solid #dedede; border-radius:9px !important; font-size:11px; font-weight:600; text-align:left; box-shadow:none; }
     .node .creative-style-trigger svg { width:14px; height:14px; flex:0 0 auto; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-    .creative-style-control.open .creative-style-trigger { border-color:#13aa72; box-shadow:0 0 0 3px rgba(19,170,114,.12); }
-    .creative-style-popover { position:absolute; z-index:90; top:calc(100% + 7px); left:0; right:auto; display:none; width:430px; max-width:min(82vw,430px); max-height:470px; overflow:auto; padding:10px; border:1px solid rgba(54,73,63,.18); border-radius:12px; color:#17201c; background:rgba(255,255,255,.98); box-shadow:0 18px 50px rgba(15,23,42,.2); pointer-events:auto; }
+    .creative-style-control.open .creative-style-trigger { border-color:#777; box-shadow:0 0 0 2px rgba(128,128,128,.16); }
+    .creative-style-popover { position:absolute; z-index:90; top:calc(100% + 7px); left:0; right:auto; display:none; width:620px; max-width:min(86vw,620px); max-height:min(72vh,620px,var(--creative-available-height,72vh)); overflow-y:auto; overscroll-behavior:contain; padding:10px; border:1px solid #d5d5d5; border-radius:12px; color:#222; background:#fff; box-shadow:0 18px 50px rgba(0,0,0,.18); pointer-events:auto; }
     .creative-style-control.open .creative-style-popover { display:block; }
+    .creative-style-control.open-up .creative-style-popover { top:auto; bottom:calc(100% + 7px); }
+    .creative-style-control.align-right .creative-style-popover { left:auto; right:0; }
     .node.generator:has(.creative-style-control.open) { z-index:95 !important; }
-    .creative-style-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
-    .node .creative-style-card { position:relative; display:block; width:100%; height:auto; min-height:0; aspect-ratio:1; padding:0; overflow:hidden; text-align:left; border:1px solid rgba(62,81,70,.16); border-radius:8px !important; background:#eef2ef; pointer-events:auto; cursor:pointer; }
-    .node .creative-style-card.active { border-color:#2fbd5b; box-shadow:0 0 0 2px rgba(47,189,91,.14); }
+    .creative-style-search-row { position:sticky; z-index:2; top:-10px; display:flex; align-items:center; gap:8px; margin:-10px -10px 10px; padding:10px; border-bottom:1px solid #e5e5e5; background:#fff; }
+    .creative-style-search-row span { flex:none; color:#737373; font-size:11px; white-space:nowrap; }
+    body.node-canvas-page .node .creative-style-search { flex:1; width:100%; min-width:0; height:34px; padding:0 10px; color:#222; background:#f6f6f6; border:1px solid #dedede; border-radius:8px; outline:0; font-size:12px; }
+    body.node-canvas-page .node .creative-style-search:focus-visible { border-color:#777; box-shadow:0 0 0 2px rgba(128,128,128,.16); }
+    .creative-style-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
+    .node .creative-style-card { position:relative; display:block; width:100%; height:auto; min-height:0; aspect-ratio:394 / 492; padding:0; overflow:hidden; text-align:left; border:1px solid #d8d8d8; border-radius:8px !important; background:#f2f2f2; pointer-events:auto; cursor:pointer; }
+    .node .creative-style-card[hidden] { display:none !important; }
+    .node .creative-style-card:hover,.node .creative-style-card:focus-visible { border-color:#888; outline:0; box-shadow:0 0 0 2px rgba(128,128,128,.16); }
+    .node .creative-style-card.active { border-color:#555; box-shadow:0 0 0 2px rgba(80,80,80,.24); }
     .creative-style-preview { display:block; width:100%; height:100%; overflow:hidden; border-radius:7px !important; background-color:var(--style-a); background-image:url('./assets/creative-styles-grid.png'); background-repeat:no-repeat; background-size:400% 400%; background-position:var(--sprite-x) var(--sprite-y); }
+    .creative-style-preview.custom { position:relative; display:grid; place-items:center; background-image:radial-gradient(circle at 78% 16%,rgba(255,255,255,.34),transparent 32%),linear-gradient(145deg,var(--style-a),#171717); }
+    .creative-style-preview.custom::before { content:""; position:absolute; width:64%; aspect-ratio:1; border:1px solid rgba(255,255,255,.36); border-radius:50%; transform:translate(19%,-16%); }
+    .creative-style-preview.reference { background-image:url('./assets/creative-styles-reference.png'); background-size:607.868% 881.707%; background-position:var(--reference-x) var(--reference-y); }
+    .creative-style-card.reference .creative-style-copy { display:none; }
+    .creative-style-mark { position:relative; z-index:1; color:#fff; font-size:27px; font-weight:700; letter-spacing:-.06em; text-shadow:0 2px 12px rgba(0,0,0,.25); }
     .creative-style-copy { position:absolute; right:0; bottom:0; left:0; padding:22px 7px 6px; background:linear-gradient(transparent,rgba(0,0,0,.72)); }
     .creative-style-preview.free { display:grid; place-items:center; color:#fff; font-size:28px; background-image:linear-gradient(145deg,#64748b,#334155); }
     .creative-style-copy strong,.creative-style-copy small { display:block; }
-    .creative-style-copy strong { color:#fff; font-size:10px; line-height:1.2; }
+    .creative-style-copy strong { color:#fff; font-size:10px; line-height:1.2; overflow-wrap:anywhere; }
     .creative-style-copy small { display:none; }
-    body.dark-theme .creative-style-popover { color:rgba(255,255,255,.92); background:rgba(24,29,27,.98); border-color:rgba(255,255,255,.14); box-shadow:0 18px 50px rgba(0,0,0,.42); }
-    body.dark-theme .node .creative-style-trigger { color:rgba(255,255,255,.92); background:#202523; border-color:rgba(255,255,255,.12); }
+    .creative-style-empty { margin:12px 0 4px; color:#777; font-size:12px; text-align:center; }
+    .creative-style-empty[hidden] { display:none; }
+    body.dark-theme .creative-style-popover { color:#f2f2f2; background:#1b1b1b; border-color:#444; box-shadow:0 18px 50px rgba(0,0,0,.42); }
+    body.dark-theme .creative-style-search-row { background:#1b1b1b; border-color:#383838; }
+    body.dark-theme .creative-style-search-row span { color:#aaa; }
+    body.node-canvas-page.dark-theme .node .creative-style-search { color:#f2f2f2; background:#242424; border-color:#444; }
+    body.dark-theme .node .creative-style-trigger { color:#f2f2f2; background:#242424; border-color:#444; }
+    body.dark-theme .node .creative-style-card { border-color:#444; }
     .generator-skill-description { line-height:1.35; }
 
     .node.result .preview { position:relative; }
@@ -6823,13 +6842,6 @@
     }
 
     .node.audio {
-      --audio-panel:#fff;
-      --audio-panel-soft:#f7f6f4;
-      --audio-stage:#f0eeeb;
-      --audio-border:rgba(31,35,33,.16);
-      --audio-text:#211f1d;
-      --audio-muted:#77736f;
-      --audio-control:#f3f1ef;
       width:520px;
       min-height:184px;
       overflow:visible;
@@ -6837,15 +6849,6 @@
       border-radius:0;
       background:transparent;
       box-shadow:none;
-    }
-    body.dark-theme .node.audio {
-      --audio-panel:#1b1f1d;
-      --audio-panel-soft:#151917;
-      --audio-stage:#252a28;
-      --audio-border:rgba(151,160,156,.3);
-      --audio-text:#eef6f1;
-      --audio-muted:#a4b0aa;
-      --audio-control:#242826;
     }
     html body.node-canvas-page .canvas .node.audio,
     html body.node-canvas-page .canvas .node.audio:hover,
@@ -7014,22 +7017,49 @@
     html body.node-canvas-page .canvas .node.result.box-selected .preview {
       box-shadow:inset 0 0 0 1px #999 !important;
     }
-    /* Neutral surfaces: color is reserved for small semantic indicators, not layout blocks. */
+    /* Canvas semantic tokens share the calibrated light/dark neutral palette.
+       Components below consume these aliases instead of redefining colors. */
     body.node-canvas-page {
-      --wd-surface-0:#f2f2f2;
-      --wd-surface-1:#fff;
-      --wd-surface-2:#f7f7f7;
+      --wd-surface-0:var(--wd-neutral-page);
+      --wd-surface-1:var(--wd-neutral-surface);
+      --wd-surface-2:var(--wd-neutral-surface-2);
       --wd-control:#eee;
-      --wd-ink:#202020;
+      --wd-control-soft:#f1f1f1;
+      --wd-ink:var(--wd-neutral-text);
       --wd-edge:#d2d2d2;
+      --wd-accent-soft:rgba(128,128,128,.1);
+      --wd-accent-line:rgba(128,128,128,.3);
+      --fg-ink:var(--wd-ink);
+      --fg-muted:var(--wd-neutral-muted);
+      --fg-page:var(--wd-surface-0);
+      --fg-surface-solid:var(--wd-surface-1);
+      --fg-mint:var(--wd-control-soft);
+      --fg-mint-soft:var(--wd-surface-2);
+      --fg-fill:rgba(80,80,80,.06);
+      --fg-fill-strong:rgba(80,80,80,.11);
+      --fg-line:rgba(24,24,24,.12);
+      --fg-line-strong:rgba(80,80,80,.3);
+      --fg-shadow:0 14px 38px rgba(0,0,0,.1);
+      --audio-panel:var(--wd-surface-1);
+      --audio-panel-soft:var(--wd-surface-2);
+      --audio-stage:#ededed;
+      --audio-border:rgba(24,24,24,.16);
+      --audio-text:var(--wd-ink);
+      --audio-muted:var(--wd-neutral-muted);
+      --audio-control:var(--wd-control-soft);
     }
     body.node-canvas-page.dark-theme {
-      --wd-surface-0:#111;
-      --wd-surface-1:#1c1c1c;
-      --wd-surface-2:#242424;
       --wd-control:#303030;
-      --wd-ink:#f2f2f2;
+      --wd-control-soft:#303030;
       --wd-edge:#444;
+      --wd-accent-soft:rgba(160,160,160,.1);
+      --wd-accent-line:rgba(160,160,160,.3);
+      --fg-fill:rgba(180,180,180,.06);
+      --fg-fill-strong:rgba(180,180,180,.11);
+      --fg-line:rgba(255,255,255,.12);
+      --fg-line-strong:rgba(190,190,190,.3);
+      --audio-stage:#2a2a2a;
+      --audio-border:rgba(255,255,255,.16);
     }
     body.node-canvas-page .sidebar,
     body.node-canvas-page .assistant-panel,
@@ -7069,12 +7099,6 @@
       background:var(--wd-surface-1) !important;
       border-color:var(--wd-edge) !important;
     }
-    body.node-canvas-page.dark-theme .node.audio {
-      --audio-panel:#1c1c1c;
-      --audio-panel-soft:#222326;
-      --audio-stage:#26272a;
-      --audio-control:#2b2c30;
-    }
     body.node-canvas-page .node.audio-result .preview { background:var(--wd-surface-1) !important; }
     body.node-canvas-page .assistant-panel { box-shadow:0 22px 64px rgba(0,0,0,.3) !important; }
     /* Keep the application surfaces genuinely neutral; reserve color for tiny state markers. */
@@ -7094,8 +7118,6 @@
     body.node-canvas-page.dark-theme .node textarea,
     body.node-canvas-page.dark-theme .node select,
     body.node-canvas-page.dark-theme .node .node-select-trigger { background-color:#292929 !important; color:#eee !important; }
-    body.node-canvas-page.dark-theme #collapseSidebarButton.sidebar-collapse-tab,
-    body.node-canvas-page.dark-theme .floating-sidebar-button.sidebar-collapse-tab { background:#303030 !important; color:#f3f3f3 !important; }
     body.node-canvas-page #collapseSidebarButton.sidebar-collapse-tab,
     body.node-canvas-page .floating-sidebar-button.sidebar-collapse-tab { background:#303030 !important; color:#f3f3f3 !important; border-color:#555 !important; }
     body.node-canvas-page.dark-theme .assistant-title-mark,
@@ -7172,9 +7194,7 @@
     body.node-canvas-page.dark-theme .sidebar button.wide-button.gallery-entry:hover { background:#323232 !important; border-color:#777 !important; color:#fff !important; }
     body.node-canvas-page.dark-theme #assistantToggleButton.active { background:#383838 !important; border-color:#666 !important; color:#fff !important; }
     body.node-canvas-page .node.image .thumb-index { background:#e6e6e6 !important; color:#171717 !important; border-color:#777 !important; }
-    body.node-canvas-page .assistant-rail { background:#303030 !important; border-color:#555 !important; color:#f2f2f2 !important; box-shadow:-8px 0 24px rgba(0,0,0,.24) !important; }
     body.node-canvas-page .assistant-rail::before { background:#3a3a3a !important; color:#fff !important; }
-    body.node-canvas-page .assistant-rail-arrow { color:#eee !important; }
     body.node-canvas-page #collapseSidebarButton.sidebar-collapse-tab,
     body.node-canvas-page .floating-sidebar-button.sidebar-collapse-tab { box-shadow:none !important; outline:none !important; filter:none !important; }
     body.node-canvas-page .node.image .upload-box.single-reference { position:relative; display:block; padding:2px; overflow:hidden; }
@@ -7318,12 +7338,48 @@
     body.node-canvas-page:not(.dark-theme) .node.outpaint button.outpaint-edit-button:hover {
       color:#202020 !important; background:#e5e5e5 !important; border-color:#aaa !important;
     }
+    /* Editors, upload areas and secondary controls consume the shared neutral tokens. */
+    body.node-canvas-page .psd-source-preview,
+    body.node-canvas-page .vector-source-preview,
+    body.node-canvas-page .outpaint-editor-stage { background-color:var(--wd-surface-2) !important; border-color:var(--wd-edge) !important; }
+    body.node-canvas-page .psd-source-upload,
+    body.node-canvas-page .outpaint-editor-head button,
+    body.node-canvas-page .outpaint-editor-tools button,
+    body.node-canvas-page .outpaint-editor-tools select,
+    body.node-canvas-page .outpaint-editor-prompt {
+      color:var(--wd-ink) !important;
+      background:var(--wd-control) !important;
+      border-color:var(--wd-edge) !important;
+      box-shadow:none !important;
+    }
+    body.node-canvas-page .psd-source-upload:hover,
+    body.node-canvas-page .outpaint-editor-head button:hover,
+    body.node-canvas-page .outpaint-editor-tools button:hover { background:var(--wd-surface-1) !important; border-color:#888 !important; }
+    body.node-canvas-page .psd-actions [data-psd-generate],
+    body.node-canvas-page .outpaint-editor-tools button.active {
+      color:var(--wd-ink) !important;
+      background:var(--wd-control) !important;
+      border-color:#888 !important;
+    }
+    body.node-canvas-page .prompt-refine-output,
+    body.node-canvas-page .prompt-refine-actions [data-prompt-refine-run] {
+      color:var(--wd-ink) !important;
+      background:var(--wd-surface-2) !important;
+      border-color:var(--wd-edge) !important;
+    }
+    body.node-canvas-page .prompt-refine-actions [data-prompt-refine-apply] {
+      color:var(--wd-ink) !important;
+      background:var(--wd-control) !important;
+      border-color:#888 !important;
+    }
+    body.node-canvas-page .prompt-refine-actions [data-prompt-refine-apply]:hover:not(:disabled) { background:var(--wd-surface-1) !important; }
+    body.node-canvas-page .psd-countdown::before { background:#aaa; box-shadow:0 0 0 3px rgba(128,128,128,.16); }
     html body.node-canvas-page:not(.dark-theme) .canvas .node .node-body button.wide-button[data-generate].generating {
       color:#252525 !important; background:#e4e4e4 !important; border-color:#aaa !important;
     }
     @media (max-width:900px) { .image-comment-panel { top:68px; right:10px; width:220px; max-height:30vh; } }
   </style>
-</head>
+<link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script></head>
 <body class="node-canvas-page">
   <div class="app assistant-open">
     <aside class="sidebar">
@@ -8096,13 +8152,13 @@
     const sketchBackgroundColor = "#ffffff";
     const legacySketchBackgroundColor = { red:24, green:24, blue:24 };
     const creativeStyles = [
-      { id:"poster", name:"海报", note:"醒目标题与视觉中心", mark:"字", a:"#ee9155", b:"#c75931", prompt:"海报设计：突出主标题和单一视觉焦点，保留清晰文案区、网格层级与安全边距。" },
+      { id:"poster", name:"海报", note:"通用平面海报与清晰排版", mark:"字", a:"#ee9155", b:"#c75931", prompt:"通用平面海报设计：突出主标题和单一视觉焦点，保留清晰文案区、网格层级与安全边距；不默认使用蓝图技术线稿。" },
       { id:"interior", name:"室内设计", note:"空间、材质与采光", mark:"⌂", a:"#e7bad9", b:"#a981a9", prompt:"室内设计效果图：空间尺度可信，材质细节清楚，采光自然，家具布局可落地。" },
       { id:"logo", name:"Logo", note:"简洁且易识别", mark:"◉", a:"#dce6ec", b:"#8fa2ae", prompt:"Logo设计：图形简洁、轮廓清楚、缩小后仍可识别，适合纯色和矢量化使用。" },
-      { id:"illustration", name:"插画", note:"叙事感与统一画风", mark:"✿", a:"#cfc5ef", b:"#8178a7", prompt:"插画创作：角色与场景具有叙事感，线条、色彩、材质和光影保持统一画风。" },
-      { id:"headshot", name:"头像照", note:"自然真实的人像光线", mark:"☺", a:"#d9d3cd", b:"#7c716a", prompt:"专业头像照：真实自然的人像比例，柔和棚拍光，干净背景，清晰眼神与皮肤质感。" },
-      { id:"icon", name:"图标", note:"小尺寸清晰可辨", mark:"✦", a:"#176d69", b:"#0b4348", prompt:"图标设计：使用统一线宽与圆角，小尺寸清晰可辨，造型简洁并适合成套扩展。" },
-      { id:"product", name:"产品摄影", note:"棚拍质感与卖点", mark:"▣", a:"#ffc7dc", b:"#d7799e", prompt:"产品摄影：棚拍级光影，主体轮廓清楚，材质真实，背景简洁并突出产品卖点。" },
+      { id:"illustration", name:"插画", note:"不限媒介的叙事插画", mark:"✿", a:"#cfc5ef", b:"#8178a7", prompt:"通用插画创作：角色与场景具有叙事感，线条、色彩、材质和光影保持统一；除非另有要求，不套用动漫分镜或漫画网点。" },
+      { id:"headshot", name:"头像照", note:"写实专业人像（非 3D）", mark:"☺", a:"#d9d3cd", b:"#7c716a", prompt:"写实专业头像照：真实自然的人像比例，柔和棚拍光，干净背景，清晰眼神与皮肤质感；不转化为 3D 角色。" },
+      { id:"icon", name:"图标", note:"界面功能图标而非贴纸", mark:"✦", a:"#176d69", b:"#0b4348", prompt:"界面功能图标设计：使用统一线宽与圆角，小尺寸清晰可辨，造型简洁并适合成套扩展；不加模切贴纸边。" },
+      { id:"product", name:"产品摄影", note:"从零构思商业棚拍", mark:"▣", a:"#ffc7dc", b:"#d7799e", prompt:"产品商业摄影：设计棚拍级光影和简洁背景，主体轮廓清楚，材质真实并突出卖点；若要求保持原图不变，应改用增强照片。" },
       { id:"merch", name:"周边商品", note:"图案贴合真实载体", mark:"T", a:"#3c8bd4", b:"#13538d", prompt:"周边商品设计：图案自然贴合真实载体，透视、褶皱和印刷质感可信，适合商品展示。" },
       { id:"infographic", name:"信息图", note:"数据结构一眼读懂", mark:"↗", a:"#c9deef", b:"#7ea6c8", prompt:"信息图设计：信息分组明确，阅读顺序清晰，图形辅助理解，数字和中文文字准确可读。" },
       { id:"flyer", name:"传单", note:"促销信息层级清楚", mark:"A", a:"#5b5b67", b:"#272731", prompt:"传单设计：促销主题突出，标题、利益点、时间和行动号召层级清楚，适合印刷。" },
@@ -8112,7 +8168,52 @@
       { id:"advertisement", name:"广告", note:"卖点突出并可转化", mark:"!", a:"#da9bb1", b:"#9d4d70", prompt:"广告创意：产品卖点突出，视觉冲击明确，文案区域清楚，构图引导用户关注行动号召。" },
       { id:"thumbnail", name:"缩略图", note:"小图也有强焦点", mark:"▶", a:"#bcd5b8", b:"#6f996b", prompt:"缩略图设计：小尺寸仍有强视觉焦点，高对比、少文字、主体表情或动作清楚。" },
       { id:"website", name:"网站样机", note:"完整网页视觉预览", mark:"▦", a:"#3275a8", b:"#154265", prompt:"网站样机：展示完整网页层级、响应式布局和组件状态，内容密度合理，界面真实可用。" }
-    ];
+    ].map((style, sprite) => ({ ...style, sprite }));
+    // These image-creation presets complement the existing broad skills. Keep
+    // legacy IDs intact so saved canvases and assistant selections still load.
+    creativeStyles.push(
+      { id:"aerial-view", name:"航拍视角", note:"俯视构图与空间尺度", mark:"↘", a:"#557b61", prompt:"航拍视角：从高处俯拍，保持可信的地形与物体比例，突出清晰的空间层次、自然光线和画面中的主角。" },
+      { id:"collectors-tin", name:"收藏版铁盒", note:"怀旧收藏与精致陈列", mark:"▣", a:"#819a77", prompt:"收藏版铁盒：把主题物件布置在打开的收藏铁盒中，形成精致的分格、纪念品细节与温暖的怀旧质感。" },
+      { id:"retro-80s", name:"重返80年代", note:"年代服饰与胶片质感", mark:"80", a:"#a46d78", prompt:"重返80年代：使用符合 1980 年代的服饰、发型、色彩和生活场景，保留人物身份，呈现自然的胶片摄影质感。" },
+      { id:"exaggerated-cartoon", name:"夸张漫画", note:"放大表情与角色特征", mark:"！", a:"#5b9cd7", prompt:"夸张漫画：以鲜明轮廓、夸张表情和有张力的姿态表现主体；特征仍清晰可辨，画面保持统一的漫画上色。" },
+      { id:"sketch", name:"素描", note:"铅笔线条与纸张肌理", mark:"✎", a:"#a8a8a8", prompt:"素描：以手绘铅笔线、自然排线和纸张肌理表现主体，保留准确结构与明暗关系，避免变成灰度照片。" },
+      { id:"stickers", name:"贴纸", note:"独立轮廓与成套图案", mark:"✦", a:"#e58a42", prompt:"贴纸：将主题转化为一组成套贴纸，轮廓清楚，白色模切边与统一的色彩语言，每个图案彼此独立。" },
+      { id:"oktoberfest-vintage", name:"慕尼黑啤酒节怀旧", note:"节庆纪实与复古胶片", mark:"杯", a:"#9b693c", prompt:"慕尼黑啤酒节怀旧：呈现传统节庆服饰、啤酒帐篷与热闹社交氛围，使用温暖的复古胶片色调和自然纪实瞬间。" },
+      { id:"photo-booth", name:"拍照亭", note:"连拍条与自然表情", mark:"▤", a:"#737373", prompt:"拍照亭：输出同一人物的多格连拍照片条，表情与动作逐格变化，身份和服装一致，保留真实的闪光灯与冲印质感。" },
+      { id:"y2k-digicam", name:"Y2K 数码相机风", note:"千禧年闪光灯快照", mark:"Y2K", a:"#a96e98", prompt:"Y2K 数码相机风：模拟千禧年前后的便携数码相机直闪、轻微噪点与高对比色彩，画面随性而非棚拍。" },
+      { id:"anime", name:"动漫", note:"单幅动漫人物与场景", mark:"漫", a:"#5079ad", prompt:"动漫：以统一的动画角色设计、清晰线稿、赛璐璐上色和有层次的场景呈现单幅画面，保持人物结构稳定。" },
+      { id:"retro-70s-portrait", name:"70 年代风格人像", note:"复古服饰与暖色胶片", mark:"70", a:"#9b744d", prompt:"70 年代风格人像：保留人物可辨识特征，结合 1970 年代服饰、发型、自然暖色光和轻微胶片颗粒。" },
+      { id:"impressionist-painting", name:"印象派绘画", note:"可见笔触与色光变化", mark:"▧", a:"#8c8db3", prompt:"印象派绘画：以可见的短笔触、丰富色光与空气透视表现主题，整体构图可读，不使用摄影般平滑的表面。" },
+      { id:"top-view-collection", name:"置顶合集", note:"俯拍平铺与物件归类", mark:"⌗", a:"#9b83aa", prompt:"置顶合集：将多个相关物件从正上方平铺陈列，保持清楚间距、统一光向与可辨识的细节，形成有秩序的主题合集。" },
+      { id:"underwater", name:"水下", note:"折射、气泡与水中光束", mark:"≈", a:"#4c8194", prompt:"水下：让主体处于可信的水下环境，表现折射光纹、悬浮气泡和水体层次；保留主体身份与自然姿态。" },
+      { id:"avatar-3d", name:"3D 头像", note:"立体角色头像", mark:"3D", a:"#6c91cb", prompt:"3D 头像：制作完整的立体角色头像，五官与发型特征清楚，材质和柔和棚拍光统一，背景简洁。" },
+      { id:"acrylic-painting", name:"丙烯画", note:"厚涂颜料与大胆色块", mark:"▨", a:"#e39745", prompt:"丙烯画：使用可见的厚涂笔触、覆盖性的颜料层和大胆色块，保留主体结构与手工画布质感。" },
+      { id:"felt-miniature", name:"羊毛毡微缩模型", note:"纤维手作与微缩场景", mark:"◌", a:"#b88b78", prompt:"羊毛毡微缩模型：把主题制作成手工针毡微缩物件，呈现柔软纤维、简化造型与真实桌面微距摄影。" },
+      { id:"tarot-card", name:"塔罗牌", note:"神秘象征与牌面边框", mark:"☾", a:"#4d7862", prompt:"塔罗牌：以象征性人物和图案构成对称牌面，加入精致边框、神秘叙事与统一的复古印刷质感。" },
+      { id:"sculpture", name:"雕像", note:"石材质感与立体雕刻", mark:"◉", a:"#8d8176", prompt:"雕像：把主体塑造成可站立的立体雕塑，刻画真实的石材或青铜材质、体积、底座与展厅光线。" },
+      { id:"clay-animation-world", name:"黏土动画世界", note:"定格动画手作质感", mark:"●", a:"#ac704d", prompt:"黏土动画世界：以手捏黏土角色与场景表现主题，保留轻微指纹、手工边缘和定格动画的柔和布光。" },
+      { id:"model-kit", name:"拼装模型套件", note:"零件板与产品展示", mark:"⊞", a:"#40865e", prompt:"拼装模型套件：把主体与配件做成排列整齐的拼装零件板，连接杆、零件边界和比例可信，像真实模型套件摄影。" },
+      { id:"arcade-16bit", name:"16 位街机风格", note:"像素角色与街机配色", mark:"16", a:"#4b63a8", prompt:"16 位街机风格：采用清晰像素网格、有限色阶与复古街机角色和场景设计，避免混入平滑的现代 3D 渲染。" },
+      { id:"handwritten-annotations", name:"手写批注风格", note:"手绘箭头与文字标记", mark:"↗", a:"#77a6ca", prompt:"手写批注风格：在保留主体清晰可见的基础上加入少量手写便签、箭头和说明涂线，标记应帮助理解而不遮挡重点。" },
+      { id:"beauty-guide", name:"美妆指南", note:"分步骤的妆容展示", mark:"✧", a:"#ad7b80", prompt:"美妆指南：以清楚的人像和局部特写展示妆容重点，步骤布局整齐，肤色真实，妆效与文字标签准确易读。" },
+      { id:"doodle", name:"涂鸦", note:"随性手绘与跳跃线条", mark:"✳", a:"#8b6c85", prompt:"涂鸦：以随性的手绘线条、涂抹与活泼的不规则构图表现主题，保持主体可辨认和画面节奏。" },
+      { id:"bobblehead", name:"你的摇头娃娃", note:"人物特征的收藏玩偶", mark:"☺", a:"#9d7859", prompt:"摇头娃娃：保留参考人物的可辨识五官和穿着，把人物做成大头小身的收藏玩偶，带底座与真实玩具摄影光线。" },
+      { id:"mini-me", name:"迷你分身", note:"同一人物的微缩副本", mark:"↟", a:"#8a6a51", prompt:"迷你分身：以同一人物为原型制作一个或多个微缩版本，脸部与服装保持一致，通过比例和场景形成有趣的互动。" },
+      { id:"cutaway", name:"剖面图", note:"结构可见的产品说明", mark:"◫", a:"#607ca6", prompt:"剖面图：清楚展示产品或物体的内部构造与外部轮廓，切面层级准确，标注简洁，具有可信的工业说明图质感。" },
+      { id:"photo-enhance", name:"增强照片", note:"修复细节但保持原貌", mark:"＋", a:"#7490a5", prompt:"增强照片：若有参考图，以原图为准改善清晰度、曝光和细节，保留人物身份、构图、文字和真实肤质，不新增无关物体。" },
+      { id:"distant-nostalgia", name:"远方情结", note:"旅行记忆与手写信件", mark:"✉", a:"#8d796b", prompt:"远方情结：以旅行照片、手写信件和纪念物构成温柔的记忆画面，留出呼吸感，情绪含蓄而不杂乱。" },
+      { id:"night-flash", name:"夜拍闪光", note:"夜景直闪纪实照片", mark:"✴", a:"#555d78", prompt:"夜拍闪光：夜间环境中使用相机直闪，主体明亮、背景保留城市暗部和自然颗粒，呈现真实抓拍瞬间。" },
+      { id:"blueprint-poster", name:"蓝图海报", note:"技术线稿与尺寸标记", mark:"⌖", a:"#416ca6", prompt:"蓝图海报：用蓝底技术线稿、结构尺寸线和清楚的标题排版组织画面，兼顾工程说明与海报可读性。" },
+      { id:"color-study", name:"色彩分析", note:"同一主体的配色对照", mark:"◑", a:"#876e91", prompt:"色彩分析：在统一构图和相同主体下展示多组配色方案，分栏对照清楚，颜色变化不改变人物或物体身份。" },
+      { id:"comic", name:"漫画", note:"分镜、对白与叙事节奏", mark:"▥", a:"#d4a544", prompt:"漫画：以清楚的分镜和人物动作推进短篇故事，线条与角色外观保持连续；对白气泡文字准确且不遮挡主体。" },
+      { id:"manga", name:"动漫漫画", note:"黑白网点与日式分镜", mark:"▦", a:"#878787", prompt:"动漫漫画：采用黑白线稿、网点阴影和有节奏的日式漫画分镜，人物在各格保持一致，文字气泡易读。" },
+      { id:"fantasy-newspaper", name:"奇幻报纸", note:"虚构头版与复古印刷", mark:"报", a:"#8a7864", prompt:"奇幻报纸：设计一张虚构世界的报纸头版，包含醒目标题、分栏正文与主题插图，纸张和旧式印刷质感可信。" },
+      { id:"film-strip", name:"胶片条", note:"连续画格与冲洗颗粒", mark:"▤", a:"#676260", prompt:"胶片条：把连贯画面排成电影胶片条，画格主体保持一致，加入适度的胶片颗粒、边框和时间流动感。" },
+      { id:"photoreal-wallpaper", name:"超写实壁纸", note:"微距细节与沉浸式背景", mark:"◈", a:"#4c7a59", prompt:"超写实壁纸：以高细节、自然光影和清晰材质制作可作壁纸的沉浸式画面，主体位置适合桌面图标留白。" }
+    );
+    // The supplied reference image has 38 cards in a five-column grid. Use
+    // those exact pixels for the matching previews, without altering prompts.
+    creativeStyles.slice(16).forEach((style, referenceIndex) => { style.referenceIndex = referenceIndex; });
     const builtInKeywordPresets = [
       { name: "图片高清放大", text: "4K超清放大，增强纹理与边缘细节，保持原始构图、比例、文字和主体不变" },
       { name: "商业海报", text: "商业海报设计，高级版式，清晰视觉层级，醒目标题区，专业品牌质感" },
@@ -11384,11 +11485,22 @@
     }
 
     function creativeStyleOptionsHtml(node) {
-      const noneOption = `<button class="creative-style-card ${!node.creativeStyle ? "active" : ""}" data-creative-style="" type="button"><span class="creative-style-preview free">无</span><span class="creative-style-copy"><strong>无选择</strong><small>不添加创作风格</small></span></button>`;
-      return noneOption + creativeStyles.map((style, index) => {
-        const column = index % 4;
-        const row = Math.floor(index / 4);
-        return `<button class="creative-style-card ${node.creativeStyle === style.id ? "active" : ""}" data-creative-style="${style.id}" type="button"><span class="creative-style-preview" style="--style-a:${style.a};--sprite-x:${column * 100 / 3}%;--sprite-y:${row * 100 / 3}%"></span><span class="creative-style-copy"><strong>${style.name}</strong><small>${style.note}</small></span></button>`;
+      const noneOption = `<button class="creative-style-card ${!node.creativeStyle ? "active" : ""}" data-creative-style="" type="button" aria-label="无选择，不添加创作风格"><span class="creative-style-preview free">无</span><span class="creative-style-copy"><strong>无选择</strong><small>不添加创作风格</small></span></button>`;
+      const referenceXPositions = [133, 539, 945, 1350, 1756];
+      const referenceYPositions = [207, 713, 1215, 1719, 2223, 2727, 3231, 3735];
+      return noneOption + creativeStyles.map((style) => {
+        const hasSprite = Number.isInteger(style.sprite);
+        const hasReference = Number.isInteger(style.referenceIndex);
+        const column = hasSprite ? style.sprite % 4 : 0;
+        const row = hasSprite ? Math.floor(style.sprite / 4) : 0;
+        const referenceColumn = hasReference ? style.referenceIndex % 5 : 0;
+        const referenceRow = hasReference ? Math.floor(style.referenceIndex / 5) : 0;
+        const referenceX = referenceXPositions[referenceColumn] * 100 / (2395 - 394);
+        const referenceY = referenceYPositions[referenceRow] * 100 / (4338 - 492);
+        const previewStyle = `--style-a:${style.a};--sprite-x:${column * 100 / 3}%;--sprite-y:${row * 100 / 3}%;--reference-x:${referenceX}%;--reference-y:${referenceY}%`;
+        const previewMark = hasSprite || hasReference ? "" : `<span class="creative-style-mark" aria-hidden="true">${escapeHtml(style.mark)}</span>`;
+        const search = escapeHtml(`${style.name} ${style.note}`.normalize("NFKC").toLocaleLowerCase());
+        return `<button class="creative-style-card ${hasReference ? "reference" : ""} ${node.creativeStyle === style.id ? "active" : ""}" data-creative-style="${escapeHtml(style.id)}" data-creative-search="${search}" type="button" aria-label="${escapeHtml(`${style.name}：${style.note}`)}" title="${escapeHtml(style.note)}"><span class="creative-style-preview${hasReference ? " reference" : hasSprite ? "" : " custom"}" style="${previewStyle}">${previewMark}</span><span class="creative-style-copy"><strong>${escapeHtml(style.name)}</strong><small>${escapeHtml(style.note)}</small></span></button>`;
       }).join("");
     }
 
@@ -12306,7 +12418,7 @@
         </div>
         <div class="form-row creative-style-row">
           <label>创作技能</label>
-          <div class="creative-style-control" data-creative-style-control><button class="creative-style-trigger" data-creative-style-toggle type="button" aria-expanded="false"><span>${selectedCreativeStyle ? selectedCreativeStyle.name : "无选择"}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="creative-style-popover" data-creative-style-popover><div class="creative-style-grid">${creativeStyleOptionsHtml(node)}</div></div></div>
+          <div class="creative-style-control" data-creative-style-control><button class="creative-style-trigger" data-creative-style-toggle type="button" aria-expanded="false" aria-controls="creative-style-popover-${node.id}"><span>${selectedCreativeStyle ? selectedCreativeStyle.name : "无选择"}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="creative-style-popover" id="creative-style-popover-${node.id}" data-creative-style-popover role="group" aria-label="创作技能选项"><div class="creative-style-search-row"><input class="creative-style-search" data-creative-style-search type="search" aria-label="搜索创作技能" placeholder="搜索创作技能…" autocomplete="off"><span>${creativeStyles.length} 项</span></div><div class="creative-style-grid" data-creative-style-grid></div><p class="creative-style-empty" data-creative-style-empty hidden>没有找到匹配的创作技能</p></div></div>
         </div>` : ""}
         <div class="form-row">
           <label>模型</label>
@@ -12438,21 +12550,67 @@
       skillPickerPopover?.addEventListener("click", (event) => event.stopPropagation());
       const creativeControl = wrap.querySelector("[data-creative-style-control]");
       const creativeToggle = wrap.querySelector("[data-creative-style-toggle]");
+      const creativeGrid = wrap.querySelector("[data-creative-style-grid]");
+      let closeCreativeOnOutside = null;
+      const closeCreativePicker = () => {
+        creativeControl.classList.remove("open", "open-up", "align-right");
+        creativeToggle.setAttribute("aria-expanded", "false");
+        if (closeCreativeOnOutside) document.removeEventListener("click", closeCreativeOnOutside);
+        closeCreativeOnOutside = null;
+      };
       creativeToggle?.addEventListener("click", (event) => {
         event.stopPropagation();
         const open = !creativeControl.classList.contains("open");
-        creativeControl.classList.toggle("open", open);
-        creativeToggle.setAttribute("aria-expanded", String(open));
-        if (open) setTimeout(() => document.addEventListener("click", () => { creativeControl.classList.remove("open"); creativeToggle.setAttribute("aria-expanded", "false"); }, { once:true }), 0);
+        if (!open) return closeCreativePicker();
+        if (creativeGrid && !creativeGrid.dataset.loaded) {
+          creativeGrid.innerHTML = creativeStyleOptionsHtml(node);
+          creativeGrid.dataset.loaded = "true";
+        }
+        const rect = creativeToggle.getBoundingClientRect();
+        const availableBelow = window.innerHeight - rect.bottom;
+        const openUp = availableBelow < 360 && rect.top > availableBelow;
+        creativeControl.classList.toggle("open-up", openUp);
+        const pickerWidth = Math.min(620, window.innerWidth * .86);
+        creativeControl.classList.toggle("align-right", window.innerWidth - rect.left < pickerWidth && rect.right >= pickerWidth);
+        creativeControl.style.setProperty("--creative-available-height", `${Math.max(120, Math.floor((openUp ? rect.top : availableBelow) - 18))}px`);
+        creativeControl.classList.add("open");
+        creativeToggle.setAttribute("aria-expanded", "true");
+        creativeControl.querySelector("[data-creative-style-search]")?.focus({ preventScroll:true });
+        closeCreativeOnOutside = (outsideEvent) => {
+          if (!creativeControl.contains(outsideEvent.target)) closeCreativePicker();
+        };
+        setTimeout(() => { if (creativeControl.classList.contains("open")) document.addEventListener("click", closeCreativeOnOutside); }, 0);
       });
       wrap.querySelector("[data-creative-style-popover]")?.addEventListener("click", (event) => event.stopPropagation());
-      wrap.querySelectorAll("[data-creative-style]").forEach((button) => button.addEventListener("click", () => {
+      wrap.querySelector("[data-creative-style-popover]")?.addEventListener("wheel", (event) => event.stopPropagation(), { passive:true });
+      const creativeSearch = wrap.querySelector("[data-creative-style-search]");
+      creativeSearch?.addEventListener("input", () => {
+        const query = creativeSearch.value.trim().normalize("NFKC").toLocaleLowerCase();
+        let visible = 0;
+        wrap.querySelectorAll("[data-creative-style][data-creative-search]").forEach((button) => {
+          const matches = !query || button.dataset.creativeSearch.includes(query);
+          button.hidden = !matches;
+          if (matches) visible++;
+        });
+        const empty = wrap.querySelector("[data-creative-style-empty]");
+        if (empty) empty.hidden = visible > 0;
+      });
+      creativeSearch?.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        event.stopPropagation();
+        closeCreativePicker();
+        creativeToggle.focus();
+      });
+      creativeGrid?.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-creative-style]");
+        if (!button || !creativeGrid.contains(button)) return;
+        closeCreativePicker();
         pushHistory();
         const selected = button.dataset.creativeStyle || "";
         node.creativeStyle = node.creativeStyle === selected ? "" : selected;
         node.status = node.creativeStyle ? `已选择创作技能：${creativeStyleById(node.creativeStyle)?.name || ""}。` : "已切换为自由创作。";
         render();
-      }));
+      });
       wrap.querySelector("[data-skill-manage]")?.addEventListener("click", () => openNamedTab("./asset-library.html#skills", "资产 · Skill"));
       wrap.querySelectorAll("[data-generator-skill]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -14664,7 +14822,11 @@
     function autoGrowTextarea(field) {
       const minHeight = Number.parseInt(getComputedStyle(field).minHeight, 10) || 0;
       field.style.height = "auto";
-      field.style.height = `${Math.max(field.scrollHeight + 8, minHeight)}px`;
+      const contentHeight = Math.max(field.scrollHeight + 8, minHeight);
+      // Long prompts must not push the generation controls several screens away.
+      const autoHeightLimit = field.closest(".node") ? Math.max(320, minHeight) : Infinity;
+      field.style.height = `${Math.min(contentHeight, autoHeightLimit)}px`;
+      if (field.closest(".node")) field.style.overflowY = "auto";
     }
 
     function autoGrowTextareas(root) {
@@ -16335,6 +16497,15 @@
     });
 
     canvasWrap.addEventListener("wheel", (event) => {
+      if (event.target.closest("[data-creative-style-popover]")) return;
+      // Text editing and nested scroll panels own the wheel, even at their edges.
+      // Ctrl+wheel remains an explicit canvas zoom gesture.
+      if (!event.ctrlKey) {
+        if (event.target.closest("textarea, input, select, [contenteditable='true']")) return;
+        for (let element = event.target; element && element !== canvasWrap; element = element.parentElement) {
+          if (element.scrollHeight > element.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(element).overflowY)) return;
+        }
+      }
       event.preventDefault();
       markZoomInteraction();
       const before = screenToWorld(event.clientX, event.clientY);
@@ -18481,7 +18652,12 @@ ${formatInstruction}`;
       const selectedResolution = String(node.resolution || "1K").toUpperCase();
       const requestResolution = node._forceBaseGeneration || isOneKOnlyImageModel(node.model) ? "1K" : selectedResolution;
       const maskedReference = node.type === "outpaint" ? null : references.find((item) => item?.maskUrl && item?.url) || null;
-      const imageModel = maskedReference && !node._psdLayerJob ? "gpt-image-2" : imageGenerationApiModel(node.model, requestResolution);
+      const selectedImageModel = imageGenerationApiModel(node.model, requestResolution);
+      // Keep the selected GPT image model for local edits. Silently downgrading
+      // every masked request to gpt-image-2 discards the user's quality choice.
+      const imageModel = maskedReference && !isGptImageModel(selectedImageModel) && !node._psdLayerJob
+        ? "gpt-image-2"
+        : selectedImageModel;
       const grokImageModel = isGrokImageModel(imageModel);
       const orderedImageReferences = maskedReference
         ? [maskedReference, ...references.filter((item) => item !== maskedReference)]
@@ -18500,7 +18676,11 @@ ${formatInstruction}`;
           ].filter(Boolean).join("\n\n");
       const imagePayload = {
         model: imageModel,
-        prompt: promptWithSize(imagePrompt, targetSize),
+        // The normal size suffix asks for a fresh composition. That conflicts
+        // with pixel-preserving masked edits and can override local comments.
+        prompt: maskedReference
+          ? `${imagePrompt}\n\n保留原图的画幅比例及所有未标注内容的位置。按批注编号分别检查每一处透明遮罩区域，只在对应区域执行对应修改；不得把后一条批注当作唯一任务。输出目标尺寸 ${targetSize.replace("x", "×")}。`
+          : promptWithSize(imagePrompt, targetSize),
         n: Math.max(1, Math.min(9, Number(node.count) || 1)),
         size: node._forceStandardApiSize
           ? apiSizeFromTarget(targetSize)
@@ -22565,6 +22745,7 @@ ${formatInstruction}`;
     document.addEventListener("pointerup", finishAssistantPanelInteraction);
     document.addEventListener("pointercancel", finishAssistantPanelInteraction);
     assistantInput.addEventListener("keydown", (event) => {
+      if (event.isComposing || event.keyCode === 229) return;
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         sendAssistantMessage();

@@ -62,7 +62,9 @@ const { chromium } = require("playwright");
     await page.locator('.node.outpaint').last().locator('[data-outpaint-edit]').click();
     const editor = page.locator('.outpaint-editor-overlay');
     assert.ok((await editor.locator('[data-outpaint-scale]').boundingBox()).width < 150, 'scale menu should stay compact');
-    assert.equal(await editor.locator('[data-outpaint-prompt]').evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(36, 38, 38)');
+    const promptBackground = await editor.locator('[data-outpaint-prompt]').evaluate((element) => getComputedStyle(element).backgroundColor);
+    const channels = promptBackground.match(/\d+/g).map(Number);
+    assert.ok(channels[0] >= 220 && channels[0] === channels[1] && channels[1] === channels[2], `light editor must be neutral and light: ${promptBackground}`);
     await editor.locator('[data-outpaint-ratio="1.777778"]').click();
     let frameState = await page.evaluate(() => {
       const node = nodes.filter((item) => item.type === 'outpaint').at(-1);

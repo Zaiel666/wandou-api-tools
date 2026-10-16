@@ -20,3 +20,19 @@ test('large action states no longer use green fills', () => {
   assert.match(styles, /\.sidebar-collapse-tab:hover\s*\{[\s\S]*?background:#303030;/);
   assert.match(styles, /\.node\.outpaint button\.outpaint-edit-button\s*\{[\s\S]*?background-color:#303030 !important;/);
 });
+
+test('audio, export and editing surfaces use theme-neutral colors', () => {
+  assert.match(styles, /body\.node-canvas-page\s*\{[^}]*--audio-panel-soft:var\(--wd-surface-2\);/);
+  assert.match(styles, /body\.node-canvas-page\.dark-theme\s*\{[^}]*--audio-stage:#2a2a2a;/);
+  assert.match(styles, /body\.node-canvas-page \.psd-source-upload,[\s\S]*?\.outpaint-editor-prompt\s*\{[^}]*background:var\(--wd-control\) !important;/);
+  assert.match(styles, /body\.node-canvas-page \.prompt-refine-output,[\s\S]*?\.prompt-refine-actions \[data-prompt-refine-run\]\s*\{[^}]*background:var\(--wd-surface-2\) !important;/);
+});
+
+test('canvas and audio aliases have one theme-aware source of truth', () => {
+  assert.match(styles, /--wd-surface-1:var\(--wd-neutral-surface\);/);
+  assert.match(styles, /--fg-surface-solid:var\(--wd-surface-1\);/);
+  assert.match(styles, /--fg-mint-soft:var\(--wd-surface-2\);/);
+  assert.equal((styles.match(/--audio-panel-soft:/g) || []).length, 1);
+  assert.equal((styles.match(/--fg-surface-solid:/g) || []).length, 1);
+  assert.doesNotMatch(styles, /--audio-(?:panel|panel-soft|stage|border|text|muted|control):#(?:f7f6f4|1b1f1d|151917|a4b0aa)/i);
+});

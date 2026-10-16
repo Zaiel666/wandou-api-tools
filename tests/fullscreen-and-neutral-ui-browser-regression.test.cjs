@@ -16,8 +16,9 @@ const { chromium } = require("playwright");
       const rect = element.getBoundingClientRect();
       return { left: rect.left, right: innerWidth - rect.right, width: rect.width, viewport: innerWidth };
     });
-    assert.ok(projectLayout.width >= projectLayout.viewport * 0.98, JSON.stringify(projectLayout));
-    assert.ok(projectLayout.left <= 2 && projectLayout.right <= 2, JSON.stringify(projectLayout));
+    const projectSidebar = await projectPage.locator('.project-sidebar').boundingBox();
+    assert.ok(Math.abs(projectLayout.left - (projectSidebar.x + projectSidebar.width)) <= 2, JSON.stringify(projectLayout));
+    assert.ok(projectLayout.right <= 2, JSON.stringify(projectLayout));
 
     const assetPage = await context.newPage();
     await assetPage.goto(pathToFileURL(path.resolve(__dirname, "../app/asset-library.html")).href);

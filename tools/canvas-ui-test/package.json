@@ -1,0 +1,12 @@
+{
+  "name": "wandou-canvas-ui-test-tools",
+  "private": true,
+  "description": "Offline DOM regression tests and vendored icon assets for the isolated canvas prototype",
+  "scripts": {
+    "test": "node --test ../../tests/canvas-test-page.test.cjs ../../tests/canvas-test-ui-dom.test.cjs"
+  },
+  "dependencies": {
+    "@tabler/icons": "3.35.0",
+    "linkedom": "0.18.12"
+  }
+}

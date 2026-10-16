@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title>豌豆Ai思维导图</title>
 <link rel="icon" href="./logo.png">
+<script>
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem("ai-tools-theme") === "dark" ? "dark" : "light";
+  } catch (_error) {
+    document.documentElement.dataset.theme = "light";
+  }
+</script>
 <script src="https://unpkg.com/d3@7.8.5/dist/d3.min.js"></script>
 <script src="https://unpkg.com/markmap-lib@0.15.3/dist/browser/index.js"></script>
 <script src="https://unpkg.com/markmap-view@0.15.3/dist/browser/index.js"></script>
@@ -1041,7 +1048,8 @@
         }
     }
 </style>
-</head>
+<link rel="stylesheet" href="./prompt-mind-map-neutral.css">
+<link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script></head>
 <body>
 <div class="header">
     <h1><img class="brand-logo" src="./logo.png" alt="" /><span>豌豆Ai思维导图</span></h1>
@@ -1819,6 +1827,12 @@ function waitForLibraries() {
 }
 async function init() {
     try {
+        // Translate the controls immediately. The diagram library is loaded from a CDN and
+        // may be slow or unavailable; its loading state must not leave the UI blank.
+        const savedLang = localStorage.getItem('ai-mindmap-language');
+        const browserLang = navigator.language.split('-')[0];
+        const initialLang = savedLang || (['zh', 'en'].includes(browserLang) ? browserLang : 'zh');
+        setLanguage(initialLang);
         await waitForLibraries();
         const { Transformer, Markmap } = window.markmap;
         transformer = new Transformer();
@@ -1891,11 +1905,6 @@ async function init() {
         });
 
         loadConfig();
-
-        const savedLang = localStorage.getItem('ai-mindmap-language');
-        const browserLang = navigator.language.split('-')[0];
-        const initialLang = savedLang || (['zh', 'en'].includes(browserLang) ? browserLang : 'zh');
-        setLanguage(initialLang);
 
         const apiUrl = document.getElementById('api-url').value.trim();
         const apiKey = document.getElementById('api-key').value.trim();

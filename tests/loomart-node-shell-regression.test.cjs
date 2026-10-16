@@ -543,7 +543,9 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.equal(await page.locator("#assistantRailButton [data-assistant-rail-copy]").innerText(), "对话模式");
   assert.equal(await page.locator("#assistantRailButton .assistant-rail-arrow svg").count(), 1);
   assert.ok(await page.locator("#assistantSkillSelect option").count() > 1);
-  assert.equal(await page.locator("#assistantCreativeSkillSelect option").count(), 17);
+  const expectedCreativeSkills = await page.evaluate(() => creativeStyles.map((style) => style.id));
+  const assistantCreativeSkills = await page.locator("#assistantCreativeSkillSelect option").evaluateAll((options) => options.map((option) => option.value).filter(Boolean));
+  assert.deepEqual(assistantCreativeSkills, expectedCreativeSkills, "assistant exposes the complete creative skill catalog in order");
   assert.equal(await page.locator("[data-assistant-resize]").count(), 8);
   assert.deepEqual(await page.locator("[data-assistant-resize]").evaluateAll((handles) => Object.fromEntries(handles.map((handle) => [handle.dataset.assistantResize, getComputedStyle(handle).cursor]))), {
     nw: "nwse-resize",
