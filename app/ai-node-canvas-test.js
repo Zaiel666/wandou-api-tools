@@ -4,6 +4,7 @@
   // Remember UI state only, so re-renders do not replay success/selection effects.
   // No listeners dispatch actions: the original controls remain authoritative.
   const motionState = new Map();
+  const refinePulse = new Map();
   const decorateMotion = (element, node) => {
     element.querySelectorAll('.node-menu button,.prompt-corner-tools button,.node-select-trigger,[data-generate],.test-stepper button').forEach(button => button.classList.add('test-motion-button'));
     const key = node.id || element.dataset.id;
@@ -371,7 +372,49 @@
     }
     labelButton(tools.querySelector('[data-skill-picker-toggle]'), 'Skill', 'stack-2');
     labelButton(tools.querySelector('[data-prompt-library]'), '提示词库', 'clipboard-text');
-    labelButton(tools.querySelector('[data-prompt-refine-open]'), 'AI 润色', 'sparkles');
+    const refineButton = tools.querySelector('[data-prompt-refine-open]');
+    labelButton(refineButton, 'AI 润色', 'sparkles');
+    if (refineButton) {
+      refineButton.classList.add('test-refine-button');
+      const sparkle = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      sparkle.classList.add('ui-icon', 'test-refine-icon');
+      sparkle.setAttribute('viewBox', '0 0 24 24');
+      sparkle.setAttribute('aria-hidden', 'true');
+      sparkle.setAttribute('focusable', 'false');
+      const sparklePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      sparklePath.setAttribute('d', 'M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6z');
+      sparkle.append(sparklePath);
+      refineButton.querySelector('.ui-icon')?.replaceWith(sparkle);
+      refineButton.title = '先写好提示词，再点 AI 润色';
+      refineButton.dataset.tooltip = refineButton.title;
+      const label = refineButton.querySelector('span');
+      label.className = 'test-refine-label';
+      label.replaceChildren(...[...'AI 润色'].map((letter, index) => {
+        const glyph = document.createElement('span');
+        glyph.className = 'test-refine-letter';
+        glyph.textContent = letter === ' ' ? '\u00a0' : letter;
+        glyph.style.setProperty('--letter-order', String(index));
+        return glyph;
+      }));
+      if (Date.now() - (refinePulse.get(node.id) || 0) < 1400) refineButton.classList.add('test-refine-activated');
+      refineButton.addEventListener('click', event => {
+        if (!String(node.prompt || '').trim()) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          showToast('请先输入提示词，再点 AI 润色');
+          element.querySelector('[data-field="prompt"]')?.focus();
+          return;
+        }
+        refinePulse.set(node.id, Date.now());
+        refineButton.classList.add('test-refine-activated');
+        setTimeout(() => {
+          if (refinePulse.get(node.id) && Date.now() - refinePulse.get(node.id) >= 1350) {
+            refinePulse.delete(node.id);
+            document.querySelector(`.node[data-id="${node.id}"] [data-prompt-refine-open]`)?.classList.remove('test-refine-activated');
+          }
+        }, 1450);
+      }, { capture:true });
+    }
     const summary = document.createElement('p');
     summary.className = 'test-skill-summary';
     summary.textContent = skillName + ' · ' + (creativeName === '无选择' ? '未选择创作技能' : creativeName);
@@ -390,7 +433,7 @@
     const ratio = element.querySelector('.ratio-menu')?.closest('.form-row');
     element.querySelectorAll('.ratio-menu .node-select-option').forEach(option => {
       if (/^(1:1|16:9|9:16|4:3|3:4)(?:\s|$)/.test(option.textContent.trim()) && !option.querySelector('.test-common-ratio')) {
-        const badge = document.createElement('span');badge.className = 'test-common-ratio';badge.textContent = '（常用）';option.append(badge);
+        const badge = document.createElement('span');badge.className = 'test-common-ratio';badge.textContent = '（常用）';(option.querySelector('span') || option).append(badge);
       }
     });
     const resolution = element.querySelector('.resolution-row');
@@ -464,12 +507,12 @@
     document.querySelector('.brand h1').innerHTML = '豌豆 AI<span class="brand-subtitle">绘图节点画布</span>';
     const badge = document.createElement('span');
     badge.className = 'test-version-badge';
-    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.3 · 节点画布' : '测试版 · 独立数据';
+    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.4 · 节点画布' : '测试版 · 独立数据';
     badge.title = '测试项目与正式版隔离；API 设置需要在测试页单独配置。';
     document.querySelector('.sidebar').append(badge);
     const creation = {
       image:['photo','参考图','blue'],sketch:['pencil','画板'],generator:['sparkles','AI 绘图','blue'],
-      video:['video','AI 视频'],keyword:['clipboard-text','提示词反推','blue'],png:['scissors','抠图 PNG','blue'],
+      video:['video','AI 视频'],batch:['layout-grid','批量改图','blue'],keyword:['clipboard-text','提示词反推','blue'],png:['scissors','抠图 PNG','blue'],
       outpaint:['arrows-maximize','扩图','green'],style:['palette','风格迁移'],psd:['stack-2','分层 PSD','blue'],
       vector:['vector-bezier','SVG / AI','blue'],audio:['music','AI 音频','blue']
     };
@@ -534,8 +577,8 @@
     const toolbar = document.createElement('nav');
     toolbar.className = 'test-canvas-toolbar';
     toolbar.setAttribute('aria-label', '画布工具');
-    toolbar.innerHTML = '<button type="button" data-tool="select" aria-label="选择节点" title="选择节点" aria-pressed="true">↖</button><button type="button" data-tool="pan" aria-label="平移画布" title="平移画布" aria-pressed="false">✋</button><i></i><button type="button" data-tool="minus" aria-label="缩小">−</button><output data-test-zoom>100%</output><button type="button" data-tool="plus" aria-label="放大">+</button><i></i><button type="button" data-tool="fit">适应画布</button><button type="button" data-tool="arrange">自动排列</button><i></i><button type="button" data-tool="undo" aria-label="撤销" title="撤销">↶</button><button type="button" data-tool="redo" aria-label="重做" title="重做">↷</button>';
-    const toolIcons = {select:'pointer',pan:'hand-stop',minus:'minus',plus:'plus',arrange:'layout-grid',undo:'arrow-back-up',redo:'arrow-forward-up'};
+    toolbar.innerHTML = '<button type="button" data-tool="select" aria-label="选择节点" title="选择节点" aria-pressed="true">↖</button><button type="button" data-tool="select-all" aria-label="整体选中" title="整体选中画布节点">□</button><button type="button" data-tool="pan" aria-label="平移画布" title="平移画布" aria-pressed="false">✋</button><i></i><button type="button" data-tool="minus" aria-label="缩小">−</button><output data-test-zoom>100%</output><button type="button" data-tool="plus" aria-label="放大">+</button><i></i><button type="button" data-tool="fit">适应画布</button><button type="button" data-tool="arrange">自动排列</button><i></i><button type="button" data-tool="undo" aria-label="撤销" title="撤销">↶</button><button type="button" data-tool="redo" aria-label="重做" title="重做">↷</button>';
+    const toolIcons = {select:'pointer','select-all':'select-all',pan:'hand-stop',minus:'minus',plus:'plus',arrange:'layout-grid',undo:'arrow-back-up',redo:'arrow-forward-up'};
     for (const [tool, name] of Object.entries(toolIcons)) {
       const button = toolbar.querySelector('[data-tool="' + tool + '"]');
       labelButton(button, button.getAttribute('aria-label') || button.textContent, name, tool !== 'arrange');
@@ -546,7 +589,9 @@
     toolbar.addEventListener('click', event => {
       const action = event.target.closest('[data-tool]')?.dataset.tool;
       if (!action) return;
-      if (action === 'select' || action === 'pan') {
+      if (action === 'select-all') {
+        if (typeof selectAllCanvasNodes === 'function') selectAllCanvasNodes();
+      } else if (action === 'select' || action === 'pan') {
         mode = action;
         toolbar.querySelector('[data-tool="select"]').setAttribute('aria-pressed', mode === 'select');
         toolbar.querySelector('[data-tool="pan"]').setAttribute('aria-pressed', mode === 'pan');

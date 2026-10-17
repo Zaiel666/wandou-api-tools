@@ -354,6 +354,52 @@ body:has(.app.assistant-open) #assistantToggleButton:not([data-mascot-positioned
 .node .test-switch.test-pill-toggle:before{display:none}.node .test-pill-toggle[aria-checked=true]{background:var(--ui-green);border-color:var(--ui-green);color:#14250b}.test-pill-icon{width:16px;height:16px;flex:none;transform-origin:50% 20%}
 .test-pill-toggle.test-switch-changed .test-pill-icon{animation:node-pill-ring .42s ease-out}.test-pill-toggle.test-switch-changed span{animation:node-pill-label .2s ease-out}
 .test-common-ratio{font-size:11px;opacity:.75;white-space:nowrap}
+.node-select-menu.ratio-menu .node-select-option > span .test-common-ratio{display:inline;margin-left:0;vertical-align:baseline}
+
+/* AI refine motion adapted from the user-supplied MIT example by dexter-st:
+   https://uiverse.io/dexter-st/young-newt-20 */
+.node.generator .test-refine-button{position:relative;isolation:isolate;overflow:visible;border-radius:12px;color:#365996;background-color:color-mix(in srgb,currentColor 4%,var(--ui-surface));animation:refine-color-cycle 3.2s ease-in-out infinite;transition:box-shadow .3s ease,border-color .3s ease,transform .2s ease}
+body.dark-theme .node.generator .test-refine-button{color:#a4c2ff;animation-name:refine-color-cycle-dark}
+.node.generator .test-refine-button::before{content:"";position:absolute;inset:-3px;border:1px solid color-mix(in srgb,currentColor 54%,transparent);border-radius:15px;pointer-events:none;animation:refine-idle-ring 3.2s ease-in-out infinite}
+.node.generator .test-refine-button::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(110deg,transparent 18%,color-mix(in srgb,currentColor 18%,transparent) 50%,transparent 82%);background-size:220% 100%;animation:refine-idle-sheen 3.2s linear infinite}
+.node.generator .test-refine-button .test-refine-icon{flex:none;color:inherit;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;fill:none;filter:none;animation:refine-idle-spark 3.2s ease-in-out infinite}
+.test-refine-label{display:inline-flex;align-items:center;white-space:nowrap;position:relative;z-index:1}
+.test-refine-letter{display:inline-block;animation:refine-idle-letter 3.2s ease-in-out infinite;animation-delay:calc(var(--letter-order) * 80ms)}
+.node.generator .test-refine-button.test-refine-activated{border-color:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 25%,transparent),0 0 20px color-mix(in srgb,currentColor 48%,transparent);animation:refine-color-cycle 3.2s ease-in-out infinite,refine-click-glow 1.35s ease-out both}
+body.dark-theme .node.generator .test-refine-button.test-refine-activated{animation-name:refine-color-cycle-dark,refine-click-glow}
+.node.generator .test-refine-button.test-refine-activated .test-refine-letter{animation:refine-click-letter .75s ease-in-out both;animation-delay:calc(var(--letter-order) * 65ms)}
+.node.generator .test-refine-button.test-refine-activated .test-refine-icon{animation:refine-click-spark .9s ease-out both}
+@keyframes refine-color-cycle{0%,100%{color:#365996}35%{color:#26799f}68%{color:#7456ae}}
+@keyframes refine-color-cycle-dark{0%,100%{color:#a4c2ff}35%{color:#91d4ef}68%{color:#c4a6ff}}
+@keyframes refine-idle-ring{50%{box-shadow:0 0 13px color-mix(in srgb,currentColor 38%,transparent);opacity:1}0%,100%{box-shadow:0 0 0 transparent;opacity:.4}}
+@keyframes refine-idle-sheen{to{background-position:-220% 0}}
+@keyframes refine-idle-spark{50%{opacity:.8;filter:drop-shadow(0 0 5px currentColor)}}
+@keyframes refine-idle-letter{50%{text-shadow:0 0 5px currentColor}}
+@keyframes refine-click-glow{0%{transform:scale(1)}35%{transform:scale(1.045)}100%{transform:scale(1)}}
+@keyframes refine-click-letter{0%,100%{transform:none;filter:none}50%{transform:scale(1.35);filter:brightness(1.2);text-shadow:0 0 10px currentColor}}
+@keyframes refine-click-spark{45%{transform:rotate(-18deg) scale(1.3);filter:drop-shadow(0 0 7px currentColor)}100%{transform:none}}
+.lightbox-image-menu .test-frame-button{grid-template-columns:20px minmax(max-content,1fr);white-space:nowrap;overflow:visible}
+.lightbox-image-menu .test-frame-button .ui-icon{position:static!important;transform:none!important;display:block;flex:none}
+.lightbox-image-menu .test-frame-button > span{display:block;min-width:max-content;white-space:nowrap;overflow:visible;word-break:keep-all}
+.lightbox-image-menu.open{min-width:222px}
+.selection-box.open{border-color:#e75a47;background:#e75a471c}
+.selection-frame{position:absolute;z-index:17;display:none;box-sizing:border-box;border:2px solid #e75a47;border-radius:10px;pointer-events:none;box-shadow:0 0 0 1px #e75a4733}
+.selection-frame.open{display:block}
+.selection-frame[data-mode="all"]{border:1px solid var(--ui-text);box-shadow:0 0 0 1px var(--ui-surface),0 0 12px #0002}
+.assistant-select-field.model .assistant-picker-trigger [data-assistant-picker-value]{display:inline-flex;align-items:center;gap:5px;max-width:100%;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.assistant-select-field.model .assistant-picker-trigger [data-assistant-picker-value] > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.assistant-model-option-label{display:inline-flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.assistant-model-brand{display:block;flex:0 0 17px;width:17px;height:17px;object-fit:contain}
+body.dark-theme .assistant-model-brand[src$="openai.svg"],body.dark-theme .assistant-model-brand[src$="xai.svg"]{filter:brightness(0) invert(1)}
+body:not(.dark-theme) .assistant-model-brand[src$="openai.svg"],body:not(.dark-theme) .assistant-model-brand[src$="xai.svg"]{filter:brightness(0)}
+html body.node-canvas-page .canvas .node.box-selected{border-color:#e75a47;outline:2px solid #e75a47;outline-offset:3px;box-shadow:0 0 0 5px #e75a4725,0 0 14px #e75a4735,var(--shadow)}
+html body.node-canvas-page .canvas .node.box-selected::after{border-color:#ffd3cc;background:#d84231}
+html body.node-canvas-page .canvas .node.result.box-selected{border:0;outline:2px solid #e75a47;outline-offset:3px;box-shadow:0 0 0 5px #e75a4725}
+html body.node-canvas-page .canvas .node.result.box-selected .preview{box-shadow:inset 0 0 0 2px #e75a47}
+html body.node-canvas-page .canvas .node.audio.box-selected{outline:2px solid #e75a47;outline-offset:3px;box-shadow:0 0 0 5px #e75a4725}
+#selectionMenu [data-selection-action="delete"]{color:#ed6759;background:transparent;border-color:transparent}
+#selectionMenu [data-selection-action="delete"]:hover{color:#fff;background:#b93124}
+@media(prefers-reduced-motion:reduce){.node.generator .test-refine-button,.node.generator .test-refine-button::before,.node.generator .test-refine-button::after,.node.generator .test-refine-button .ui-icon,.test-refine-letter{animation:none!important;transition:none!important}}
 .test-resolution-menu .node-select-option.active{animation:node-choice-pop .3s ease-out}
 @keyframes node-pill-ring{0%,100%{transform:rotate(0)}25%{transform:rotate(-18deg)}60%{transform:rotate(12deg)}}
 @keyframes node-pill-label{from{opacity:.3;transform:translateX(-3px)}to{opacity:1;transform:none}}

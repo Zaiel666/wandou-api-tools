@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head><script src="./ai-node-canvas-test-storage.js"></script>
+<script src="./canvas-save-pipeline.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#030706">
@@ -7418,6 +7419,7 @@
           <button type="button" data-add-node="sketch">画板</button>
           <button type="button" data-add-node="generator">AI文字绘图</button>
           <button type="button" data-add-node="video">AI视频</button>
+          <button type="button" data-add-node="batch">批量改图</button>
           <button type="button" data-add-node="keyword">反推/生成提示词</button>
           <button type="button" data-add-node="png">PNG透明底/抠图</button>
           <button type="button" data-add-node="outpaint">扩图</button>
@@ -7541,6 +7543,7 @@
         <button type="button" data-menu-node="sketch">新建画板</button>
         <button type="button" data-menu-node="generator">新建AI文字绘图</button>
         <button type="button" data-menu-node="video">新建AI视频</button>
+        <button type="button" data-menu-node="batch">新建批量改图</button>
         <button type="button" data-menu-node="keyword">新建反推/生成提示词</button>
         <button type="button" data-menu-node="png">新建PNG透明底/抠图</button>
         <button type="button" data-menu-node="outpaint">新建扩图</button>
@@ -7550,9 +7553,10 @@
         <button type="button" data-menu-node="audio">新建AI音频</button>
       </div>
       <div id="selectionBox" class="selection-box"></div>
+      <div id="selectionFrame" class="selection-frame" aria-hidden="true"></div>
       <div id="selectionMenu" class="context-menu">
+        <button type="button" data-selection-action="delete">删除</button>
         <button type="button" data-selection-action="layout">自动排列</button>
-        <button type="button" data-selection-action="delete">删除所选节点</button>
       </div>
       <div id="linkCreateMenu" class="context-menu">
         <button type="button" data-link-create="generator">连接到 AI 图片</button>
@@ -7823,6 +7827,7 @@
     const contextMenu = document.getElementById("contextMenu");
     const selectionBox = document.getElementById("selectionBox");
     const selectionMenu = document.getElementById("selectionMenu");
+    const selectionFrame = document.getElementById("selectionFrame");
     const linkCreateMenu = document.getElementById("linkCreateMenu");
     const lightbox = document.getElementById("lightbox");
     const lightboxImage = document.getElementById("lightboxImage");
@@ -7980,6 +7985,7 @@
     let panState = null;
     let boxSelectState = null;
     let boxSelectedIds = [];
+    let selectionFrameMode = "marquee";
     let contextMenuWorld = { x: 0, y: 0 };
     let pendingLinkCreate = null;
     let activePasteNodeId = null;
@@ -8043,6 +8049,9 @@
     const assistantPanelGeometryStorageKey = "aiCanvasAssistantPanelGeometryV1";
       let saveTimer = null;
       let canvasSaveQueue = Promise.resolve();
+      const canvasSaveScheduler = WandouSavePipeline.createQueue();
+      const mediaSourceSaveCache = new Map();
+      window.wandouSaveProgress = { phase: 'idle', completed: 0, total: 0 };
       let canvasTransformFrame = null;
       let linkDrawFrame = null;
       let zoomInteractionTimer = null;
@@ -9690,7 +9699,15 @@
       const value = field.querySelector("[data-assistant-picker-value]");
       const menu = field.querySelector("[data-assistant-picker-menu]");
       const selectedOption = select.selectedOptions?.[0] || select.options?.[0];
-      if (value) value.textContent = selectedOption?.textContent || "未选择";
+      const isModelPicker = select === assistantModelSelect;
+      if (value) {
+        if (isModelPicker) {
+          value.replaceChildren(assistantModelBrandIcon(selectedOption?.value || ""));
+          const caption = document.createElement("span");
+          caption.textContent = selectedOption?.textContent || "未选择";
+          value.append(caption);
+        } else value.textContent = selectedOption?.textContent || "未选择";
+      }
       const trigger = field.querySelector('[data-assistant-picker-trigger]');
       if (trigger) {
         trigger.title = `${select.getAttribute('aria-label') || '选项'}：${selectedOption?.textContent || '未选择'}`;
@@ -9707,6 +9724,10 @@
         button.setAttribute("aria-selected", option.value === select.value ? "true" : "false");
         const label = document.createElement("span");
         label.textContent = option.textContent;
+        if (isModelPicker) {
+          label.className = "assistant-model-option-label";
+          label.prepend(assistantModelBrandIcon(option.value));
+        }
         button.appendChild(label);
         if (option.value === select.value) {
           const check = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -9726,6 +9747,30 @@
         });
         menu.appendChild(button);
       });
+    }
+
+    function assistantModelBrandIcon(model) {
+      const id = String(modelToApiModel(model) || model || "").toLowerCase();
+      const icons = [
+        [/claude|anthropic/, "claude.ico"],
+        [/deepseek/, "deepseek.svg"],
+        [/gemini|gemma|google/, "gemini-color.svg"],
+        [/grok|xai/, "xai.svg"],
+        [/chatglm|(?:^|[-_.])glm(?:$|[-_.\d])|zhipu/, "glm.ico"],
+        [/kimi|moonshot/, "kimi.ico"],
+        [/qwen|tongyi/, "qwen.svg"],
+        [/doubao|(?:^|[-_.])seed(?:$|[-_.\d])/, "doubao.png"],
+        [/minimax/, "minimax.ico"],
+        [/mistral|mixtral/, "mistral.ico"],
+        [/gpt|openai|chatgpt|codex|^o\d/, "openai.svg"]
+      ];
+      const file = !model ? "../canvas-ui-icons/sparkles.svg" : icons.find(([pattern]) => pattern.test(id))?.[1] || "../canvas-ui-icons/sparkles.svg";
+      const icon = document.createElement("img");
+      icon.className = "assistant-model-brand";
+      icon.src = `./assets/brands/${file}`;
+      icon.alt = "";
+      icon.setAttribute("aria-hidden", "true");
+      return icon;
     }
 
     function bindAssistantPickers() {
@@ -10300,6 +10345,7 @@
 
     function nodeTitle(type) {
       if (type === "generator") return "AI文字绘图";
+      if (type === "batch") return "批量改图";
       if (type === "video") return "AI视频";
       if (type === "audio") return "AI音频";
       if (type === "keyword") return "反推/生成提示词";
@@ -10318,6 +10364,7 @@
     function iconFor(type) {
       if (type === "audio") return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>';
       if (type === "video") return "▶";
+      if (type === "batch") return "▦";
       if (type === "keyword") return "#";
       if (type === "png") return "◫";
       if (type === "upscale") return "4K";
@@ -10405,7 +10452,7 @@
         const current = mountedNodes.get(node.id);
         if (current && current.dataset.renderKey === renderKey) {
           current.classList.toggle("selected", selectedNodeId === node.id);
-          current.classList.toggle("box-selected", boxSelectedIds.includes(node.id));
+          current.classList.toggle("box-selected", selectionFrameMode === "marquee" && boxSelectedIds.includes(node.id));
           current.style.left = `${node.x}px`;
           current.style.top = `${node.y}px`;
           mountedNodes.delete(node.id);
@@ -10425,6 +10472,7 @@
       });
       syncPromptOverlayLayers();
       applyCanvasTransform();
+      requestAnimationFrame(updateGroupSelectionFrame);
       updatePendingPort();
       scheduleDrawLinks();
       if (canvasChanged && !options.skipSave) scheduleCanvasSave();
@@ -10462,6 +10510,7 @@
       if (zoomValue.textContent !== zoomLabel) zoomValue.textContent = zoomLabel;
       canvasWrap.classList.toggle("low-detail", view.zoom < 0.2);
       updatePromptLibraryPosition();
+      if (boxSelectedIds.length) requestAnimationFrame(updateGroupSelectionFrame);
     }
 
     function scheduleCanvasTransform() {
@@ -10512,6 +10561,23 @@
 
     function addNodeInView(type) {
       const rect = canvasWrap.getBoundingClientRect();
+      if (type === "batch") {
+        const panel = assistantPanel.getBoundingClientRect();
+        const right = document.querySelector(".app")?.classList.contains("assistant-open") && panel.left > rect.left
+          ? Math.min(rect.right, panel.left - 18) : rect.right;
+        const width = 360 * view.zoom;
+        const height = 155 * view.zoom;
+        const occupied = [...canvas.querySelectorAll(".node")].map((element) => element.getBoundingClientRect());
+        for (let y = rect.top + 75; y + height < rect.bottom - 25; y += height + 28) {
+          for (let x = rect.left + 24; x + width < right - 16; x += width + 28) {
+            const overlaps = occupied.some((item) => x < item.right + 18 && x + width > item.left - 18 && y < item.bottom + 18 && y + height > item.top - 18);
+            if (!overlaps) {
+              const world = screenToWorld(x, y);
+              return createNode(type, world.x, world.y);
+            }
+          }
+        }
+      }
       const world = screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
       const offset = nodes.length * 18;
       const halfWidth = type === "image" || type === "audio" ? 260 : (type === "psd" || type === "vector") ? 220 : 180;
@@ -10541,11 +10607,11 @@
 
     function renderNode(node, renderKey = nodeRenderKey(node)) {
       const el = document.createElement("section");
-      el.className = `node ${node.type}${node.type === "image" && node.autoFitReference ? " auto-fit-reference" : ""}${node.type === "result" && node.mediaType === "audio" ? " audio-result" : ""}${selectedNodeId === node.id ? " selected" : ""}${boxSelectedIds.includes(node.id) ? " box-selected" : ""}`;
+      el.className = `node ${node.type}${node.type === "image" && node.autoFitReference ? " auto-fit-reference" : ""}${node.type === "result" && node.mediaType === "audio" ? " audio-result" : ""}${selectedNodeId === node.id ? " selected" : ""}${selectionFrameMode === "marquee" && boxSelectedIds.includes(node.id) ? " box-selected" : ""}`;
       el.dataset.id = node.id;
       el.dataset.renderKey = renderKey;
       const boxSelectionIndex = boxSelectedIds.indexOf(node.id);
-      if (boxSelectionIndex >= 0) el.dataset.selectionIndex = String(boxSelectionIndex + 1);
+      if (selectionFrameMode === "marquee" && boxSelectionIndex >= 0) el.dataset.selectionIndex = String(boxSelectionIndex + 1);
       el.style.left = `${node.x}px`;
       el.style.top = `${node.y}px`;
       if (node.frameWidth) el.style.width = `${node.frameWidth}px`;
@@ -10566,7 +10632,7 @@
       const isSelection = node.type === "selection";
 
       el.innerHTML = `
-        ${isSelection ? "" : '<div class="port in" data-port="in" title="输入"></div><div class="port out" data-port="out" title="输出"></div>'}
+        ${isSelection || node.type === "batch" ? "" : '<div class="port in" data-port="in" title="输入"></div><div class="port out" data-port="out" title="输出"></div>'}
         <div class="node-header" data-drag-handle>
           <div class="node-title"><span class="node-icon">${iconFor(node.type)}</span>${node.type === "image" ? `参考图 ${nodes.filter((item) => item.type === "image").indexOf(node) + 1}` : escapeHtml(node.title)}</div>
           <div class="node-menu">
@@ -10590,7 +10656,10 @@
       `;
 
       const body = el.querySelector(".node-body");
-      if (node.type === "director") {
+      if (node.type === "batch") {
+        body.innerHTML = `<div class="batch-node-body"><p>多组参考图与产品图，按槽位组合批量生成。</p><button type="button" data-batch-open>打开批量改图</button><small>${escapeHtml(node.status || "点击后在右侧设置图片槽位和改图要求")}</small></div>`;
+        body.querySelector("[data-batch-open]").addEventListener("click", () => window.WandouBatchImage?.open(node.id));
+      } else if (node.type === "director") {
         body.appendChild(window.WandouDirector?.renderBody(node) || document.createElement("div"));
       } else if (node.type === "audio") {
         body.appendChild(renderAudioBody(node));
@@ -16374,6 +16443,7 @@
       }
       selectionBox.classList.remove("open");
       boxSelectedIds = [...selectedCandidateIds(state)];
+      selectionFrameMode = "marquee";
       if (!boxSelectedIds.length) {
         clearBoxSelection();
         return;
@@ -16384,8 +16454,23 @@
         nodeEl.classList.add("box-selected");
         nodeEl.dataset.selectionIndex = String(index + 1);
       });
-      positionCanvasOverlay(selectionMenu, event.clientX, event.clientY);
+      updateGroupSelectionFrame();
       selectionMenu.classList.add("open");
+      const wrapBounds = canvasWrap.getBoundingClientRect();
+      const panelBounds = assistantPanel.getBoundingClientRect();
+      const toolbarBounds = document.querySelector(".test-canvas-toolbar")?.getBoundingClientRect();
+      const launcherBounds = assistantToggleButton.getBoundingClientRect();
+      const rightEdge = assistantPanel.closest(".app")?.classList.contains("assistant-open")
+        ? Math.min(wrapBounds.right, panelBounds.left) : wrapBounds.right;
+      const bottomEdge = toolbarBounds ? Math.min(wrapBounds.bottom, toolbarBounds.top - 52) : wrapBounds.bottom - 52;
+      let menuX = Math.max(wrapBounds.left + 8, Math.min(event.clientX, rightEdge - selectionMenu.offsetWidth - 8));
+      const menuY = Math.max(wrapBounds.top + 8, Math.min(event.clientY, bottomEdge - selectionMenu.offsetHeight - 8));
+      if (launcherBounds.width && launcherBounds.height &&
+          menuX < launcherBounds.right && menuX + selectionMenu.offsetWidth > launcherBounds.left &&
+          menuY < launcherBounds.bottom && menuY + selectionMenu.offsetHeight > launcherBounds.top) {
+        menuX = Math.max(wrapBounds.left + 8, launcherBounds.left - selectionMenu.offsetWidth - 12);
+      }
+      positionCanvasOverlay(selectionMenu, menuX, menuY);
       suppressMenuCloseOnce = true;
       setTimeout(() => {
         suppressMenuCloseOnce = false;
@@ -16404,7 +16489,48 @@
         delete nodeEl.dataset.selectionIndex;
       });
       selectionMenu.classList.remove("open");
+      selectionFrame.classList.remove("open");
     }
+
+    function updateGroupSelectionFrame() {
+      if (!boxSelectedIds.length) {
+        selectionFrame.classList.remove("open");
+        return;
+      }
+      const wrap = canvasWrap.getBoundingClientRect();
+      const selected = boxSelectedIds.map((id) => canvas.querySelector(`[data-id="${id}"]`)).filter(Boolean);
+      if (!selected.length) {
+        selectionFrame.classList.remove("open");
+        return;
+      }
+      const rects = selected.map((element) => element.getBoundingClientRect());
+      const padding = 10;
+      const left = Math.min(...rects.map((rect) => rect.left)) - wrap.left - padding;
+      const top = Math.min(...rects.map((rect) => rect.top)) - wrap.top - padding;
+      const right = Math.max(...rects.map((rect) => rect.right)) - wrap.left + padding;
+      const bottom = Math.max(...rects.map((rect) => rect.bottom)) - wrap.top + padding;
+      selectionFrame.style.left = `${left}px`;
+      selectionFrame.style.top = `${top}px`;
+      selectionFrame.style.width = `${right - left}px`;
+      selectionFrame.style.height = `${bottom - top}px`;
+      selectionFrame.dataset.mode = selectionFrameMode;
+      selectionFrame.classList.add("open");
+    }
+
+    function selectAllCanvasNodes() {
+      clearBoxSelection();
+      boxSelectedIds = nodes.filter((node) => node.type !== "selection").map((node) => node.id);
+      if (!boxSelectedIds.length) return showToast("画布上还没有节点");
+      selectionFrameMode = "all";
+      selectedNodeId = null;
+      updateSelection();
+      updateGroupSelectionFrame();
+      showToast(`已整体选中 ${boxSelectedIds.length} 个节点`);
+    }
+    window.addEventListener("pointermove", () => {
+      if (boxSelectedIds.length) requestAnimationFrame(updateGroupSelectionFrame);
+    });
+    window.addEventListener("resize", updateGroupSelectionFrame);
 
     function autoArrangeSelection() {
       const selected = boxSelectedIds.map((id) => nodes.find((node) => node.id === id)).filter(Boolean);
@@ -17718,6 +17844,7 @@
     function nodeWidth(node) {
       if (node.frameWidth) return node.frameWidth;
       if (node.type === "generator") return 480;
+      if (node.type === "batch") return 360;
       if (node.type === "keyword") return 460;
       if (node.type === "video") return 420;
       if (node.type === "audio") return 620;
@@ -21222,10 +21349,15 @@ ${formatInstruction}`;
 
     async function sourceToBlob(src, fallbackType = "application/octet-stream") {
       if (!src) return null;
-      const response = await fetchMediaWithTimeout(src, { cache: "no-store" });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const blob = await response.blob();
-      return blob.type ? blob : new Blob([blob], { type: fallbackType });
+      const controller = new AbortController();
+      // Bound remote downloads through the response body, not local disk writes.
+      const timer = /^https?:/i.test(src) ? setTimeout(() => controller.abort(), 60000) : null;
+      try {
+        const response = await fetchMediaWithTimeout(src, { cache: "no-store", signal: controller.signal }, 60000);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        return blob.type ? blob : new Blob([blob], { type: fallbackType });
+      } finally { if (timer) clearTimeout(timer); }
     }
 
     async function blobIsPng(blob) {
@@ -21641,7 +21773,8 @@ ${formatInstruction}`;
       if (persistedLocalMediaIds.has(id)) return storedValue;
       if (pendingLocalMediaWrites.has(id)) return pendingLocalMediaWrites.get(id);
       const writeTask = (async () => {
-        const browserWriteTask = (async () => {
+        const desktopMediaRequired = Boolean(window.wandouShell?.writeCanvasMedia);
+        const browserWriteTask = desktopMediaRequired ? Promise.resolve(false) : (async () => {
           const db = await openLocalMediaDb();
           return db
             ? await new Promise((resolve) => {
@@ -21657,18 +21790,18 @@ ${formatInstruction}`;
             })
             : false;
         })();
-        const desktopMediaRequired = Boolean(window.wandouShell?.writeCanvasMedia);
         let storedOnDesktop = false;
         if (desktopMediaRequired) {
           try {
             const existing = await window.wandouShell.hasCanvasMedia?.({ id });
             storedOnDesktop = Boolean(existing?.exists);
             if (!storedOnDesktop) {
-              const desktopResult = await window.wandouShell.writeCanvasMedia({ id, value });
+              const desktopResult = await writeDesktopMediaInChunks(id, value);
               storedOnDesktop = Boolean(desktopResult?.success);
+              if (!storedOnDesktop) throw new Error(desktopResult?.error || '本地媒体写入失败');
             }
-          } catch (_error) {
-            storedOnDesktop = false;
+          } catch (error) {
+            throw new Error(`媒体保存失败：${error.message}`);
           }
         }
         const storedInBrowser = desktopMediaRequired ? false : await browserWriteTask;
@@ -21730,10 +21863,34 @@ ${formatInstruction}`;
         });
       }
       if (localValue) {
-        persistedLocalMediaIds.add(id);
+        if (!window.wandouShell?.writeCanvasMedia) persistedLocalMediaIds.add(id);
         return localValue;
       }
       return "";
+    }
+
+    async function writeDesktopMediaInChunks(id, value) {
+      const writer = window.wandouShell.writeCanvasMediaChunk;
+      if (!writer) return window.wandouShell.writeCanvasMedia({ id, value });
+      const started = await writer({ action: 'begin', id, length: value.length });
+      if (!started?.success) return started;
+      const token = started.token;
+      try {
+        for (let offset = 0; offset < value.length;) {
+          let end = Math.min(value.length, offset + 1024 * 1024);
+          if (end < value.length && /[\uD800-\uDBFF]/.test(value[end - 1])) end -= 1;
+          const result = await writer({ action: 'chunk', token, offset, chunk: value.slice(offset, end) });
+          if (!result?.success) throw new Error(result?.error || '媒体数据块写入失败');
+          offset = end;
+          window.wandouSaveProgress.mediaWritten = result.written;
+          window.wandouSaveProgress.mediaTotal = result.total;
+          window.wandouSaveProgress.updatedAt = Date.now();
+        }
+        return await writer({ action: 'commit', token });
+      } catch (error) {
+        await writer({ action: 'abort', token }).catch(() => {});
+        throw error;
+      }
     }
 
     async function persistMediaValue(value) {
@@ -21741,13 +21898,25 @@ ${formatInstruction}`;
       if (value.startsWith(localMediaPrefix)) return value;
       if (value.startsWith("data:")) return putLocalMedia(value);
       if (!/^(?:https?:|blob:)/i.test(value)) return value;
+      if (mediaSourceSaveCache.has(value)) return mediaSourceSaveCache.get(value);
+      const task = persistRemoteMediaValue(value);
+      mediaSourceSaveCache.set(value, task);
+      try {
+        const result = await task;
+        if (!result.startsWith(localMediaPrefix)) mediaSourceSaveCache.delete(value);
+        if (mediaSourceSaveCache.size > 512) mediaSourceSaveCache.delete(mediaSourceSaveCache.keys().next().value);
+        return result;
+      } catch (error) { mediaSourceSaveCache.delete(value); throw error; }
+    }
+
+    async function persistRemoteMediaValue(value) {
       try {
         const blob = await sourceToBlob(value);
         if (!blob) return value;
-        return putLocalMedia(await blobToDataUrl(blob));
+        return await putLocalMedia(await blobToDataUrl(blob));
       } catch (error) {
         console.warn("Remote media could not be mirrored locally", error);
-        return value;
+        throw new Error(`图片尚未保存到本地：${error.message}`);
       }
     }
 
@@ -21973,7 +22142,10 @@ ${formatInstruction}`;
       if (canvasRecoveryBlocked) return false;
       try {
         clearTimeout(saveTimer);
-        const storedNodes = await Promise.all(context.state.nodes.map(serializeNodeForStorage));
+        window.wandouSaveProgress = { phase: 'media', completed: 0, total: context.state.nodes.length, updatedAt: Date.now() };
+        const storedNodes = await WandouSavePipeline.mapLimited(context.state.nodes, 2, serializeNodeForStorage, (completed, total) => {
+          Object.assign(window.wandouSaveProgress, { completed, total, updatedAt: Date.now() });
+        });
         const activeProject = projects.find((project) => project.id === context.projectId);
         if (activeProject) {
           activeProject.updatedAt = context.state.savedAt;
@@ -21990,7 +22162,7 @@ ${formatInstruction}`;
         // Desktop backup is authoritative; browser cache failures must not
         // invalidate an independently verified disk backup.
         try {
-          context.browserBackupSaved = await Promise.race([
+          context.browserBackupSaved = window.wandouShell?.writeCanvasBackup ? false : await Promise.race([
             writeCanvasStateBackup(storedState, context),
             new Promise((resolve) => setTimeout(() => resolve(false), 3000))
           ]);
@@ -22003,16 +22175,22 @@ ${formatInstruction}`;
         if (!context.browserBackupSaved && !window.wandouShell?.writeCanvasBackup) {
           throw new Error("IndexedDB canvas backup failed");
         }
-        if (!options.skipDesktopBackup) queueDesktopCanvasBackup(context);
+        if (!options.skipDesktopBackup && window.wandouShell?.writeCanvasBackup) {
+          window.wandouSaveProgress.phase = 'snapshot';
+          const diskResult = await writeDesktopCanvasBackup(context, true);
+          if (!diskResult?.success) throw new Error(diskResult?.error || '本地快照写入失败');
+        }
         if (activeProject) {
           try { saveProjects(); } catch (storageError) {
             warnCanvasStorageSkipped(storageError);
             if (!window.wandouShell?.writeCanvasBackup) throw storageError;
           }
         }
+        window.wandouSaveProgress.phase = 'saved';
         return true;
       } catch (error) {
         context.saveError = `${error?.name || "Error"}: ${error?.message || String(error)}`;
+        window.wandouSaveProgress = { phase: 'error', error: context.saveError };
         console.warn("Canvas save skipped", error);
         warnCanvasStorageSkipped(error);
         return false;
@@ -22025,9 +22203,7 @@ ${formatInstruction}`;
       saveTimer = null;
       const context = createCanvasSaveContext();
       saveCanvasStateImmediate(context);
-      canvasSaveQueue = canvasSaveQueue
-        .catch((error) => console.warn("Previous canvas save failed", error))
-        .then(() => saveCanvasStateNow(context));
+      canvasSaveQueue = canvasSaveScheduler.enqueue(context.projectKey, context, saveCanvasStateNow);
       return canvasSaveQueue;
     }
 
@@ -22051,17 +22227,13 @@ ${formatInstruction}`;
           error: "历史记录读取异常，程序已停止覆盖原数据"
         };
       }
-      // A stalled IndexedDB transaction from an earlier autosave must not prevent
-      // the current state from reaching the independent desktop backup forever.
-      await Promise.race([
-        canvasSaveQueue.catch(() => false),
-        new Promise((resolve) => setTimeout(() => resolve(false), 1500))
-      ]);
+      // Desktop saves bypass IndexedDB and drain a bounded, coalescing queue.
+      await canvasSaveQueue.catch(() => false);
       const context = createCanvasSaveContext();
       saveCanvasStateImmediate(context);
       const durableSaved = await saveCanvasStateNow(context, { skipDesktopBackup: true });
       const desktopBackupRequired = Boolean(window.wandouShell?.writeCanvasBackup);
-      const desktopBackup = desktopBackupRequired
+      const desktopBackup = desktopBackupRequired && durableSaved
         ? await writeDesktopCanvasBackup(context, true)
         : null;
       const localVerified = verifyCanvasStateSaved(context);
@@ -22090,6 +22262,15 @@ ${formatInstruction}`;
         backupPath: desktopBackup?.path || "",
         error
       };
+    };
+
+    // Close, update and background suspension may request saves together.
+    // Serialize those requests; a cancelled close followed by edits saves again.
+    const performCloseSave = window.wandouSaveBeforeClose;
+    let closeSaveQueue = Promise.resolve();
+    window.wandouSaveBeforeClose = () => {
+      closeSaveQueue = closeSaveQueue.catch(() => false).then(performCloseSave);
+      return closeSaveQueue;
     };
 
     document.addEventListener("visibilitychange", () => {
@@ -22141,13 +22322,13 @@ ${formatInstruction}`;
       copy.sourceUrl = await persistMediaValue(copy.sourceUrl);
       copy.outpaintSourceUrl = await persistMediaValue(copy.outpaintSourceUrl);
       if (Array.isArray(copy.references)) {
-        copy.references = await Promise.all(copy.references.map(async (item) => ({
+        copy.references = await WandouSavePipeline.mapLimited(copy.references, 1, async (item) => ({
           ...item,
           url: await persistMediaValue(item.url),
           maskUrl: await persistMediaValue(item.maskUrl),
           maskSelectionUrl: await persistMediaValue(item.maskSelectionUrl),
           doodleUrl: await persistMediaValue(item.doodleUrl)
-        })));
+        }));
       }
       return copy;
     }
@@ -22327,17 +22508,12 @@ ${formatInstruction}`;
         return false;
       }
       try {
-        const result = await Promise.race([
-          window.wandouShell.writeCanvasBackup({
-            folderId: currentFolderId,
+        window.wandouSaveProgress.phase = 'snapshot';
+        const result = await window.wandouShell.writeCanvasBackup({
+            folderId: context.state.folderId || currentFolderId,
             projectId: context.projectId,
             state: context.state
-          }),
-          new Promise((resolve) => setTimeout(() => resolve({
-            success: false,
-            error: "桌面备份超过 60 秒"
-          }), 60000))
-        ]);
+          });
         if (result?.success) {
           lastDesktopBackupAt.set(projectId, Date.now());
           finalizeCanvasStateLocalMigration(context.state, context);
@@ -22775,7 +22951,8 @@ ${formatInstruction}`;
     document.querySelectorAll("[data-add-node]").forEach((button) => {
       button.addEventListener("click", () => {
         const type = button.dataset.addNode;
-        addNodeInView(type);
+        const node = addNodeInView(type);
+        if (type === "batch") window.WandouBatchImage?.open(node.id);
       });
     });
 
@@ -23548,7 +23725,8 @@ ${formatInstruction}`;
     contextMenu.querySelectorAll("[data-menu-node]").forEach((button) => {
       button.addEventListener("pointerdown", (event) => event.stopPropagation());
       button.addEventListener("click", () => {
-        createNode(button.dataset.menuNode, contextMenuWorld.x, contextMenuWorld.y);
+        const node = createNode(button.dataset.menuNode, contextMenuWorld.x, contextMenuWorld.y);
+        if (node.type === "batch") window.WandouBatchImage?.open(node.id);
         contextMenu.classList.remove("open");
       });
     });
@@ -23608,5 +23786,8 @@ ${formatInstruction}`;
   <script src="./director-test.js"></script>
   <script src="./ai-node-canvas-test.js"></script>
   <script src="./ai-node-canvas-test-assistant.js"></script>
+  <link rel="stylesheet" href="./batch-image.css">
+  <script src="./batch-image-core.js"></script>
+  <script src="./batch-image.js"></script>
 </body>
 </html>

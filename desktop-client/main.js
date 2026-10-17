@@ -535,9 +535,6 @@ async function writeCanvasMedia(payload = {}) {
   const id = safeCanvasBackupId(payload.id, "");
   const value = typeof payload.value === "string" ? payload.value : "";
   if (!id || !value.startsWith("data:")) return { success: false, error: "Invalid canvas media" };
-  if (Buffer.byteLength(value, "utf8") > 96 * 1024 * 1024) {
-    return { success: false, error: "Canvas media is larger than 96 MB" };
-  }
   try {
     const destination = canvasMediaPath(id);
     if (fs.existsSync(destination)) return { success: true, path: destination, deduplicated: true };
@@ -681,9 +678,11 @@ async function writeCanvasBackup(payload = {}) {
     const suffix = crypto.randomBytes(4).toString("hex");
     const destination = path.join(directory, `${savedAt}-${suffix}.json`);
     const temporary = `${destination}.tmp`;
-    await fs.promises.writeFile(temporary, serialized, "utf8");
+    const snapshotFile = await fs.promises.open(temporary, 'wx');
+    try { await snapshotFile.writeFile(serialized, 'utf8'); await snapshotFile.sync(); }
+    finally { await snapshotFile.close(); }
     await fs.promises.rename(temporary, destination);
-    const fingerprintTemporary = `${fingerprintPath}.tmp`;
+    const fingerprintTemporary = `${fingerprintPath}.${suffix}.tmp`;
     await fs.promises.writeFile(fingerprintTemporary, JSON.stringify({ fingerprint, path: destination, savedAt }), "utf8");
     await fs.promises.rename(fingerprintTemporary, fingerprintPath);
     const snapshots = (await fs.promises.readdir(directory, { withFileTypes: true }))
@@ -1273,6 +1272,17 @@ ipcMain.handle("desktop:write-canvas-backup", (_event, payload = {}) => writeCan
 ipcMain.handle("desktop:read-canvas-backups", (_event, payload = {}) => readCanvasBackups(payload));
 ipcMain.handle("desktop:has-canvas-media", (_event, payload = {}) => hasCanvasMedia(payload));
 ipcMain.handle("desktop:write-canvas-media", (_event, payload = {}) => writeCanvasMedia(payload));
+const canvasMediaWriter = require('./canvas-media-writer.cjs')({ directory: canvasMediaRootDirectory, destination: canvasMediaPath });
+const mediaWriterOwners = new Set();
+ipcMain.handle("desktop:write-canvas-media-chunk", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地画布可以保存媒体" };
+  const owner = event.sender.id;
+  if (!mediaWriterOwners.has(owner)) {
+    mediaWriterOwners.add(owner);
+    event.sender.once('destroyed', () => { mediaWriterOwners.delete(owner); void canvasMediaWriter.disposeOwner(owner); });
+  }
+  return canvasMediaWriter.write(owner, payload);
+});
 ipcMain.handle("desktop:read-canvas-media", (_event, payload = {}) => readCanvasMedia(payload));
 ipcMain.handle("desktop:write-export-artifact", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return {success:false, error:"仅本地工具页面可以保存导出文件"};

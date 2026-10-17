@@ -36,6 +36,7 @@ let updateInfo = null;
 let clientConfig = {};
 let toastTimer = 0;
 let closeInProgress = false;
+let closeAttempt = 0;
 let updateStarted = false;
 let canvasBackupDirectory = "";
 
@@ -46,11 +47,11 @@ function clearTabSuspendTimer(tab) {
 }
 
 function notifyTabActivity(tab, active) {
-  if (!tab?.view || tab.suspended || tab.view.isLoading?.()) return;
-  tab.view.executeJavaScript(
+  if (!tab?.view || !tab.domReady || tab.suspended || safeWebviewCall(tab.view, "isLoading", true)) return;
+  try { tab.view.executeJavaScript(
     `typeof window.wandouSetDesktopTabActive === "function" ? window.wandouSetDesktopTabActive(${active ? "true" : "false"}) : null`,
     true
-  ).catch(() => null);
+  ).catch(() => null); } catch (_error) { /* Navigation may detach the guest between checks. */ }
 }
 
 async function suspendInactiveCanvasTab(tab) {
@@ -184,7 +185,8 @@ function openTab({ url, title = "新标签页", pinned = false }) {
     suspendTimer: 0,
     lastSaveResult: null,
     recoveryAttempts: 0,
-    recovering: false
+    recovering: false,
+    domReady: false
   };
   tab.button = createTabButton(tab, !pinned);
   tabs.set(id, tab);
@@ -215,8 +217,14 @@ function openTab({ url, title = "新标签页", pinned = false }) {
     syncThemeFromActivePage();
   });
   view.addEventListener("dom-ready", () => {
+    tab.domReady = true;
     tab.recoveryAttempts = 0;
     tab.recovering = false;
+    notifyTabActivity(tab, tab.id === activeId);
+    updateNavigation();
+  });
+  view.addEventListener("did-start-navigation", (event) => {
+    if (event.isMainFrame && !event.isInPlace) tab.domReady = false;
   });
   view.addEventListener("did-fail-load", (event) => {
     tab.button.classList.remove("loading");
@@ -238,6 +246,11 @@ function activateTab(id) {
     tab.button.classList.toggle("active", active);
     tab.button.setAttribute("aria-selected", String(active));
     tab.view.classList.toggle("active", active);
+  }
+  // Finish selecting every view before communicating with guest renderers.
+  // A guest may detach during a redirect or while a background tab resumes.
+  for (const tab of tabs.values()) {
+    const active = tab.id === id;
     if (!active) {
       notifyTabActivity(tab, false);
       scheduleTabSuspend(tab);
@@ -271,7 +284,7 @@ async function saveTabBeforeClose(tab) {
     return { ...base, ...tab.lastSaveResult };
   }
   if (!tab?.view) return { ...base, success: true, supported: false };
-  if (tab.view.isLoading?.()) {
+  if (!tab.domReady || safeWebviewCall(tab.view, "isLoading", true)) {
     return isNodeCanvasTab(tab)
       ? { ...base, success: false, supported: true, error: "页面仍在加载，尚未保存" }
       : { ...base, success: true, supported: false };
@@ -289,17 +302,23 @@ async function saveTabBeforeClose(tab) {
       success: !isNodeCanvasTab(tab),
       error: error?.message || "保存调用失败"
     }));
-    let timeoutId = null;
-    const timeout = new Promise((resolve) => {
-      timeoutId = setTimeout(() => resolve({
-        supported: isNodeCanvasTab(tab),
-        success: !isNodeCanvasTab(tab),
-        error: "保存超过 300 秒，已停止关闭或更新"
-      }), 300000);
-    });
-    const result = await Promise.race([saveTask, timeout]);
-    clearTimeout(timeoutId);
-    return { ...base, ...result };
+    let polling = false;
+    const progressTimer = setInterval(async () => {
+      if (polling || !tab.domReady) return;
+      polling = true;
+      try {
+        const progress = await tab.view.executeJavaScript('window.wandouSaveProgress || null');
+        if (!progress) return;
+        const detail = progress.phase === 'snapshot' ? '正在写入并校验本地项目快照'
+          : progress.phase === 'error' ? progress.error
+          : `正在保存节点 ${progress.completed || 0}/${progress.total || 0}${progress.mediaTotal ? ` · 当前媒体 ${(progress.mediaWritten / 1048576).toFixed(1)}/${(progress.mediaTotal / 1048576).toFixed(1)} MB` : ''}`;
+        if (closeInProgress) closeDialogStatus.textContent = `${tab.title}：${detail}。可取消关闭，保存会继续。`;
+        if (updateStarted) dialogNotes.textContent = `${tab.title}：${detail}`;
+        if (!closeInProgress && !updateStarted && tab.closing) showToast(`${tab.title}：${detail}`);
+      } catch (_error) {} finally { polling = false; }
+    }, 750);
+    try { return { ...base, ...await saveTask }; }
+    finally { clearInterval(progressTimer); }
   } catch (error) {
     return {
       ...base,
@@ -328,9 +347,11 @@ async function saveAllOpenWorkflows() {
 
 async function closeTab(id) {
   const tab = tabs.get(id);
-  if (!tab || tab.pinned) return;
+  if (!tab || tab.pinned || tab.closing) return;
+  tab.closing = true;
   clearTabSuspendTimer(tab);
   const saveResult = await saveTabBeforeClose(tab);
+  tab.closing = false;
   if (saveResult.supported && !saveResult.success) {
     const reason = saveResult.error ? `：${saveResult.error}` : "";
     showToast(`${tab.title || "当前标签"}保存失败，标签没有关闭${reason}`, true);
@@ -481,7 +502,7 @@ async function initializeClientState() {
 
 function showCloseDialog() {
   closeInProgress = false;
-  closeDialogStatus.textContent = "关闭前会强制保存并校验所有已打开的节点工作流；大画布可能需要 1–2 分钟。";
+  closeDialogStatus.textContent = "关闭前会完整保存并校验所有节点工作流；文件多时会显示进度，写入完成后再关闭。";
   closeDialogLocation.textContent = canvasBackupDirectory
     ? `工作流备份位置：\n${canvasBackupDirectory}`
     : "工作流保存在软件数据目录的 canvas-backups 文件夹中。";
@@ -493,12 +514,14 @@ function showCloseDialog() {
 
 async function saveAllAndClose() {
   if (closeInProgress) return;
+  const attempt = ++closeAttempt;
   closeInProgress = true;
-  closeDialogCancel.disabled = true;
+  closeDialogCancel.disabled = false;
   closeDialogConfirm.disabled = true;
   closeDialogConfirm.textContent = "正在保存…";
-  closeDialogStatus.textContent = "正在逐个保存并核对已打开的节点工作流，大画布可能需要 1–2 分钟，请稍候…";
+  closeDialogStatus.textContent = "正在逐个保存并核对节点工作流；您可以取消关闭，让保存继续完成。";
   const saveReport = await saveAllOpenWorkflows();
+  if (attempt !== closeAttempt) return;
   if (!saveReport.success) {
     const failedNames = saveReport.failures.map((item) => `${item.tabTitle}${item.error ? `（${item.error}）` : ""}`).join("、") || "当前工作流";
     closeInProgress = false;
@@ -510,6 +533,7 @@ async function saveAllAndClose() {
     return;
   }
   closeDialogStatus.textContent = `已验证保存 ${saveReport.saved.length} 个工作流，正在关闭软件…`;
+  closeDialogCancel.disabled = true;
   if (saveReport.backupPath) closeDialogLocation.textContent = `本次备份：\n${saveReport.backupPath}`;
   closeDialogConfirm.textContent = "正在关闭…";
   const closed = await window.wandouShell?.confirmClose({
@@ -584,7 +608,9 @@ dialogOverlay.addEventListener("click", (event) => {
   if (!updateStarted && event.target === dialogOverlay) dialogOverlay.hidden = true;
 });
 closeDialogCancel.addEventListener("click", () => {
-  if (closeInProgress) return;
+  closeAttempt += 1;
+  closeInProgress = false;
+  closeDialogConfirm.disabled = false;
   closeDialogOverlay.hidden = true;
   window.wandouShell?.cancelClose();
 });

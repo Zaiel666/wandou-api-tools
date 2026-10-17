@@ -1,0 +1,60 @@
+/* Original tool-cover collection; typography and gallery rhythm inspired by aixc4d.com. */
+body.home-test-page .common-tool-grid,
+body.home-test-page .home-test-tool-groups{gap:22px!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+body.home-test-page #home-tools .home-cover-card,
+body.home-test-page .home-test-tool-groups .home-cover-card{
+ display:flex!important;flex-direction:column;gap:0;min-width:0;min-height:0!important;height:auto!important;padding:8px!important;
+ border:1px solid var(--test-line)!important;border-radius:18px!important;background:var(--test-surface)!important;
+ text-align:left;overflow:hidden;isolation:isolate;transition:box-shadow .35s,border-color .35s,transform .35s;
+}
+body.home-test-page .home-cover-card::before,
+body.home-test-page .home-cover-card::after,
+body.home-test-page .home-cover-card .module-art,
+body.home-test-page .home-cover-card .home-test-small-icon,
+body.home-test-page .home-cover-card .home-test-card-index,
+body.home-test-page .home-cover-card .module-enter{display:none!important}
+.home-cover-card .tool-cover{position:relative;display:block;width:100%;aspect-ratio:3/2;overflow:hidden;border-radius:12px;background:#d9dce1;perspective:1000px;isolation:isolate}
+.tool-cover>img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .65s cubic-bezier(.175,.885,.32,1.275)}
+.cover-category{position:absolute;left:13px;top:12px;padding:5px 7px;border:1px solid #ffffff65;border-radius:5px;background:#ffffffb8;color:#30353a;font-size:8px;line-height:1;font-weight:700;letter-spacing:1.25px;backdrop-filter:blur(10px)}
+.cover-reveal{position:absolute;inset:auto 0 0;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:31%;padding:18px;color:#fff;background:#15171dea;backdrop-filter:blur(16px);transform:rotateX(-90deg);transform-origin:bottom;backface-visibility:hidden;transition:transform .6s cubic-bezier(.175,.885,.32,1.275)}
+.cover-reveal strong{font-size:14px;font-weight:600;line-height:1.5}.cover-reveal>span{flex:none;font-size:10px;color:#d6dae1}
+body.home-test-page #home-tools .home-cover-card .module-copy,
+body.home-test-page .home-test-tool-groups .home-cover-card .module-copy{display:block!important;position:static!important;width:100%;min-height:78px;height:auto!important;padding:15px 8px 10px!important;transform:none!important;background:none;overflow:visible}
+body.home-test-page #home-tools .home-cover-card .tool-label,
+body.home-test-page .home-test-tool-groups .tool-section[data-home-section] .module-card.home-cover-card .tool-label{display:block!important;max-width:100%;margin:0!important;color:var(--test-ink)!important;font-size:16px!important;font-weight:650!important;letter-spacing:-.3px;line-height:1.5!important}
+.home-cover-card .tool-label br{display:none}
+body.home-test-page #home-tools .home-cover-card .tool-desc,
+body.home-test-page .home-test-tool-groups .tool-section[data-home-section] .module-card.home-cover-card .tool-desc{display:block!important;max-width:100%;margin:5px 0 0!important;color:var(--test-muted)!important;font-size:12px!important;line-height:1.6!important;white-space:normal;overflow:visible;-webkit-line-clamp:unset}
+body.home-test-page .home-test-section-title{margin-bottom:18px}
+body.home-test-page .home-test-section-title h2{font-size:22px;font-weight:650;letter-spacing:-.7px}
+body.home-test-page .home-test-lower-title{margin-top:36px}
+@media(hover:hover){
+ body.home-test-page #home-tools .home-cover-card:hover,body.home-test-page .home-test-tool-groups .home-cover-card:hover{transform:translateY(-4px)!important;border-color:var(--test-line)!important;box-shadow:0 14px 30px #00000014!important}
+ .home-cover-card:hover .tool-cover>img{transform:scale(1.045)}
+ .home-cover-card:hover .cover-reveal{transform:rotateX(0)}
+}
+body.home-test-page .home-cover-card:focus-visible{outline:2px solid var(--test-ink);outline-offset:4px}
+.home-cover-card:focus-visible .cover-reveal{transform:rotateX(0)}
+/* Wide center banner with quieter neighboring slides and staggered copy. */
+body.home-test-page .home-carousel{height:clamp(215px,20vw,290px);margin-bottom:32px}
+.home-carousel .home-slide{inset:8px auto 24px 12%;width:76%;border-radius:18px;transition:transform .7s cubic-bezier(.22,.8,.24,1),opacity .7s,filter .7s}
+.home-slide[data-position=previous]{transform:translateX(-25%) scale(.92);filter:brightness(.75)}
+.home-slide[data-position=next]{transform:translateX(25%) scale(.92);filter:brightness(.75)}
+.home-carousel .home-slide-copy{transition:opacity .45s,translate .65s;translate:0 12px;opacity:0}
+.home-carousel [data-position=current] .home-slide-copy{translate:0 0;opacity:1;transition-delay:.12s}
+.home-carousel .poster-landscape{background-image:url('./assets/home-covers/canvas.webp');background-position:right center;background-size:auto 135%;background-repeat:no-repeat;background-color:#d4d8dd}
+.home-carousel .poster-0 .home-slide-art:after{background:linear-gradient(90deg,#e9ebee 0%,#e9ebeee8 33%,#e9ebee00 77%)}
+@media(max-width:1100px){body.home-test-page .home-test-tool-groups{grid-template-columns:repeat(2,minmax(0,1fr))!important}.cover-reveal{padding:12px}.cover-reveal>span{display:none}}
+@media(max-width:760px){
+ body.home-test-page .common-tool-grid,body.home-test-page .home-test-tool-groups{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+ body.home-test-page #home-tools .home-cover-card,body.home-test-page .home-test-tool-groups .home-cover-card{padding:5px!important;border-radius:13px!important}
+ .home-cover-card .tool-cover{border-radius:9px}
+ body.home-test-page #home-tools .home-cover-card .module-copy,body.home-test-page .home-test-tool-groups .home-cover-card .module-copy{padding:11px 5px 8px!important;min-height:91px}
+ body.home-test-page #home-tools .home-cover-card .tool-label,body.home-test-page .home-test-tool-groups .tool-section[data-home-section] .module-card.home-cover-card .tool-label{font-size:14px!important}
+ body.home-test-page #home-tools .home-cover-card .tool-desc,body.home-test-page .home-test-tool-groups .tool-section[data-home-section] .module-card.home-cover-card .tool-desc{font-size:11px!important}
+ .cover-category{left:6px;top:6px;font-size:6px;letter-spacing:.5px;padding:4px}
+ body.home-test-page .home-carousel{height:220px}.home-carousel .home-slide{left:7%;width:86%}.home-carousel .home-slide-copy{width:77%}
+ body.home-test-page .home-test-section-title h2{font-size:19px}.home-test-section-title p{font-size:10px}
+}
+@media(hover:none),(pointer:coarse){.cover-reveal{display:none}}
+@media(prefers-reduced-motion:reduce){.home-cover-card *,.home-carousel *{animation:none!important;transition:none!important}.cover-reveal{display:none}.home-cover-card:hover .tool-cover>img{transform:none}}

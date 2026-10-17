@@ -41,3 +41,69 @@
 .home-carousel-controls [data-pause]{border-left:1px solid var(--test-line)}
 @media(max-width:700px){.home-test-page .home-carousel{height:210px}.home-carousel .home-slide{left:8%;width:84%}.home-carousel .home-slide-copy{left:7%;width:70%}.home-carousel .home-slide-copy small{font-size:8px}.home-test-page .home-carousel .home-slide h2{font-size:26px}.home-carousel .poster-orbit{left:58%;opacity:.5}.home-carousel .carousel-edge{width:30px;height:30px}.home-carousel .carousel-prev{left:0}.home-carousel .carousel-next{right:0}}
 @media(prefers-reduced-motion:reduce){.home-carousel *{animation:none!important;transition:none!important}}
+
+/* Fold-up card motion adapted from gharsh11032000's MIT-licensed Uiverse example:
+   https://uiverse.io/gharsh11032000/selfish-owl-57 */
+body.home-test-page .home-flip-card{position:relative!important;isolation:isolate;overflow:hidden!important;perspective:1000px;transition:transform .6s cubic-bezier(.175,.885,.32,1.275),box-shadow .6s cubic-bezier(.175,.885,.32,1.275),border-color .3s ease!important}
+body.home-test-page .home-flip-card .home-flip-front{position:absolute;inset:0;z-index:2;display:flex;align-items:center;padding:20px;pointer-events:none;transition:opacity .28s ease,transform .6s cubic-bezier(.175,.885,.32,1.275)}
+body.home-test-page .home-flip-front-title{display:block;max-width:68%;color:var(--test-ink);font-size:21px;font-weight:700;line-height:1.25;letter-spacing:-.4px}
+body.home-test-page .home-flip-card .home-flip-back{position:absolute!important;inset:0;z-index:3;box-sizing:border-box;width:100%!important;height:100%!important;margin:0!important;padding:22px!important;overflow:hidden;background:var(--test-surface-raised);color:var(--test-ink);pointer-events:none;backface-visibility:hidden;transform:rotateX(-90deg);transform-origin:bottom;transition:transform .6s cubic-bezier(.175,.885,.32,1.275)}
+body.home-test-page .home-flip-card:not(.home-flip-motion-ready) .home-flip-back{transition:none!important}
+body.home-test-page #home-tools .home-flip-card .home-flip-back .tool-label{max-width:100%;margin:0!important;font-size:23px!important}
+body.home-test-page #home-tools .home-flip-card .home-flip-back .tool-desc{max-width:100%;margin-top:10px;font-size:13px!important;line-height:1.5!important}
+body.home-test-page .home-flip-card .home-flip-back .module-enter{display:none!important}
+body.home-test-page .home-flip-action{position:absolute;left:22px;bottom:19px;color:var(--test-ink);font-size:11px;font-weight:700}
+body.home-test-page #home-tools .home-flip-card .home-test-card-index{transition:opacity .25s ease}
+body.home-test-page #home-tools .home-flip-card .module-art{transition:opacity .45s ease,transform .6s cubic-bezier(.175,.885,.32,1.275)}
+body.home-test-page .home-test-tool-groups .home-flip-card .home-flip-front{align-items:flex-end;padding:13px}
+body.home-test-page .home-test-tool-groups .home-flip-front-title{max-width:100%;font-size:14px;line-height:1.27}
+body.home-test-page .home-test-tool-groups .home-flip-card .home-flip-back{display:flex!important;flex-direction:column;align-items:flex-start;gap:7px!important;padding:16px!important}
+body.home-test-page .home-test-tool-groups .home-flip-card .home-flip-back .tool-label{font-size:16px!important;line-height:1.25!important}
+body.home-test-page .home-test-tool-groups .home-flip-card .home-flip-back .tool-desc{display:block;-webkit-line-clamp:unset;overflow:visible;font-size:11px!important;line-height:1.45!important}
+body.home-test-page .home-test-tool-groups .home-flip-action{left:16px;bottom:11px;font-size:10px}
+body.home-test-page .home-test-tool-groups .home-flip-card::before,body.home-test-page .home-test-tool-groups .home-flip-card .home-test-small-icon{transition:opacity .3s ease,transform .6s cubic-bezier(.175,.885,.32,1.275)}
+body.home-test-page .blog-entry-card.home-flip-card{display:block!important}
+body.home-test-page .blog-entry-card .home-flip-front{left:200px;align-items:center;padding:22px}
+body.home-test-page .blog-entry-card .home-flip-front-title{max-width:100%;font-size:23px}
+body.home-test-page .blog-entry-card .home-flip-back{display:flex!important;flex-direction:column;align-items:flex-start;justify-content:center;gap:9px;padding:24px!important}
+body.home-test-page .blog-entry-card .home-flip-back strong{font-size:24px!important}
+body.home-test-page .blog-entry-card .blog-entry-visual{width:200px;height:100%;transition:opacity .3s ease,transform .6s cubic-bezier(.175,.885,.32,1.275)}
+body.home-test-page .service-card.home-flip-card,body.home-test-page .guide-card.home-flip-card{display:block!important}
+body.home-test-page .service-card .home-flip-front,body.home-test-page .guide-card .home-flip-front{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+body.home-test-page .service-card .home-flip-front-title,body.home-test-page .guide-card .home-flip-front-title{max-width:100%;font-size:20px}
+body.home-test-page .home-flip-front-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid var(--test-line);border-radius:10px;background:var(--test-surface-raised);color:var(--test-ink);font-size:24px;font-weight:650;transition:transform .6s cubic-bezier(.175,.885,.32,1.275)}
+body.home-test-page .service-card .home-flip-back,body.home-test-page .guide-card .home-flip-back{display:flex!important;flex-direction:column;align-items:flex-start;gap:9px;padding:20px!important}
+body.home-test-page .service-card .home-flip-back .service-card-icon{display:none}
+body.home-test-page .service-card .home-flip-back strong,body.home-test-page .guide-card .home-flip-back h3{margin:0;color:var(--test-ink);font-size:20px!important;line-height:1.3}
+body.home-test-page .service-card .home-flip-back .service-card-description,body.home-test-page .guide-card .home-flip-back p{margin:0;color:var(--test-muted);font-size:12px!important;line-height:1.45}
+body.home-test-page .service-card .home-flip-back .service-card-action,body.home-test-page .guide-card .home-flip-back .guide-card-action{margin-top:auto;font-size:11px}
+@media(hover:hover){
+ body.home-test-page .home-flip-card:hover{z-index:5;border-color:var(--test-line)!important;box-shadow:0 12px 26px #0000001d!important;transform:scale(1.05)!important}
+ body.home-test-page .home-test-tool-groups .home-flip-card:hover{transform:scale(1.035)!important}
+ body.home-test-page .home-flip-card:hover .home-flip-front,body.home-test-page .home-flip-card:hover .home-test-card-index{opacity:0;transform:scale(.72)}
+ body.home-test-page .home-flip-card:hover .home-flip-front-mark{transform:scale(0)}
+ body.home-test-page .home-flip-card:hover .home-flip-back{transform:rotateX(0deg)}
+ body.home-test-page #home-tools .home-flip-card:hover .module-art{opacity:0;transform:scale(0)!important}
+ body.home-test-page .home-test-tool-groups .home-flip-card:hover::before,body.home-test-page .home-test-tool-groups .home-flip-card:hover .home-test-small-icon{opacity:0;transform:scale(0)}
+ body.home-test-page .blog-entry-card:hover .blog-entry-visual{opacity:0;transform:scale(.72)}
+}
+body.home-test-page .home-flip-card:focus-visible{z-index:5;outline:2px solid var(--test-pea)!important;outline-offset:3px;box-shadow:0 12px 26px #0000001d!important;transform:scale(1.03)!important}
+body.home-test-page .home-flip-card:focus-visible .home-flip-front,body.home-test-page .home-flip-card:focus-visible .home-test-card-index{opacity:0;transform:scale(.72)}
+body.home-test-page .home-flip-card:focus-visible .home-flip-back{transform:rotateX(0deg)}
+body.home-test-page #home-tools .home-flip-card:focus-visible .module-art{opacity:0;transform:scale(0)!important}
+body.home-test-page .home-test-tool-groups .home-flip-card:focus-visible::before,body.home-test-page .home-test-tool-groups .home-flip-card:focus-visible .home-test-small-icon{opacity:0;transform:scale(0)}
+body.home-test-page .home-panel.active .info-card:not(.home-flip-card):hover{transform:scale(1.015);box-shadow:0 10px 24px #00000014!important;transition:transform .6s cubic-bezier(.175,.885,.32,1.275),box-shadow .6s ease}
+@media(max-width:700px){body.home-test-page .blog-entry-card .home-flip-front{left:0;top:45%;padding:15px}}
+@media(hover:none),(pointer:coarse),(prefers-reduced-motion:reduce){
+ body.home-test-page .home-flip-card{perspective:none;transition:none!important}
+ body.home-test-page .home-flip-card .home-flip-front{display:none}
+ body.home-test-page .home-flip-card .home-flip-back{position:relative!important;inset:auto;width:100%!important;height:auto!important;min-height:inherit;margin:0!important;padding:inherit!important;pointer-events:auto;transform:none!important;transition:none!important;background:transparent}
+ body.home-test-page #home-tools .home-flip-card .home-flip-back{min-height:180px;padding:18px!important}
+ body.home-test-page .home-test-tool-groups .home-flip-card .home-flip-back{min-height:110px;padding:12px!important}
+ body.home-test-page .home-flip-card .home-test-card-index,body.home-test-page .home-flip-card .module-art,body.home-test-page .home-test-tool-groups .home-flip-card::before,body.home-test-page .home-test-tool-groups .home-flip-card .home-test-small-icon{opacity:1;transform:none}
+ body.home-test-page .home-flip-action{display:none}
+ body.home-test-page .blog-entry-card .blog-entry-visual{display:block;width:100%;height:auto}
+ body.home-test-page .service-card .home-flip-back,body.home-test-page .guide-card .home-flip-back{min-height:160px;padding:20px!important}
+ body.home-test-page .service-card .home-flip-back .service-card-icon{display:grid}
+ body.home-test-page .home-panel.active .info-card:not(.home-flip-card):hover{transform:none;transition:none}
+}

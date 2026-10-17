@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
     [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot),
-    [string]$BuildDirectory = 'dist'
+    [string]$BuildDirectory = 'dist',
+    [string]$OutputDirectory = 'dist'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,7 +12,7 @@ if ($Version -notmatch '^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$') { throw "Invalid
 
 $compiler = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $desktopRoot = Join-Path $RepositoryRoot 'desktop-client'
-if ($BuildDirectory -notmatch '^dist(?:-[a-zA-Z0-9.]+)?$') { throw 'Invalid build directory.' }
+if ($BuildDirectory -notmatch '^dist(?:-[a-zA-Z0-9.-]+)?$') { throw 'Invalid build directory.' }
 $runtimeSource = Join-Path $desktopRoot "$BuildDirectory\win-unpacked"
 $packageRoot = Join-Path $desktopRoot "$BuildDirectory\portable-package"
 $runtimeRoot = Join-Path $packageRoot '程序文件'
@@ -19,13 +20,18 @@ $compatibilityApp = Join-Path $packageRoot 'resources\app'
 $launcher = Join-Path $packageRoot '豌豆AI工具.exe'
 $webLauncher = Join-Path $packageRoot '网页版.html'
 $guide = Join-Path $packageRoot '使用说明.txt'
-$releaseRoot = Join-Path $RepositoryRoot 'dist'
+$releaseRoot = [IO.Path]::GetFullPath((Join-Path $RepositoryRoot $OutputDirectory))
+if (-not $releaseRoot.StartsWith(([IO.Path]::GetFullPath($RepositoryRoot).TrimEnd('\') + '\'), [StringComparison]::OrdinalIgnoreCase)) { throw 'Output directory must stay inside the repository.' }
 $zip = Join-Path $releaseRoot 'wandou-ai-tools-windows-x64.zip'
 
 if (-not (Test-Path -LiteralPath (Join-Path $runtimeSource '豌豆AI工具.exe'))) {
     throw 'Electron win-unpacked build is missing.'
 }
 
+$resolvedPackageRoot = [IO.Path]::GetFullPath($packageRoot)
+if (-not $resolvedPackageRoot.StartsWith(([IO.Path]::GetFullPath($desktopRoot).TrimEnd('\') + '\'), [StringComparison]::OrdinalIgnoreCase)) { throw 'Package directory is outside desktop-client.' }
+$runtimeVersion = (Get-Item -LiteralPath (Join-Path $runtimeSource '豌豆AI工具.exe')).VersionInfo.ProductVersion
+if ($runtimeVersion -ne $Version -and $runtimeVersion -ne "$Version.0") { throw "Runtime version $runtimeVersion does not match requested version $Version." }
 if (Test-Path -LiteralPath $packageRoot) { Remove-Item -LiteralPath $packageRoot -Recurse -Force }
 New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
 Copy-Item -Path (Join-Path $runtimeSource '*') -Destination $runtimeRoot -Recurse -Force

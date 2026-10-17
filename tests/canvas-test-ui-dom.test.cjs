@@ -248,8 +248,8 @@ test('full-page boot wires the bottom toolbar, sidebar icons and single-row assi
   assert.deepEqual(imageMenuActions,['lightboxContextCopy','lightboxContextPrompt','lightboxContextRegenerate']);
   assert.ok(fs.readFileSync(path.join(app,'action-motion.js'),'utf8').includes("const excluded='.test-frame-button,"));
   assert.equal(document.querySelector('.topbar').parentElement,document.body);
-  assert.equal(document.querySelectorAll('[data-add-node] .ui-icon').length,11);
-  assert.equal(document.querySelectorAll('[data-menu-node].test-create-menu-item .ui-icon').length,11);
+  assert.equal(document.querySelectorAll('[data-add-node] .ui-icon').length,12);
+  assert.equal(document.querySelectorAll('[data-menu-node].test-create-menu-item .ui-icon').length,12);
   for (const button of document.querySelectorAll('[data-menu-node]')) {
     assert.equal(button.children.length,2);
     assert.equal(button.lastElementChild.tagName,'SPAN');

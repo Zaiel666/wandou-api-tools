@@ -1,0 +1,50 @@
+{
+  "canvas": "AI node workflow canvas: floating porcelain and graphite nodes connected by chrome cables, small lime glass connector.",
+  "subjects": [
+    [
+      "gridform",
+      "An editorial graphic poster composition: three floating poster panels with bold black geometric grids, a chrome sphere, muted lilac circle and white typography-like abstract bars. No readable text."
+    ],
+    [
+      "audio",
+      "A beautiful graphite studio microphone with chrome mesh, floating beside a sculptural white sound waveform morphing into neat porcelain document lines. Tiny lime glass accent."
+    ],
+    [
+      "image",
+      "A surreal miniature mountain landscape emerging from a floating white picture frame, silver moon, satin clouds, a small lavender glass sphere. Image creation studio."
+    ],
+    [
+      "motion",
+      "Giant sculptural extruded letter A and letter M in glossy black and porcelain white, trailing repeated thin chrome outlines suggesting typographic motion, tiny coral detail."
+    ],
+    [
+      "cutout",
+      "A delicate white sculptural flower lifted out of a frosted square picture plane, checkerboard translucent floor and precise dotted contour around the flower, tiny mint glass accent. Background removal."
+    ],
+    [
+      "watermark",
+      "Two overlapping frosted glass picture planes showing a serene white dune, with a chrome eraser-like capsule sliding across the foreground leaving a perfectly clear clean area, tiny blue glass accent. Image cleanup."
+    ],
+    [
+      "keyword",
+      "A white picture frame containing an abstract chrome sphere and arch, connecting through tiny floating squares to neatly spaced black text-like bars on a translucent document. Tiny lime accent. Reverse image prompting."
+    ],
+    [
+      "copywriter",
+      "A ribbon of irregular graphite speech-like fragments transforming into beautifully aligned porcelain typographic bars on a floating document, a silver fountain pen nib, tiny lavender accent. Writing refinement."
+    ],
+    [
+      "video-prompt",
+      "An elegant graphite cinema clapperboard beside floating translucent storyboard panels and a chrome camera lens, neat white document lines, tiny warm amber accent. Professional video prompt writing."
+    ],
+    [
+      "video",
+      "A glossy black play triangle inside a floating frosted landscape screen, a white ribbon of soundwave flowing into neat subtitle bars beneath, chrome trim, small cyan glass detail. Video transcription."
+    ],
+    [
+      "mindmap",
+      "A beautiful branching tree made of porcelain rounded rectangular nodes connected by slim chrome rods, one central dark graphite node and a small lime glass node, floating in an isometric studio composition. Mind mapping."
+    ]
+  ],
+  "shared": "Landscape 3:2 Cinema4D / Octane studio product render; pale cool gray, porcelain, graphite, chrome, restrained colored accent. No text, no labels. Built-in image_gen."
+}
