@@ -75,11 +75,12 @@ test('test project, theme, session and database operations cannot hit production
   assert.equal(localStorage.getItem('aiCanvasStateV1'), 'production');
 });
 
-test('all eleven creation actions and original project controls remain wired', () => {
+test('all original creation actions plus batch editing and project controls remain wired', () => {
   const production = read('ai-node-canvas.html');
   const actions = source => [...source.matchAll(/<button\b[^>]*data-add-node="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(actions(html), actions(production));
-  assert.equal(actions(html).length, 11);
+  assert.deepEqual(actions(html).filter(action => action !== 'batch'), actions(production));
+  assert.equal(actions(html).filter(action => action === 'batch').length, 1);
+  assert.equal(actions(html).length, 12);
   for (const id of ['exportProjectButton','importProjectButton','newProjectButton','themeToggleButton','assistantSendButton']) {
     assert.ok(html.includes(`id="${id}"`));
     assert.ok(html.includes(`${id}.addEventListener`) || html.includes(`getElementById("${id}")`));

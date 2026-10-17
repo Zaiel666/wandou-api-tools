@@ -26,10 +26,8 @@ assert.match(
   /pendingLocalMediaWrites\.has\(id\)/,
   "duplicate media persistence must share one in-flight write",
 );
-assert.match(
-  shellSource,
-  /保存超过 300 秒[\s\S]*300000/,
-  "large first-time saves need a five-minute safety window",
-);
+assert.doesNotMatch(shellSource, /保存超过 300 秒|300000/, 'local saves must not fail on a fixed five-minute timer');
+assert.match(shellSource, /await saveTask/, 'close must wait for the actual save result');
+assert.match(shellSource, /attempt !== closeAttempt/, 'cancelled close attempts must ignore late save results');
 
 console.log("PASS: close backups use compact media state without false 120-second failures");
