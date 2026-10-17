@@ -145,7 +145,7 @@ internal static class PortableUpdater
         throw lastError ?? new IOException("Directory move failed.");
     }
 
-    static bool DeleteDirectoryWithRetry(string directory, string log)
+    static bool DeleteDirectoryWithRetry(string directory, string log, string description = "previous installation")
     {
         if (String.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) return true;
         for (var attempt = 1; attempt <= 20; attempt++)
@@ -157,11 +157,11 @@ internal static class PortableUpdater
             }
             catch (Exception ex)
             {
-                Log(log, "Previous installation cleanup attempt " + attempt + " failed for " + directory + ": " + ex.Message);
+                Log(log, description + " cleanup attempt " + attempt + " failed for " + directory + ": " + ex.Message);
             }
             Thread.Sleep(500);
         }
-        Log(log, "Warning: previous installation remains after cleanup retries: " + directory);
+        Log(log, "Warning: " + description + " remains after cleanup retries: " + directory);
         return false;
     }
 
@@ -331,6 +331,17 @@ internal static class PortableUpdater
             StartApplicationWithRetry(install, executable, log);
             return 1;
         }
-        finally { try { Directory.Delete(stage, true); } catch { } }
+        finally
+        {
+            // In the locked-directory fallback the extracted stage is copied, not
+            // moved. A transient scanner lock must not leave another full copy of
+            // the application beside the installed folder after every update.
+            if (Directory.Exists(stage))
+            {
+                try { File.WriteAllText(Path.Combine(stage, ".wandou-stage-cleanup-ready"), DateTime.UtcNow.ToString("u")); }
+                catch (Exception markerError) { Log(log, "Unable to mark staging directory for later cleanup: " + markerError.Message); }
+                DeleteDirectoryWithRetry(stage, log, "staging directory");
+            }
+        }
     }
 }

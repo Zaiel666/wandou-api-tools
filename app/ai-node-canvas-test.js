@@ -507,8 +507,8 @@
     document.querySelector('.brand h1').innerHTML = '豌豆 AI<span class="brand-subtitle">绘图节点画布</span>';
     const badge = document.createElement('span');
     badge.className = 'test-version-badge';
-    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.4 · 节点画布' : '测试版 · 独立数据';
-    badge.title = '测试项目与正式版隔离；API 设置需要在测试页单独配置。';
+    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.5 · 节点画布' : '测试版 · 独立数据';
+    badge.title = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '当前正式版本：2.0.5' : '测试项目与正式版隔离；API 设置需要在测试页单独配置。';
     document.querySelector('.sidebar').append(badge);
     const creation = {
       image:['photo','参考图','blue'],sketch:['pencil','画板'],generator:['sparkles','AI 绘图','blue'],
@@ -624,7 +624,7 @@
     new MutationObserver(syncZoom).observe(document.getElementById('zoomValue'), { childList: true, subtree: true, characterData: true });
     syncZoom();
     // Rebuild once to decorate nodes restored before this script loaded.
-    canvas.querySelectorAll('.node').forEach(node => node.remove());
+    canvas.querySelectorAll('.node').forEach(node => { releaseMountedNode(node); node.remove(); });
     render();
     if (!canvasTestStorage.getItem('test-layout-initialized')) {
       requestAnimationFrame(() => { fitCanvasToContent(false); canvasTestStorage.setItem('test-layout-initialized', '1'); });

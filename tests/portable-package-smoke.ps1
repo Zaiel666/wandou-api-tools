@@ -59,5 +59,8 @@ finally {
     foreach ($process in (Get-RuntimeProcesses)) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
     if ($launcherProcess -and -not $launcherProcess.HasExited) { Stop-Process -Id $launcherProcess.Id -Force -ErrorAction SilentlyContinue }
     Start-Sleep -Milliseconds 300
-    if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
+    $resolvedTestRoot = [IO.Path]::GetFullPath($testRoot)
+    $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if (-not $resolvedTestRoot.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or (Split-Path $resolvedTestRoot -Leaf) -notmatch '^wandou-package-smoke-[0-9a-f]{32}$') { throw 'Unexpected temporary test directory.' }
+    if (Test-Path -LiteralPath $resolvedTestRoot) { Remove-Item -LiteralPath $resolvedTestRoot -Recurse -Force }
 }

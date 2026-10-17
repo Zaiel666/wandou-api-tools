@@ -10439,6 +10439,32 @@
       observer.observe(nodeElement);
     }
 
+    let canvasMotionObserver;
+    const nodeLayoutObservers = new WeakMap();
+
+    function observeNodeMotion(element) {
+      if (typeof IntersectionObserver !== "function") {
+        element.classList.add("motion-visible");
+        return;
+      }
+      if (!canvasMotionObserver) {
+        canvasMotionObserver = new IntersectionObserver((entries) => {
+          entries.forEach(({ target, isIntersecting }) => {
+            if (target.isConnected) target.classList.toggle("motion-visible", isIntersecting);
+          });
+        }, { root: canvasWrap, rootMargin: "40px", threshold: 0 });
+      }
+      canvasMotionObserver.observe(element);
+    }
+
+    function releaseMountedNode(element) {
+      canvasMotionObserver?.unobserve(element);
+      canvasMediaObserver?.unobserve(element);
+      pendingCanvasMedia.delete(element);
+      nodeLayoutObservers.get(element)?.forEach(observer => observer.disconnect());
+      nodeLayoutObservers.delete(element);
+    }
+
     function render(options = {}) {
       const renderStartedAt = performance.now();
       // 保留没有变化的节点 DOM。此前每次都会删掉再创建全部节点：上传一张
@@ -10459,14 +10485,17 @@
           return;
         }
         const nodeEl = renderNode(node, renderKey);
-        if (current) current.replaceWith(nodeEl);
+        if (current) {
+          releaseMountedNode(current);
+          current.replaceWith(nodeEl);
+        }
         else canvas.appendChild(nodeEl);
         mountedNodes.delete(node.id);
         stabilizeMountedNode(nodeEl, node);
         canvasChanged = true;
       });
       mountedNodes.forEach((element) => {
-        canvasMediaObserver?.unobserve(element);
+        releaseMountedNode(element);
         element.remove();
         canvasChanged = true;
       });
@@ -10483,20 +10512,32 @@
     }
 
     function stabilizeMountedNode(nodeEl, node) {
+      observeNodeMotion(nodeEl);
       observeDeferredNodeMedia(nodeEl);
+      const layoutObservers = [];
+      nodeLayoutObservers.set(nodeEl, layoutObservers);
       new Set([...nodeEl.querySelectorAll(".reference-comment-marker")].map((marker) => marker.closest(".thumb")).filter(Boolean)).forEach((thumb) => {
         const image = thumb.querySelector("img:not(.reference-mask-overlay):not(.reference-doodle-overlay)");
         image?.addEventListener("load", () => positionReferenceCommentMarkers(thumb));
         if (image?.complete) requestAnimationFrame(() => positionReferenceCommentMarkers(thumb));
-        if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => positionReferenceCommentMarkers(thumb)).observe(thumb);
+        if (typeof ResizeObserver !== "undefined") {
+          const observer = new ResizeObserver(() => positionReferenceCommentMarkers(thumb));
+          observer.observe(thumb);
+          layoutObservers.push(observer);
+        }
       });
       requestAnimationFrame(() => {
+        if (!nodeEl.isConnected) return;
         nodeEl.querySelectorAll("textarea[data-autogrow]").forEach((field) => {
           autoGrowTextarea(field);
           if (field.dataset.field === "prompt") {
             const height = Math.ceil(field.offsetHeight);
             if (height && node.promptHeight !== height) {
+              const matchesMountedState = nodeEl.dataset.renderKey === nodeRenderKey(node);
               node.promptHeight = height;
+              // Preserve the key's canonical order, but never absorb an edit
+              // made since this node was mounted into the cached DOM state.
+              if (matchesMountedState) nodeEl.dataset.renderKey = nodeRenderKey(node);
               scheduleCanvasSave();
             }
           }
@@ -22274,7 +22315,8 @@ ${formatInstruction}`;
     };
 
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") saveCanvasState();
+      document.body.classList.toggle("canvas-page-hidden", document.hidden);
+      if (document.visibilityState === "hidden") scheduleCanvasSave();
     });
 
     window.addEventListener("pagehide", () => {
@@ -22530,15 +22572,25 @@ ${formatInstruction}`;
     }
 
     window.__wandouDesktopTabActive = true;
+    let desktopResumeFrame = null;
     window.wandouSetDesktopTabActive = (active) => {
+      const nextActive = Boolean(active);
+      if (window.__wandouDesktopTabActive === nextActive) {
+        return { active: nextActive, pending: nodes.some((node) => node.pending) };
+      }
       window.__wandouDesktopTabActive = Boolean(active);
       document.body.classList.toggle("desktop-tab-inactive", !window.__wandouDesktopTabActive);
+      if (desktopResumeFrame !== null) cancelAnimationFrame(desktopResumeFrame);
+      desktopResumeFrame = null;
       if (!window.__wandouDesktopTabActive) {
         pausePerformanceMonitor(60000);
-        saveCanvasState();
+        scheduleCanvasSave();
       } else {
         pausePerformanceMonitor(5000);
-        render();
+        desktopResumeFrame = requestAnimationFrame(() => {
+          desktopResumeFrame = null;
+          if (window.__wandouDesktopTabActive) render({ skipSave: true });
+        });
       }
       return {
         active: window.__wandouDesktopTabActive,

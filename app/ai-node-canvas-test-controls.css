@@ -362,17 +362,17 @@ body:has(.app.assistant-open) #assistantToggleButton:not([data-mascot-positioned
 body.dark-theme .node.generator .test-refine-button{color:#a4c2ff;animation-name:refine-color-cycle-dark}
 .node.generator .test-refine-button::before{content:"";position:absolute;inset:-3px;border:1px solid color-mix(in srgb,currentColor 54%,transparent);border-radius:15px;pointer-events:none;animation:refine-idle-ring 3.2s ease-in-out infinite}
 .node.generator .test-refine-button::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(110deg,transparent 18%,color-mix(in srgb,currentColor 18%,transparent) 50%,transparent 82%);background-size:220% 100%;animation:refine-idle-sheen 3.2s linear infinite}
-.node.generator .test-refine-button .test-refine-icon{flex:none;color:inherit;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;fill:none;filter:none;animation:refine-idle-spark 3.2s ease-in-out infinite}
+.node.generator .test-refine-button .test-refine-icon{flex:none;color:inherit;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;fill:none;filter:none;animation:none}
 .test-refine-label{display:inline-flex;align-items:center;white-space:nowrap;position:relative;z-index:1}
-.test-refine-letter{display:inline-block;animation:refine-idle-letter 3.2s ease-in-out infinite;animation-delay:calc(var(--letter-order) * 80ms)}
+.test-refine-letter{display:inline-block}
 .node.generator .test-refine-button.test-refine-activated{border-color:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 25%,transparent),0 0 20px color-mix(in srgb,currentColor 48%,transparent);animation:refine-color-cycle 3.2s ease-in-out infinite,refine-click-glow 1.35s ease-out both}
 body.dark-theme .node.generator .test-refine-button.test-refine-activated{animation-name:refine-color-cycle-dark,refine-click-glow}
 .node.generator .test-refine-button.test-refine-activated .test-refine-letter{animation:refine-click-letter .75s ease-in-out both;animation-delay:calc(var(--letter-order) * 65ms)}
 .node.generator .test-refine-button.test-refine-activated .test-refine-icon{animation:refine-click-spark .9s ease-out both}
 @keyframes refine-color-cycle{0%,100%{color:#365996}35%{color:#26799f}68%{color:#7456ae}}
 @keyframes refine-color-cycle-dark{0%,100%{color:#a4c2ff}35%{color:#91d4ef}68%{color:#c4a6ff}}
-@keyframes refine-idle-ring{50%{box-shadow:0 0 13px color-mix(in srgb,currentColor 38%,transparent);opacity:1}0%,100%{box-shadow:0 0 0 transparent;opacity:.4}}
-@keyframes refine-idle-sheen{to{background-position:-220% 0}}
+@keyframes refine-idle-ring{50%{opacity:1;transform:scale(1.025)}0%,100%{opacity:.4;transform:scale(1)}}
+@keyframes refine-idle-sheen{0%,100%{opacity:.15}50%{opacity:.65}}
 @keyframes refine-idle-spark{50%{opacity:.8;filter:drop-shadow(0 0 5px currentColor)}}
 @keyframes refine-idle-letter{50%{text-shadow:0 0 5px currentColor}}
 @keyframes refine-click-glow{0%{transform:scale(1)}35%{transform:scale(1.045)}100%{transform:scale(1)}}
@@ -431,3 +431,15 @@ html body.node-canvas-page .canvas .node.audio.box-selected{outline:2px solid #e
   .test-switch:active:not(:disabled) .test-switch-knob {width:18px;}
   .test-switch[aria-checked=true]:active:not(:disabled) .test-switch-knob {left:21px;}
 }
+
+/* Only animate nodes near the viewport. Keep visible refine color/icon in sync. */
+.canvas .node:not(.motion-visible),
+.canvas .node:not(.motion-visible) *,
+.canvas .node:not(.motion-visible)::before,
+.canvas .node:not(.motion-visible)::after,
+.canvas .node:not(.motion-visible) *::before,
+.canvas .node:not(.motion-visible) *::after,
+body:is(.desktop-tab-inactive,.canvas-page-hidden) .canvas,
+body:is(.desktop-tab-inactive,.canvas-page-hidden) .canvas *,
+body:is(.desktop-tab-inactive,.canvas-page-hidden) .canvas *::before,
+body:is(.desktop-tab-inactive,.canvas-page-hidden) .canvas *::after{animation:none!important;transition:none!important}

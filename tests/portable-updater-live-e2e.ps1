@@ -78,7 +78,9 @@ public static class UpdateDirectoryLock {
     $arguments = @($updater, $install, $package, '豌豆AI工具.exe', $ready, '1.0.57', 'crashpad_handler.exe')
     Start-Process -FilePath $parentExe -ArgumentList $arguments -WorkingDirectory $install -WindowStyle Hidden | Out-Null
 
-    $deadline = [DateTime]::UtcNow.AddSeconds(50)
+    # On busy Windows hosts, stopping Chromium helper processes and retrying a
+    # locked directory can together exceed the old 50-second test deadline.
+    $deadline = [DateTime]::UtcNow.AddSeconds(120)
     do {
         Start-Sleep -Milliseconds 300
         $versionFile = Join-Path $install 'resources\app\VERSION.txt'
@@ -111,15 +113,21 @@ public static class UpdateDirectoryLock {
     do {
         Start-Sleep -Milliseconds 300
         $previous = @(Get-ChildItem -LiteralPath $testRoot -Directory -Filter '豌豆AI工具.previous-*')
-    } while ($previous.Count -ne 0 -and [DateTime]::UtcNow -lt $cleanupDeadline)
+        $stages = @(Get-ChildItem -LiteralPath $testRoot -Directory -Filter 'wandou-ai-stage-*')
+    } while (($previous.Count -ne 0 -or $stages.Count -ne 0) -and [DateTime]::UtcNow -lt $cleanupDeadline)
     if ($previous.Count -ne 0) { throw "Expected previous installations to be cleaned, found $($previous.Count)." }
+    if ($stages.Count -ne 0) { throw "Expected extracted update stages to be cleaned, found $($stages.Count)." }
     $logText = Get-Content -LiteralPath $log -Raw
     if ($logText -match 'Warning: previous installation remains') { throw 'The updater left a previous installation behind.' }
+    if ($logText -match 'Warning: staging directory remains') { throw 'The updater left an extracted update stage behind.' }
     Write-Output "PASS: migrated old layout to three-entry v1.0.57 package and verified restart; locked directory: $LockInstallDirectory."
 }
 finally {
     if ($directoryLock) { $directoryLock.Dispose() }
     Stop-TestProcesses
     Start-Sleep -Milliseconds 300
-    if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
+    $resolvedTestRoot = [IO.Path]::GetFullPath($testRoot)
+    $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if (-not $resolvedTestRoot.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or (Split-Path $resolvedTestRoot -Leaf) -notmatch '^wandou-updater-live-e2e-[0-9a-f]{32}$') { throw 'Unexpected temporary test directory.' }
+    if (Test-Path -LiteralPath $resolvedTestRoot) { Remove-Item -LiteralPath $resolvedTestRoot -Recurse -Force }
 }

@@ -71,6 +71,37 @@ async function cleanupStalePortableInstallBackups() {
   }
 }
 
+async function cleanupStalePortableUpdateStages() {
+  if (!app.isPackaged) return;
+  const { installDirectory } = portableInstallContext();
+  const installParent = path.resolve(path.dirname(installDirectory));
+  try {
+    const entries = await fs.promises.readdir(installParent, { withFileTypes: true });
+    for (const entry of entries) {
+      // A stage can belong to an update still running in another portable copy.
+      // Only remove an exact updater GUID after completion or a full day of age.
+      if (!/^wandou-ai-stage-[a-f0-9]{32}$/i.test(entry.name) || !entry.isDirectory() || entry.isSymbolicLink()) continue;
+      const stageDirectory = path.resolve(installParent, entry.name);
+      if (path.dirname(stageDirectory) !== installParent) continue;
+      try {
+        const stats = await fs.promises.lstat(stageDirectory);
+        if (!stats.isDirectory() || stats.isSymbolicLink()) continue;
+        let completedStage = false;
+        try {
+          const marker = await fs.promises.lstat(path.join(stageDirectory, ".wandou-stage-cleanup-ready"));
+          completedStage = marker.isFile() && !marker.isSymbolicLink() && Date.now() - marker.mtimeMs >= 30 * 1000;
+        } catch (_error) { /* Older updater versions did not write this marker. */ }
+        if (!completedStage && Date.now() - stats.mtimeMs < 24 * 60 * 60 * 1000) continue;
+        await fs.promises.rm(stageDirectory, { recursive: true, force: true, maxRetries: 12, retryDelay: 500 });
+      } catch (error) {
+        console.warn("Unable to remove stale portable update stage:", stageDirectory, error.message);
+      }
+    }
+  } catch (error) {
+    console.warn("Unable to inspect portable update stages:", error.message);
+  }
+}
+
 function readClientConfig() {
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, "client-config.json"), "utf8"));
@@ -1353,8 +1384,15 @@ app.whenReady().then(() => {
       }, 500);
     }, testCloseDelay);
   }
-  const cleanupTimer = setTimeout(() => { cleanupStalePortableInstallBackups(); }, 2500);
+  const cleanupTimer = setTimeout(() => {
+    cleanupStalePortableInstallBackups();
+    cleanupStalePortableUpdateStages();
+  }, 2500);
   cleanupTimer.unref?.();
+  const completedStageTimer = setTimeout(() => { cleanupStalePortableUpdateStages(); }, 45 * 1000);
+  completedStageTimer.unref?.();
+  const stageCleanupTimer = setInterval(() => { cleanupStalePortableUpdateStages(); }, 10 * 60 * 1000);
+  stageCleanupTimer.unref?.();
 });
 app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
 app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
