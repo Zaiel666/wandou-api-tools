@@ -65,8 +65,11 @@ test('mascot launcher retains button semantics and composer has no reserved foot
   assert.ok(!base.includes('padding-bottom:82px'));
   assert.ok(base.includes('.assistant-panel {padding-bottom:0;}'));
   assert.ok(controls.includes('margin:8px 8px 4px'));
-  assert.ok(controls.includes('@keyframes pea-assistant-greet'));
-  assert.match(controls, /@media\(prefers-reduced-motion:reduce\)\s*\{\s*#assistantToggleButton \.assistant-mascot \{animation:none/);
+  assert.equal(launcher.querySelectorAll('.assistant-mascot').length, 1);
+  assert.ok(launcher.querySelector('canvas.assistant-mascot-motion'));
+  assert.ok(document.querySelector('script[src="./assistant-mascot-motion.js"]'));
+  assert.ok(!controls.includes('@keyframes pea-assistant-greet'));
+  assert.match(controls, /@media\(prefers-reduced-motion:reduce\)\s*\{\s*#assistantToggleButton\[data-mascot-animated\] \.assistant-mascot \{visibility:visible/);
 });
 function setup(markup) {
   const {document, window} = parseHTML('<html><body>' + markup + '</body></html>');
@@ -284,7 +287,7 @@ test('API request, annotation, reference ordering and export handlers are unchan
       const end=source.indexOf('\n    function ',index+10);
       const asyncEnd=source.indexOf('\n    async function ',index+10);
       const stop=Math.min(...[end,asyncEnd].filter(n=>n>index));
-      return source.slice(index,stop).replaceAll('canvasTestStorage','localStorage').replaceAll('canvasTestSessionStorage','sessionStorage').replace(/\r\n/g,'\n');
+      return source.slice(index,stop).replaceAll('canvasTestStorage','localStorage').replaceAll('canvasTestSessionStorage','sessionStorage').replace(/\r\n/g,'\n').trimEnd();
     };
     assert.equal(extract(page),extract(production),name+' must retain the original implementation');
   }

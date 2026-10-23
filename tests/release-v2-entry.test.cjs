@@ -16,7 +16,7 @@ test('shell save checks recognize old, new and prototype canvas URLs',()=>{
 });
 test('release includes native converter and bundled Blender script',()=>{
  const config=JSON.parse(read('desktop-client/package.json'));
- assert.equal(config.version,'2.0.5');
+ assert.equal(config.version,'2.0.6');
  assert.ok(config.build.files.includes('director-ipc.cjs'));
  assert.ok(config.build.files.includes('director-converter.cjs'));
  assert.ok(config.build.extraResources.some(x=>x.to==='director/convert-blend.py'));

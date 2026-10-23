@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head><script src="./ai-node-canvas-test-storage.js"></script>
 <script src="./canvas-save-pipeline.js"></script>
+<script src="./canvas-media-preview.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#030706">
@@ -7613,10 +7614,12 @@
     <button id="assistantRailButton" class="assistant-rail" type="button" aria-label="展开对话模式"><span class="assistant-rail-arrow" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m3 5 5 5-5 5M9 5l5 5-5 5"/></svg></span><span class="assistant-rail-label" data-assistant-rail-copy>对话模式</span></button>
   </div>
   <button id="assistantToggleButton" class="assistant-launcher" type="button" aria-controls="assistantPanel" aria-expanded="true" aria-label="收起对话助手" title="收起对话助手">
-    <span class="assistant-mascot-window" aria-hidden="true"><img class="assistant-mascot" src="./assets/pea-assistant-sprite-v2.png" alt="" draggable="false"><img class="assistant-mascot mascot-frame-2" src="./assets/pea-assistant-sprite-v2.png" alt="" draggable="false"><img class="assistant-mascot mascot-frame-3" src="./assets/pea-assistant-sprite-v2.png" alt="" draggable="false"><img class="assistant-mascot mascot-frame-4" src="./assets/pea-assistant-sprite-v2.png" alt="" draggable="false"></span>
+    <span class="assistant-mascot-window" aria-hidden="true"><img class="assistant-mascot" src="./assets/pea-assistant-sprite-v2.png" alt="" draggable="false"><canvas class="assistant-mascot-motion"></canvas></span>
     <span class="assistant-mascot-label">对话助手</span>
   </button>
   <script src="./assistant-mascot.js" defer></script>
+<script src="./assets/pea-assistant-portrait.js" defer></script>
+<script src="./assistant-mascot-motion.js" defer></script>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">已完成</div>
   <div id="lightbox" class="lightbox">
     <button id="lightboxClose" class="ghost lightbox-close" type="button">关闭</button>
@@ -10408,6 +10411,10 @@
     function setDeferredNodeMedia(nodeElement, active) {
       nodeElement.querySelectorAll("[data-canvas-media]").forEach((media) => {
         const source = active ? canvasMediaSourceFor(media) : "";
+        if (media.tagName === "IMG" && window.WandouCanvasPreview) {
+          window.WandouCanvasPreview.setSource(media, source);
+          return;
+        }
         if (active && source) {
           if (media.getAttribute("src") !== source) media.setAttribute("src", source);
           return;
@@ -10439,6 +10446,20 @@
       observer.observe(nodeElement);
     }
 
+    const pendingCanvasMotion = new Map();
+    let canvasMotionTimer = null;
+    function flushCanvasMotion() {
+      clearTimeout(canvasMotionTimer);
+      if (canvasWrap.matches(".is-panning,.is-zooming")) {
+        canvasMotionTimer = setTimeout(flushCanvasMotion, 180);
+        return;
+      }
+      canvasMotionTimer = null;
+      for (const [target, active] of pendingCanvasMotion) {
+        if (target.isConnected) target.classList.toggle("motion-visible", active);
+      }
+      pendingCanvasMotion.clear();
+    }
     let canvasMotionObserver;
     const nodeLayoutObservers = new WeakMap();
 
@@ -10449,16 +10470,17 @@
       }
       if (!canvasMotionObserver) {
         canvasMotionObserver = new IntersectionObserver((entries) => {
-          entries.forEach(({ target, isIntersecting }) => {
-            if (target.isConnected) target.classList.toggle("motion-visible", isIntersecting);
-          });
+          entries.forEach(({ target, isIntersecting }) => pendingCanvasMotion.set(target, isIntersecting));
+          if (canvasMotionTimer === null) canvasMotionTimer = setTimeout(flushCanvasMotion, 32);
         }, { root: canvasWrap, rootMargin: "40px", threshold: 0 });
       }
       canvasMotionObserver.observe(element);
     }
 
     function releaseMountedNode(element) {
+      window.WandouCanvasPreview?.release(element);
       canvasMotionObserver?.unobserve(element);
+      pendingCanvasMotion.delete(element);
       canvasMediaObserver?.unobserve(element);
       pendingCanvasMedia.delete(element);
       nodeLayoutObservers.get(element)?.forEach(observer => observer.disconnect());
@@ -10485,6 +10507,7 @@
           return;
         }
         const nodeEl = renderNode(node, renderKey);
+        window.WandouCanvasPreview?.prepare(nodeEl);
         if (current) {
           releaseMountedNode(current);
           current.replaceWith(nodeEl);
@@ -14902,8 +14925,9 @@
       if (node.type === "result" && previewImg) {
         const syncRatio = () => {
           if (!previewImg.naturalWidth || !previewImg.naturalHeight) return;
-          if (!node.width) node.width = previewImg.naturalWidth;
-          if (!node.height) node.height = previewImg.naturalHeight;
+          const original = window.WandouCanvasPreview?.dimensions(previewImg);
+          if (!node.width) node.width = original?.width || previewImg.naturalWidth;
+          if (!node.height) node.height = original?.height || previewImg.naturalHeight;
           node.ratio = `${node.width}:${node.height}`;
           const nodeEl = canvas.querySelector(`[data-id="${node.id}"]`);
           if (nodeEl) nodeEl.style.setProperty("--preview-ratio", `${previewImg.naturalWidth} / ${previewImg.naturalHeight}`);
@@ -21388,13 +21412,13 @@ ${formatInstruction}`;
       return `${base}-${Date.now()}${extension}`;
     }
 
-    async function sourceToBlob(src, fallbackType = "application/octet-stream") {
+    async function sourceToBlob(src, fallbackType = "application/octet-stream", timeoutMs = 60000) {
       if (!src) return null;
       const controller = new AbortController();
       // Bound remote downloads through the response body, not local disk writes.
-      const timer = /^https?:/i.test(src) ? setTimeout(() => controller.abort(), 60000) : null;
+      const timer = /^https?:/i.test(src) ? setTimeout(() => controller.abort(), timeoutMs) : null;
       try {
-        const response = await fetchMediaWithTimeout(src, { cache: "no-store", signal: controller.signal }, 60000);
+        const response = await fetchMediaWithTimeout(src, { cache: "default", signal: controller.signal }, timeoutMs);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
         return blob.type ? blob : new Blob([blob], { type: fallbackType });
@@ -21950,14 +21974,56 @@ ${formatInstruction}`;
       } catch (error) { mediaSourceSaveCache.delete(value); throw error; }
     }
 
+    const remoteMediaSaveFailures = new Map();
+    let remoteMediaSaveDeadline = Infinity;
+
     async function persistRemoteMediaValue(value) {
+      const remote = /^https?:/i.test(value);
+      const previous = remoteMediaSaveFailures.get(value);
+      if (remote && previous?.retryAfter > Date.now()) return value;
+      let blob;
       try {
-        const blob = await sourceToBlob(value);
-        if (!blob) return value;
-        return await putLocalMedia(await blobToDataUrl(blob));
+        const remaining = Math.min(8000, remoteMediaSaveDeadline - Date.now());
+        if (remote && remaining <= 0) throw new Error("网络图片下载超时，已保留原链接");
+        blob = await sourceToBlob(value, "application/octet-stream", remote ? Math.max(1, remaining) : 60000);
+        if (!blob?.size) throw new Error("图片内容为空");
       } catch (error) {
-        console.warn("Remote media could not be mirrored locally", error);
-        throw new Error(`图片尚未保存到本地：${error.message}`);
+        // An expired network URL must not prevent saving the rest of a project.
+        // Blob/data URLs and disk errors cannot be recovered from a URL: still fail.
+        if (!remote) throw error;
+        remoteMediaSaveFailures.set(value, { url:value, error:error.message || String(error), checkedAt:Date.now(), retryAfter:Date.now() + 60000 });
+        if (remoteMediaSaveFailures.size > 512) remoteMediaSaveFailures.delete(remoteMediaSaveFailures.keys().next().value);
+        return value;
+      }
+      const stored = await putLocalMedia(await blobToDataUrl(blob));
+      if (!stored.startsWith(localMediaPrefix)) throw new Error("图片未能写入本地存储");
+      remoteMediaSaveFailures.delete(value);
+      return stored;
+    }
+
+    function updateCanvasMediaSaveNotice(nodeList) {
+      const warnings = nodeList.flatMap(node => (node.mediaSaveWarnings || []).map(warning => ({...warning, title:node.title || node.id})));
+      let notice = document.getElementById("canvasMediaSaveNotice");
+      if (!warnings.length) { notice?.remove(); return; }
+      if (!notice) {
+        notice = document.createElement("details");
+        notice.id = "canvasMediaSaveNotice";
+        notice.style.cssText = "position:absolute;top:62px;left:18px;z-index:8;max-width:390px;max-height:180px;overflow:auto;padding:8px 12px;border-radius:8px;background:#493b20;color:#fff1ce;font-size:12px;line-height:1.6";
+        notice.addEventListener("pointerdown", event => event.stopPropagation());
+        notice.addEventListener("wheel", event => event.stopPropagation());
+        canvasWrap.appendChild(notice);
+      }
+      notice.replaceChildren();
+      const summary = document.createElement("summary");
+      summary.textContent = "部分远程图片未下载，已保留原链接（" + new Set(warnings.map(item => item.url)).size + " 张）";
+      notice.appendChild(summary);
+      const explanation = document.createElement("div");
+      explanation.textContent = "不影响保存节点和已有本地图片。点击对应节点检查图片；如原链接已失效，请重新上传原图。";
+      notice.appendChild(explanation);
+      for (const item of warnings) {
+        const line = document.createElement("div");
+        line.textContent = item.title + "：" + item.error;
+        notice.appendChild(line);
       }
     }
 
@@ -22183,6 +22249,7 @@ ${formatInstruction}`;
       if (canvasRecoveryBlocked) return false;
       try {
         clearTimeout(saveTimer);
+        remoteMediaSaveDeadline = Date.now() + 8000;
         window.wandouSaveProgress = { phase: 'media', completed: 0, total: context.state.nodes.length, updatedAt: Date.now() };
         const storedNodes = await WandouSavePipeline.mapLimited(context.state.nodes, 2, serializeNodeForStorage, (completed, total) => {
           Object.assign(window.wandouSaveProgress, { completed, total, updatedAt: Date.now() });
@@ -22228,12 +22295,13 @@ ${formatInstruction}`;
           }
         }
         window.wandouSaveProgress.phase = 'saved';
+        if (context.projectId === activeProjectId) updateCanvasMediaSaveNotice(storedNodes);
         return true;
       } catch (error) {
         context.saveError = `${error?.name || "Error"}: ${error?.message || String(error)}`;
         window.wandouSaveProgress = { phase: 'error', error: context.saveError };
         console.warn("Canvas save skipped", error);
-        warnCanvasStorageSkipped(error);
+        showToast("画布尚未保存：" + (error?.message || String(error)));
         return false;
       }
     }
@@ -22355,23 +22423,37 @@ ${formatInstruction}`;
 
     async function serializeNodeForStorage(node) {
       const copy = { ...node };
+      const warnings = [];
+      for (const warning of copy.mediaSaveWarnings || []) {
+        if (warning.retryAfter > Date.now() && !remoteMediaSaveFailures.has(warning.url)) remoteMediaSaveFailures.set(warning.url, warning);
+      }
+      const persistField = async (value, field) => {
+        const stored = await persistMediaValue(value);
+        if (/^https?:/i.test(stored || "")) {
+          const failure = remoteMediaSaveFailures.get(stored);
+          if (failure) warnings.push({...failure, field});
+        }
+        return stored;
+      };
       if (/^https?:/i.test(copy.mediaUrl || "")) copy.mediaSourceUrl = copy.mediaUrl;
       if (/^https?:/i.test(copy.previewUrl || "")) copy.previewSourceUrl = copy.previewUrl;
       if (/^https?:/i.test(copy.fullUrl || "")) copy.fullSourceUrl = copy.fullUrl;
-      copy.mediaUrl = await persistMediaValue(copy.mediaUrl);
-      copy.previewUrl = await persistMediaValue(copy.previewUrl);
-      copy.fullUrl = await persistMediaValue(copy.fullUrl);
-      copy.sourceUrl = await persistMediaValue(copy.sourceUrl);
-      copy.outpaintSourceUrl = await persistMediaValue(copy.outpaintSourceUrl);
+      copy.mediaUrl = await persistField(copy.mediaUrl, "mediaUrl");
+      copy.previewUrl = await persistField(copy.previewUrl, "previewUrl");
+      copy.fullUrl = await persistField(copy.fullUrl, "fullUrl");
+      copy.sourceUrl = await persistField(copy.sourceUrl, "sourceUrl");
+      copy.outpaintSourceUrl = await persistField(copy.outpaintSourceUrl, "outpaintSourceUrl");
       if (Array.isArray(copy.references)) {
         copy.references = await WandouSavePipeline.mapLimited(copy.references, 1, async (item) => ({
           ...item,
-          url: await persistMediaValue(item.url),
-          maskUrl: await persistMediaValue(item.maskUrl),
-          maskSelectionUrl: await persistMediaValue(item.maskSelectionUrl),
-          doodleUrl: await persistMediaValue(item.doodleUrl)
+          url: await persistField(item.url, "references.url"),
+          maskUrl: await persistField(item.maskUrl, "references.maskUrl"),
+          maskSelectionUrl: await persistField(item.maskSelectionUrl, "references.maskSelectionUrl"),
+          doodleUrl: await persistField(item.doodleUrl, "references.doodleUrl")
         }));
       }
+      if (warnings.length) copy.mediaSaveWarnings = warnings;
+      else delete copy.mediaSaveWarnings;
       return copy;
     }
 
@@ -22423,6 +22505,7 @@ ${formatInstruction}`;
         node.references = [];
         node.status = node.type === "result" ? "" : "可上传参考图。";
       }
+      const storedMedia = {mediaUrl:node.mediaUrl, previewUrl:node.previewUrl, fullUrl:node.fullUrl};
       const [mediaUrl, previewUrl, fullUrl, sourceUrl, outpaintSourceUrl] = await Promise.all([
         resolveLoadedMedia(node.mediaUrl, mediaCache),
         resolveLoadedMedia(node.previewUrl, mediaCache),
@@ -22430,6 +22513,12 @@ ${formatInstruction}`;
         resolveLoadedMedia(node.sourceUrl, mediaCache),
         resolveLoadedMedia(node.outpaintSourceUrl, mediaCache)
       ]);
+      for (const [field, resolved] of [["mediaUrl",mediaUrl],["previewUrl",previewUrl],["fullUrl",fullUrl]]) {
+        const origin = node[field.replace("Url", "SourceUrl")];
+        if (resolved && storedMedia[field]?.startsWith(localMediaPrefix) && /^https?:/i.test(origin || "")) {
+          mediaSourceSaveCache.set(origin, Promise.resolve(storedMedia[field]));
+        }
+      }
       node.mediaUrl = mediaUrl || node.mediaSourceUrl || "";
       node.previewUrl = previewUrl || node.previewSourceUrl || node.mediaUrl || "";
       node.fullUrl = fullUrl || node.fullSourceUrl || node.mediaUrl || "";
@@ -22469,6 +22558,7 @@ ${formatInstruction}`;
       };
       const workerCount = Math.min(3, list.length);
       await Promise.all(Array.from({ length: workerCount }, worker));
+      updateCanvasMediaSaveNotice(list);
     }
 
     function mergeCanvasRecoveryState(compactState, backupState) {

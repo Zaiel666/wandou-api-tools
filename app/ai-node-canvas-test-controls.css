@@ -153,36 +153,18 @@
 .canvas-wrap:is(.is-zooming,.is-panning) .node *::after {animation-play-state:paused!important;transition:none!important;}
 
 /* Only the mascot moves, never the pointer target or the chat composer. */
-#assistantToggleButton.assistant-launcher {width:132px;height:132px;min-height:0;padding:0;gap:0;border:0;background:transparent;box-shadow:none;color:#285515;touch-action:none;user-select:none;cursor:grab;}
-#assistantToggleButton.assistant-launcher:hover,#assistantToggleButton.assistant-launcher.active {background:transparent;border:0;}
+#assistantToggleButton.assistant-launcher {width:132px;height:132px;min-height:0;padding:0;gap:0;border:0;border-color:transparent!important;background:transparent!important;box-shadow:none!important;color:#285515;touch-action:none;user-select:none;cursor:grab;}
 #assistantToggleButton .assistant-mascot-window {position:absolute;inset:0;overflow:hidden;padding:0;border:0;background:none;pointer-events:none;}
-#assistantToggleButton .assistant-mascot {position:absolute;left:0;top:0;display:block;width:200%;height:200%;max-width:none;pointer-events:none;animation:pea-assistant-greet 4.8s linear infinite;}
-#assistantToggleButton .mascot-frame-2 {transform:translate(-50%,0);opacity:0;animation-name:pea-assistant-half;}
-#assistantToggleButton .mascot-frame-3 {transform:translate(0,-50%);opacity:0;animation-name:pea-assistant-blink;}
-#assistantToggleButton .mascot-frame-4 {transform:translate(-50%,-50%);opacity:0;animation-name:pea-assistant-recover;}
+#assistantToggleButton .assistant-mascot {position:absolute;left:0;top:0;display:block;width:200%;height:200%;max-width:none;pointer-events:none;}
+#assistantToggleButton .assistant-mascot-motion {position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;visibility:hidden;}
+#assistantToggleButton[data-mascot-animated] .assistant-mascot {visibility:hidden;}
+#assistantToggleButton[data-mascot-animated] .assistant-mascot-motion {visibility:visible;}
 #assistantToggleButton .assistant-mascot-label {position:absolute;left:12%;right:12%;top:88.5%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;padding:0;border:0;background:none;font-size:13px;font-weight:750;line-height:18px;letter-spacing:0;color:#285515;pointer-events:none;text-shadow:0 1px #efffc2;}
 body:has(.app.assistant-open) #assistantToggleButton:not([data-mascot-positioned]) {right:min(calc(var(--chat-size) + 12px),calc(100vw - 136px));}
 #assistantToggleButton[data-mascot-dragging] {cursor:grabbing;}
-#assistantToggleButton[data-mascot-dragging] .assistant-mascot {animation-play-state:paused;}
-@keyframes pea-assistant-greet {
-  0%,36%,100% {opacity:1;}
-  39%,94% {opacity:0;}
-}
-@keyframes pea-assistant-half {
-  0%,36%,46%,100% {opacity:0;}
-  39%,42% {opacity:1;}
-}
-@keyframes pea-assistant-blink {
-  0%,42%,54%,100% {opacity:0;}
-  46%,50% {opacity:1;}
-}
-@keyframes pea-assistant-recover {
-  0%,50%,100% {opacity:0;}
-  54%,94% {opacity:1;}
-}
 @media(prefers-reduced-motion:reduce) {
-  #assistantToggleButton .assistant-mascot {animation:none;transform:none;opacity:1;}
-  #assistantToggleButton .assistant-mascot:not(:first-child) {display:none;}
+  #assistantToggleButton[data-mascot-animated] .assistant-mascot {visibility:visible;}
+  #assistantToggleButton[data-mascot-animated] .assistant-mascot-motion {visibility:hidden;}
 }
 
 .node .auto-split-control,.node .transparent-background-control {display:flex;align-items:center;justify-content:space-between;gap:10px;}
@@ -443,3 +425,8 @@ body:is(.desktop-tab-inactive,.canvas-page-hidden) .canvas,
 body:is(.desktop-tab-inactive,.canvas-page-hidden) .canvas *,
 body:is(.desktop-tab-inactive,.canvas-page-hidden) .canvas *::before,
 body:is(.desktop-tab-inactive,.canvas-page-hidden) .canvas *::after{animation:none!important;transition:none!important}
+
+/* Canvas overview motion budget */
+.canvas-wrap.low-detail .test-refine-button,
+.canvas-wrap.low-detail .test-refine-button::before,
+.canvas-wrap.low-detail .test-refine-button::after {animation:none!important;}

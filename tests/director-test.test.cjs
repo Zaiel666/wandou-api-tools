@@ -123,7 +123,7 @@ test('corrupt persisted model is not silently replaced with a demo',async()=>{
 test('test-only integration retains model copy, storage path and local dependency',()=>{
   const page=fs.readFileSync('app/ai-node-canvas-test.html','utf8'),production=fs.readFileSync('app/ai-node-canvas.html','utf8');
   assert.match(page,/WandouDirector\?\.renderBody/);assert.match(page,/directorModelKind: node.directorModelKind/);
-  assert.match(page,/copy.sourceUrl = await persistMediaValue/);assert.match(page,/resolveLoadedMedia\(node.sourceUrl/);
+  assert.match(page,/copy.sourceUrl = await persist(?:MediaValue|Field)\(/);assert.match(page,/resolveLoadedMedia\(node.sourceUrl/);
   assert.doesNotMatch(production,/director-test.js/);assert.ok(fs.existsSync('app/vendor/director-three.js'));
 });
 test('all three director selects use themed accessible menus and preserve changes',async()=>{
