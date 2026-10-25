@@ -1,4 +1,5 @@
 const params = new URLSearchParams(location.search);
+document.documentElement.dataset.theme = params.get("theme") === "dark" ? "dark" : "light";
 const homeUrl = params.get("home");
 const version = params.get("version") || "";
 const preloadUrl = new URL("./preload.js", location.href).href;
@@ -39,6 +40,17 @@ let closeInProgress = false;
 let closeAttempt = 0;
 let updateStarted = false;
 let canvasBackupDirectory = "";
+let desktopThemeRevision = -1;
+
+function applyDesktopTheme(state) {
+  if (!state || !Number.isSafeInteger(state.revision) || state.revision < desktopThemeRevision) return;
+  if (state.theme !== "light" && state.theme !== "dark") return;
+  desktopThemeRevision = state.revision;
+  document.documentElement.dataset.theme = state.theme;
+}
+
+window.wandouShell?.onThemeChanged(applyDesktopTheme);
+window.wandouShell?.getTheme().then(applyDesktopTheme).catch(() => {});
 
 function clearTabSuspendTimer(tab) {
   if (!tab?.suspendTimer) return;
@@ -89,6 +101,21 @@ function scheduleTabSuspend(tab) {
 
 function normalizedUrl(url) {
   try { return new URL(url, homeUrl).href; } catch (_error) { return url; }
+}
+
+function tabIdentity(url) {
+  try {
+    const parsed = new URL(url, homeUrl);
+    if (parsed.protocol === 'file:' && /\/ai-node-canvas(?:-v2|-test)?\.html$/i.test(parsed.pathname)) {
+      // `project` is the folder identity; its canvas maintains the inner project
+      // selection. Redirects and display-only query options must not fork it.
+      const directory = parsed.pathname.slice(0, parsed.pathname.lastIndexOf('/') + 1).toLowerCase();
+      const isolatedTest = /\/ai-node-canvas-test\.html$/i.test(parsed.pathname)
+        && !/(?:^|[?&])workspace=production(?:&|$)/.test(parsed.search);
+      return JSON.stringify(['canvas', parsed.host.toLowerCase(), directory, isolatedTest ? 'test' : 'production', parsed.searchParams.get('project') || '']);
+    }
+    return parsed.href;
+  } catch (_error) { return String(url || ''); }
 }
 
 function showToast(message, error = false) {
@@ -154,7 +181,8 @@ function createTabButton(tab, closable) {
 function openTab({ url, title = "新标签页", pinned = false }) {
   if (!url) return null;
   const targetUrl = normalizedUrl(url);
-  const existing = [...tabs.values()].find((tab) => tab.url === targetUrl);
+  const identity = tabIdentity(targetUrl);
+  const existing = [...tabs.values()].find((tab) => tab.identity === identity || tabIdentity(tab.url) === identity);
   if (existing) {
     if (title && existing.title !== title) {
       existing.title = title;
@@ -175,6 +203,7 @@ function openTab({ url, title = "新标签页", pinned = false }) {
   const tab = {
     id,
     url: targetUrl,
+    identity,
     resumeUrl: targetUrl,
     title,
     pinned,
@@ -196,11 +225,13 @@ function openTab({ url, title = "新标签页", pinned = false }) {
   view.addEventListener("did-navigate", (event) => {
     if (tab.suspended && event.url === "about:blank") return;
     tab.url = event.url;
+    tab.identity = tabIdentity(event.url);
     tab.resumeUrl = event.url;
     updateNavigation();
   });
   view.addEventListener("did-navigate-in-page", (event) => {
     tab.url = event.url;
+    tab.identity = tabIdentity(event.url);
     updateNavigation();
   });
   view.addEventListener("page-title-updated", (event) => {
@@ -214,7 +245,6 @@ function openTab({ url, title = "新标签页", pinned = false }) {
   view.addEventListener("did-stop-loading", () => {
     tab.button.classList.remove("loading");
     notifyTabActivity(tab, tab.id === activeId);
-    syncThemeFromActivePage();
   });
   view.addEventListener("dom-ready", () => {
     tab.domReady = true;
@@ -270,7 +300,6 @@ function activateTab(id) {
   brandButton.classList.toggle("active", tab.pinned);
   brandButton.setAttribute("aria-current", tab.pinned ? "page" : "false");
   updateNavigation();
-  syncThemeFromActivePage();
 }
 
 function isNodeCanvasTab(tab) {
@@ -376,25 +405,6 @@ function updateNavigation() {
   const view = activeView();
   backButton.disabled = !safeWebviewCall(view, "canGoBack");
   forwardButton.disabled = !safeWebviewCall(view, "canGoForward");
-}
-
-async function syncThemeFromActivePage() {
-  const view = activeView();
-  if (!view || safeWebviewCall(view, "isLoading", true)) return;
-  try {
-    const theme = await view.executeJavaScript(`(() => {
-      const saved = localStorage.getItem("ai-tools-theme") || localStorage.getItem("wd-theme");
-      if (saved === "dark" || saved === "light") return saved;
-      const root = document.documentElement;
-      const body = document.body;
-      return root.dataset.theme === "dark" || root.classList.contains("dark") || body?.classList.contains("dark-theme") ? "dark" : "light";
-    })()`, true);
-    const safeTheme = theme === "dark" ? "dark" : "light";
-    document.documentElement.dataset.theme = safeTheme;
-    window.wandouShell?.setTheme(safeTheme);
-  } catch (_error) {
-    // 页面加载完成后的下一轮会继续同步。
-  }
 }
 
 async function openAnnouncement() {
@@ -645,4 +655,3 @@ openTab({ url: homeUrl, title: "首页", pinned: true });
 initializeClientState();
 setInterval(refreshUpdateInfo, 30 * 60 * 1000);
 window.addEventListener("online", () => refreshUpdateInfo({ retries: 1 }));
-setInterval(syncThemeFromActivePage, 1000);

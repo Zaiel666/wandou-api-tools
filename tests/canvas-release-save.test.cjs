@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const page=fs.readFileSync(require('node:path').join(__dirname,'../app/ai-node-canvas-test.html'),'utf8');
+const page=fs.readFileSync(require('node:path').join(process.env.WANDOU_TEST_APP_ROOT||require('node:path').join(__dirname,'../app'),'ai-node-canvas-test.html'),'utf8');
 const start=page.indexOf('    window.wandouSaveBeforeClose = async () => {');
 const code=page.slice(start,page.indexOf('    document.addEventListener("visibilitychange"',start));
 function fixture({ready=true,present=true,durable=true,backup=true,recovery=false}={}){

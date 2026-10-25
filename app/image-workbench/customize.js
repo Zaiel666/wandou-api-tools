@@ -143,6 +143,7 @@
   }
 
   function readTheme() {
+    if (window.WandouTheme) return window.WandouTheme.get();
     try {
       return window.WandouLocalCache?.readTheme(localStorage.getItem("wd-theme") || "light") || localStorage.getItem("wd-theme") || "light";
     } catch {
@@ -250,7 +251,8 @@
   }
 
   function isNanoBananaModel(model) {
-    return /^gemini-.*image-preview$/i.test(String(modelToApiModel(model) || model || ""));
+    const id = String(modelToApiModel(model) || model || "");
+    return /^gemini-.*image-preview$/i.test(id) || /^gemini-(?:3\.1-flash(?:-lite)?|3-pro)-image$/i.test(id);
   }
 
   function readModel() {
@@ -262,18 +264,28 @@
     }
   }
 
+  function qualityOptionsForModel(model = readModel()) {
+    const id = String(modelToApiModel(model) || "").toLowerCase();
+    if (/(?:^|[-.])1k(?:$|[-.])/.test(id) || /^gemini-3\.1-flash-lite-image(?:-preview)?$/.test(id)) return QUALITY_OPTIONS.slice(0, 1);
+    if (id === "grok-imagine-image-2.0") return QUALITY_OPTIONS.slice(0, 2);
+    return QUALITY_OPTIONS;
+  }
+
   function readQuality() {
+    const options = qualityOptionsForModel();
+    const fallback = options.find(option => option.value === "medium")?.value || options[0].value;
     try {
-      const value = localStorage.getItem("wd-quality") || "medium";
-      return QUALITY_OPTIONS.some((option) => option.value === value) ? value : "medium";
+      const value = localStorage.getItem("wd-quality") || fallback;
+      return options.some(option => option.value === value) ? value : fallback;
     } catch {
-      return "medium";
+      return fallback;
     }
   }
 
   function writeQuality(value) {
+    const options = qualityOptionsForModel();
     try {
-      localStorage.setItem("wd-quality", QUALITY_OPTIONS.some((option) => option.value === value) ? value : "medium");
+      localStorage.setItem("wd-quality", options.some(option => option.value === value) ? value : options[0].value);
     } catch {}
   }
 
@@ -364,19 +376,37 @@
   }
 
   function apiSafeGenerationSize(sizeText) {
-    const size = parseSizeText(sizeText);
+    const parsed = parseSizeText(sizeText);
+    if (!parsed) return sizeText;
+    const { width, height } = parsed;
     const maxEdge = 3840;
     const maxPixels = 8294400;
-    if (!size) return sizeText;
-    if (size.width <= maxEdge && size.height <= maxEdge && size.width * size.height <= maxPixels) return sizeText;
-    const scale = Math.min(maxEdge / size.width, maxEdge / size.height, Math.sqrt(maxPixels / (size.width * size.height)));
-    let safeWidth = Math.max(16, Math.round(size.width * scale / 16) * 16);
-    let safeHeight = Math.max(16, Math.round(size.height * scale / 16) * 16);
+    const minPixels = 655360;
+    if (!width || !height) return "1024x1024";
+    const ratio = Math.max(1 / 3, Math.min(3, width / height));
+    let safeWidth = Math.max(16, Math.round(width / 16) * 16);
+    let safeHeight = Math.max(16, Math.round(height / 16) * 16);
+    if (safeWidth > safeHeight * 3) safeWidth = safeHeight * 3;
+    if (safeHeight > safeWidth * 3) safeHeight = safeWidth * 3;
+    const pixels = safeWidth * safeHeight;
+    if (safeWidth <= maxEdge && safeHeight <= maxEdge && pixels >= minPixels && pixels <= maxPixels) return `${safeWidth}x${safeHeight}`;
+    const scale = pixels < minPixels
+      ? Math.sqrt(minPixels / pixels)
+      : Math.min(maxEdge / safeWidth, maxEdge / safeHeight, Math.sqrt(maxPixels / pixels));
+    safeWidth = Math.max(16, Math.round(safeWidth * scale / 16) * 16);
+    safeHeight = Math.max(16, Math.round(safeHeight * scale / 16) * 16);
     while (safeWidth > maxEdge || safeHeight > maxEdge || safeWidth * safeHeight > maxPixels) {
       safeWidth = Math.max(16, safeWidth - 16);
       safeHeight = Math.max(16, safeHeight - 16);
     }
-    return formatSize(safeWidth, safeHeight);
+    // Rounding can cross the aspect-ratio or minimum-pixel boundary.
+    if (safeWidth > safeHeight * 3) safeHeight = Math.ceil(safeWidth / 48) * 16;
+    if (safeHeight > safeWidth * 3) safeWidth = Math.ceil(safeHeight / 48) * 16;
+    while (safeWidth * safeHeight < minPixels) {
+      if (safeWidth / safeHeight < ratio) safeWidth += 16;
+      else safeHeight += 16;
+    }
+    return `${safeWidth}x${safeHeight}`;
   }
 
   function isGoogleModel(model) {
@@ -403,18 +433,6 @@
     return sizeForQuality(rawSize, readQuality());
   }
 
-  function readCurrentOutputSize() {
-    const rawSize = readRawVisibleSize();
-    if (rawSize) {
-      const sizeText = readResolutionSource() === "size" && parseSizeText(rawSize)
-        ? rawSize
-        : sizeForQuality(rawSize, readQuality());
-      const visibleSize = parseSizeText(sizeText);
-      if (visibleSize) return visibleSize;
-    }
-    return parseSizeText(readTargetSize());
-  }
-
   function getRequestCount(body) {
     const values = [body.n, body.count, body.quantity, body.num_images, readVisibleCount()];
     return clampCount(values.find((value) => Number.parseInt(value, 10) > 1) || 1);
@@ -424,21 +442,40 @@
     return !!body && typeof body === "object" && ("prompt" in body || "image" in body || "input" in body) && ("size" in body || "quality" in body || "model" in body);
   }
 
+  function grokImageAspectRatio(sizeText) {
+    const size = parseSizeText(sizeText);
+    if (!size) return "auto";
+    const actual = size.width / size.height;
+    const supported = ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "2:1", "1:2", "19.5:9", "9:19.5", "20:9", "9:20", "21:9", "5:2"];
+    return supported.find(value => {
+      const [width, height] = value.split(":").map(Number);
+      return Math.abs(actual - width / height) / (width / height) <= .01;
+    }) || "auto";
+  }
+
   function normalizeImageBody(body, count = 1) {
     const next = { ...body };
     const model = readModel();
     const rawSize = readRawVisibleSize();
     const sizeSource = readResolutionSource();
     const targetQuality = sizeSource === "size" ? (qualityFromSize(rawSize) || readQuality()) : readQuality();
-    const effectiveQuality = model === "gpt-image-2.5-1k" ? "low" : targetQuality;
-    const effectiveSize = sizeSource === "size" && parseSizeText(rawSize) ? rawSize : sizeForQuality(rawSize, targetQuality);
+    const availableQualities = qualityOptionsForModel(model);
+    const effectiveQuality = availableQualities.some(option => option.value === targetQuality) ? targetQuality : availableQualities[availableQualities.length - 1].value;
+    const effectiveSize = availableQualities.length === 1 || effectiveQuality !== targetQuality
+      ? sizeForQuality(rawSize, effectiveQuality)
+      : sizeSource === "size" && parseSizeText(rawSize) ? rawSize : sizeForQuality(rawSize, effectiveQuality);
     const googleModel = isGoogleModel(model);
     if (effectiveSize) writeTargetSize(effectiveSize);
     if (Object.prototype.hasOwnProperty.call(next, "moderation")) next.moderation = "low";
     if (Object.prototype.hasOwnProperty.call(next, "safety_tolerance")) next.safety_tolerance = 6;
     if (Object.prototype.hasOwnProperty.call(next, "model")) next.model = modelToApiModel(model);
     next.quality = effectiveQuality;
-    if (effectiveSize) next.size = apiSafeGenerationSize(effectiveSize);
+    if (effectiveSize) next.size = /^gpt-image-2(?:$|[-.])/i.test(modelToApiModel(model)) ? apiSafeGenerationSize(effectiveSize) : effectiveSize;
+    if (modelToApiModel(model) === "grok-imagine-image-2.0") {
+      // Resolution is independent from quality in the Grok image API.
+      next.resolution = effectiveQuality === "low" ? "1k" : "2k";
+      next.aspect_ratio = grokImageAspectRatio(effectiveSize);
+    }
     if (googleModel) {
       next.model = modelToApiModel(model);
       next.quality = effectiveQuality;
@@ -515,6 +552,23 @@
     return "";
   }
 
+  function nanoBananaImageConfig(normalized) {
+    const selected = String(normalized.resolution).toUpperCase();
+    const liteModel = /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(String(normalized.model || ""));
+    const imageConfig = { imageSize: liteModel ? "1K" : ["1K", "2K", "4K"].includes(selected) ? selected : "2K" };
+    const size = parseSizeText(normalized.targetSize || normalized.size);
+    if (size) {
+      const ratio = size.width / size.height;
+      const supported = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"];
+      const aspectRatio = supported.find(value => {
+        const [width, height] = value.split(":").map(Number);
+        return Math.abs(ratio - width / height) / (width / height) <= .01;
+      });
+      if (aspectRatio) imageConfig.aspectRatio = aspectRatio;
+    }
+    return imageConfig;
+  }
+
   async function requestNanoBananaImage(input, init, body) {
     const normalized = normalizeImageBody(body, 1);
     const model = modelToApiModel(readModel());
@@ -532,7 +586,8 @@
           parts: [{ text: prompt || "生成图片" }, ...imageParts]
         }],
         generationConfig: {
-          responseModalities: ["TEXT", "IMAGE"]
+          responseModalities: ["TEXT", "IMAGE"],
+          imageConfig: nanoBananaImageConfig(normalized)
         }
       })
     });
@@ -701,7 +756,7 @@
     document.documentElement.dataset.wdThemeBound = "1";
     enforceChosenTheme();
     window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener?.("change", enforceChosenTheme);
-    window.setInterval(enforceChosenTheme, 1000);
+    window.addEventListener("wandou-theme-change", enforceChosenTheme);
   }
 
   window.fetch = async function (input, init) {
@@ -709,8 +764,6 @@
       let body = null;
       try { body = JSON.parse(init.body); } catch {}
       if (body && isImageRequest(body)) {
-        const ready = await requireAutoSaveDirectory();
-        if (!ready) throw new Error("生成前必须先设置本地强制保存位置。");
         if (isNanoBananaModel(readModel())) return requestNanoBananaImage(input, init, body);
         init = { ...init, body: JSON.stringify(normalizeImageBody(body, 1)) };
       }
@@ -816,12 +869,12 @@
     button.title = "清理缓存";
     button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m20.5 2.5-9.2 9.2"/><path d="m9.8 10.2 4 4-5.9 5.9c-1.7 1.7-4.5 1.7-6.2 0l8.1-9.9Z"/><path d="M4.2 18.2c1.3.1 2.4.6 3.2 1.5"/><path d="M7 15.2c1.4.1 2.5.6 3.3 1.4"/></svg>';
     button.addEventListener("click", async () => {
-      const ok = window.confirm("确定清理绘图工作台缓存吗？API 密钥和主题不会被清除。");
+      const ok = window.confirm("确定清理已删除结果的临时历史吗？这些已删除结果将无法从历史中找回。现有项目、原图、工作台图片、API 设置和主题都会保留。");
       if (!ok) return;
-      await clearWorkbenchCache();
-      localStorage.removeItem("gpt-image-playground");
-      syncWorkbenchApiConfig();
-      window.location.reload();
+      const result = await clearWorkbenchCache();
+      window.alert(result?.ok
+        ? (result.clearedRecords ? "已清理临时历史，项目、原图和工作台设置已保留。" : "暂无可清理的临时历史，项目、原图和工作台设置已保留。")
+        : "临时历史未完全清理，请重试；项目和原图已保留。");
     });
     themeButton.insertAdjacentElement("afterend", button);
   }
@@ -839,13 +892,18 @@
     });
   }
 
-  function clearWorkbenchCache() {
+  async function clearWorkbenchCache() {
     if (window.WandouLocalCache?.clearHeavyCache) return window.WandouLocalCache.clearHeavyCache();
-    return Promise.all([
-      deleteCacheDb("gpt-image-playground"),
-      deleteCacheDb("ai-node-canvas-media-v1"),
-      deleteCacheDb("wandou-ai-local-cache")
-    ]);
+    let clearedRecords = 0;
+    try {
+      const removeKeys = [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.includes(":deleted-results:")) removeKeys.push(key);
+      }
+      removeKeys.forEach((key) => { localStorage.removeItem(key); clearedRecords += 1; });
+      return { ok: true, clearedRecords, clearedDatabases: 0 };
+    } catch { return { ok: false, clearedRecords, clearedDatabases: 0 }; }
   }
 
   const WORKBENCH_IMAGE_DB = "gpt-image-playground";
@@ -1081,7 +1139,7 @@ function rewriteQualityOptions() {
 
     control?.querySelectorAll("[data-option-value]").forEach((option) => {
       const value = option.getAttribute("data-option-value");
-      if (value === "auto") {
+      if (value === "auto" || !qualityOptionsForModel().some(item => item.value === value)) {
         if (!option.classList.contains("wd-quality-hidden-option")) option.classList.add("wd-quality-hidden-option");
         if (option.classList.contains("wd-quality-option")) option.classList.remove("wd-quality-option");
         return;
@@ -1099,7 +1157,10 @@ function rewriteQualityOptions() {
     const currentLabel = qualityLabel(current);
     if (label && label.textContent !== currentLabel) label.textContent = currentLabel;
     control.querySelectorAll(".wd-custom-quality-option").forEach((button) => {
-      button.classList.remove("wd-quality-hidden-option");
+      const available = qualityOptionsForModel().some(option => option.value === button.dataset.value);
+      button.classList.toggle("wd-quality-hidden-option", !available);
+      button.disabled = !available;
+      button.hidden = !available;
       const isSelected = button.dataset.value === current;
       button.classList.toggle("selected", isSelected);
       const ariaSelected = isSelected ? "true" : "false";
@@ -1139,7 +1200,7 @@ function rewriteQualityOptions() {
     const nextQuality = qualityFromSize(rawSize);
     if (!nextQuality) return;
     writeQuality(nextQuality);
-    syncNativeQuality(nextQuality);
+    syncNativeQuality(readQuality());
     const custom = document.querySelector(".wd-custom-quality-control");
     if (custom) updateCustomQualityControl(custom);
   }
@@ -1219,8 +1280,8 @@ function rewriteQualityOptions() {
         event.stopPropagation();
         writeResolutionSource("quality");
         writeQuality(option.value);
-        syncNativeQuality(option.value);
-        syncSizeDisplayFromQuality(option.value);
+        syncNativeQuality(readQuality());
+        syncSizeDisplayFromQuality(readQuality());
         updateCustomQualityControl(wrap);
         wrap.classList.remove("open");
       });
@@ -1606,22 +1667,6 @@ function rewriteQualityOptions() {
     button.title = autosaveSupported() ? "\u9009\u62e9\u751f\u6210\u56fe\u7247\u81ea\u52a8\u4fdd\u5b58\u7684\u672c\u5730\u6587\u4ef6\u5939" : "\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u81ea\u52a8\u4fdd\u5b58\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae";
   }
 
-  async function requireAutoSaveDirectory() {
-    if (!autosaveSupported()) {
-      updateAutoSaveControl();
-      setAutoSaveStatus("当前浏览器不支持本地强制保存，无法生成图片。");
-      return false;
-    }
-    await loadAutoSaveHandle();
-    const ready = Boolean(autoSaveHandle && await hasAutoSavePermission(autoSaveHandle, false));
-    if (!ready) {
-      autoSaveHandle = null;
-      updateAutoSaveControl();
-      setAutoSaveStatus("请先点击红色按钮设置本地保存位置。");
-    }
-    return ready;
-  }
-
   async function chooseAutoSaveDirectory() {
     if (!autosaveSupported()) {
       setAutoSaveStatus("\u5f53\u524d\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u81ea\u52a8\u4fdd\u5b58\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae\u3002");
@@ -1638,32 +1683,14 @@ function rewriteQualityOptions() {
       await storeAutoSaveHandle(handle);
       updateAutoSaveControl();
       setAutoSaveStatus(`\u5df2\u9009\u62e9\u4fdd\u5b58\u4f4d\u7f6e\uff1a${handle.name}`);
-      autoSaveGeneratedCards();
     } catch (error) {
       if (error?.name !== "AbortError") setAutoSaveStatus("\u9009\u62e9\u4fdd\u5b58\u4f4d\u7f6e\u5931\u8d25\u3002");
     }
   }
 
   function ensureAutoSaveControl() {
-    const existing = document.getElementById("wdAutoSaveControl");
-    const headerActions = document.querySelector(".wd-theme-toggle")?.parentElement;
-    if (existing) {
-      if (headerActions && existing.parentElement !== headerActions) headerActions.appendChild(existing);
-      return;
-    }
-    const wrap = document.createElement("div");
-    wrap.id = "wdAutoSaveControl";
-    wrap.className = "wd-autosave-control";
-    const button = document.createElement("button");
-    button.id = "wdAutoSaveButton";
-    button.type = "button";
-    button.addEventListener("click", chooseAutoSaveDirectory);
-    const status = document.createElement("span");
-    status.id = "wdAutoSaveStatus";
-    wrap.append(button, status);
-    (headerActions || document.body).appendChild(wrap);
-    updateAutoSaveControl();
-    loadAutoSaveHandle();
+    // Project history stays in the app; exporting a file is an explicit download.
+    document.getElementById("wdAutoSaveControl")?.remove();
   }
 
   function readAutoSaveDoneSet() {
@@ -1894,72 +1921,15 @@ function rewriteQualityOptions() {
     return match ? { width: Number(match[1]), height: Number(match[2]) } : null;
   }
 
-  function forced4kSize(scope, baseSize) {
-    const target = parseSizeText(readTargetSize());
-    if (target) return target;
-    if (!baseSize?.width || !baseSize?.height) return null;
-    if (!/4k/i.test(normalizeText(scope))) return null;
-    const edge = 4096;
-    const ratio = edge / Math.max(baseSize.width, baseSize.height);
-    return {
-      width: Math.max(1, Math.round(baseSize.width * ratio)),
-      height: Math.max(1, Math.round(baseSize.height * ratio))
-    };
-  }
-
-  function targetOutputSize(scope, baseSize) {
-    const current = readCurrentOutputSize();
-    if (current) return current;
-    return forced4kSize(scope, baseSize);
-  }
-
-  async function resizeBlobToPngBlob(blob, width, height) {
-    return new Promise((resolve) => {
-      const objectUrl = URL.createObjectURL(blob);
-      const image = new Image();
-      image.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(image, 0, 0, width, height);
-          canvas.toBlob((nextBlob) => resolve(nextBlob || blob), "image/png");
-        } catch {
-          resolve(blob);
-        } finally {
-          URL.revokeObjectURL(objectUrl);
-        }
-      };
-      image.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        resolve(blob);
-      };
-      image.src = objectUrl;
-    });
-  }
-
   async function buildWorkbenchImageBlob(scope, image) {
     const imageId = image.getAttribute("data-image-id");
     const record = await readFullImageRecord(imageId);
     const source = record?.dataUrl || image.src;
     if (!source) return null;
-    const displayedSize = readDisplayedImageSize(scope);
-    const targetSize = targetOutputSize(scope, displayedSize || record || { width: image.naturalWidth, height: image.naturalHeight });
-    const targetWidth = targetSize?.width || displayedSize?.width || record?.width || 0;
-    const targetHeight = targetSize?.height || displayedSize?.height || record?.height || 0;
-    let extension = imageExtension(source);
-    let blob = await (await nativeFetch(source)).blob();
-    if (targetWidth && targetHeight && (image.naturalWidth !== targetWidth || image.naturalHeight !== targetHeight)) {
-      blob = await resizeBlobToPngBlob(blob, targetWidth, targetHeight);
-      extension = "png";
-    }
-    return {
-      blob,
-      extension,
-      key: `${autoSaveHandle?.name || "dir"}:${imageId || source.slice(0, 120)}:${targetWidth || image.naturalWidth}x${targetHeight || image.naturalHeight}`,
-      filename: `wandou-ai-${Date.now()}.${extension}`
-    };
+    // Export the original bytes. Current generation settings must not resize old results.
+    const blob = await (await nativeFetch(source)).blob();
+    const extension = blob.type === "image/jpeg" ? "jpg" : blob.type === "image/webp" ? "webp" : imageExtension(source);
+    return { blob, extension, filename: `wandou-ai-${Date.now()}.${extension}` };
   }
 
   async function downloadImageFromScope(scope) {
@@ -1995,40 +1965,6 @@ function rewriteQualityOptions() {
     } catch {
       link.remove();
     }
-  }
-
-  async function autoSaveImageFromScope(scope, image) {
-    if (!autoSaveHandle && !autoSaveHandleLoaded) await loadAutoSaveHandle();
-    if (!autoSaveHandle || !image?.src || image.dataset.wdAutosaveState === "saving") return;
-    try {
-      const output = await buildWorkbenchImageBlob(scope, image);
-      if (!output?.blob) return;
-      const done = readAutoSaveDoneSet();
-      if (done.has(output.key)) {
-        image.dataset.wdAutosaveState = "saved";
-        return;
-      }
-      image.dataset.wdAutosaveState = "saving";
-      if (await writeBlobToAutoSaveDirectory(output.blob, output.filename)) {
-        markAutoSaveDone(output.key);
-        image.dataset.wdAutosaveState = "saved";
-      } else {
-        image.dataset.wdAutosaveState = "";
-      }
-    } catch (error) {
-      image.dataset.wdAutosaveState = "";
-      setAutoSaveStatus("\u81ea\u52a8\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u4f7f\u7528\u4e0b\u8f7d\u6309\u94ae\u3002");
-    }
-  }
-
-  function autoSaveGeneratedCards() {
-    if (!autoSaveHandle && autoSaveHandleLoaded) return;
-    document.querySelectorAll(".task-card-wrapper").forEach((card) => {
-      const image = findDownloadImage(card);
-      if (!image?.src || image.dataset.wdAutosaveState === "saved" || image.dataset.wdAutosaveState === "saving") return;
-      if (image.complete) autoSaveImageFromScope(card, image);
-      else image.addEventListener("load", () => autoSaveImageFromScope(card, image), { once: true });
-    });
   }
 
   function findCardActionRow(card) {
@@ -2096,22 +2032,38 @@ function rewriteQualityOptions() {
     });
   }
 
+  const displayedImageDimensions = new WeakMap();
+
+  function actualWorkbenchImageSize(image) {
+    const imageId = image.getAttribute("data-image-id") || "";
+    const source = image.src || "";
+    const cached = displayedImageDimensions.get(image);
+    if (cached?.imageId === imageId && cached?.source === source) return cached.promise;
+    const promise = readFullImageRecord(imageId).then(record => {
+      const width = Number(record?.width) || image.naturalWidth;
+      const height = Number(record?.height) || image.naturalHeight;
+      if (!width || !height) {
+        displayedImageDimensions.delete(image);
+        return null;
+      }
+      return { width, height };
+    });
+    displayedImageDimensions.set(image, { imageId, source, promise });
+    return promise;
+  }
+
   function updateDisplayedImageSizes() {
-    document.querySelectorAll(".task-card-wrapper, .fixed.inset-0").forEach((scope) => {
+    document.querySelectorAll(".task-card-wrapper, .fixed.inset-0").forEach(scope => {
       const image = findDownloadImage(scope);
       if (!image) return;
       const update = async () => {
-        const record = await readFullImageRecord(image.getAttribute("data-image-id"));
-        const displayedSize = readDisplayedImageSize(scope);
-        const targetSize = targetOutputSize(scope, displayedSize || record || { width: image.naturalWidth, height: image.naturalHeight });
-        const width = targetSize?.width || displayedSize?.width || record?.width || image.naturalWidth;
-        const height = targetSize?.height || displayedSize?.height || record?.height || image.naturalHeight;
-        if (!width || !height) return;
-        const textNodes = sizeTextElements(scope).map(({ item }) => item);
-        textNodes.forEach((item) => {
+        const imageId = image.getAttribute("data-image-id");
+        const source = image.src;
+        const actual = await actualWorkbenchImageSize(image);
+        if (!actual || image.getAttribute("data-image-id") !== imageId || image.src !== source) return;
+        sizeTextElements(scope).forEach(({ item }) => {
           const separator = normalizeText(item).includes("\u00d7") ? "\u00d7" : "x";
-          const sizeText = `${width}${separator}${height}`;
-          const nextText = (item.textContent || "").replace(SIZE_TEXT_PATTERN, sizeText);
+          const nextText = (item.textContent || "").replace(SIZE_TEXT_PATTERN, `${actual.width}${separator}${actual.height}`);
           if (item.textContent !== nextText) item.textContent = nextText;
         });
       };
@@ -2121,20 +2073,15 @@ function rewriteQualityOptions() {
   }
 
   function updateDisplayedQualityLabels() {
-    const fallback = qualityLabel(readQuality());
     document.querySelectorAll(".task-card-wrapper, .fixed.inset-0").forEach((scope) => {
-      const scopeSizeText = sizeTextElements(scope)
-        .map(({ text }) => text)
-        .find((text) => /^\d{3,5}[x×]\d{3,5}$/.test(text));
-      const sizeQuality = qualityFromSize(scopeSizeText);
       Array.from(scope.querySelectorAll("div, span")).forEach((item) => {
         const compact = normalizeText(item).replace(/\s+/g, "");
         const match = compact.match(new RegExp(`^(?:${QUALITY_LEGACY_TITLE}|${RESOLUTION_TITLE})(auto|low|medium|high|1k|2k|4k)$`, "i"));
         if (!match) return;
         const valueText = match[1];
-        const nextLabel = sizeQuality ? qualityLabel(sizeQuality) : valueText.toLowerCase() === "auto" ? fallback : qualityLabel(qualityValueFromLabel(valueText) || readQuality());
+        const nextLabel = valueText.toLowerCase() === "auto" ? "自动" : qualityLabel(qualityValueFromLabel(valueText));
         const titleNode = Array.from(item.children).find((child) => normalizeText(child) === QUALITY_LEGACY_TITLE);
-        if (titleNode) titleNode.textContent = RESOLUTION_TITLE;
+        if (titleNode) titleNode.textContent = "生成档位";
         const valueNode = Array.from(item.children).find((child) => normalizeText(child).toLowerCase() === valueText.toLowerCase());
         if (valueNode) valueNode.textContent = nextLabel;
       });
@@ -2148,7 +2095,6 @@ function rewriteQualityOptions() {
       markGeneratedCards();
       addCardDownloadButtons();
       markImageDetailModals();
-      autoSaveGeneratedCards();
     }, 80);
   }
 

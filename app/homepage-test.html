@@ -1,6 +1,7 @@
 ﻿<!doctype html>
 <html lang="zh-CN" data-theme="light">
 <head>
+<script src="./theme-sync.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f7f7">
@@ -1174,6 +1175,7 @@
         <button class="secondary" type="button" data-api-clear>清除</button>
         <button class="primary" type="submit">保存设置</button>
       </div>
+      <div class="project-storage-entry"><div><strong>项目存储</strong><p>查看保存位置，或将项目和原图迁移到其他磁盘。</p></div><button class="secondary" type="button" data-storage-settings-open>存储设置</button></div>
     </form>
   </div>
 
@@ -1437,5 +1439,7 @@
   </script>
   <script src="./local-cache.js"></script>
   <script src="./workflow.js"></script>
+  <link rel="stylesheet" href="./storage-settings.css">
+  <script src="./storage-settings.js"></script>
 </body>
 </html>

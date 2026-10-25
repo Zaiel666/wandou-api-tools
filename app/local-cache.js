@@ -173,6 +173,7 @@
   }
 
   function syncTheme(theme) {
+    if (window.WandouTheme) return window.WandouTheme.set(theme);
     const next = theme === "light" ? "light" : "dark";
     try {
       localStorage.setItem(GLOBAL_THEME_KEY, next);
@@ -182,6 +183,7 @@
   }
 
   function readTheme(defaultTheme) {
+    if (window.WandouTheme) return window.WandouTheme.get();
     try {
       return localStorage.getItem(GLOBAL_THEME_KEY) || localStorage.getItem("wd-theme") || defaultTheme || "light";
     } catch {
@@ -203,11 +205,9 @@
   }
 
   async function clearHeavyCache() {
-    const dbResults = await Promise.all([
-      deleteDb(DB_NAME),
-      deleteDb("ai-node-canvas-media-v1"),
-      deleteDb("gpt-image-playground")
-    ]);
+    // These IndexedDB databases contain projects and original images, including
+    // the only copy in browser mode. Only explicitly discarded history is temporary.
+    let clearedRecords = 0;
     try {
       const removeKeys = [];
       for (let index = 0; index < localStorage.length; index += 1) {
@@ -215,13 +215,12 @@
         if (!key) continue;
         if (key.includes(":deleted-results:")) removeKeys.push(key);
       }
-      removeKeys.forEach((key) => localStorage.removeItem(key));
-    } catch {}
-    fallbackDbPromise = null;
-    configPromise = null;
+      removeKeys.forEach((key) => { localStorage.removeItem(key); clearedRecords += 1; });
+    } catch { return { ok: false, clearedRecords, clearedDatabases: 0 }; }
     return {
-      ok: dbResults.some(Boolean),
-      clearedDatabases: dbResults.filter(Boolean).length
+      ok: true,
+      clearedRecords,
+      clearedDatabases: 0
     };
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "wandou-ai-desktop",
-  "version": "2.0.6",
+  "version": "2.0.14",
   "description": "豌豆AI Windows 客户端",
   "main": "main.js",
   "author": "PeaFour",
@@ -21,14 +21,60 @@
     "productName": "豌豆AI工具",
     "copyright": "Copyright © 2026 PeaFour",
     "asar": true,
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "canvas-media-writer.cjs", "director-ipc.cjs", "director-converter.cjs", "shell.html", "shell.css", "shell.js", "client-config.json", "package.json"],
-    "extraResources": [
-      { "from": "../tools/director-blender/convert-blend.py", "to": "director/convert-blend.py" },
-      { "from": "../app", "to": "app", "filter": ["**/*", "!ui-v2-lab.html", "!homepage-modern-preview.html", "!homepage-modern-preview.css", "!gridform-logo.png"] },
-      { "from": "portable-updater.ps1", "to": "portable-updater.ps1" },
-      { "from": "portable-updater.exe", "to": "portable-updater.exe" }
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "canvas-media-writer.cjs",
+      "director-ipc.cjs",
+      "director-converter.cjs",
+      "shell.html",
+      "shell.css",
+      "shell.js",
+      "client-config.json",
+      "package.json",
+      "canvas-backup-guard.cjs",
+      "canvas-media-location.cjs",
+      "canvas-media-protocol.cjs",
+      "project-storage.cjs"
     ],
-    "win": { "icon": "../app/logo.ico", "target": [{ "target": "dir", "arch": ["x64"] }] }
+    "extraResources": [
+      {
+        "from": "../tools/director-blender/convert-blend.py",
+        "to": "director/convert-blend.py"
+      },
+      {
+        "from": "../app",
+        "to": "app",
+        "filter": [
+          "**/*",
+          "!ui-v2-lab.html",
+          "!homepage-modern-preview.html",
+          "!homepage-modern-preview.css",
+          "!gridform-logo.png"
+        ]
+      },
+      {
+        "from": "portable-updater.ps1",
+        "to": "portable-updater.ps1"
+      },
+      {
+        "from": "portable-updater.exe",
+        "to": "portable-updater.exe"
+      }
+    ],
+    "win": {
+      "icon": "../app/logo.ico",
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
   }
 }

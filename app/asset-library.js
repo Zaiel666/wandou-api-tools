@@ -8,6 +8,12 @@
   const importButton = document.getElementById("importSkill");
   const openSkillDirectoryButton = document.getElementById("openSkillDirectory");
   const toast = document.getElementById("assetToast");
+  const locationDialog = document.getElementById("assetLocationDialog");
+  const locationName = document.getElementById("assetLocationName");
+  const locationStatus = document.getElementById("assetLocationStatus");
+  const locationPath = document.getElementById("assetLocationPath");
+  const locationDetails = document.getElementById("assetLocationDetails");
+  const locationOpenButton = document.getElementById("assetLocationOpenFolder");
   const canvasPrefix = "aiCanvasStateV1";
   const indexedPrefix = "indexed-media:";
   let filter = "all";
@@ -15,6 +21,9 @@
   let folders = [];
   let visibleLimit = 120;
   let toastTimer = 0;
+  let loadRevision = 0;
+  let locationRevision = 0;
+  let locationRef = "";
 
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
@@ -46,9 +55,56 @@
     toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
   }
 
+  async function showOriginalLocation(asset) {
+    const revision = ++locationRevision;
+    locationRef = "";
+    locationName.textContent = asset.name;
+    locationStatus.textContent = "正在查找原图存储文件…";
+    locationPath.value = "";
+    locationDetails.hidden = true;
+    locationOpenButton.disabled = true;
+    if (!locationDialog.open) locationDialog.showModal();
+    if (!window.wandouShell?.getCanvasMediaLocation) {
+      locationStatus.textContent = "浏览器版无法查看电脑中的原文件位置，请在豌豆 AI 桌面版打开。";
+      return;
+    }
+    const ref = asset.originalStored;
+    if (!ref) {
+      locationStatus.textContent = "这条记录只保留了预览，无法确定原图文件位置。";
+      return;
+    }
+    // Do not send inline image bytes or treat a preview/download folder as the original.
+    if (!/^(?:indexed-media:|wandou-media:\/\/)/.test(ref)) {
+      locationStatus.textContent = "原图尚未保存为本机项目文件。保存项目后，可刷新资产再查看。";
+      return;
+    }
+    try {
+      const result = await window.wandouShell.getCanvasMediaLocation(ref);
+      if (revision !== locationRevision || !locationDialog.open) return;
+      if (!result?.success || !result.path) {
+        locationStatus.textContent = result?.missing
+          ? "未找到本机原图存储文件，文件可能已被移走或清理。"
+          : (result?.error || "这张原图没有可查看的本机文件位置。");
+        return;
+      }
+      locationRef = ref;
+      locationPath.value = result.path;
+      locationPath.title = result.path;
+      locationDetails.hidden = false;
+      locationStatus.textContent = result.storageFormat === "data-url"
+        ? "这是由软件管理的项目原图存储文件（.data），原图可在软件中查看和下载。"
+        : "这是由软件管理的项目原图存储文件。";
+      locationOpenButton.disabled = !window.wandouShell?.showCanvasMediaInFolder;
+    } catch (_error) {
+      if (revision === locationRevision && locationDialog.open) locationStatus.textContent = "暂时无法读取原文件位置，请稍后重试。";
+    }
+  }
+
   async function resolveMedia(value) {
     if (!String(value || "").startsWith(indexedPrefix)) return value || "";
     const id = value.slice(indexedPrefix.length);
+    const runtimeUrl = await window.WandouMediaUrls?.resolve(id);
+    if (runtimeUrl) return runtimeUrl;
     try {
       const result = await window.wandouShell?.readCanvasMedia?.({ id });
       if (result?.success) return result.value || "";
@@ -77,9 +133,9 @@
       const project = Array.isArray(projects) ? projects.find((item) => String(item.id) === projectId) : null;
       return {
         folderId: ownedFolderId,
-        folderName: folder?.name || "未命名文件夹",
+        folderName: folder?.name || state?.folderName || "未命名文件夹",
         projectId,
-        projectName: project?.name || ""
+        projectName: project?.name || state?.projectName || ""
       };
     }
     const ordered = [...folders].sort((left, right) => String(right.id).length - String(left.id).length);
@@ -100,7 +156,7 @@
     return { folderId: "ungrouped", folderName: "未归类", projectId: "", projectName: "" };
   }
 
-  function collectMediaAssets() {
+  function collectMediaAssets(stateRecords = null) {
     const keys = [];
     for (let index = 0; index < localStorage.length; index += 1) {
       const key = localStorage.key(index);
@@ -109,9 +165,9 @@
     keys.sort((left, right) => right.split(":").length - left.split(":").length);
     const media = [];
     const seen = new Set();
-    for (const key of keys) {
+    const records = stateRecords || keys.map((key) => ({ key, state: readJson(key, null) }));
+    for (const { key, state } of records) {
       if (key.includes(":project-collection:") || key.includes(":active-project-collection:")) continue;
-      const state = readJson(key, null);
       if (!state || !Array.isArray(state.nodes)) continue;
       const project = projectContextForStorageKey(key, state);
       if (!project) continue;
@@ -119,13 +175,15 @@
         if (node?.type !== "result" || !["image", "video"].includes(node.mediaType)) continue;
         const stored = node.previewUrl || node.mediaUrl || node.fullUrl || "";
         const fullStored = node.fullUrl || node.mediaUrl || node.previewUrl || "";
-        if (!stored || seen.has(stored)) continue;
-        seen.add(stored);
+        const identity = fullStored || stored;
+        if (!stored || seen.has(identity)) continue;
+        seen.add(identity);
         media.push({
           type: node.mediaType,
           name: node.title || node.prompt?.slice(0, 36) || (node.mediaType === "video" ? "视频资产" : "图片资产"),
           stored,
           fullStored,
+          originalStored: node.fullUrl || node.mediaUrl || "",
           createdAt: Number(node.createdAt || state.savedAt) || 0,
           sequence: Number(String(node.id || "").replace(/\D/g, "")) || 0,
           width: node.width,
@@ -167,12 +225,20 @@
   }
 
   async function load() {
+    const revision = ++loadRevision;
     applyTheme();
     visibleLimit = 120;
     folders = readJson("aiCanvasProjectsV1", []);
     if (!Array.isArray(folders)) folders = [];
-    const skills = await WandouSkills.list();
-    assets = [...collectMediaAssets(), ...skills.map((skill) => ({ ...skill, type: "skill" }))];
+    const [skills, stateRecords] = await Promise.all([
+      WandouSkills.list(),
+      window.WandouAssetStates?.read(folders).catch(() => {
+        if (revision === loadRevision) showToast("部分项目暂时无法读取，请稍后刷新资产。");
+        return null;
+      })
+    ]);
+    if (revision !== loadRevision) return;
+    assets = [...collectMediaAssets(stateRecords), ...skills.map((skill) => ({ ...skill, type: "skill" }))];
     refreshFolderOptions();
     render();
   }
@@ -180,7 +246,7 @@
   function mediaCard(asset) {
     const index = assets.indexOf(asset);
     const directory = [asset.folderName, asset.projectName].filter(Boolean).map(escapeHtml).join(" / ");
-    return `<article class="asset-card media-card" data-media-index="${index}"><div class="media-preview" data-preview-index="${index}"><span>正在读取…</span></div><div class="asset-card-body"><h3 class="asset-card-title">${escapeHtml(asset.name)}</h3><div class="asset-card-meta">${asset.type === "video" ? "视频" : "图片"}${asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}</div>${directory ? `<div class="asset-card-directory" title="${directory}">${directory}</div>` : ""}</div></article>`;
+    return `<article class="asset-card media-card" data-media-index="${index}"><div class="media-preview" data-preview-index="${index}"><span>正在读取…</span></div><div class="asset-card-body"><h3 class="asset-card-title">${escapeHtml(asset.name)}</h3><div class="asset-card-meta">${asset.type === "video" ? "视频" : "图片"}${asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}</div>${directory ? `<div class="asset-card-directory" title="${directory}">${directory}</div>` : ""}${asset.type === "image" ? `<button class="asset-location-button" type="button" data-asset-location="${index}" aria-label="查看${escapeHtml(asset.name)}的原文件位置">原文件位置</button>` : ""}</div></article>`;
   }
 
   function skillCard(skill, selected) {
@@ -217,10 +283,10 @@
       document.querySelector(`[data-count="${type}"]`).textContent = assets.filter((asset) => asset.type === type).length;
     }
     document.querySelector('[data-count="all"]').textContent = assets.length;
-    title.textContent = { all: "全部资产", image: "图片资产", video: "视频资产", skill: "绘图 Skill" }[filter];
+    title.textContent = { all: "全部资产", image: "所有图片", video: "视频资产", skill: "绘图 Skill" }[filter];
     subtitle.textContent = filter === "skill"
       ? "个人 Skill 统一存放在软件 Skill 目录；ZIP 请先解压，再导入含 SKILL.md 的文件夹。"
-      : `图片和视频按文件夹目录归类，当前${direction < 0 ? "最近生成优先" : "最早生成优先"}。`;
+      : `按软件内的项目文件夹归类，当前${direction < 0 ? "最近生成优先" : "最早生成优先"}；点击图片的“原文件位置”可查看本机存储位置。`;
     importButton.hidden = filter !== "skill";
     openSkillDirectoryButton.hidden = filter !== "skill";
     folderSelect.hidden = filter === "skill";
@@ -251,6 +317,12 @@
     });
     content.querySelectorAll("[data-delete-skill]").forEach((button) => {
       button.onclick = () => deleteSkill(assets[Number(button.dataset.deleteSkill)]);
+    });
+    content.querySelectorAll("[data-asset-location]").forEach((button) => {
+      button.onclick = (event) => {
+        event.stopPropagation();
+        showOriginalLocation(assets[Number(button.dataset.assetLocation)]);
+      };
     });
     content.querySelectorAll("[data-preview-index]").forEach(async (box) => {
       const asset = assets[Number(box.dataset.previewIndex)];
@@ -313,6 +385,30 @@
     if (!result?.success) showToast(result?.error || "无法打开 Skill 目录");
   };
   document.getElementById("refreshAssets").onclick = load;
+  document.getElementById("assetLocationClose").onclick = () => locationDialog.close();
+  locationDialog.addEventListener("close", () => { locationRevision += 1; locationRef = ""; });
+  locationDialog.addEventListener("click", (event) => {
+    if (event.target !== locationDialog) return;
+    const bounds = locationDialog.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) locationDialog.close();
+  });
+  locationOpenButton.onclick = async () => {
+    if (!locationRef || !window.wandouShell?.showCanvasMediaInFolder) return;
+    const ref = locationRef;
+    locationOpenButton.disabled = true;
+    try {
+      const result = await window.wandouShell.showCanvasMediaInFolder(ref);
+      if (!result?.success) {
+        showToast(result?.error || "无法打开原图所在文件夹，请刷新后重试。");
+        if (result?.missing && locationRef === ref) {
+          locationRef = "";
+          locationDetails.hidden = true;
+          locationStatus.textContent = "未找到本机原图存储文件，文件可能已被移走或清理。";
+        }
+      }
+    } catch (_error) { showToast("无法打开原图所在文件夹，请稍后重试。"); }
+    finally { if (locationRef === ref && locationDialog.open) locationOpenButton.disabled = false; }
+  };
   document.querySelector(".lightbox-close").onclick = () => document.getElementById("assetLightbox").classList.remove("open");
   document.getElementById("assetLightbox").onclick = (event) => {
     if (event.target.id === "assetLightbox") event.currentTarget.classList.remove("open");

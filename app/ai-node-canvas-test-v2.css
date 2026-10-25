@@ -46,6 +46,17 @@
 .prompt-manager-modal .prompt-manager-list,.prompt-manager-modal .prompt-filter-section {scrollbar-color:var(--ui-muted) transparent;}
 .prompt-editor-card input,.prompt-editor-card textarea {background:var(--ui-soft);color:var(--ui-text);border-color:var(--ui-line);}
 
+/* Favorites use this standalone canvas palette, like the prompt library.
+   The legacy --wd-neutral-* aliases are absent on this page. */
+.favorite-panel {
+  --favorite-muted:#62626e;
+  background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-line);
+}
+.dark-theme .favorite-panel {--favorite-muted:#b0b0ba;}
+.favorite-panel .hint {color:var(--favorite-muted);}
+.favorite-panel .favorite-card {background:var(--ui-soft);color:var(--ui-text);border-color:var(--ui-line);}
+.dark-theme .node.style .field > label {color:var(--ui-text);}
+
 /* Confirmed design, independent component stylesheet. Old dialog rules live in
    the lower-priority legacy layer; no shared glass skin or specificity patches. */
 :root {--ui-bg:#fff;--ui-surface:#fff;--ui-soft:#f8f8f9;--ui-hover:#f1f1f3;--ui-line:#e7e7ec;--ui-text:#171720;--ui-muted:#858590;--ui-primary:#181818;--ui-on-primary:#fff;--ui-green:#19b328;--ui-shadow:0 2px 7px #18182009;--sidebar-size:232px;--chat-size:316px;}

@@ -1,6 +1,7 @@
 ﻿<!doctype html>
 <html lang="zh-CN">
 <head>
+<script src="./theme-sync.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>项目文件夹</title>
@@ -540,6 +541,7 @@
   <div id="projectNotice" class="project-notice" role="status" aria-live="polite"></div>
 
   <script src="./local-cache.js"></script>
+  <script src="./canvas-media-urls.js"></script>
   <script>
     const canvasStorageKey = "aiCanvasStateV1";
     const projectListStorageKey = "aiCanvasProjectsV1";
@@ -764,6 +766,8 @@
     async function resolveProjectMedia(value) {
       if (typeof value !== "string" || !value.startsWith(localMediaPrefix)) return value || "";
       const id = value.slice(localMediaPrefix.length);
+      const runtimeUrl = await window.WandouMediaUrls?.resolve(id);
+      if (runtimeUrl) return runtimeUrl;
       if (window.wandouShell?.readCanvasMedia) {
         try {
           const desktopResult = await window.wandouShell.readCanvasMedia({ id });
@@ -852,7 +856,9 @@
     }
 
     async function applyProjectStateToCard(project, state, renderToken) {
-      if (!state || renderToken !== coverRenderToken) return;
+      // A compact storage index has a timestamp but no nodes. It is not an
+      // empty canvas and must not outrank the complete desktop backup.
+      if (!Array.isArray(state?.nodes) || renderToken !== coverRenderToken) return;
       const stateSavedAt = Number(state.savedAt || 0);
       const cached = projectSummaryCache.get(project.id);
       if (cached && stateSavedAt && Number(cached.savedAt || 0) > stateSavedAt) return;
@@ -1268,9 +1274,14 @@
       applyGlobalTheme(nextLight ? "light" : "dark");
     });
 
+    window.addEventListener("wandou-theme-change", (event) => {
+      document.body.classList.toggle("light-theme", event.detail.theme === "light");
+      document.body.classList.toggle("dark-theme", event.detail.theme === "dark");
+      updateTheme();
+    });
     applyGlobalTheme(window.WandouLocalCache?.readTheme(safeLocalGet(themeStorageKey, "light")) || "light");
     window.addEventListener("storage", (event) => {
-      if (event.key === themeStorageKey) applyGlobalTheme(event.newValue || "light");
+      if (!window.WandouTheme && event.key === themeStorageKey) applyGlobalTheme(event.newValue || "light");
       if (event.key === projectListStorageKey || event.key?.startsWith(`${canvasStorageKey}:`)) {
         loadProjects();
         render();

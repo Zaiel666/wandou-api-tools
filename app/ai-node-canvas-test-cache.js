@@ -203,11 +203,8 @@
   }
 
   async function clearHeavyCache() {
-    const dbResults = await Promise.all([
-      deleteDb(DB_NAME),
-      deleteDb("ai-node-canvas-media-v1"),
-      deleteDb("gpt-image-playground")
-    ]);
+    // Projects and original images are permanent data, even in browser mode.
+    let clearedRecords = 0;
     try {
       const removeKeys = [];
       for (let index = 0; index < canvasTestStorage.length; index += 1) {
@@ -215,13 +212,12 @@
         if (!key) continue;
         if (key.includes(":deleted-results:")) removeKeys.push(key);
       }
-      removeKeys.forEach((key) => canvasTestStorage.removeItem(key));
-    } catch {}
-    fallbackDbPromise = null;
-    configPromise = null;
+      removeKeys.forEach((key) => { canvasTestStorage.removeItem(key); clearedRecords += 1; });
+    } catch { return { ok: false, clearedRecords, clearedDatabases: 0 }; }
     return {
-      ok: dbResults.some(Boolean),
-      clearedDatabases: dbResults.filter(Boolean).length
+      ok: true,
+      clearedRecords,
+      clearedDatabases: 0
     };
   }
 

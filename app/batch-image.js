@@ -129,10 +129,6 @@
     const context=key(), nodeList=nodes, anchor=nodes.find(node=>node.id===activeNodeId&&node.type==='batch'); busy=true;stop=false;lock();renderSlots();
     if(anchor){anchor.status=`批量改图 · ${retry?state.jobs.length:plan.length} 个任务处理中`;render();}
     try {
-      const handle=nativeAutoSaveDirectory||autoSaveDirectoryHandle||await loadAutoSaveDirectoryHandle();
-      if(window.wandouShell?.chooseSaveDirectory && !(nativeAutoSaveDirectory||(handle&&await hasAutoSaveDirectoryPermission(handle,true)))) {
-        message('请先设置图片保存位置，然后再开始。');close(true);await chooseAutoSaveDirectory();return;
-      }
       if(context!==key()||nodeList!==nodes)throw new Error('项目已变化，任务未启动。');
       if(!retry) {
         pushHistory();

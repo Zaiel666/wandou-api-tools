@@ -2,7 +2,7 @@ const apiStorageKey = "ai-tools-api-config";
 const durableApiConfigKey = "api-config-v1";
 let memoryApiConfig = null;
 const savedTheme = localStorage.getItem("ai-tools-theme");
-const initialTheme = window.WandouLocalCache?.readTheme(savedTheme || "light") || savedTheme || "light";
+const initialTheme = window.WandouTheme?.get() || window.WandouLocalCache?.readTheme(savedTheme || "light") || savedTheme || "light";
 let currentImageDataUrl = "";
 let sourceImageDataUrl = "";
 let sourceImageFile = null;
@@ -133,21 +133,28 @@ function deleteCacheDb(name) {
 
 async function clearHeavyCacheSafe() {
   if (window.WandouLocalCache?.clearHeavyCache) return window.WandouLocalCache.clearHeavyCache();
-  const dbResults = await Promise.all([
-    deleteCacheDb("wandou-ai-local-cache"),
-    deleteCacheDb("ai-node-canvas-media-v1"),
-    deleteCacheDb("gpt-image-playground")
-  ]);
-  return { ok: dbResults.some(Boolean) };
+  let clearedRecords = 0;
+  try {
+    const removeKeys = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key?.includes(":deleted-results:")) removeKeys.push(key);
+    }
+    removeKeys.forEach((key) => { localStorage.removeItem(key); clearedRecords += 1; });
+    return { ok: true, clearedRecords, clearedDatabases: 0 };
+  } catch { return { ok: false, clearedRecords, clearedDatabases: 0 }; }
 }
 
 document.querySelector("[data-cache-clear]")?.addEventListener("click", async () => {
-  const ok = window.confirm("确定清理图片缓存和临时历史吗？API 密钥、主题和项目文件夹不会被清除。");
+  const ok = window.confirm("确定清理已删除结果的临时历史吗？这些已删除结果将无法从历史中找回。现有项目、原图、工作台图片、API 密钥和主题都会保留。");
   if (!ok) return;
   const result = await clearHeavyCacheSafe();
-  showToast(result?.ok ? "缓存已清理，重新打开页面后生效。" : "缓存清理完成。");
+  showToast(result?.ok
+    ? (result.clearedRecords ? "已清理已删除结果的临时历史，项目和原图已保留。" : "暂无可清理的临时历史，项目和原图已保留。")
+    : "临时历史未完全清理，请重试；项目和原图已保留。");
 });
 
+window.addEventListener("wandou-theme-change", renderThemeToggleSvg);
 renderThemeToggleSvg();
 
 const imageInput = document.querySelector("#imageInput");

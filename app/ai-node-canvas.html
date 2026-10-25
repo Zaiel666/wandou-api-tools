@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<script src="./theme-sync.js"></script>
+<script src="./canvas-media-urls.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#030706">
@@ -8087,6 +8089,7 @@
     };
 
     function readGlobalTheme() {
+      if (window.WandouTheme) return window.WandouTheme.get();
       try {
         const value = localStorage.getItem(globalThemeStorageKey)
           || localStorage.getItem("wd-theme")
@@ -8098,6 +8101,7 @@
     }
 
     function writeGlobalTheme(theme) {
+      if (window.WandouTheme) return window.WandouTheme.set(theme);
       const nextTheme = theme === "dark" ? "dark" : "light";
       try {
         localStorage.setItem(globalThemeStorageKey, nextTheme);
@@ -8419,32 +8423,31 @@
       const button = document.getElementById("autoSaveDirectoryButton");
       if (!button) return;
       const selectedDirectory = nativeAutoSaveDirectory || autoSaveDirectoryHandle;
-      const isMissing = autoSaveSupported() && !selectedDirectory;
-      button.classList.toggle("required-warning", isMissing);
-      button.setAttribute("aria-invalid", isMissing ? "true" : "false");
+      button.classList.remove("required-warning");
+      button.setAttribute("aria-invalid", "false");
       if (!autoSaveSupported()) {
-        button.textContent = "生成后下载";
-        button.setAttribute("aria-label", "当前预览模式不支持自动保存目录，生成后可下载文件");
+        button.textContent = "下载：浏览器";
+        button.setAttribute("aria-label", "项目自动保留在软件内；点击图片下载按钮导出文件");
         button.disabled = false;
-        button.title = "Codex 预览无法直接写入指定目录；生成后请使用图片上的下载按钮";
+        button.title = "项目自动保留在软件内；需要文件时请使用图片上的下载按钮";
         return;
       }
       const directoryName = selectedDirectory?.name?.trim() || "";
       const directoryPath = selectedDirectory?.directory?.trim() || directoryName;
-      button.textContent = directoryName || (selectedDirectory ? "已设置保存位置" : "设置保存位置");
+      button.textContent = directoryName ? `下载：${directoryName}` : "下载目录（可选）";
       button.setAttribute(
         "aria-label",
-        directoryName ? `当前保存位置：${directoryName}，点击更改` : "必须设置保存位置"
+        directoryName ? `下载目录：${directoryName}，点击更改` : "下载目录（可选），不影响项目保存或生成图片"
       );
       button.disabled = false;
       button.title = directoryPath
-        ? `当前保存位置：${directoryPath}\n点击可更改保存位置`
-        : "选择生成图片自动保存的本地文件夹";
+        ? `下载目录：${directoryPath}\n仅在点击下载时导出文件；项目自动保留在软件内`
+        : "可选：指定点击下载时使用的文件夹；项目自动保留在软件内，无需设置";
     }
 
     async function chooseAutoSaveDirectory() {
       if (!autoSaveSupported()) {
-        showToast("Codex 预览无法设置自动保存目录；生成后请使用下载按钮", "info", 4000);
+        showToast("项目自动保留在软件内；需要导出文件时请使用下载按钮", "info", 4000);
         updateAutoSaveDirectoryButton();
         return;
       }
@@ -8455,8 +8458,7 @@
           nativeAutoSaveDirectory = selected;
           autoSaveDirectoryHandle = null;
           updateAutoSaveDirectoryButton();
-          showToast(`已选择保存位置：${selected.directory || selected.name}`, "success");
-          await saveUnsavedGeneratedImagesToSelectedDirectory();
+          showToast(`已设置下载目录：${selected.directory || selected.name}（仅手动下载时使用）`, "success");
           return;
         }
         const handle = await window.showDirectoryPicker({ mode: "readwrite" });
@@ -8467,21 +8469,22 @@
         autoSaveDirectoryHandle = handle;
         await storeAutoSaveDirectoryHandle(handle);
         updateAutoSaveDirectoryButton();
-        showToast(`\u5df2\u9009\u62e9\u4fdd\u5b58\u4f4d\u7f6e\uff1a${handle.name}`, "success");
-        await saveUnsavedGeneratedImagesToSelectedDirectory();
+        showToast(`已设置下载目录：${handle.name}（仅手动下载时使用）`, "success");
       } catch (error) {
-        if (error?.name !== "AbortError") showToast(`选择保存位置失败：${error?.message || "未知错误"}`, "error", 4000);
+        if (error?.name !== "AbortError") showToast(`选择下载目录失败：${error?.message || "未知错误"}`, "error", 4000);
       }
     }
 
     function imageResolutionOptionsForModel(model) {
       const apiModel = modelToApiModel(model);
+      if (isOneKOnlyImageModel(model)) return ["1K"];
       if (apiModel === "grok-imagine-image-2.0") return ["1K", "2K"];
-      return /gemini-.*image-preview/i.test(apiModel) ? ["4K"] : imageResolutionOptions;
+      return imageResolutionOptions;
     }
 
     function isOneKOnlyImageModel(model) {
-      return /(?:^|[-.])1k(?:$|[-.])/i.test(String(modelToApiModel(model) || ""));
+      const id = String(modelToApiModel(model) || "");
+      return /(?:^|[-.])1k(?:$|[-.])/i.test(id) || /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(id);
     }
 
     function videoCapabilitiesForModel(model) {
@@ -9376,6 +9379,7 @@
     async function portableProjectMedia(value) {
       if (typeof value !== "string" || !value) return value || "";
       const resolved = await getLocalMedia(value);
+      if (window.WandouMediaUrls?.isRuntimeUrl(resolved)) return window.WandouMediaUrls.toDataUrl(resolved);
       if (!resolved || resolved.startsWith("data:")) return resolved;
       try {
         const blob = await sourceToBlob(resolved);
@@ -9391,12 +9395,15 @@
       copy.mediaUrl = await portableProjectMedia(copy.mediaUrl);
       copy.previewUrl = await portableProjectMedia(copy.previewUrl);
       copy.fullUrl = await portableProjectMedia(copy.fullUrl);
+      copy.sourceUrl = await portableProjectMedia(copy.sourceUrl);
+      copy.outpaintSourceUrl = await portableProjectMedia(copy.outpaintSourceUrl);
       if (Array.isArray(copy.references)) {
         copy.references = await Promise.all(copy.references.map(async (item) => ({
           ...item,
           url: await portableProjectMedia(item.url),
           maskUrl: await portableProjectMedia(item.maskUrl),
-          maskSelectionUrl: await portableProjectMedia(item.maskSelectionUrl)
+          maskSelectionUrl: await portableProjectMedia(item.maskSelectionUrl),
+          doodleUrl: await portableProjectMedia(item.doodleUrl)
         })));
       }
       return copy;
@@ -10036,7 +10043,8 @@
         nodes: cleanNodes.map((node) => serializeNodeForHistory(node, mediaReferences)),
         links: links.filter((link) => cleanIds.has(link.from) && cleanIds.has(link.to)),
         nodeId,
-        view
+        view,
+        intentionalResetAt
       });
     }
 
@@ -10045,8 +10053,7 @@
         if (!isLargeDataUrl(value, largeMediaDataUrlLimit)) return value;
         const id = mediaStorageId(value);
         if (!mediaReferences.has(id)) {
-          mediaReferences.set(id, `${localMediaPrefix}${id}`);
-          queueLargeMediaPersist(value, id);
+          mediaReferences.set(id, queueLargeMediaPersist(value, id));
         }
         return mediaReferences.get(id);
       }
@@ -10066,14 +10073,21 @@
 
     function queueLargeMediaPersist(value, knownId = "") {
       const id = knownId || mediaStorageId(value);
+      if (persistedLocalMediaIds.has(id)) return `${localMediaPrefix}${id}`;
+      if (!window.WandouMediaUrls?.retainHistory(id, value)) return value;
       if (!pendingHistoryMediaPersistIds.has(id)) {
         pendingHistoryMediaPersistIds.add(id);
-        putLocalMedia(value).finally(() => pendingHistoryMediaPersistIds.delete(id));
+        putLocalMedia(value).then(stored => {
+          if (stored === `${localMediaPrefix}${id}`) window.WandouMediaUrls?.forgetHistory(id);
+        }).catch(error => console.warn("Undo image write deferred; original retained", error))
+          .finally(() => pendingHistoryMediaPersistIds.delete(id));
       }
       return `${localMediaPrefix}${id}`;
     }
 
     function compactMediaForSnapshot(value) {
+      const stored = window.WandouMediaUrls?.storedReference(value);
+      if (stored) return stored;
       if (!isLargeDataUrl(value, largeMediaDataUrlLimit)) return value;
       return queueLargeMediaPersist(value);
     }
@@ -10096,8 +10110,11 @@
     function parseCanvasSnapshot(snapshot) {
       const state = JSON.parse(snapshot);
       if (!Array.isArray(state.nodes)) throw new Error("Invalid canvas snapshot");
+      const hadNodes = state.nodes.length > 0;
       state.nodes = state.nodes.filter((node) => node && node.id && node.type);
-      if (!state.nodes.length) throw new Error("Empty canvas snapshot");
+      const resetAt = Number(state.intentionalResetAt);
+      state.intentionalResetAt = Number.isFinite(resetAt) && resetAt > 0 ? resetAt : 0;
+      if (!state.nodes.length && (hadNodes || !state.intentionalResetAt)) throw new Error("Empty canvas snapshot");
       if (!Array.isArray(state.links)) state.links = [];
       return state;
     }
@@ -10126,6 +10143,7 @@
         pruneBrokenLinks();
         nodeId = Number(state.nodeId) || 1;
         view = normalizeRestoredCanvasView(state.view || view);
+        intentionalResetAt = state.intentionalResetAt;
         selectedNodeId = null;
         render();
         syncDeletedResultsWithCanvas();
@@ -10321,8 +10339,32 @@
       observer.observe(nodeElement);
     }
 
+    let activeCanvasRenderIndex = null;
+
+    function canvasRenderIndex() {
+      const nodeById = new Map(), incoming = new Map(), imageOrdinals = new Map();
+      let ordinal = 0;
+      nodes.forEach(node => {
+        nodeById.set(node.id, node);
+        if (node.type === "image") imageOrdinals.set(node.id, ++ordinal);
+      });
+      links.forEach(link => {
+        if (!incoming.has(link.to)) incoming.set(link.to, []);
+        incoming.get(link.to).push(link);
+      });
+      return { nodeById, incoming, imageOrdinals };
+    }
+
+    function imageNodeOrdinal(node) {
+      return activeCanvasRenderIndex?.imageOrdinals.get(node.id)
+        || nodes.filter(item => item.type === "image").indexOf(node) + 1;
+    }
+
     function render(options = {}) {
       const renderStartedAt = performance.now();
+      const previousRenderIndex = activeCanvasRenderIndex;
+      activeCanvasRenderIndex = canvasRenderIndex();
+      try {
       // 保留没有变化的节点 DOM。此前每次都会删掉再创建全部节点：上传一张
       // 参考图或生成一张结果时，历史图片也会一起重新解码、重排。
       const mountedNodes = new Map(
@@ -10335,8 +10377,9 @@
         if (current && current.dataset.renderKey === renderKey) {
           current.classList.toggle("selected", selectedNodeId === node.id);
           current.classList.toggle("box-selected", boxSelectedIds.includes(node.id));
-          current.style.left = `${node.x}px`;
-          current.style.top = `${node.y}px`;
+          const left = `${node.x}px`, top = `${node.y}px`;
+          if (current.style.left !== left) current.style.left = left;
+          if (current.style.top !== top) current.style.top = top;
           mountedNodes.delete(node.id);
           return;
         }
@@ -10361,6 +10404,7 @@
       if (nodes.length > 80 || (nodes.length > 20 && renderDuration > 900)) {
         setTimeout(showPerformanceWarning, 0);
       }
+      } finally { activeCanvasRenderIndex = previousRenderIndex; }
     }
 
     function stabilizeMountedNode(nodeEl, node) {
@@ -10496,7 +10540,7 @@
       el.innerHTML = `
         ${isSelection ? "" : '<div class="port in" data-port="in" title="输入"></div><div class="port out" data-port="out" title="输出"></div>'}
         <div class="node-header" data-drag-handle>
-          <div class="node-title"><span class="node-icon">${iconFor(node.type)}</span>${node.type === "image" ? `参考图 ${nodes.filter((item) => item.type === "image").indexOf(node) + 1}` : escapeHtml(node.title)}</div>
+          <div class="node-title"><span class="node-icon">${iconFor(node.type)}</span>${node.type === "image" ? `参考图 ${imageNodeOrdinal(node)}` : escapeHtml(node.title)}</div>
           <div class="node-menu">
             ${node.type === "generator" ? `<button class="favorite-button prompt-library-trigger" data-prompt-library type="button" title="提示词" aria-label="提示词">
               <svg class="prompt-bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z"/><text x="12" y="13.2">文</text></svg>
@@ -11179,7 +11223,7 @@
     }
 
     function isActiveLightboxFavorited() {
-      return Boolean(activeLightbox.src && imageFavoriteItems().some((item) => item.url === activeLightbox.src));
+      return Boolean(activeLightbox.src && imageFavoriteItems().some((item) => (item.url === activeLightbox.src || (item.mediaReference && item.mediaReference === window.WandouMediaUrls?.storedReference(activeLightbox.src)))));
     }
 
     function updateLightboxFavoriteButton() {
@@ -11571,7 +11615,7 @@
         const result = await postPromptModelWithFallback(configuredUrl, headers, {
           messages: [
             { role: "system", content: instruction },
-            { role: "user", content: messageContentFor(node, references, targetSize) }
+            { role: "user", content: await messageContentFor(node, references, targetSize) }
           ],
           temperature: 0.2
         }, signal);
@@ -11741,7 +11785,7 @@
           const resultNodeId = event.dataTransfer?.getData("application/x-wandou-result-node") || "";
           const draggedUrl = event.dataTransfer?.getData("text/uri-list") || event.dataTransfer?.getData("text/plain") || "";
           const sourceNode = resultNodeId ? nodes.find((item) => item.id === resultNodeId && item.type === "result") : null;
-          const sourceUrl = sourceNode ? favoriteMediaUrl(sourceNode) : String(draggedUrl).split(/\r?\n/).find((line) => /^https?:|^data:image\//i.test(line.trim()))?.trim() || "";
+          const sourceUrl = sourceNode ? favoriteMediaUrl(sourceNode) : String(draggedUrl).split(/\r?\n/).find((line) => isRenderableImageUrl(line.trim()))?.trim() || "";
           const file = files[0];
           if (!file && !sourceUrl) return;
           event.preventDefault();
@@ -15202,7 +15246,7 @@
     }
 
     function isRenderableImageUrl(url) {
-      return typeof url === "string" && (/^data:image\//i.test(url) || /^blob:/i.test(url) || /^https?:\/\//i.test(url));
+      return typeof url === "string" && (/^data:image\//i.test(url) || /^blob:/i.test(url) || /^https?:\/\//i.test(url) || window.WandouMediaUrls?.isRuntimeUrl(url));
     }
 
     async function readImageFileAsDataUrl(file) {
@@ -15277,7 +15321,7 @@
     }
 
     async function addImageUrlsToNode(node, urls) {
-      const cleanUrls = Array.from(new Set(urls || [])).filter((url) => /^data:image\//i.test(url) || /^https?:\/\//i.test(url));
+      const cleanUrls = Array.from(new Set(urls || [])).filter(isRenderableImageUrl);
       if (!cleanUrls.length) return 0;
       const existing = normalizeReferences(node);
       const videoReferenceLimit = node.type === "video"
@@ -15774,9 +15818,11 @@
     }
 
     function updatePendingPort() {
+      const connectedOutputs = new Set(links.map(link => link.from));
+      const connectedInputs = new Set(links.map(link => link.to));
       canvas.querySelectorAll(".port.out").forEach((portEl) => {
         const nodeIdValue = portEl.closest(".node")?.dataset.id;
-        const connected = links.some((link) => link.from === nodeIdValue);
+        const connected = connectedOutputs.has(nodeIdValue);
         portEl.classList.toggle("connected", connected);
         const dragPending = portDragState?.anchorPort === "out" && portDragState.anchorNode === nodeIdValue;
         portEl.classList.toggle("pending", nodeIdValue === linkingFrom || dragPending);
@@ -15785,7 +15831,7 @@
       });
       canvas.querySelectorAll(".port.in").forEach((portEl) => {
         const nodeIdValue = portEl.closest(".node")?.dataset.id;
-        const connected = links.some((link) => link.to === nodeIdValue);
+        const connected = connectedInputs.has(nodeIdValue);
         portEl.classList.toggle("connected", connected);
         const dragPending = portDragState?.anchorPort === "in" && portDragState.anchorNode === nodeIdValue;
         portEl.classList.toggle("pending", nodeIdValue === linkingTo || dragPending);
@@ -15806,10 +15852,22 @@
     }
 
     function drawLinks() {
-      lines.setAttribute("viewBox", "0 0 6200 4200");
-      lines.setAttribute("overflow", "visible");
-      const activeKeys = new Set();
+      // Read every endpoint before changing SVG attributes. Interleaved reads and
+      // writes forced a layout for almost every link on large canvases.
+      const nodeById = new Map(nodes.map(node => [node.id, node]));
+      const mountedById = new Map([...canvas.querySelectorAll(".node")].map(element => [element.dataset.id, element]));
+      const endpointIds = new Set(links.flatMap(link => [link.from, link.to]));
+      if (portDragState) { endpointIds.add(portDragState.anchorNode); endpointIds.add(portDragState.snapTo); }
       const metricCache = new Map();
+      endpointIds.forEach(id => {
+        const node = nodeById.get(id), element = mountedById.get(id);
+        if (node && element) metricCache.set(id, { x:node.x, y:node.y, width:element.offsetWidth, height:element.offsetHeight });
+        else metricCache.set(id, null);
+      });
+      const pointer = portDragState ? screenToWorld(portDragState.currentX || portDragState.startX, portDragState.currentY || portDragState.startY) : null;
+      if (lines.getAttribute("viewBox") !== "0 0 6200 4200") lines.setAttribute("viewBox", "0 0 6200 4200");
+      if (lines.getAttribute("overflow") !== "visible") lines.setAttribute("overflow", "visible");
+      const activeKeys = new Set();
       links.forEach((link) => {
         const key = `${link.from}:${link.to}`;
         activeKeys.add(key);
@@ -15848,8 +15906,10 @@
           linkElements.set(key, entry);
           lines.append(path, cut);
         }
-        entry.path.setAttribute("d", linkPathData(from, to));
-        entry.cut.setAttribute("transform", `translate(${(from.x + to.x) / 2} ${(from.y + to.y) / 2})`);
+        const pathData = linkPathData(from, to);
+        const cutTransform = `translate(${(from.x + to.x) / 2} ${(from.y + to.y) / 2})`;
+        if (entry.path.getAttribute("d") !== pathData) entry.path.setAttribute("d", pathData);
+        if (entry.cut.getAttribute("transform") !== cutTransform) entry.cut.setAttribute("transform", cutTransform);
       });
       linkElements.forEach((entry, key) => {
         if (activeKeys.has(key)) return;
@@ -15861,7 +15921,6 @@
         clearTemporaryLink();
         return;
       }
-      const pointer = screenToWorld(portDragState.currentX || portDragState.startX, portDragState.currentY || portDragState.startY);
       const anchor = getPortCenterFast(portDragState.anchorNode, portDragState.anchorPort, metricCache);
       const snapPort = portDragState.anchorPort === "out" ? "in" : "out";
       const snap = portDragState.snapTo ? getPortCenterFast(portDragState.snapTo, snapPort, metricCache) : null;
@@ -15884,18 +15943,11 @@
     }
 
     function getPortCenterFast(nodeIdValue, port, metricCache) {
-      const nodeEl = canvas.querySelector(`[data-id="${nodeIdValue}"]`);
-      if (!nodeEl) return null;
-      const node = nodes.find((item) => item.id === nodeIdValue);
-      if (!node) return null;
-      let metrics = metricCache.get(nodeIdValue);
-      if (!metrics) {
-        metrics = { width: nodeEl.offsetWidth, height: nodeEl.offsetHeight };
-        metricCache.set(nodeIdValue, metrics);
-      }
+      const metrics = metricCache.get(nodeIdValue);
+      if (!metrics) return null;
       return {
-        x: node.x + (port === "out" ? metrics.width : 0),
-        y: node.y + metrics.height / 2
+        x: metrics.x + (port === "out" ? metrics.width : 0),
+        y: metrics.y + metrics.height / 2
       };
     }
 
@@ -16094,6 +16146,7 @@
     });
 
     window.addEventListener("pointerup", (event) => {
+      if (event.target.closest?.("#themeToggleButton") && !boxSelectState && !resizeState && !dragState && !panState && !portDragState) return;
       if (boxSelectState) {
         finishBoxSelection(event);
         return;
@@ -16424,10 +16477,12 @@
       boxSelectedIds.forEach((id) => canvas.querySelector(`[data-id="${id}"]`)?.classList.add("deleting-confirm"));
       pushHistory();
       const selected = new Set(boxSelectedIds);
+      const previousNodeCount = nodes.length;
       nodes.forEach((node) => {
         if (selected.has(node.id)) archiveDeletedResult(node);
       });
       nodes = nodes.filter((node) => !selected.has(node.id));
+      if (previousNodeCount > 0 && !nodes.length) intentionalResetAt = Date.now();
       links = links.filter((link) => !selected.has(link.from) && !selected.has(link.to));
       clearBoxSelection();
       render();
@@ -16569,6 +16624,7 @@
       const node = nodes.find((item) => item.id === id);
       archiveDeletedResult(node);
       nodes = nodes.filter((node) => node.id !== id);
+      if (node && !nodes.length) intentionalResetAt = Date.now();
       links = links.filter((link) => link.from !== id && link.to !== id);
       render();
     }
@@ -16732,18 +16788,18 @@
         showToast(`重新生成前必须先填写${regenerationProfile.label} API 密钥`);
         return;
       }
-      const saveHandle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-      const saveReady = nativeAutoSaveDirectory || (saveHandle && await hasAutoSaveDirectoryPermission(saveHandle, true));
-      if (!saveReady && window.wandouShell?.chooseSaveDirectory) {
-        closeLightboxImageMenu();
-        showToast("重新生成前必须先设置保存位置");
-        await chooseAutoSaveDirectory();
-        return;
-      }
 
       const sourceNode = resultGenerationSource(original);
       if (!sourceNode) {
         showToast("没有找到这张图片的原始生成节点");
+        return;
+      }
+      const regenerationReferences = collectReferenceItems([...getInputMediaList(sourceNode.id), sourceNode]);
+      const editModelError = imageEditModelError({ ...sourceNode, model: original.model || sourceNode.model }, regenerationReferences);
+      if (editModelError) {
+        sourceNode.status = editModelError;
+        showToast(editModelError, "error", 7000);
+        refreshRenderedNode(sourceNode.id);
         return;
       }
       closeLightboxImageMenu();
@@ -16940,13 +16996,6 @@
         showToast(`生成前必须先填写${generationProfile.label} API 密钥`);
         return;
       }
-      const saveHandle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-      const saveReady = nativeAutoSaveDirectory || (saveHandle && await hasAutoSaveDirectoryPermission(saveHandle, true));
-      if (!saveReady && window.wandouShell?.chooseSaveDirectory) {
-        showToast("生成前必须先设置保存位置");
-        await chooseAutoSaveDirectory();
-        return;
-      }
       if (node.type === "generator" && node.skillId) {
         try {
           await applySelectedSkillForGeneration(node);
@@ -16959,11 +17008,6 @@
       }
       const transparentPngOutput = (node.type === "png" && node.transparentBackground !== false)
         || ((node.type === "generator" || node.type === "outpaint") && (node.transparentBackground || promptRequestsTransparentPng(node.prompt)));
-      if (transparentPngOutput && (node.type === "generator" || node.type === "outpaint") && !isGptImageModel(imageGenerationApiModel(node.model))) {
-        node.model = defaultImageModel(gptImageModelOptions);
-        node.resolution = imageResolutionOptionsForModel(node.model)[0];
-        showToast(`检测到透明底需求，已自动切换为 ${node.model} 并启用真实 PNG 透明通道。`, "success", 4200);
-      }
       pausePerformanceMonitor(30000);
       const inputMedia = getInputMedia(node.id);
       const inputMediaList = getInputMediaList(node.id);
@@ -16980,6 +17024,18 @@
       if (node.type === "upscale" || node.type === "outpaint") references = references.slice(0, 1);
       await ensureReferenceDimensions(references);
       references = applyGeneratorAnnotationMask(node, references);
+      const editModelError = imageEditModelError(node, references);
+      if (editModelError) {
+        node.status = editModelError;
+        render();
+        showToast(editModelError, "error", 7000);
+        return;
+      }
+      if (transparentPngOutput && (node.type === "generator" || node.type === "outpaint") && !isGptImageModel(imageGenerationApiModel(node.model))) {
+        node.model = defaultImageModel(gptImageModelOptions);
+        node.resolution = imageResolutionOptionsForModel(node.model)[0];
+        showToast(`检测到透明底需求，已自动切换为 ${node.model} 并启用真实 PNG 透明通道。`, "success", 4200);
+      }
       references = await appendGeneratorAnnotationGuide(node, references);
       if (node.type === "outpaint" && references[0]?.url) {
         const actualSize = await getImageDimensions(references[0].url);
@@ -17032,7 +17088,9 @@
         : fixedVideoRatio
         ? { size: sizeFromRatio(fixedVideoRatio, node.resolution, [], { prompt: "" }), source: `视频模型固定 ${fixedVideoRatio}` }
         : sizeDecisionFromRatio(node.ratio, node.resolution, references, autoOptions);
-      const targetSize = sizeDecision.size;
+      const targetSize = ["generator", "style"].includes(node.type) && isNanoBananaModel(modelToApiModel(node.model))
+        ? nanoBananaImageSettings(node, sizeDecision.size).size
+        : sizeDecision.size;
       if (node.type === "generator" && node.autoSplit && !options.autoSplitConfirmed) {
         stopAutoSplitCountdown(node);
         node.autoSplitReviewOpen = false;
@@ -17056,7 +17114,7 @@
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 120000);
         try {
-          await createAutoSplitBatchDirectory(node);
+          beginAutoSplitBatch(node);
           const analysis = await analyzeAutoSplitPlan(node, references, node.autoSplitLockedSize, controller.signal);
           node.autoSplitPlan = analysis.items;
           node.autoSplitSeriesSpec = analysis.seriesSpec;
@@ -17431,7 +17489,6 @@
             ? `透明 PNG 已生成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。`
             : "透明 PNG 已从原图抠出，未重新绘制主体，可放大预览、收藏和下载。";
           setNodeStatus(pending.id, pending.status);
-          await autoSaveGeneratedNodeMedia(pending);
           if (!sourceNode._deferCanvasSave) await saveCanvasState();
           return;
         }
@@ -17533,7 +17590,6 @@
           : apiResult.fromApi ? `接口生成完成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。` : "演示生成完成，可下载。";
         setNodeStatus(pending.id, pending.status);
         refreshRenderedNode(pending.id);
-        await settleWithin(autoSaveGeneratedNodeMedia(pending), 18000, null, "图片自动保存");
         if (!sourceNode._deferCanvasSave) {
           await settleWithin(saveCanvasState(), 10000, null, "生成结果保存");
         }
@@ -17844,6 +17900,13 @@
       return { url:extracted.url, mediaType:"audio", mimeType:extracted.mimeType || "audio/mpeg", fromApi:true };
     }
 
+    function imageEditModelError(node, references = []) {
+      if (["video", "keyword", "audio", "outpaint"].includes(node.type)) return "";
+      if (!references.some(item => item?.url && item?.maskUrl)) return "";
+      if (isGptImageModel(imageGenerationApiModel(node.model))) return "";
+      return "当前局部重绘功能仅支持 GPT 图像模型。请手动切换模型，或移除遮罩后再生成；当前未发送生成请求。";
+    }
+
     async function callApi(node, signal) {
       if (node.type === "audio") return callAudioApi(node, signal);
       const apiProfile = apiProfileForModel(node.model);
@@ -17861,6 +17924,8 @@
           node
       ];
       const references = collectReferenceItems(referenceSources);
+      const editModelError = imageEditModelError(node, references);
+      if (editModelError) throw new Error(editModelError);
       const jsonHeaders = { "Content-Type": "application/json" };
       if (apiProfile.key) jsonHeaders.Authorization = `Bearer ${apiProfile.key}`;
       const hasLocalEditMask = references.some((item) => item?.maskUrl && item?.maskSelectionUrl);
@@ -18022,6 +18087,7 @@
     }
 
     async function postChatCompletion(configuredUrl, headers, body, signal) {
+      if (globalThis.WandouMediaUrls && Array.isArray(body.messages)) body = { ...body, messages: await globalThis.WandouMediaUrls.materializeMessages(body.messages) };
       const url = normalizeApiEndpoint(configuredUrl, { type: "keyword" }, false);
       const response = await fetchMaybeProxied(url, {
         method: "POST",
@@ -18059,7 +18125,7 @@
         model: modelToPromptModel("Gemini"),
         messages: [
           { role: "system", content: "你是图像理解助手。只描述图片内容，不要使用工具。" },
-          { role: "user", content: messageContentFor({ ...node, prompt: visionPrompt }, references, targetSize) }
+          { role: "user", content: await messageContentFor({ ...node, prompt: visionPrompt }, references, targetSize) }
         ]
       }, signal);
       const description = (vision.text || extractText(vision.data) || "").trim();
@@ -18462,7 +18528,9 @@ ${formatInstruction}`;
     }
 
     function isNanoBananaModel(model) {
-      return /^gemini-.*image-preview$/i.test(String(model || ""));
+      const id = String(model || "");
+      // Keep existing preview aliases and recognize the verified stable image IDs.
+      return /^gemini-.*image-preview$/i.test(id) || /^gemini-(?:3\.1-flash(?:-lite)?|3-pro)-image$/i.test(id);
     }
 
     function isGrokImageModel(model) {
@@ -18494,9 +18562,37 @@ ${formatInstruction}`;
       return dataUrlToGeminiImagePart(await readFileAsDataUrl(file));
     }
 
+    function nanoBananaImageSettings(node, targetSize) {
+      const selected = String(node.resolution || "1K").toUpperCase();
+      const liteModel = /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(String(modelToApiModel(node.model) || ""));
+      const imageSize = !liteModel && imageResolutionOptions.includes(selected) ? selected : "1K";
+      const { width, height } = parseSize(targetSize);
+      const requestedRatio = ratioLabelFromSize(width, height);
+      // Native Gemini image tiers use model pixels, not video long-edge sizes.
+      // https://ai.google.dev/gemini-api/docs/generate-content/image-generation
+      const oneK = {
+        "1:1": [1024, 1024], "2:3": [848, 1264], "3:2": [1264, 848],
+        "3:4": [896, 1200], "4:3": [1200, 896], "4:5": [928, 1152],
+        "5:4": [1152, 928], "9:16": [768, 1376], "16:9": [1376, 768],
+        "21:9": [1584, 672]
+      };
+      const aspectRatio = oneK[requestedRatio] ? requestedRatio : Object.keys(oneK).find(key => {
+        const [w, h] = oneK[key];
+        return Math.abs(width / height - w / h) < .00001;
+      });
+      const base = oneK[aspectRatio];
+      const imageConfig = { imageSize };
+      if (base) imageConfig.aspectRatio = aspectRatio;
+      const keepExactSize = node.type === "outpaint" || node.type === "png" || ratioKey(node.ratio) === "自定义尺寸";
+      const scale = { "1K": 1, "2K": 2, "4K": 4 }[imageSize];
+      return { imageConfig, size: base && !keepExactSize ? base.map(value => value * scale).join("x") : targetSize };
+    }
+
     async function callNanoBananaApi(node, references, configuredUrl, headers, signal) {
+      references = globalThis.WandouMediaUrls ? await globalThis.WandouMediaUrls.materializeReferences(references) : references;
       const model = modelToApiModel(node.model);
-      const targetSize = node._targetSize || sizeFromRatio(node.ratio, node.resolution, references);
+      const requestedSize = node._targetSize || sizeFromRatio(node.ratio, node.resolution, references, { customWidth: node.customWidth, customHeight: node.customHeight });
+      const { imageConfig, size: targetSize } = nanoBananaImageSettings(node, requestedSize);
       const inputReferences = node.type === "outpaint" && references[0]?.url
         ? [{ url: (await createOutpaintGuide(references[0], targetSize, node.outpaintDirection, node.outpaintAmount, node.outpaintCustomInsets)).imageUrl }]
         : references;
@@ -18504,7 +18600,7 @@ ${formatInstruction}`;
         text: [
           node.prompt || "",
           targetSize ? `输出比例和尺寸参考：${targetSize}` : "",
-          node.resolution ? `分辨率：${node.resolution}` : ""
+          `分辨率：${imageConfig.imageSize}`
         ].filter(Boolean).join("\n")
       }];
       for (let index = 0; index < inputReferences.length; index += 1) {
@@ -18520,7 +18616,8 @@ ${formatInstruction}`;
         body: JSON.stringify({
           contents: [{ role: "user", parts }],
           generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"]
+            responseModalities: ["TEXT", "IMAGE"],
+            imageConfig
           }
         }),
         signal
@@ -18550,6 +18647,9 @@ ${formatInstruction}`;
     }
 
     async function buildApiRequest(node, references) {
+      const editModelError = imageEditModelError(node, references);
+      if (editModelError) throw new Error(editModelError);
+      references = globalThis.WandouMediaUrls ? await globalThis.WandouMediaUrls.materializeReferences(references) : references;
       const targetSize = node._apiTargetSize || node._targetSize || (node.type === "png" ? transparentTargetSize(references, node.resolution) : sizeFromRatio(node.ratio, node.resolution, references));
       if (node.type === "keyword") {
         const formatInstruction = node.promptFormat === "sentence"
@@ -18576,7 +18676,7 @@ ${formatInstruction}`;
             model: modelToPromptModel(node.model),
             messages: [
               { role: "system", content: "你是提示词生成助手。只输出用户要求的中英文提示词，不要使用工具，不要输出分析过程。" },
-              { role: "user", content: messageContentFor({ ...node, prompt: promptText }, isTextReverse ? [] : references, targetSize) }
+              { role: "user", content: await messageContentFor({ ...node, prompt: promptText }, isTextReverse ? [] : references, targetSize) }
             ],
             stream: false
           }),
@@ -18614,7 +18714,7 @@ ${formatInstruction}`;
         const payload = {
           model: modelToApiModel(node.model),
           prompt: node.prompt,
-          messages: [{ role: "user", content: messageContentFor({ ...node, prompt: videoPrompt }, videoReferences, targetSize) }],
+          messages: [{ role: "user", content: await messageContentFor({ ...node, prompt: videoPrompt }, videoReferences, targetSize) }],
           size: payloadAspectRatio === "Auto" ? "auto" : payloadAspectRatio,
           stream: /veo/i.test(String(node.model || "")) ? true : false
         };
@@ -18653,11 +18753,8 @@ ${formatInstruction}`;
       const requestResolution = node._forceBaseGeneration || isOneKOnlyImageModel(node.model) ? "1K" : selectedResolution;
       const maskedReference = node.type === "outpaint" ? null : references.find((item) => item?.maskUrl && item?.url) || null;
       const selectedImageModel = imageGenerationApiModel(node.model, requestResolution);
-      // Keep the selected GPT image model for local edits. Silently downgrading
-      // every masked request to gpt-image-2 discards the user's quality choice.
-      const imageModel = maskedReference && !isGptImageModel(selectedImageModel) && !node._psdLayerJob
-        ? "gpt-image-2"
-        : selectedImageModel;
+      // Unsupported masked edits are rejected before request construction.
+      const imageModel = selectedImageModel;
       const grokImageModel = isGrokImageModel(imageModel);
       const orderedImageReferences = maskedReference
         ? [maskedReference, ...references.filter((item) => item !== maskedReference)]
@@ -18848,7 +18945,8 @@ ${formatInstruction}`;
       return a;
     }
 
-    function messageContentFor(node, references, targetSize) {
+    async function messageContentFor(node, references, targetSize) {
+      references = globalThis.WandouMediaUrls ? await globalThis.WandouMediaUrls.materializeReferences(references) : references;
       const prompt = promptWithSize(node.prompt, targetSize);
       if (!references.length) return prompt;
       return [
@@ -19475,21 +19573,28 @@ ${formatInstruction}`;
       const maxPixels = 8294400;
       const minPixels = 655360;
       if (!width || !height) return "1024x1024";
-      const ratio = width / Math.max(1, height);
-      let safeWidth = roundToMultiple(width, 16);
-      let safeHeight = roundToMultiple(height, 16);
-      if (ratio > 3) safeWidth = roundToMultiple(safeHeight * 3, 16);
-      if (ratio < 1 / 3) safeHeight = roundToMultiple(safeWidth * 3, 16);
+      const ratio = Math.max(1 / 3, Math.min(3, width / height));
+      let safeWidth = Math.max(16, Math.round(width / 16) * 16);
+      let safeHeight = Math.max(16, Math.round(height / 16) * 16);
+      if (safeWidth > safeHeight * 3) safeWidth = safeHeight * 3;
+      if (safeHeight > safeWidth * 3) safeHeight = safeWidth * 3;
       const pixels = safeWidth * safeHeight;
       if (safeWidth <= maxEdge && safeHeight <= maxEdge && pixels >= minPixels && pixels <= maxPixels) return `${safeWidth}x${safeHeight}`;
       const scale = pixels < minPixels
-        ? Math.sqrt(minPixels / Math.max(1, pixels))
-        : Math.min(maxEdge / safeWidth, maxEdge / safeHeight, Math.sqrt(maxPixels / Math.max(1, pixels)));
-      safeWidth = roundToMultiple(safeWidth * scale, 16);
-      safeHeight = roundToMultiple(safeHeight * scale, 16);
+        ? Math.sqrt(minPixels / pixels)
+        : Math.min(maxEdge / safeWidth, maxEdge / safeHeight, Math.sqrt(maxPixels / pixels));
+      safeWidth = Math.max(16, Math.round(safeWidth * scale / 16) * 16);
+      safeHeight = Math.max(16, Math.round(safeHeight * scale / 16) * 16);
       while (safeWidth > maxEdge || safeHeight > maxEdge || safeWidth * safeHeight > maxPixels) {
         safeWidth = Math.max(16, safeWidth - 16);
         safeHeight = Math.max(16, safeHeight - 16);
+      }
+      // Rounding can cross the aspect-ratio or minimum-pixel boundary.
+      if (safeWidth > safeHeight * 3) safeHeight = Math.ceil(safeWidth / 48) * 16;
+      if (safeHeight > safeWidth * 3) safeWidth = Math.ceil(safeHeight / 48) * 16;
+      while (safeWidth * safeHeight < minPixels) {
+        if (safeWidth / safeHeight < ratio) safeWidth += 16;
+        else safeHeight += 16;
       }
       return `${safeWidth}x${safeHeight}`;
     }
@@ -20806,12 +20911,12 @@ ${formatInstruction}`;
       const {
         mediaUrl, previewUrl, fullUrl, sourceUrl, outpaintSourceUrl,
         mediaSourceUrl, previewSourceUrl, fullSourceUrl, references,
-        elapsed, apiSeconds, apiReturned, ...rest
+        elapsed, apiSeconds, apiReturned, x, y, ...rest
       } = node;
-      const upstream = links
-        .filter((link) => link.to === node.id)
+      const incoming = activeCanvasRenderIndex?.incoming.get(node.id) || (activeCanvasRenderIndex ? [] : links.filter(link => link.to === node.id));
+      const upstream = incoming
         .map((link) => {
-          const source = nodes.find((item) => item.id === link.from);
+          const source = activeCanvasRenderIndex ? activeCanvasRenderIndex.nodeById.get(link.from) : nodes.find(item => item.id === link.from);
           if (!source) return { id: link.from, missing: true };
           return {
             id: source.id,
@@ -20820,6 +20925,7 @@ ${formatInstruction}`;
               url: compactMediaRenderKey(item?.url),
               maskUrl: compactMediaRenderKey(item?.maskUrl),
               maskSelectionUrl: compactMediaRenderKey(item?.maskSelectionUrl),
+              doodleUrl: compactMediaRenderKey(item?.doodleUrl),
               comments: Array.isArray(item?.comments) ? item.comments.map((comment) => ({
                 id:comment?.id, text:comment?.text, shape:comment?.shape,
                 x:comment?.x, y:comment?.y, w:comment?.w, h:comment?.h
@@ -20829,7 +20935,7 @@ ${formatInstruction}`;
         });
       return JSON.stringify({
         ...rest,
-        displayOrdinal: node.type === "image" ? nodes.filter((item) => item.type === "image").indexOf(node) + 1 : 0,
+        displayOrdinal: node.type === "image" ? imageNodeOrdinal(node) : 0,
         upstream,
         mediaUrl: compactMediaRenderKey(mediaUrl),
         previewUrl: compactMediaRenderKey(previewUrl),
@@ -20843,7 +20949,10 @@ ${formatInstruction}`;
           ...item,
           url: compactMediaRenderKey(item?.url),
           maskUrl: compactMediaRenderKey(item?.maskUrl),
-          maskSelectionUrl: compactMediaRenderKey(item?.maskSelectionUrl)
+          maskSelectionUrl: compactMediaRenderKey(item?.maskSelectionUrl),
+          doodleUrl: compactMediaRenderKey(item?.doodleUrl),
+          previewUrl: compactMediaRenderKey(item?.previewUrl),
+          sourceUrl: compactMediaRenderKey(item?.sourceUrl)
         })) : []
       });
     }
@@ -20988,23 +21097,11 @@ ${formatInstruction}`;
       return safeFilePart(`自动拆分-${stamp}-${suffix}-${activeProjectName()}`);
     }
 
-    async function createAutoSplitBatchDirectory(node) {
-      const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-      if (!handle) {
-        if (!window.wandouShell?.chooseSaveDirectory) return "";
-        throw new Error("请先设置保存位置");
-      }
-      const folderName = autoSplitBatchFolderName();
-      if (window.wandouShell?.createSaveDirectory && nativeAutoSaveDirectory) {
-        const result = await window.wandouShell.createSaveDirectory(folderName);
-        if (!result?.success) throw new Error(result?.error || "批次文件夹创建失败");
-      } else {
-        if (!await hasAutoSaveDirectoryPermission(handle, true)) throw new Error("保存位置没有写入权限");
-        await handle.getDirectoryHandle(folderName, { create: true });
-      }
-      node.autoSplitBatchFolder = folderName;
+    function beginAutoSplitBatch(node) {
+      // Keep a unique batch identifier for grouping and retries without creating a disk folder.
+      node.autoSplitBatchFolder = autoSplitBatchFolderName();
       scheduleCanvasSave();
-      return folderName;
+      return node.autoSplitBatchFolder;
     }
 
     const volatileDownloadSequences = new Map();
@@ -21090,7 +21187,7 @@ ${formatInstruction}`;
         if (!blob || !blob.size) throw new Error("图片内容为空");
         const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
         if (!handle) {
-          showToast("保存失败：请先设置保存位置", "error", 4000);
+          showToast("下载失败：请先设置下载目录", "error", 4000);
           return false;
         }
         if (window.wandouShell?.writeSaveFile && nativeAutoSaveDirectory) {
@@ -21107,7 +21204,7 @@ ${formatInstruction}`;
           return false;
         }
         if (!await hasAutoSaveDirectoryPermission(handle, false)) {
-          showToast("保存失败：保存位置需要重新授权，请点击更改保存位置", "error", 4800);
+          showToast("下载目录需要重新授权，请点击更改下载目录", "error", 4800);
           return false;
         }
         const dot = filename.lastIndexOf(".");
@@ -21128,46 +21225,6 @@ ${formatInstruction}`;
         showToast(`保存失败：${error?.message || "无法写入所选文件夹"}`, "error", 4800);
         return false;
       }
-    }
-
-    async function autoSaveGeneratedNodeMedia(node) {
-      if (!node || node.type !== "result" || node.pending || node.mediaType !== "image" || node.autoSaved) return false;
-      const handle = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-      if (!handle) return false;
-      const src = favoriteMediaUrl(node);
-      if (!src) return false;
-      try {
-        const blob = await sourceToLosslessPngBlob(src, node.width, node.height);
-        const filename = downloadFileName(node, "png");
-        if (blob && await writeBlobToAutoSaveBatchDirectory(blob, filename, node.autoSaveBatchFolder || "")) {
-          node.autoSaved = true;
-          return true;
-        }
-      } catch (error) {
-        showToast(`自动保存失败：${error?.message || "请使用下载按钮"}`, "error", 4800);
-      }
-      return false;
-    }
-
-    async function saveUnsavedGeneratedImagesToSelectedDirectory() {
-      const pendingFiles = nodes.filter((node) =>
-        node?.type === "result" && !node.pending && node.mediaType === "image" && !node.autoSaved && favoriteMediaUrl(node)
-      );
-      if (!pendingFiles.length) return { saved: 0, failed: 0 };
-      showToast(`正在把 ${pendingFiles.length} 张已有图片补存到新位置…`);
-      let saved = 0;
-      for (const node of pendingFiles) {
-        if (await autoSaveGeneratedNodeMedia(node)) saved += 1;
-      }
-      scheduleCanvasSave();
-      const failed = pendingFiles.length - saved;
-      const directory = nativeAutoSaveDirectory?.directory || nativeAutoSaveDirectory?.name || autoSaveDirectoryHandle?.name || "所选文件夹";
-      showToast(
-        failed ? `已保存 ${saved} 张到 ${directory}，${failed} 张失败` : `已保存 ${saved} 张到 ${directory}`,
-        failed ? "error" : "success",
-        6000
-      );
-      return { saved, failed };
     }
 
     async function sourceToBlobUrl(src, fallbackType = "application/octet-stream") {
@@ -21200,6 +21257,15 @@ ${formatInstruction}`;
 
     async function triggerDownload(src, filename, fallbackType = "application/octet-stream") {
       try {
+        try {
+          const directory = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
+          if (directory) {
+            const blob = await sourceToBlob(src, fallbackType);
+            if (blob && await writeBlobToAutoSaveDirectory(blob, filename)) return true;
+          }
+        } catch (error) {
+          console.warn("Selected download directory unavailable; trying browser download", error);
+        }
         const objectUrl = await sourceToBlobUrl(src, fallbackType);
         if (!objectUrl && /^https?:\/\//i.test(src)) {
           openNamedTab(src, filename || "下载文件");
@@ -21504,27 +21570,12 @@ ${formatInstruction}`;
         if (desktopMediaRequired) void browserWriteTask.catch(() => false);
         const durablyStored = desktopMediaRequired ? storedOnDesktop : storedInBrowser;
         if (!durablyStored) return value;
+        window.WandouMediaUrls?.forgetHistory(id);
         persistedLocalMediaIds.add(id);
         return storedValue;
       })().finally(() => pendingLocalMediaWrites.delete(id));
       pendingLocalMediaWrites.set(id, writeTask);
       return writeTask;
-    }
-
-    async function cacheRecoveredDesktopMedia(id, value) {
-      const db = await openLocalMediaDb();
-      if (!db || !value) return;
-      await new Promise((resolve) => {
-        try {
-          const tx = db.transaction(localMediaStoreName, "readwrite");
-          tx.objectStore(localMediaStoreName).put({ id, value, savedAt: Date.now() });
-          tx.oncomplete = resolve;
-          tx.onerror = resolve;
-          tx.onabort = resolve;
-        } catch (_error) {
-          resolve();
-        }
-      });
     }
 
     async function getLocalMedia(value) {
@@ -21534,16 +21585,21 @@ ${formatInstruction}`;
         try { await pendingLocalMediaWrites.get(id); }
         catch (_error) {}
       }
+      const runtimeUrl = await window.WandouMediaUrls?.resolve(id);
+      if (runtimeUrl) { persistedLocalMediaIds.add(id); return runtimeUrl; }
       if (window.wandouShell?.readCanvasMedia) {
         try {
           const desktopResult = await window.wandouShell.readCanvasMedia({ id });
           if (desktopResult?.success && desktopResult.value) {
-            void cacheRecoveredDesktopMedia(id, desktopResult.value);
+            // Disk is authoritative; opening a project must not copy every
+            // original image into IndexedDB again. Keep the legacy read below.
             persistedLocalMediaIds.add(id);
             return desktopResult.value;
           }
         } catch (_error) {}
       }
+      const pendingHistoryValue = window.WandouMediaUrls?.historyValue(id);
+      if (pendingHistoryValue) return pendingHistoryValue;
       const db = await openLocalMediaDb();
       let localValue = "";
       if (db) {
@@ -21567,6 +21623,8 @@ ${formatInstruction}`;
 
     async function persistMediaValue(value) {
       if (typeof value !== "string" || !value) return value || "";
+      const storedRuntime = window.WandouMediaUrls?.storedReference(value);
+      if (storedRuntime) return storedRuntime;
       if (value.startsWith(localMediaPrefix)) return value;
       if (value.startsWith("data:")) return putLocalMedia(value);
       if (!/^(?:https?:|blob:)/i.test(value)) return value;
@@ -22104,14 +22162,15 @@ ${formatInstruction}`;
 
     function chooseCanvasRecoveryState(states) {
       const validStates = states
-        .filter((state) => state && Array.isArray(state.nodes) && state.nodes.length)
+        .filter((state) => state && Array.isArray(state.nodes) && (state.nodes.length || Number(state.intentionalResetAt) > 0))
         .sort((left, right) => canvasStateSavedAt(right) - canvasStateSavedAt(left));
       if (!validStates.length) return null;
       const latest = validStates[0];
       const latestMeaningful = validStates.find(isMeaningfulCanvasState);
       const resetAt = Number(latest.intentionalResetAt) || 0;
       if (isSeedCanvasState(latest) && !resetAt && latestMeaningful) return latestMeaningful;
-      if (resetAt && latestMeaningful && resetAt < canvasStateSavedAt(latestMeaningful)) return latestMeaningful;
+      // savedAt is the desktop commit order; resetAt may predate an older
+      // snapshot after the device clock changes. An explicit latest reset wins.
       return latest;
     }
 
@@ -22235,7 +22294,7 @@ ${formatInstruction}`;
           backupState,
           ...desktopStates
         ]);
-        if (!state || !Array.isArray(state.nodes) || !state.nodes.length) {
+        if (!state || !Array.isArray(state.nodes) || (!state.nodes.length && !(Number(state.intentionalResetAt) > 0))) {
           isRestoring = false;
           return false;
         }
@@ -22258,7 +22317,7 @@ ${formatInstruction}`;
         if (desktopStates.includes(state) && state !== localState) {
           showToast("已从安全备份恢复画布");
         }
-        return nodes.length > 0;
+        return nodes.length > 0 || intentionalResetAt > 0;
       } catch (error) {
         console.warn("Canvas restore failed; local records were preserved", error);
         isRestoring = false;
@@ -22375,11 +22434,14 @@ ${formatInstruction}`;
       } catch (error) {
         preview = node.previewUrl || node.mediaUrl || sourceUrl;
       }
+      if (window.WandouMediaUrls?.isRuntimeUrl(preview)) preview = await window.WandouMediaUrls.toDataUrl(preview);
       const media = preview;
       const copy = {
         ...node,
         id: `deleted-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         originalId: node.id,
+        sourceUrl: window.WandouMediaUrls?.storedReference(node.sourceUrl) || node.sourceUrl || "",
+        outpaintSourceUrl: window.WandouMediaUrls?.storedReference(node.outpaintSourceUrl) || node.outpaintSourceUrl || "",
         mediaUrl: media,
         previewUrl: preview,
         fullUrl: /^https?:\/\//i.test(node.fullUrl || "") ? node.fullUrl : "",
@@ -22683,14 +22745,7 @@ ${formatInstruction}`;
       event.stopPropagation();
       setSettingsOpen(!settingsPopover.classList.contains("open"));
     });
-    const autoSaveDirectoryButton = document.createElement("button");
-    autoSaveDirectoryButton.id = "autoSaveDirectoryButton";
-    autoSaveDirectoryButton.className = "ghost";
-    autoSaveDirectoryButton.type = "button";
-    autoSaveDirectoryButton.style.minWidth = "156px";
-    autoSaveDirectoryButton.addEventListener("click", chooseAutoSaveDirectory);
-    document.getElementById("settingsButton").insertAdjacentElement("beforebegin", autoSaveDirectoryButton);
-    updateAutoSaveDirectoryButton();
+    // Project media is saved internally; retain prior destinations for manual downloads.
     loadAutoSaveDirectoryHandle();
     assistantRailButton.addEventListener("click", () => setAssistantOpen(!document.querySelector(".app").classList.contains("assistant-open")));
     assistantCloseButton.addEventListener("click", () => setAssistantOpen(false));
@@ -22787,10 +22842,10 @@ ${formatInstruction}`;
       document.body.classList.toggle("dark-theme");
       updateThemeLabel();
       writeGlobalTheme(document.body.classList.contains("dark-theme") ? "dark" : "light");
-      scheduleCanvasSave();
     });
+    window.addEventListener("wandou-theme-change", (event) => applyGlobalTheme(event.detail.theme));
     window.addEventListener("storage", (event) => {
-      if (event.key === globalThemeStorageKey) applyGlobalTheme(event.newValue || "light");
+      if (!window.WandouTheme && event.key === globalThemeStorageKey) applyGlobalTheme(event.newValue || "light");
       if (event.key === homeProjectListStorageKey) updateCurrentFolderName();
     });
     openGalleryButton.addEventListener("click", () => openGallery("image"));
@@ -23016,7 +23071,7 @@ ${formatInstruction}`;
         downloadPromptText(activePromptPreview[lang] || "", lang);
       });
     });
-    lightboxFavorite.addEventListener("click", (event) => {
+    lightboxFavorite.addEventListener("click", async (event) => {
       event.stopPropagation();
       if (!activeLightbox.src || activeLightbox.mode === "video" || activeLightbox.mode === "prompt") return;
       const items = imageFavoriteItems();
@@ -23026,7 +23081,11 @@ ${formatInstruction}`;
         showToast("已取消图片收藏");
       } else {
         const node = nodes.find((item) => item.id === activeLightbox.nodeId);
-        items.unshift({ url: activeLightbox.src, name: node?.title || "图片收藏", savedAt: Date.now() });
+        const favoriteSource = activeLightbox.src;
+        let favoriteUrl;
+        try { favoriteUrl = window.WandouMediaUrls ? await window.WandouMediaUrls.toDataUrl(favoriteSource) : favoriteSource; }
+        catch (error) { showToast(error.message || "收藏原图读取失败"); return; }
+        items.unshift({ url: favoriteUrl, mediaReference: window.WandouMediaUrls?.storedReference(favoriteSource) || "", name: node?.title || "图片收藏", savedAt: Date.now() });
         showToast("图片已收藏");
       }
       localStorage.setItem("aiCanvasImageFavorites", JSON.stringify(items));

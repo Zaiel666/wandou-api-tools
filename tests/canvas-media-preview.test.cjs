@@ -1,11 +1,12 @@
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('path');
 const {pathToFileURL}=require('url');const {chromium}=require('../desktop-client/node_modules/playwright');const sharp=require('../desktop-client/node_modules/sharp');
+const app=process.env.WANDOU_TEST_APP_ROOT||path.resolve(__dirname,'../app');
 test('canvas thumbnails bound decoded pixels while editing and persisted sources keep full originals',async()=>{
  const full='data:image/png;base64,'+(await sharp({create:{width:2048,height:8192,channels:4,background:'#42b66b'}}).png().toBuffer()).toString('base64');
  const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
  try{
   const p=await browser.newPage({viewport:{width:1440,height:900}});const errors=[];p.on('pageerror',e=>errors.push(e.message));
-  await p.route(/^https?:/,r=>r.abort());await p.goto(pathToFileURL(path.resolve('app/ai-node-canvas-test.html')).href);
+  await p.route(/^https?:/,r=>r.abort());await p.goto(pathToFileURL(path.join(app,'ai-node-canvas-test.html')).href);
   await p.waitForFunction(()=>document.body.dataset.canvasReady==='true');
   await p.evaluate(full=>{nodes=[];links=[];view={x:40,y:30,zoom:.4};createNode('result',0,0,{_deferRender:true,mediaType:'image',mediaUrl:full,fullUrl:full,width:2048,height:8192});render({skipSave:true});},full);
   await p.waitForFunction(()=>{const img=canvas.querySelector('.node.result .preview img');return img?.naturalWidth>0&&img.src.startsWith('blob:');});
@@ -36,7 +37,7 @@ test('large animated GIF, WebP and APNG previews preserve every frame',async()=>
  const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
  try{
   const p=await browser.newPage();
-  await p.goto(pathToFileURL(path.resolve('app/ai-node-canvas-test.html')).href);
+  await p.goto(pathToFileURL(path.join(app,'ai-node-canvas-test.html')).href);
   await p.waitForFunction(()=>document.body.dataset.canvasReady==='true');
   for(const format of ['gif','webp','png']){
    const original=format==='png'?apng:await sharp(raw,{raw:{width:1600,height:3200,channels:3,pageHeight:1600}})[format]({loop:0,delay:[100,100]}).toBuffer();

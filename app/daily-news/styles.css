@@ -97,6 +97,9 @@ html[data-theme="dark"] .hero { background: transparent; }
 .section-head h2 { margin: 0; font-size: 1.5rem; line-height: 1.2; font-weight: 650; letter-spacing: -.014em; }
 .pill { min-height: 44px; padding: 0 17px; border: 0; border-radius: var(--radius-capsule); transition: transform var(--duration-instant) var(--ease-out), filter var(--duration-fast) var(--ease-out); }
 .pill.dark { color: var(--primary-foreground); background: var(--primary); font-size: .8125rem; font-weight: 600; }
+/* The shared dark skin uses a light green fill for these actions and badges. */
+html[data-theme="dark"] .pill.dark,
+html[data-theme="dark"] .column-head span { color: #14341f; }
 .pill:hover { filter: brightness(.96); }
 .pill:active { transform: scale(var(--press-scale)); }
 .top-five { border-top: 1px solid var(--separator); }

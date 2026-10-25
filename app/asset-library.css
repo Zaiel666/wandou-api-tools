@@ -75,6 +75,21 @@ button, input, select { font: inherit; }
 .asset-toast { position: fixed; left: 50%; bottom: 24px; z-index: 70; max-width: min(560px, 90vw); padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: var(--panel); box-shadow: var(--shadow); transform: translate(-50%, 24px); opacity: 0; pointer-events: none; transition: .2s ease; }
 .asset-toast.show { transform: translate(-50%, 0); opacity: 1; }
 
+.asset-location-button { margin-top:10px; padding:6px 9px; border:1px solid var(--line); border-radius:7px; color:var(--text); background:var(--panel); font:inherit; font-size:11px; cursor:pointer; }
+.asset-location-button:hover { border-color:var(--line-strong); background:var(--panel-soft); }
+.asset-location-button:focus-visible, .asset-location-dialog button:focus-visible, #assetLocationPath:focus-visible { outline:2px solid var(--green-strong); outline-offset:2px; }
+dialog.asset-location-dialog { width:min(660px,92vw); max-height:86vh; margin:auto; padding:22px; border:1px solid var(--line); border-radius:16px; color:var(--text); background:var(--panel); box-shadow:var(--shadow); }
+.asset-location-dialog::backdrop { background:rgba(0,0,0,.52); backdrop-filter:blur(5px); }
+.asset-location-head { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.asset-location-head h2 { margin:0; font-size:20px; }
+.asset-location-name { margin:16px 0 8px; overflow-wrap:anywhere; font-weight:600; }
+.asset-location-status { min-height:40px; margin:8px 0 18px; color:var(--muted); font-size:13px; line-height:1.7; }
+#assetLocationDetails label { display:block; margin-bottom:7px; font-size:12px; color:var(--muted); }
+#assetLocationPath { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; color:var(--text); background:var(--panel-soft); font:12px/1.5 Consolas,monospace; }
+.asset-location-actions { display:flex; justify-content:flex-end; margin-top:20px; }
+.asset-location-dialog button:disabled { opacity:.5; cursor:default; }
+.asset-location-dialog [hidden] { display:none!important; }
+
 @media (max-width: 980px) {
   .asset-heading { align-items: stretch; flex-direction: column; }
   .heading-tools { justify-content: flex-start; }

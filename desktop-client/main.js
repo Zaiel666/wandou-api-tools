@@ -1,10 +1,13 @@
-const { app, BrowserWindow, ipcMain, Menu, shell, net, session, dialog, clipboard, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, shell, net, session, dialog, clipboard, nativeImage, protocol, webContents } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
 const { pathToFileURL, fileURLToPath } = require("url");
+const canvasMediaProtocol = require('./canvas-media-protocol.cjs')({ directory: canvasMediaRootDirectory });
+protocol.registerSchemesAsPrivileged([{ scheme: 'wandou-media', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
+app.on('will-quit', () => canvasMediaProtocol.dispose());
 require('./director-ipc.cjs')({app, ipcMain, getAppRoot});
 
 const APP_NAME = "豌豆AI工具";
@@ -30,6 +33,93 @@ let installedSkillsCache = { savedAt: 0, items: [] };
 
 // 与旧安装版共用数据目录，改成便携文件夹后用户原有的本地数据仍然可用。
 app.setPath("userData", process.env.WANDOU_TEST_USER_DATA_DIR || path.join(app.getPath("appData"), "豌豆AI"));
+const primaryInstance = app.requestSingleInstanceLock();
+if (!primaryInstance) app.exit(0);
+app.on('second-instance', () => { if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.show(); mainWindow.focus(); } });
+let storageMigrationPreparing = false;
+let storageOutageHandling = false;
+let storageProgressWindow = null;
+const storageMediaTokens = new Map();
+function reportProjectStorageProgress(state) {
+  for (const contents of webContents.getAllWebContents()) {
+    if (!contents.isDestroyed() && isTrustedThemePage(contents.getURL())) { try{contents.send('desktop:project-storage-progress',state);}catch(_error){/* A tab can close while progress is broadcast. */} }
+  }
+  if (storageProgressWindow && !storageProgressWindow.isDestroyed()) {
+    const text = state.message + (state.totalBytes ? `\n${Math.round((state.completedBytes || 0)/1048576)} / ${Math.round(state.totalBytes/1048576)} MB` : '');
+    storageProgressWindow.webContents.executeJavaScript(`document.querySelector('p').textContent=${JSON.stringify(text)}`).catch(()=>{});
+  }
+}
+const projectStorage = require('./project-storage.cjs')({
+  legacyRoot: app.getPath('userData'), installRoot: portableInstallContext().installDirectory,
+  onProgress: reportProjectStorageProgress
+});
+async function withProjectStorage(kind, task) {
+  try { return await projectStorage[kind](task); }
+  catch (error) {
+    const storageUnavailable=error.code==='PROJECT_STORAGE_UNAVAILABLE';
+    if(storageUnavailable&&!storageOutageHandling)void handleProjectStorageOutage(error);
+    return { success:false, error:error.message, storageUnavailable };
+  }
+}
+async function handleProjectStorageOutage(error) {
+  storageOutageHandling=true;
+  if(mainWindow&&!mainWindow.isDestroyed())mainWindow.setEnabled(false);
+  let message=error.message;
+  while(true){
+    const choice=await dialog.showMessageBox({type:'error',title:'项目数据盘已断开',message:'项目操作已暂停，原目录中的已保存数据不会被空画布覆盖。',detail:message+'\n重新启动会恢复最近成功保存的版本；当前尚未保存的编辑不会写入项目。',buttons:['重试连接并重新启动','退出'],defaultId:0,cancelId:1,noLink:true});
+    if(choice.response!==0){allowWindowClose=true;app.quit();return;}
+    try{await projectStorage.checkConnection();allowWindowClose=true;app.relaunch();app.quit();return;}
+    catch(nextError){message=nextError.message;}
+  }
+}
+
+let desktopThemeState = null;
+function readDesktopTheme() {
+  if (!desktopThemeState) {
+    desktopThemeState = { theme: null, revision: 0 };
+    try {
+      const stored = JSON.parse(fs.readFileSync(path.join(app.getPath("userData"), "ui-theme.json"), "utf8"));
+      if (stored.theme === "light" || stored.theme === "dark") {
+        desktopThemeState = { theme: stored.theme, revision: Number.isSafeInteger(stored.revision) && stored.revision > 0 ? stored.revision : 1 };
+      }
+    } catch (_error) { /* An existing install seeds its old preference from a local page. */ }
+  }
+  return { ...desktopThemeState };
+}
+
+function isTrustedThemePage(url) {
+  if (isLocalAppPage(url)) return true;
+  try {
+    return new URL(url).protocol === "file:"
+      && path.resolve(fileURLToPath(url)).toLowerCase() === path.resolve(__dirname, "shell.html").toLowerCase();
+  } catch (_error) { return false; }
+}
+
+function setDesktopTheme(theme) {
+  if (theme !== "light" && theme !== "dark") return;
+  const previous = readDesktopTheme();
+  if (previous.theme === theme) return;
+  desktopThemeState = { theme, revision: previous.revision + 1 };
+  const file = path.join(app.getPath("userData"), "ui-theme.json");
+  const temporary = `${file}.tmp`;
+  try {
+    fs.mkdirSync(app.getPath("userData"), { recursive: true });
+    fs.writeFileSync(temporary, JSON.stringify(desktopThemeState), "utf8");
+    fs.renameSync(temporary, file);
+  } catch (error) {
+    console.warn("Unable to persist the desktop theme:", error.message);
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const dark = theme === "dark";
+    mainWindow.setBackgroundColor(dark ? "#101211" : "#ffffff");
+    mainWindow.setTitleBarOverlay({ color: dark ? "#0c0e0d" : "#ffffff", symbolColor: dark ? "#eef6f0" : "#203128", height: 48 });
+  }
+  for (const contents of webContents.getAllWebContents()) {
+    if (!contents.isDestroyed() && isTrustedThemePage(contents.getURL())) {
+      try { contents.send("desktop:theme-changed", readDesktopTheme()); } catch (_error) { /* A guest may close while broadcasting. */ }
+    }
+  }
+}
 
 function portableInstallContext() {
   const executableDirectory = path.dirname(process.execPath);
@@ -224,15 +314,15 @@ function safeCanvasBackupId(value, fallback) {
 }
 
 function canvasBackupRootDirectory() {
-  return path.join(app.getPath("userData"), "canvas-backups");
+  return path.join(projectStorage.root(), "canvas-backups");
 }
 
 function canvasMediaRootDirectory() {
-  return path.join(app.getPath("userData"), "canvas-media");
+  return path.join(projectStorage.root(), "canvas-media");
 }
 
 function localDataRootDirectory() {
-  return path.join(app.getPath("userData"), "local-data");
+  return path.join(projectStorage.root(), "local-data");
 }
 
 function safeLocalDataPath(value) {
@@ -270,12 +360,12 @@ async function readLocalData(payload = {}) {
 }
 
 function projectHubStatePath() {
-  return path.join(app.getPath("userData"), "project-hub-state.json");
+  return path.join(projectStorage.root(), "project-hub-state.json");
 }
 
 function exportArtifactPath(id) {
   if (typeof id !== "string" || !/^[a-f0-9]{64}$/.test(id)) throw new Error("Invalid export artifact id");
-  return path.join(app.getPath("userData"), "export-artifacts", `${id}.bin`);
+  return path.join(projectStorage.root(), "export-artifacts", `${id}.bin`);
 }
 
 async function writeExportArtifact(payload = {}) {
@@ -335,7 +425,7 @@ async function writeProjectHubState(payload = {}) {
     return { success: false, error: "项目文件夹清单异常，超过 4 MB" };
   }
   try {
-    await fs.promises.mkdir(app.getPath("userData"), { recursive: true });
+    await fs.promises.mkdir(projectStorage.root(), { recursive: true });
     const destination = projectHubStatePath();
     const temporary = `${destination}.${process.pid}-${Date.now()}-${crypto.randomBytes(3).toString("hex")}.tmp`;
     await fs.promises.writeFile(temporary, serialized, "utf8");
@@ -605,8 +695,7 @@ function canvasBackupDirectory(folderId, projectId) {
 }
 
 function canvasBackupFingerprint(state) {
-  const stableState = { ...state, savedAt: 0 };
-  return crypto.createHash("sha256").update(JSON.stringify(stableState)).digest("hex");
+  return require('./canvas-backup-guard.cjs').fingerprint(state);
 }
 
 function containsEmbeddedCanvasMedia(value) {
@@ -683,29 +772,22 @@ async function writeCanvasBackup(payload = {}) {
   }
   const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
   const projectId = safeCanvasBackupId(payload.projectId, "default-project");
-  const savedAt = Number(state.savedAt) || Date.now();
-  const envelope = {
-    format: "wandou-canvas-backup",
-    version: 1,
-    folderId,
-    projectId,
-    savedAt,
-    state
-  };
-  const serialized = JSON.stringify(envelope);
   try {
     const directory = canvasBackupDirectory(folderId, projectId);
     await fs.promises.mkdir(directory, { recursive: true });
     const fingerprint = canvasBackupFingerprint(state);
     const fingerprintPath = path.join(directory, ".latest-backup.json");
-    try {
-      const latest = JSON.parse(await fs.promises.readFile(fingerprintPath, "utf8"));
-      if (latest?.fingerprint === fingerprint && latest?.path && fs.existsSync(latest.path)) {
-        return { success: true, path: latest.path, savedAt, deduplicated: true };
-      }
-    } catch (_error) {
-      // 首次保存或旧版本没有指纹文件时继续写入新快照。
+    const latest = await latestCanvasBackupForGuard({ folderId, projectId });
+    if (latest?.fingerprint === fingerprint) {
+      return { success: true, path: latest.path, savedAt: latest.savedAt, fingerprint, deduplicated: true };
     }
+    // Renderer clocks can move backwards or repeat a millisecond. The committed
+    // state and filename share a strictly increasing project revision timestamp,
+    // including when an older application left a snapshot dated in the future.
+    const savedAt = Math.max(Date.now(), Number(latest?.savedAt || 0) + 1);
+    if (!Number.isSafeInteger(savedAt)) throw new Error("备份时间记录无效，已保留现有项目，请导出项目备份后重试");
+    state = { ...state, savedAt };
+    const serialized = JSON.stringify({ format: "wandou-canvas-backup", version: 1, folderId, projectId, savedAt, state });
     const suffix = crypto.randomBytes(4).toString("hex");
     const destination = path.join(directory, `${savedAt}-${suffix}.json`);
     const temporary = `${destination}.tmp`;
@@ -714,16 +796,22 @@ async function writeCanvasBackup(payload = {}) {
     finally { await snapshotFile.close(); }
     await fs.promises.rename(temporary, destination);
     const fingerprintTemporary = `${fingerprintPath}.${suffix}.tmp`;
-    await fs.promises.writeFile(fingerprintTemporary, JSON.stringify({ fingerprint, path: destination, savedAt }), "utf8");
-    await fs.promises.rename(fingerprintTemporary, fingerprintPath);
-    const snapshots = (await fs.promises.readdir(directory, { withFileTypes: true }))
-      .filter((entry) => entry.isFile() && /^\d+-[0-9a-f]+\.json$/i.test(entry.name))
-      .map((entry) => entry.name)
-      .sort((left, right) => Number(right.split("-")[0]) - Number(left.split("-")[0]));
-    await Promise.all(snapshots.slice(12).map((name) =>
-      fs.promises.unlink(path.join(directory, name)).catch(() => {})
-    ));
-    return { success: true, path: destination, savedAt };
+    // The snapshot is already durable. Failure to update this optional hint or
+    // prune old files must not report a failed commit and leave the guard stale.
+    try {
+      await fs.promises.writeFile(fingerprintTemporary, JSON.stringify({ fingerprint, path: destination, savedAt }), "utf8");
+      await fs.promises.rename(fingerprintTemporary, fingerprintPath);
+    } catch (_error) { await fs.promises.unlink(fingerprintTemporary).catch(() => {}); }
+    try {
+      const snapshots = (await fs.promises.readdir(directory, { withFileTypes: true }))
+        .filter((entry) => entry.isFile() && /^\d+-[0-9a-f]+\.json$/i.test(entry.name))
+        .map((entry) => entry.name)
+        .sort((left, right) => Number(right.split("-")[0]) - Number(left.split("-")[0]));
+      await Promise.all(snapshots.slice(12).map((name) =>
+        fs.promises.unlink(path.join(directory, name)).catch(() => {})
+      ));
+    } catch (_error) { /* Keep older snapshots when cleanup is unavailable. */ }
+    return { success: true, path: destination, savedAt, fingerprint };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -788,6 +876,26 @@ async function readCanvasBackups(payload = {}) {
     if (error.code === "ENOENT") return { success: true, states: [], skippedLarge: 0 };
     return { success: false, states: [], skippedLarge: 0, error: error.message };
   }
+}
+
+async function latestCanvasBackupForGuard(payload) {
+  const directory = canvasBackupDirectory(payload.folderId, payload.projectId);
+  let files;
+  try { files = await fs.promises.readdir(directory); }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  files = files.filter(name => /^\d+-[0-9a-f]+\.json$/i.test(name))
+    .sort((a,b) => Number(b.split('-')[0]) - Number(a.split('-')[0])).slice(0,12);
+  for (const name of files) {
+    try {
+      const backupPath = path.join(directory, name);
+      const envelope = JSON.parse(await fs.promises.readFile(backupPath, 'utf8'));
+      if (envelope.format === 'wandou-canvas-backup' && Array.isArray(envelope.state?.nodes)) {
+        const savedAt = Math.max(Number(name.split('-')[0]) || 0, Number(envelope.savedAt) || 0, Number(envelope.state.savedAt) || 0);
+        return { path:backupPath, savedAt, fingerprint:canvasBackupFingerprint(envelope.state) };
+      }
+    } catch (_error) { /* Match recovery: a damaged newest file may have an older valid backup. */ }
+  }
+  return null;
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
@@ -1095,18 +1203,19 @@ function createWindow() {
   allowWindowClose = false;
   closePromptPending = false;
   shellReady = false;
+  const initialDarkTheme = readDesktopTheme().theme === "dark";
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 930,
     minWidth: 980,
     minHeight: 680,
     show: false,
-    backgroundColor: "#ffffff",
+    backgroundColor: initialDarkTheme ? "#101211" : "#ffffff",
     title: APP_NAME,
     icon: getIconPath(),
     autoHideMenuBar: true,
     titleBarStyle: "hidden",
-    titleBarOverlay: { color: "#ffffff", symbolColor: "#203128", height: 48 },
+    titleBarOverlay: { color: initialDarkTheme ? "#0c0e0d" : "#ffffff", symbolColor: initialDarkTheme ? "#eef6f0" : "#203128", height: 48 },
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -1125,7 +1234,7 @@ function createWindow() {
     if (allowWindowClose) return;
     if (!shellReady) return;
     event.preventDefault();
-    if (updateInProgress) {
+    if (updateInProgress || storageMigrationPreparing || storageOutageHandling) {
       mainWindow.focus();
       return;
     }
@@ -1164,7 +1273,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, "shell.html"), {
-    query: { home: getAppEntryUrl(), version: app.getVersion() }
+    query: { home: getAppEntryUrl(), version: app.getVersion(), theme: initialDarkTheme ? "dark" : "light" }
   });
   mainWindow.once("ready-to-show", () => mainWindow.show());
 }
@@ -1177,8 +1286,10 @@ ipcMain.on("desktop:open-tab", (_event, payload = {}) => {
   if (isSafeHttpsUrl(payload.url)) shell.openExternal(payload.url);
 });
 const activeCanvasApiRequests = new Map();
+let activeCanvasApiCount = 0;
 ipcMain.handle("desktop:api-fetch", async (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) throw new Error("仅本地工具页面可以调用 API 请求");
+  if (storageMigrationPreparing) throw new Error("正在准备迁移项目数据，请等待软件重新打开后再生成");
   const url = String(payload.url || "");
   if (!isAllowedCanvasApiUrl(url)) throw new Error("接口地址不在允许范围内");
 
@@ -1189,6 +1300,7 @@ ipcMain.handle("desktop:api-fetch", async (event, payload = {}) => {
   const requestKey = requestId ? `${event.sender.id}:${requestId}` : "";
   const controller = new AbortController();
   if (requestKey) activeCanvasApiRequests.set(requestKey, controller);
+  activeCanvasApiCount += 1;
   try {
     const response = await net.fetch(url, {
       method,
@@ -1206,6 +1318,7 @@ ipcMain.handle("desktop:api-fetch", async (event, payload = {}) => {
       bodyBase64: bytes.toString("base64")
     };
   } finally {
+    activeCanvasApiCount -= 1;
     if (requestKey && activeCanvasApiRequests.get(requestKey) === controller) activeCanvasApiRequests.delete(requestKey);
   }
 });
@@ -1215,10 +1328,10 @@ ipcMain.on("desktop:api-fetch-cancel", (event, payload = {}) => {
   if (!requestId) return;
   activeCanvasApiRequests.get(`${event.sender.id}:${requestId}`)?.abort();
 });
-ipcMain.on("desktop:set-theme", (_event, theme) => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  const dark = theme === "dark";
-  mainWindow.setTitleBarOverlay({ color: dark ? "#0c0e0d" : "#ffffff", symbolColor: dark ? "#eef6f0" : "#203128", height: 48 });
+ipcMain.handle("desktop:get-theme", () => readDesktopTheme());
+ipcMain.on("desktop:set-theme", (event, theme) => {
+  if (event.senderFrame !== event.sender.mainFrame || !isTrustedThemePage(event.senderFrame?.url || "")) return;
+  setDesktopTheme(theme);
 });
 ipcMain.on("desktop:shell-ready", () => { shellReady = true; });
 ipcMain.on("desktop:cancel-close", () => { closePromptPending = false; });
@@ -1299,10 +1412,30 @@ ipcMain.handle("desktop:copy-image", (event, payload = {}) => {
     return { success: false, error: error.message };
   }
 });
-ipcMain.handle("desktop:write-canvas-backup", (_event, payload = {}) => writeCanvasBackup(payload));
-ipcMain.handle("desktop:read-canvas-backups", (_event, payload = {}) => readCanvasBackups(payload));
-ipcMain.handle("desktop:has-canvas-media", (_event, payload = {}) => hasCanvasMedia(payload));
-ipcMain.handle("desktop:write-canvas-media", (_event, payload = {}) => writeCanvasMedia(payload));
+const canvasBackupGuard = require('./canvas-backup-guard.cjs')({
+  latest:latestCanvasBackupForGuard,
+  write:writeCanvasBackup,
+  keyFor:payload => canvasBackupDirectory(payload.folderId, payload.projectId)
+});
+const canvasBackupOwners = new Set();
+function registerCanvasBackupOwner(sender) {
+  if (!canvasBackupOwners.has(sender.id)) {
+    const owner = sender.id;
+    canvasBackupOwners.add(owner);
+    sender.once('destroyed', () => { canvasBackupOwners.delete(owner); canvasBackupGuard.disposeOwner(owner); });
+  }
+  return sender.id;
+}
+ipcMain.handle("desktop:write-canvas-backup", (event, payload = {}) =>
+  withProjectStorage('write', () => canvasBackupGuard.save(registerCanvasBackupOwner(event.sender), payload)));
+ipcMain.handle("desktop:read-canvas-backups", async (event, payload = {}) => {
+  const owner = registerCanvasBackupOwner(event.sender);
+  const result = await withProjectStorage('read', () => readCanvasBackups(payload));
+  if (!event.sender.isDestroyed()) canvasBackupGuard.rememberRead(owner, payload, result);
+  return result;
+});
+ipcMain.handle("desktop:has-canvas-media", (_event, payload = {}) => withProjectStorage('read', () => hasCanvasMedia(payload)));
+ipcMain.handle("desktop:write-canvas-media", (_event, payload = {}) => withProjectStorage('write', () => writeCanvasMedia(payload)));
 const canvasMediaWriter = require('./canvas-media-writer.cjs')({ directory: canvasMediaRootDirectory, destination: canvasMediaPath });
 const mediaWriterOwners = new Set();
 ipcMain.handle("desktop:write-canvas-media-chunk", (event, payload = {}) => {
@@ -1310,38 +1443,66 @@ ipcMain.handle("desktop:write-canvas-media-chunk", (event, payload = {}) => {
   const owner = event.sender.id;
   if (!mediaWriterOwners.has(owner)) {
     mediaWriterOwners.add(owner);
-    event.sender.once('destroyed', () => { mediaWriterOwners.delete(owner); void canvasMediaWriter.disposeOwner(owner); });
+    event.sender.once('destroyed', () => {
+      mediaWriterOwners.delete(owner); void canvasMediaWriter.disposeOwner(owner);
+      for (const [token, tokenOwner] of storageMediaTokens) if (tokenOwner === owner) storageMediaTokens.delete(token);
+    });
   }
-  return canvasMediaWriter.write(owner, payload);
+  return withProjectStorage('write', async () => {
+    const result = await canvasMediaWriter.write(owner, payload);
+    if (payload.action === 'begin' && result.success) storageMediaTokens.set(result.token,owner);
+    if (payload.token && (payload.action === 'commit' || payload.action === 'abort' || !result.success)) storageMediaTokens.delete(payload.token);
+    return result;
+  });
 });
-ipcMain.handle("desktop:read-canvas-media", (_event, payload = {}) => readCanvasMedia(payload));
+ipcMain.handle("desktop:read-canvas-media", (_event, payload = {}) => withProjectStorage('read', () => readCanvasMedia(payload)));
+ipcMain.handle("desktop:get-canvas-media-url", (event, payload = {}) => {
+  if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地页面可以读取图片" };
+  return withProjectStorage('read', () => canvasMediaProtocol.getUrl(payload.id));
+});
+const canvasMediaLocation = require('./canvas-media-location.cjs')({
+  directory: canvasMediaRootDirectory,
+  getUrl: id => canvasMediaProtocol.getUrl(id),
+  showItemInFolder: file => shell.showItemInFolder(file)
+});
+function isCanvasMediaLocationCaller(event) {
+  return event.senderFrame === event.sender.mainFrame && isLocalAppPage(event.senderFrame?.url || "");
+}
+ipcMain.handle("desktop:get-canvas-media-location", (event, payload = {}) => {
+  if (!isCanvasMediaLocationCaller(event)) return { success: false, error: "仅本地资产页面可以查看原图位置" };
+  return withProjectStorage('read', () => canvasMediaLocation.get(payload?.ref));
+});
+ipcMain.handle("desktop:show-canvas-media-in-folder", (event, payload = {}) => {
+  if (!isCanvasMediaLocationCaller(event)) return { success: false, error: "仅本地资产页面可以打开原图位置" };
+  return withProjectStorage('read', () => canvasMediaLocation.show(payload?.ref));
+});
 ipcMain.handle("desktop:write-export-artifact", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return {success:false, error:"仅本地工具页面可以保存导出文件"};
-  return writeExportArtifact(payload);
+  return withProjectStorage('write', () => writeExportArtifact(payload));
 });
 ipcMain.handle("desktop:read-export-artifact", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return {success:false, error:"仅本地工具页面可以读取导出文件"};
-  return readExportArtifact(payload);
+  return withProjectStorage('read', () => readExportArtifact(payload));
 });
 ipcMain.handle("desktop:get-local-data-config", (event) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取本地存储配置" };
-  return { success: true, mode: "disk", directory: localDataRootDirectory() };
+  return withProjectStorage('read', () => ({ success: true, mode: "disk", directory: localDataRootDirectory() }));
 });
 ipcMain.handle("desktop:write-local-data", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以写入本地数据" };
-  return writeLocalData(payload);
+  return withProjectStorage('write', () => writeLocalData(payload));
 });
 ipcMain.handle("desktop:read-local-data", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取本地数据" };
-  return readLocalData(payload);
+  return withProjectStorage('read', () => readLocalData(payload));
 });
 ipcMain.handle("desktop:read-project-hub-state", (event) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以读取项目文件夹" };
-  return readProjectHubState();
+  return withProjectStorage('read', () => readProjectHubState());
 });
 ipcMain.handle("desktop:write-project-hub-state", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地工具页面可以保存项目文件夹" };
-  return writeProjectHubState(payload);
+  return withProjectStorage('write', () => writeProjectHubState(payload));
 });
 ipcMain.handle("desktop:list-skills", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return [];
@@ -1368,8 +1529,92 @@ ipcMain.handle("desktop:get-canvas-backup-directory", () => ({
   directory: canvasBackupRootDirectory()
 }));
 
-app.whenReady().then(() => {
+function isProjectStorageSettingsCaller(event) {
+  if (event.senderFrame !== event.sender.mainFrame || !isLocalAppPage(event.senderFrame?.url || '')) return false;
+  try { return ['index.html','homepage-test.html','asset-library.html','asset-library-test.html'].includes(path.basename(fileURLToPath(event.senderFrame.url)).toLowerCase()); }
+  catch (_error) { return false; }
+}
+async function inspectStorageMigrationTabs() {
+  if (!mainWindow || mainWindow.isDestroyed() || !shellReady) throw Error('页面尚未准备好，请稍后再试');
+  if (activeCanvasApiCount) throw Error('仍有生成或识别请求正在运行，请完成后再迁移');
+  const result = await mainWindow.webContents.executeJavaScript(`(async()=>{
+    for (const tab of tabs.values()) {
+      if (tab.suspended) continue;
+      let name='';try{name=new URL(tab.url).pathname.split('/').pop().toLowerCase()}catch{}
+      if (!isNodeCanvasTab(tab)) {
+        if (!['index.html','homepage-test.html','asset-library.html','asset-library-test.html'].includes(name)) return {success:false,error:'请先完成任务并关闭其他工具标签：'+(tab.title||name)};
+        continue;
+      }
+      if (!tab.domReady || safeWebviewCall(tab.view,'isLoading',true)) return {success:false,error:'画布仍在加载，请稍后再试'};
+      const state=await tab.view.executeJavaScript("({pending:(typeof nodes!=='undefined'&&nodes.some(n=>n.pending||n.promptRefineLoading))||(typeof psdJobs!=='undefined'&&psdJobs.size>0)||(typeof vectorJobs!=='undefined'&&vectorJobs.size>0)||(typeof audioJobs!=='undefined'&&audioJobs.size>0)||(typeof assistantSending!=='undefined'&&assistantSending)})");
+      if (state.pending) return {success:false,error:'画布仍在生成或处理图片，请完成后再迁移：'+tab.title};
+    }
+    return {success:true};
+  })()`);
+  if (!result?.success) throw Error(result?.error || '无法确认所有画布状态，已停止迁移');
+}
+async function requestProjectStorageMigration(payload) {
+  if (storageMigrationPreparing || updateInProgress) return {success:false,error:'正在执行其他保存或更新操作，请稍后重试'};
+  storageMigrationPreparing=true;
+  try {
+    if (!mainWindow || mainWindow.isDestroyed()) throw Error('主窗口不可用');
+    mainWindow.setEnabled(false);
+    await inspectStorageMigrationTabs();
+    reportProjectStorageProgress({phase:'saving',message:'正在保存并核对所有打开的画布…'});
+    const report=await mainWindow.webContents.executeJavaScript('saveAllOpenWorkflows()');
+    if (!report?.success) throw Error('画布保存未通过：'+(report?.failures||[]).map(item=>item.tabTitle+' '+(item.error||'')).join('；'));
+    await inspectStorageMigrationTabs();
+    if (storageMediaTokens.size) throw Error('原图仍在写入，请等待保存完成后再迁移');
+    await projectStorage.freeze();
+    if (activeCanvasApiCount || storageMediaTokens.size) throw Error('仍有后台任务，请完成后重试');
+    await projectStorage.prepare(payload);
+    reportProjectStorageProgress({phase:'restarting',message:'已保存，软件将重启并迁移。旧目录会完整保留。'});
+    // After this point all project writers are frozen. Startup performs the copy
+    // before any editing page exists; pagehide cannot race with the source copy.
+    setTimeout(()=>{allowWindowClose=true;app.relaunch();app.quit();},250);
+    return {success:true,restarting:true};
+  } catch(error) {
+    projectStorage.unfreeze();storageMigrationPreparing=false;
+    if(mainWindow&&!mainWindow.isDestroyed())mainWindow.setEnabled(true);
+    reportProjectStorageProgress({phase:'error',message:error.message});
+    return {success:false,error:error.message};
+  }
+}
+ipcMain.handle('desktop:get-project-storage-info',(event)=>{
+  if(!isProjectStorageSettingsCaller(event))return{success:false,error:'仅本地存储设置可以查看项目目录'};
+  return projectStorage.info();
+});
+ipcMain.handle('desktop:choose-project-storage-directory',async(event)=>{
+  if(!isProjectStorageSettingsCaller(event))return{success:false,error:'仅本地存储设置可以选择项目目录'};
+  try {
+    const selected=await dialog.showOpenDialog(mainWindow,{title:'选择磁盘或父目录（将建立“豌豆AI数据”）',properties:['openDirectory','createDirectory']});
+    if(selected.canceled||!selected.filePaths.length)return{success:false,canceled:true};
+    return await projectStorage.choose(selected.filePaths[0]);
+  }catch(error){return{success:false,error:error.message};}
+});
+ipcMain.handle('desktop:request-project-storage-migration',(event,payload={})=>{
+  if(!isProjectStorageSettingsCaller(event))return{success:false,error:'仅本地存储设置可以迁移项目目录'};
+  return requestProjectStorageMigration(payload);
+});
+
+app.whenReady().then(async () => {
+  if(!primaryInstance)return;
+  while(true){
+    try{await projectStorage.available();break;}
+    catch(error){const choice=await dialog.showMessageBox({type:'error',title:'项目存储目录不可用',message:error.message,buttons:['重试','退出'],defaultId:0,cancelId:1,noLink:true});if(choice.response!==0){app.quit();return;}}
+  }
+  if(projectStorage.hasPending()){
+    const storageDark=readDesktopTheme().theme==='dark',storageBackground=storageDark?'#171717':'#ffffff',storageText=storageDark?'#dddddd':'#343434';
+    storageProgressWindow=new BrowserWindow({width:520,height:210,show:true,resizable:false,minimizable:false,maximizable:false,closable:false,autoHideMenuBar:true,backgroundColor:storageBackground,title:'正在迁移项目数据',webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
+    await storageProgressWindow.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(`<!doctype html><meta charset="utf-8"><body style="font:16px Microsoft YaHei,sans-serif;padding:28px;color:${storageText};background:${storageBackground}"><h3>正在迁移项目数据</h3><p style="white-space:pre-line">正在准备，请勿断开目标磁盘。原目录数据会保留。</p>`));
+  }
+  let migration;
+  try{migration=await projectStorage.initialize();}
+  catch(error){await dialog.showMessageBox({type:'error',title:'项目存储初始化失败',message:error.message,buttons:['退出']});app.quit();return;}
+  if(migration?.success===false)await dialog.showMessageBox({type:'warning',title:'项目迁移未完成',message:'仍使用原目录，原数据没有删除。',detail:migration.error,buttons:['继续使用原目录']});
+  protocol.handle('wandou-media', request => canvasMediaProtocol.handle(request));
   createWindow();
+  if(storageProgressWindow&&!storageProgressWindow.isDestroyed())storageProgressWindow.destroy();storageProgressWindow=null;
   const testCloseDelay = Number(process.env.WANDOU_TEST_CLOSE_AFTER_MS || 0);
   if (Number.isInteger(testCloseDelay) && testCloseDelay >= 1000 && testCloseDelay <= 60000) {
     setTimeout(() => {

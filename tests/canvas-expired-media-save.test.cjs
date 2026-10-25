@@ -1,9 +1,11 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const source=fs.readFileSync(require('node:path').join(__dirname,'../app/ai-node-canvas-test.html'),'utf8');
+const app=process.env.WANDOU_TEST_APP_ROOT||require('node:path').join(__dirname,'../app');
+const source=fs.readFileSync(require('node:path').join(app,'ai-node-canvas-test.html'),'utf8');
 function fixture({downloadError=new Error('HTTP 404'),diskError,blob=true}={}){
  let downloads=0,writes=0;
- const env={Date,Map,Promise,console,localMediaPrefix:'indexed-media:',mediaSourceSaveCache:new Map(),sourceToBlob:async()=>{downloads++;if(downloadError)throw downloadError;return blob?{size:10}:null;},blobToDataUrl:async()=> 'data:image/png;base64,AA',putLocalMedia:async()=>{writes++;if(diskError)throw diskError;return 'indexed-media:original';},WandouSavePipeline:require('../app/canvas-save-pipeline.js')};
+ const env={Date,Map,Promise,console,localMediaPrefix:'indexed-media:',mediaSourceSaveCache:new Map(),sourceToBlob:async()=>{downloads++;if(downloadError)throw downloadError;return blob?{size:10}:null;},blobToDataUrl:async()=> 'data:image/png;base64,AA',putLocalMedia:async()=>{writes++;if(diskError)throw diskError;return 'indexed-media:original';},WandouSavePipeline:require(require('node:path').join(app,'canvas-save-pipeline.js'))};
  const context=vm.createContext(env);
+ env.window=env;
  vm.runInContext(source.slice(source.indexOf('    async function persistMediaValue('),source.indexOf('    function updateCanvasMediaSaveNotice')),context);
  vm.runInContext(source.slice(source.indexOf('    async function serializeNodeForStorage('),source.indexOf('    function isLargeDataUrl')),context);
  return {context,counts:()=>({downloads,writes})};

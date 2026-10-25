@@ -1,0 +1,29 @@
+/* Project storage controls are separate from image export and API configuration. */
+.project-storage-entry { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:20px; padding-top:18px; border-top:1px solid var(--border, #ddd); }
+.project-storage-entry strong { font-size:14px; }
+.project-storage-entry p { margin:5px 0 0; font-size:12px; line-height:1.6; color:inherit; opacity:.72; }
+.project-storage-entry [data-storage-settings-open] { flex:none; width:auto; min-height:36px; padding:8px 12px; font:inherit; font-size:12px; }
+dialog.storage-settings-dialog { --storage-bg:#fff; --storage-soft:#f7f7f8; --storage-text:#202126; --storage-muted:#62656d; --storage-line:#dedfe3; --storage-primary:#202126; --storage-on-primary:#fff; width:min(720px,94vw); max-height:90vh; margin:auto; padding:24px; border:1px solid var(--storage-line); border-radius:16px; color:var(--storage-text); background:var(--storage-bg); box-shadow:0 20px 70px #0003; font:14px/1.6 "Microsoft YaHei",Arial,sans-serif; }
+html[data-theme="dark"] .storage-settings-dialog { --storage-bg:#1b1b1d; --storage-soft:#242427; --storage-text:#eeeeef; --storage-muted:#b1b2b9; --storage-line:#3a3b40; --storage-primary:#ededee; --storage-on-primary:#1b1b1d; }
+.storage-settings-dialog::backdrop { background:rgba(0,0,0,.55); backdrop-filter:blur(5px); }
+.storage-settings-dialog * { box-sizing:border-box; }
+.storage-settings-dialog [hidden] { display:none!important; }
+.storage-settings-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.storage-settings-head h2 { margin:0; color:var(--storage-text); font-size:21px; line-height:1.4; }
+.storage-settings-dialog button { appearance:none; width:auto; min-height:36px; padding:8px 12px; border:1px solid var(--storage-line); border-radius:8px; color:var(--storage-text); background:var(--storage-soft); font:inherit; font-size:13px; cursor:pointer; box-shadow:none; }
+.storage-settings-dialog button:hover:not(:disabled) { filter:brightness(.96); }
+.storage-settings-dialog button:disabled { opacity:.5; cursor:default; }
+.storage-settings-dialog button:focus-visible, .storage-settings-dialog input:focus-visible { outline:2px solid var(--storage-text); outline-offset:2px; }
+.storage-settings-section { margin:16px 0; }
+.storage-settings-section > label { display:block; margin-bottom:6px; font-size:13px; color:var(--storage-text); font-weight:600; }
+.storage-settings-dialog input[readonly] { display:block; width:100%; min-height:40px; margin:0; padding:9px 11px; border:1px solid var(--storage-line); border-radius:8px; color:var(--storage-text); background:var(--storage-soft); font:12px/1.6 Consolas,monospace; box-shadow:none; }
+.storage-settings-meta { margin:7px 0 0; color:var(--storage-muted); font-size:12px; }
+.storage-settings-scope, .storage-settings-retention { margin:14px 0; color:var(--storage-muted); font-size:13px; line-height:1.7; }
+.storage-settings-retention { padding:12px 14px; border:1px solid var(--storage-line); border-radius:9px; background:var(--storage-soft); }
+.storage-settings-retention strong { color:var(--storage-text); }
+.storage-settings-status { min-height:24px; margin:14px 0 0; color:var(--storage-text); font-size:13px; overflow-wrap:anywhere; }
+.storage-settings-status[data-kind="error"] { color:#b4232f; }
+html[data-theme="dark"] .storage-settings-status[data-kind="error"] { color:#ff9ca5; }
+.storage-settings-actions { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:20px; }
+.storage-settings-dialog .storage-settings-migrate { color:var(--storage-on-primary); background:var(--storage-primary); border-color:var(--storage-primary); }
+@media(max-width:600px) { dialog.storage-settings-dialog { padding:18px; }.project-storage-entry { align-items:flex-start; flex-direction:column; }.storage-settings-actions { flex-direction:column; }.storage-settings-actions button { width:100%; } }

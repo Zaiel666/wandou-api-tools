@@ -2,8 +2,19 @@
   async function mapLimited(items, limit, task, progress = () => {}) {
     const result = new Array(items.length);
     let next = 0, completed = 0, failure;
+    const now = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
+    let sliceStarted = now(), pause = null;
     await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
       while (next < items.length && !failure) {
+        // Cached media resolves immediately. Yield between short work slices so
+        // a large save cannot monopolize the renderer's microtask queue.
+        if (pause || now() - sliceStarted >= 8) {
+          if (!pause) pause = new Promise(resolve => setTimeout(() => {
+            sliceStarted = now(); pause = null; resolve();
+          }, 0));
+          await pause;
+          if (failure || next >= items.length) break;
+        }
         const index = next++;
         try { result[index] = await task(items[index], index); progress(++completed, items.length); }
         catch (error) { failure = error; }

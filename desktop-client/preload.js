@@ -48,6 +48,12 @@ contextBridge.exposeInMainWorld("wandouShell", {
   cancelClose: () => ipcRenderer.send("desktop:cancel-close"),
   markReady: () => ipcRenderer.send("desktop:shell-ready"),
   setTheme: (theme) => ipcRenderer.send("desktop:set-theme", theme),
+  getTheme: () => ipcRenderer.invoke("desktop:get-theme"),
+  onThemeChanged: (callback) => {
+    const handler = (_event, state) => callback(state);
+    ipcRenderer.on("desktop:theme-changed", handler);
+    return () => ipcRenderer.removeListener("desktop:theme-changed", handler);
+  },
   getClientConfig: () => ipcRenderer.invoke("desktop:get-client-config"),
   checkForUpdates: () => ipcRenderer.invoke("desktop:check-for-updates"),
   startUpdate: (updateInfo) => ipcRenderer.invoke("desktop:start-update", updateInfo),
@@ -63,6 +69,17 @@ contextBridge.exposeInMainWorld("wandouShell", {
   writeCanvasMedia: (payload) => ipcRenderer.invoke("desktop:write-canvas-media", payload),
   writeCanvasMediaChunk: (payload) => ipcRenderer.invoke("desktop:write-canvas-media-chunk", payload),
   readCanvasMedia: (payload) => ipcRenderer.invoke("desktop:read-canvas-media", payload),
+  getCanvasMediaUrl: (payload) => ipcRenderer.invoke("desktop:get-canvas-media-url", payload),
+  getProjectStorageInfo: () => ipcRenderer.invoke("desktop:get-project-storage-info"),
+  chooseProjectStorageDirectory: () => ipcRenderer.invoke("desktop:choose-project-storage-directory"),
+  requestProjectStorageMigration: (payload) => ipcRenderer.invoke("desktop:request-project-storage-migration", payload),
+  onProjectStorageProgress: (callback) => {
+    const handler = (_event, state) => callback(state);
+    ipcRenderer.on("desktop:project-storage-progress", handler);
+    return () => ipcRenderer.removeListener("desktop:project-storage-progress", handler);
+  },
+  getCanvasMediaLocation: (ref) => ipcRenderer.invoke("desktop:get-canvas-media-location", { ref }),
+  showCanvasMediaInFolder: (ref) => ipcRenderer.invoke("desktop:show-canvas-media-in-folder", { ref }),
   writeExportArtifact: (payload) => ipcRenderer.invoke("desktop:write-export-artifact", payload),
   readExportArtifact: (payload) => ipcRenderer.invoke("desktop:read-export-artifact", payload),
   getLocalDataConfig: () => ipcRenderer.invoke("desktop:get-local-data-config"),

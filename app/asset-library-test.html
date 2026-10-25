@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN" data-theme="light">
 <head>
+<script src="./theme-sync.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>资产 · 豌豆 AI 测试版</title>
@@ -28,7 +29,7 @@
       <div class="asset-nav-label asset-filter-label">资产分类</div>
       <nav class="asset-filter-nav" aria-label="资产分类">
         <button class="asset-filter active" data-filter="all" type="button"><span>全部资产</span><span data-count="all">0</span></button>
-        <button class="asset-filter" data-filter="image" type="button"><span>图片</span><span data-count="image">0</span></button>
+        <button class="asset-filter" data-filter="image" type="button"><span>所有图片</span><span data-count="image">0</span></button>
         <button class="asset-filter" data-filter="video" type="button"><span>视频</span><span data-count="video">0</span></button>
         <button class="asset-filter" data-filter="skill" type="button"><span>绘图 Skill</span><span data-count="skill">0</span></button>
       </nav>
@@ -37,7 +38,7 @@
     <div class="asset-workspace">
       <header class="asset-topbar">
         <div class="asset-breadcrumb"><a href="./homepage-test.html">工作空间</a><span aria-hidden="true">/</span><strong>资产</strong></div>
-        <div class="asset-actions"><button class="button asset-refresh" id="refreshAssets" type="button">刷新</button><a class="button asset-back" href="./homepage-test.html">返回首页</a></div>
+        <div class="asset-actions"><button class="button" type="button" data-storage-settings-open>存储设置</button><button class="button asset-refresh" id="refreshAssets" type="button">刷新</button><a class="button asset-back" href="./homepage-test.html">返回首页</a></div>
       </header>
       <section class="asset-main">
         <div class="asset-heading">
@@ -58,6 +59,13 @@
     </div>
   </main>
   <div class="asset-lightbox" id="assetLightbox"><button class="lightbox-close" type="button" aria-label="关闭">×</button><div id="lightboxMedia"></div></div>
+  <dialog class="asset-location-dialog" id="assetLocationDialog" aria-labelledby="assetLocationTitle" aria-describedby="assetLocationStatus">
+    <div class="asset-location-head"><h2 id="assetLocationTitle">原文件位置</h2><button class="button" id="assetLocationClose" type="button" aria-label="关闭原文件位置">关闭</button></div>
+    <p class="asset-location-name" id="assetLocationName"></p>
+    <p class="asset-location-status" id="assetLocationStatus" role="status"></p>
+    <div id="assetLocationDetails" hidden><label for="assetLocationPath">项目原图存储文件</label><input id="assetLocationPath" type="text" readonly spellcheck="false"></div>
+    <div class="asset-location-actions"><button class="button" id="assetLocationOpenFolder" type="button" disabled>打开所在文件夹</button></div>
+  </dialog>
   <div class="asset-toast" id="assetToast" role="status" aria-live="polite"></div>
   <script src="./skill-catalog.js"></script>
   <script type="application/x-disabled">
@@ -70,6 +78,10 @@
     async function render(){const q=search.value.trim().toLowerCase(),selected=WandouSkills.getSelected();const filtered=assets.filter(a=>(filter==='all'||a.type===filter)&&(!q||`${a.name||''} ${a.description||''}`.toLowerCase().includes(q))),items=filtered.slice(0,visibleLimit);for(const type of ['image','video','skill'])document.querySelector(`[data-count="${type}"]`).textContent=assets.filter(a=>a.type===type).length;document.querySelector('[data-count="all"]').textContent=assets.length;title.textContent={all:'全部资产',image:'图片',video:'视频',skill:'已安装 Skill'}[filter];if(!items.length){grid.innerHTML='<div class="asset-empty">这里还没有对应资产。生成图片或视频后会自动出现在这里。</div>';return}grid.innerHTML=items.map((a)=>a.type==='skill'?`<article class="asset-card skill-card"><div class="skill-card-head"><span class="skill-mark">SK</span><span class="installed-badge">已安装</span></div><div><h3>${escapeHtml(a.name)}</h3><p>${escapeHtml(a.description)}</p></div><button class="skill-use ${selected?.id===a.id?'selected':''}" data-skill-index="${assets.indexOf(a)}" type="button">${selected?.id===a.id?'已用于绘图':'用于绘图'}</button></article>`:`<article class="asset-card media-card" data-media-index="${assets.indexOf(a)}"><div class="media-preview" data-preview-index="${assets.indexOf(a)}"><span>正在读取…</span></div><div class="asset-card-body"><h3 class="asset-card-title">${escapeHtml(a.name)}</h3><div class="asset-card-meta">${a.type==='video'?'视频':'图片'}${a.width&&a.height?` · ${a.width}×${a.height}`:''}</div></div></article>`).join('')+(filtered.length>visibleLimit?`<button class="asset-load-more" type="button">加载更多（剩余 ${filtered.length-visibleLimit}）</button>`:'');grid.querySelectorAll('[data-skill-index]').forEach(b=>b.onclick=()=>{const skill=assets[Number(b.dataset.skillIndex)];WandouSkills.setSelected(skill);render()});grid.querySelectorAll('[data-preview-index]').forEach(async box=>{const a=assets[Number(box.dataset.previewIndex)],url=await resolveMedia(a.stored);a.url=url;box.innerHTML=url?(a.type==='video'?`<video src="${url}" muted preload="metadata"></video>`:`<img src="${url}" alt="">`):'<span>媒体暂不可用</span>'});grid.querySelectorAll('[data-media-index]').forEach(card=>card.onclick=async()=>{const a=assets[Number(card.dataset.mediaIndex)],url=await resolveMedia(a.fullStored||a.stored);if(!url)return;document.getElementById('lightboxMedia').innerHTML=a.type==='video'?`<video src="${url}" controls autoplay></video>`:`<img src="${url}" alt="">`;document.getElementById('assetLightbox').classList.add('open')});grid.querySelector('.asset-load-more')?.addEventListener('click',()=>{visibleLimit+=60;render()})}
     document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;visibleLimit=60;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()});search.oninput=()=>{visibleLimit=60;render()};document.getElementById('refreshAssets').onclick=load;document.querySelector('.lightbox-close').onclick=()=>document.getElementById('assetLightbox').classList.remove('open');document.getElementById('assetLightbox').onclick=(e)=>{if(e.target.id==='assetLightbox')e.currentTarget.classList.remove('open')};load();
   </script>
+  <script src="./canvas-media-urls.js"></script>
+  <script src="./asset-state-reader.js"></script>
   <script src="./asset-library.js"></script>
+  <link rel="stylesheet" href="./storage-settings.css">
+  <script src="./storage-settings.js"></script>
 </body>
 </html>
