@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld("wandouShell", {
   chooseSaveDirectory: () => ipcRenderer.invoke("desktop:choose-save-directory"),
   createSaveDirectory: (folderName) => ipcRenderer.invoke("desktop:create-save-directory", { folderName }),
   writeSaveFile: (filename, bytes, folderName = "") => ipcRenderer.invoke("desktop:write-save-file", { filename, bytes, folderName }),
+  saveFileAs: (filename, bytes, mimeType = "") => ipcRenderer.invoke("desktop:save-file-as", { filename, bytes, mimeType }),
   copyImage: (bytes) => ipcRenderer.invoke("desktop:copy-image", { bytes }),
   writeCanvasBackup: (payload) => ipcRenderer.invoke("desktop:write-canvas-backup", payload),
   readCanvasBackups: (payload) => ipcRenderer.invoke("desktop:read-canvas-backups", payload),
@@ -71,7 +72,7 @@ contextBridge.exposeInMainWorld("wandouShell", {
   readCanvasMedia: (payload) => ipcRenderer.invoke("desktop:read-canvas-media", payload),
   getCanvasMediaUrl: (payload) => ipcRenderer.invoke("desktop:get-canvas-media-url", payload),
   getProjectStorageInfo: () => ipcRenderer.invoke("desktop:get-project-storage-info"),
-  chooseProjectStorageDirectory: () => ipcRenderer.invoke("desktop:choose-project-storage-directory"),
+  chooseProjectStorageDirectory: (options = {}) => ipcRenderer.invoke("desktop:choose-project-storage-directory", options),
   requestProjectStorageMigration: (payload) => ipcRenderer.invoke("desktop:request-project-storage-migration", payload),
   onProjectStorageProgress: (callback) => {
     const handler = (_event, state) => callback(state);

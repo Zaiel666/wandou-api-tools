@@ -346,7 +346,13 @@ async function saveTabBeforeClose(tab) {
         if (!closeInProgress && !updateStarted && tab.closing) showToast(`${tab.title}：${detail}`);
       } catch (_error) {} finally { polling = false; }
     }, 750);
-    try { return { ...base, ...await saveTask }; }
+    try {
+      const result = await saveTask;
+      if (isNodeCanvasTab(tab) && !result?.supported) {
+        return { ...base, supported: true, success: false, error: "画布尚未准备好保存，请等待页面加载完成后重试" };
+      }
+      return { ...base, ...result };
+    }
     finally { clearInterval(progressTimer); }
   } catch (error) {
     return {

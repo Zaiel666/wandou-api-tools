@@ -7811,6 +7811,7 @@
   </div>
 
   <script src="./ai-node-canvas-test-cache.js"></script>
+  <script src="./image-export.js"></script>
   <script src="./export-artifact-store.js"></script>
   <script src="./prompt-library-data.js"></script>
   <script src="./prompt-library-sources.js"></script>
@@ -21634,16 +21635,20 @@ ${formatInstruction}`;
     }
 
     async function triggerDownload(src, filename, fallbackType = "application/octet-stream") {
-      try {
+      if (window.wandouShell || window.showSaveFilePicker) {
         try {
-          const directory = nativeAutoSaveDirectory || autoSaveDirectoryHandle || await loadAutoSaveDirectoryHandle();
-          if (directory) {
-            const blob = await sourceToBlob(src, fallbackType);
-            if (blob && await writeBlobToAutoSaveDirectory(blob, filename)) return true;
-          }
+          const blob = await sourceToBlob(src, fallbackType);
+          const result = await window.WandouImageExport.save({ blob, filename, mimeType: fallbackType });
+          if (result?.canceled) { showToast("已取消保存"); return false; }
+          if (!result?.success) throw new Error(result?.error || "无法保存文件");
+          showToast(`已保存：${result.filename || filename}`, "success");
+          return true;
         } catch (error) {
-          console.warn("Selected download directory unavailable; trying browser download", error);
+          showToast(`保存失败：${error?.message || "无法写入所选位置"}`, "error", 4000);
+          return false;
         }
+      }
+      try {
         const objectUrl = await sourceToBlobUrl(src, fallbackType);
         if (!objectUrl && /^https?:\/\//i.test(src)) {
           openNamedTab(src, filename || "下载文件");
@@ -21696,8 +21701,7 @@ ${formatInstruction}`;
         const extension = node.mediaType === "video" ? "mp4" : node.mediaType === "audio" ? (node.audioFormat || "mp3") : "png";
         const filename = downloadFileName(node, extension);
         const mediaMime = node.mediaType === "video" ? "video/mp4" : node.mediaType === "audio" ? (node.audioMimeType || (extension === "wav" ? "audio/wav" : "audio/mpeg")) : "image/png";
-        const ok = await triggerDownload(objectUrl || downloadUrl, filename, mediaMime);
-        if (!ok && /^https?:\/\//i.test(downloadUrl)) showToast("浏览器限制跨域下载，请稍后重试", "error", 4000);
+        await triggerDownload(objectUrl || downloadUrl, filename, mediaMime);
       } catch (error) {
         console.warn("Node media download failed", error);
         showToast(`下载失败：${error?.message || "无法处理图片"}`, "error", 4200);

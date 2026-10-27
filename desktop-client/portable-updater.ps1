@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$InstallDirectory = '',
     [string]$PackagePath = '',
     [int]$ProcessId = 0,
@@ -176,6 +176,19 @@ try {
     Start-Sleep -Milliseconds 650
 
     Set-UpdateStage 'extracting'
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::OpenRead($PackagePath)
+    try {
+        foreach ($entry in $archive.Entries) {
+            $entryName = $entry.FullName.Replace('\', '/')
+            if ($entryName.StartsWith('/') -or $entryName.Contains(':')) { throw 'Unsafe update archive path.' }
+            foreach ($part in $entryName.Split('/')) {
+                if ($part -in @('.', '..', '豌豆AI数据', '.wandou-project-storage.json') -or $part.StartsWith('.wandou-project-migration-', [StringComparison]::OrdinalIgnoreCase)) {
+                    throw 'Update packages must not contain project data or migration directories.'
+                }
+            }
+        }
+    } finally { $archive.Dispose() }
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
     Expand-Archive -LiteralPath $PackagePath -DestinationPath $stage -Force
 
@@ -232,7 +245,11 @@ try {
         try { Start-Process -FilePath (Join-Path $InstallDirectory $ExecutableName) -WorkingDirectory $InstallDirectory } catch {}
     }
 } finally {
-    Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+    $resolvedStage = [IO.Path]::GetFullPath($stage)
+    $temporaryRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if ($resolvedStage.StartsWith($temporaryRoot, [StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolvedStage) -match '^wandou-ai-stage-[a-f0-9]{32}$') {
+        Remove-Item -LiteralPath $resolvedStage -Recurse -Force -ErrorAction SilentlyContinue
+    }
     if (-not $SkipRestart) {
         Start-Sleep -Milliseconds 500
         Remove-Item -LiteralPath $StatusPath -Force -ErrorAction SilentlyContinue

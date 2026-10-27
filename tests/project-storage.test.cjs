@@ -11,10 +11,11 @@ function fixture(){
  return{base,legacyRoot,installRoot,targetParent,target,files,make};
 }
 async function prepared(f,api=f.make()){const choice=await api.choose(f.targetParent);assert.equal(choice.targetDirectory,f.target);assert.equal(fs.existsSync(f.target),false);await api.prepare(choice);return{api,choice}}
-test('legacy remains default; chooser is preview-only and forged or conflicting destinations are rejected',async()=>{
- const f=fixture(),api=f.make(),info=await api.info();assert.equal(info.currentDirectory,f.legacyRoot);assert.equal(info.custom,false);assert.equal(info.fileCount,5);
+test('legacy is kept before verified startup; chooser is preview-only and forged or conflicting destinations are rejected',async()=>{
+ const f=fixture(),api=f.make(),info=await api.info();assert.equal(info.currentDirectory,f.legacyRoot);assert.equal(info.storageMode,'legacy');assert.equal(info.defaultDirectory,path.join(f.installRoot,'豌豆AI数据'));assert.equal(info.custom,false);assert.equal(info.fileCount,5);
  await assert.rejects(()=>api.prepare({targetDirectory:f.target,selectionToken:'forged'}),/失效/);
- await assert.rejects(()=>api.choose(f.installRoot),/安装目录/);
+ const portable=await api.chooseDefault();assert.equal(portable.targetDirectory,path.join(f.installRoot,'豌豆AI数据'));assert.equal(fs.existsSync(portable.targetDirectory),false);
+ await assert.rejects(()=>api.choose(path.join(f.installRoot,'nested')),/安装目录/);
  fs.mkdirSync(f.target);fs.writeFileSync(path.join(f.target,'unrelated.txt'),'keep');await assert.rejects(()=>api.choose(f.targetParent),/已有内容/);assert.equal(fs.readFileSync(path.join(f.target,'unrelated.txt'),'utf8'),'keep');
 });
 test('offline startup migration verifies exact bytes, switches configuration once and preserves all old files and Chromium data',async()=>{

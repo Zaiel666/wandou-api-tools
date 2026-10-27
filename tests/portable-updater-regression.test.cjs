@@ -27,7 +27,13 @@ assert.match(updater, /CleanupPreviousInstallations\(install, log\)/, "successfu
 assert.match(updater, /DeleteDirectoryWithRetry\(directory, log\)/, "old installation cleanup must retry transient Windows locks");
 assert.match(updater, /VerifyPortableLayout\(stage, executable, target, "Package"\)/, "the extracted outer and runtime layouts must be verified");
 assert.match(updater, /RuntimeDirectoryName = "程序文件"/, "the updater must understand the compact portable runtime directory");
-assert.match(updater, /Directory\.GetFiles\(install, "\*", SearchOption\.AllDirectories\)/, "locked-directory migration must remove obsolete root runtime files");
+assert.match(updater, /CollectProgramEntries\(install, install, oldFiles, oldDirectories\)/, "locked-directory migration must enumerate only program files");
+assert.match(updater, /ProjectDataDirectoryName = "豌豆AI数据"/, "the updater must reserve the program-adjacent data directory");
+assert.match(updater, /Preserving embedded project data; replacing program files only/, "embedded data must stay in place during upgrades");
+assert.match(updater, /ContainsProtectedProjectData\(directory\)/, "cleanup must retain backups containing project data");
+assert.match(updater, /ValidateUpdatePackage\(package\)/, "update archives must not overwrite embedded data");
+assert.match(updater, /HasMigrationDirectory\(install\)/, "retained data migrations must use program-only replacement");
+assert.match(updater, /Path\.GetFileName\(entry\)\.StartsWith\("\.wandou-project-migration-", StringComparison\.OrdinalIgnoreCase\)/, "program-file enumeration must never descend into retained migration copies");
 
 const main = fs.readFileSync(path.resolve(__dirname, "..", "desktop-client", "main.js"), "utf8");
 assert.match(main, /cleanupStalePortableInstallBackups/, "the restarted app must clean backups left by older updater versions");
@@ -41,5 +47,6 @@ assert.match(workflow, /build-portable-package\.ps1/, "releases must use the com
 const packageBuilder = fs.readFileSync(path.resolve(__dirname, "..", "scripts", "build-portable-package.ps1"), "utf8");
 assert.match(packageBuilder, /'使用说明\.txt', '网页版\.html', '豌豆AI工具\.exe'/, "only the three requested entries may remain visible");
 assert.match(packageBuilder, /resources\\app\\VERSION\.txt/, "the outer compatibility version must support old updaters");
+assert.match(packageBuilder, /Portable updater compilation failed/, "the package must compile the updater source rather than ship an obsolete binary");
 
 console.log("PASS: portable updater supports the compact outer folder, restarts, and removes stale backups");

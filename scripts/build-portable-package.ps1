@@ -40,6 +40,12 @@ Remove-Item -LiteralPath (Join-Path $runtimeRoot 'wandou-ai-update.log') -Force 
 & $compiler /nologo /target:winexe /optimize+ "/win32icon:$RepositoryRoot\app\logo.ico" "/out:$launcher" (Join-Path $desktopRoot 'portable-launcher.cs')
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $launcher)) { throw 'Portable launcher compilation failed.' }
 
+# Compile the updater from the reviewed source for every package; never ship a
+# stale binary that can move or remove a program-adjacent project-data folder.
+$updater = Join-Path $runtimeRoot 'resources\portable-updater.exe'
+& $compiler /nologo /target:winexe /optimize+ /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/out:$updater" (Join-Path $desktopRoot 'portable-updater.cs')
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $updater)) { throw 'Portable updater compilation failed.' }
+
 Copy-Item -LiteralPath (Join-Path $desktopRoot 'web-launcher.html') -Destination $webLauncher
 New-Item -ItemType Directory -Path $compatibilityApp -Force | Out-Null
 Set-Content -LiteralPath (Join-Path $compatibilityApp 'VERSION.txt') -Value "v$Version" -Encoding ASCII
@@ -53,7 +59,10 @@ Set-Content -LiteralPath (Join-Path $compatibilityApp 'VERSION.txt') -Value "v$V
 
 “程序文件”和“resources”是隐藏的运行目录，请勿移动或删除。
 软件无需安装；检测到新版本时，先保存画布，再点击更新即可自动覆盖并重新启动。
-图片默认保存到软件设置中选择的本地文件夹，透明图片保持 PNG 透明通道。
+节点画布项目与原图默认保存在软件文件夹内的“豌豆AI数据”，也可以在存储设置中选择独立目录。
+已有自定义目录继续使用原位置；旧目录迁移成功后仍保留备份。API 配置和工作台浏览器存储仍保留在原位置。
+下载图片时自行选择保存位置，透明图片保持 PNG 透明通道。
+手动升级前请保存并退出，只替换程序文件，完整保留“豌豆AI数据”。移动软件时请移动整个文件夹，包含其中的数据目录。
 "@ | Set-Content -LiteralPath $guide -Encoding UTF8
 
 # 兼容旧更新器需要保留外层 resources/VERSION.txt，但把所有运行内容隐藏，

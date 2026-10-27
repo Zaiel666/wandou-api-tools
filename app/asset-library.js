@@ -14,6 +14,8 @@
   const locationPath = document.getElementById("assetLocationPath");
   const locationDetails = document.getElementById("assetLocationDetails");
   const locationOpenButton = document.getElementById("assetLocationOpenFolder");
+  const locationDownloadButton = document.getElementById("assetLocationDownload");
+  const locationDownloadStatus = document.getElementById("assetLocationDownloadStatus");
   const canvasPrefix = "aiCanvasStateV1";
   const indexedPrefix = "indexed-media:";
   let filter = "all";
@@ -24,6 +26,8 @@
   let loadRevision = 0;
   let locationRevision = 0;
   let locationRef = "";
+  let locationAsset = null;
+  let imageDownloadPending = false;
 
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
@@ -55,9 +59,56 @@
     toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
   }
 
+  function updateDownloadButtons() {
+    content.querySelectorAll("[data-asset-download]").forEach((button) => {
+      button.disabled = imageDownloadPending;
+    });
+    locationDownloadButton.disabled = imageDownloadPending || !locationAsset?.originalStored;
+  }
+
+  function showDownloadResult(asset, message) {
+    if (locationDialog.open && locationAsset === asset) {
+      locationDownloadStatus.textContent = message;
+      locationDownloadStatus.hidden = false;
+    } else {
+      showToast(message);
+    }
+  }
+
+  async function downloadImage(asset, button) {
+    if (imageDownloadPending) return;
+    if (!asset?.originalStored) return showDownloadResult(asset, "这条记录只保留了预览，无法下载原图。请回到项目检查原图是否存在。");
+    imageDownloadPending = true;
+    clearTimeout(toastTimer);
+    toast.classList.remove("show");
+    locationDownloadStatus.hidden = true;
+    const originalLabel = button.textContent;
+    button.textContent = "保存中…";
+    updateDownloadButtons();
+    try {
+      const source = await resolveMedia(asset.originalStored);
+      if (!source) throw new Error("未找到原图，文件可能已被移走或清理。请检查项目存储目录后重试。");
+      if (!window.WandouImageExport?.save) throw new Error("图片下载组件尚未就绪，请刷新资产后重试。");
+      const result = await window.WandouImageExport.save({ source, filename: asset.name || "图片" });
+      if (result?.canceled) return;
+      if (!result?.success) throw new Error(result?.error || "图片保存失败，请重新选择保存位置后重试。");
+      showDownloadResult(asset, result.path ? `图片已保存到 ${result.path}` : "已发起图片下载。");
+    } catch (error) {
+      showDownloadResult(asset, error?.message || "图片保存失败，请稍后重试。");
+    } finally {
+      imageDownloadPending = false;
+      button.textContent = originalLabel;
+      updateDownloadButtons();
+    }
+  }
+
   async function showOriginalLocation(asset) {
     const revision = ++locationRevision;
     locationRef = "";
+    locationAsset = asset;
+    locationDownloadStatus.textContent = "";
+    locationDownloadStatus.hidden = true;
+    updateDownloadButtons();
     locationName.textContent = asset.name;
     locationStatus.textContent = "正在查找原图存储文件…";
     locationPath.value = "";
@@ -92,7 +143,7 @@
       locationPath.title = result.path;
       locationDetails.hidden = false;
       locationStatus.textContent = result.storageFormat === "data-url"
-        ? "这是由软件管理的项目原图存储文件（.data），原图可在软件中查看和下载。"
+        ? "这是由软件管理的项目原图存储文件（.data），资源管理器不能直接预览。点击“另存为图片”，选择位置后即可保存为可查看的图片；无需修改或移动这个存储文件。"
         : "这是由软件管理的项目原图存储文件。";
       locationOpenButton.disabled = !window.wandouShell?.showCanvasMediaInFolder;
     } catch (_error) {
@@ -174,7 +225,10 @@
       for (const node of state.nodes) {
         if (node?.type !== "result" || !["image", "video"].includes(node.mediaType)) continue;
         const stored = node.previewUrl || node.mediaUrl || node.fullUrl || "";
-        const fullStored = node.fullUrl || node.mediaUrl || node.previewUrl || "";
+        const originalStored = node.transparent
+          ? node.mediaUrl || node.fullUrl || ""
+          : node.fullUrl || node.mediaUrl || "";
+        const fullStored = originalStored || node.previewUrl || "";
         const identity = fullStored || stored;
         if (!stored || seen.has(identity)) continue;
         seen.add(identity);
@@ -183,7 +237,7 @@
           name: node.title || node.prompt?.slice(0, 36) || (node.mediaType === "video" ? "视频资产" : "图片资产"),
           stored,
           fullStored,
-          originalStored: node.fullUrl || node.mediaUrl || "",
+          originalStored,
           createdAt: Number(node.createdAt || state.savedAt) || 0,
           sequence: Number(String(node.id || "").replace(/\D/g, "")) || 0,
           width: node.width,
@@ -246,7 +300,7 @@
   function mediaCard(asset) {
     const index = assets.indexOf(asset);
     const directory = [asset.folderName, asset.projectName].filter(Boolean).map(escapeHtml).join(" / ");
-    return `<article class="asset-card media-card" data-media-index="${index}"><div class="media-preview" data-preview-index="${index}"><span>正在读取…</span></div><div class="asset-card-body"><h3 class="asset-card-title">${escapeHtml(asset.name)}</h3><div class="asset-card-meta">${asset.type === "video" ? "视频" : "图片"}${asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}</div>${directory ? `<div class="asset-card-directory" title="${directory}">${directory}</div>` : ""}${asset.type === "image" ? `<button class="asset-location-button" type="button" data-asset-location="${index}" aria-label="查看${escapeHtml(asset.name)}的原文件位置">原文件位置</button>` : ""}</div></article>`;
+    return `<article class="asset-card media-card" data-media-index="${index}"><div class="media-preview" data-preview-index="${index}"><span>正在读取…</span></div><div class="asset-card-body"><h3 class="asset-card-title">${escapeHtml(asset.name)}</h3><div class="asset-card-meta">${asset.type === "video" ? "视频" : "图片"}${asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}</div>${directory ? `<div class="asset-card-directory" title="${directory}">${directory}</div>` : ""}${asset.type === "image" ? `<div class="asset-media-actions"><button class="asset-download-button" type="button" data-asset-download="${index}" aria-label="下载${escapeHtml(asset.name)}，选择保存位置" title="选择位置保存原图"${imageDownloadPending ? " disabled" : ""}>下载图片</button><button class="asset-location-button" type="button" data-asset-location="${index}" aria-label="查看${escapeHtml(asset.name)}的原文件位置">原文件位置</button></div>` : ""}</div></article>`;
   }
 
   function skillCard(skill, selected) {
@@ -286,7 +340,7 @@
     title.textContent = { all: "全部资产", image: "所有图片", video: "视频资产", skill: "绘图 Skill" }[filter];
     subtitle.textContent = filter === "skill"
       ? "个人 Skill 统一存放在软件 Skill 目录；ZIP 请先解压，再导入含 SKILL.md 的文件夹。"
-      : `按软件内的项目文件夹归类，当前${direction < 0 ? "最近生成优先" : "最早生成优先"}；点击图片的“原文件位置”可查看本机存储位置。`;
+      : `按软件内的项目文件夹归类，当前${direction < 0 ? "最近生成优先" : "最早生成优先"}；点击“下载图片”选择保存位置，“原文件位置”可查看内部存储文件。`;
     importButton.hidden = filter !== "skill";
     openSkillDirectoryButton.hidden = filter !== "skill";
     folderSelect.hidden = filter === "skill";
@@ -322,6 +376,12 @@
       button.onclick = (event) => {
         event.stopPropagation();
         showOriginalLocation(assets[Number(button.dataset.assetLocation)]);
+      };
+    });
+    content.querySelectorAll("[data-asset-download]").forEach((button) => {
+      button.onclick = (event) => {
+        event.stopPropagation();
+        downloadImage(assets[Number(button.dataset.assetDownload)], button);
       };
     });
     content.querySelectorAll("[data-preview-index]").forEach(async (box) => {
@@ -386,7 +446,8 @@
   };
   document.getElementById("refreshAssets").onclick = load;
   document.getElementById("assetLocationClose").onclick = () => locationDialog.close();
-  locationDialog.addEventListener("close", () => { locationRevision += 1; locationRef = ""; });
+  locationDialog.addEventListener("close", () => { locationRevision += 1; locationRef = ""; locationAsset = null; updateDownloadButtons(); });
+  locationDownloadButton.onclick = () => downloadImage(locationAsset, locationDownloadButton);
   locationDialog.addEventListener("click", (event) => {
     if (event.target !== locationDialog) return;
     const bounds = locationDialog.getBoundingClientRect();

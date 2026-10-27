@@ -11,16 +11,21 @@ const within = (candidate, root) => normalized(candidate) === normalized(root) |
 
 module.exports = function createProjectStorage({ legacyRoot, installRoot, onProgress = () => {}, fault = async () => {} }) {
   legacyRoot = path.resolve(legacyRoot); installRoot = path.resolve(installRoot);
+  const portableRoot = path.join(installRoot, '豌豆AI数据');
   const configPath = path.join(legacyRoot, 'project-storage.json');
   let config = { version: 1, active: null }, invalidConfig = '', initialized = false, unavailableLatched = false;
+  let startupPrepared = false, startupPromise = null, initializePromise = null;
   let writing = new Set(), frozen = false;
   const selections = new Map();
   try {
     const value = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    if (value.version !== 1 || (value.active && (!path.isAbsolute(value.active.directory || '') || !/^[a-f0-9-]{36}$/.test(value.active.id || '')))) throw Error('Invalid storage configuration');
+    if (value.version !== 1 || (value.active && (!path.isAbsolute(value.active.directory || '') || !/^[a-f0-9-]{36}$/.test(value.active.id || '') || (value.active.mode && !['portable','custom'].includes(value.active.mode))))) throw Error('Invalid storage configuration');
     config = value;
   } catch (error) { if (error.code !== 'ENOENT') invalidConfig = '项目存储配置无法读取，请保留现有数据并联系支持，不会自动创建空项目库'; }
-  const root = () => config.active?.directory || legacyRoot;
+  // Only explicitly portable storage follows the program. Old v1 selections
+  // without a mode remain custom absolute paths, preserving the user's choice.
+  const root = () => config.active?.mode === 'portable' ? portableRoot : config.active?.directory || legacyRoot;
+  const storageMode = () => config.active ? (config.active.mode === 'portable' ? 'portable' : 'custom') : 'legacy';
   const progress = (phase, message, extra = {}) => onProgress({ phase, message, ...extra });
   async function atomicJson(file, value) {
     const temporary = `${file}.${crypto.randomUUID()}.tmp`;
@@ -93,13 +98,14 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
     return { sizeBytes, fileCount };
   }
   async function info() {
-    const base = { success: true, currentDirectory: root(), defaultDirectory: legacyRoot, custom: Boolean(config.active), previousDirectory: config.previousDirectory || '', migrationPending: Boolean(config.pending && config.pending.status !== 'failed'), lastMigration: config.lastMigration || null };
+    const base = { success: true, currentDirectory: root(), defaultDirectory: portableRoot, storageMode:storageMode(), custom: storageMode()==='custom', previousDirectory: config.previousDirectory || '', migrationPending: Boolean(config.pending && config.pending.status !== 'failed'), lastMigration: config.lastMigration || null };
     try { return { ...base, available: true, ...await sizeInfo() }; }
     catch (error) { return { ...base, available: false, sizeBytes: null, fileCount: null, error: error.message }; }
   }
   function validateTarget(target) {
     if (!path.isAbsolute(target) || path.basename(target) !== '豌豆AI数据') throw Error('请选择目标磁盘或父目录，软件会在其中建立“豌豆AI数据”');
-    if (within(target, installRoot) || within(installRoot, target) || within(target, legacyRoot) || within(legacyRoot, target) || within(target, root()) || within(root(), target)) throw Error('新数据目录不能位于当前项目目录、用户配置目录或软件安装目录内');
+    const exactPortable = normalized(target) === normalized(portableRoot);
+    if ((!exactPortable && within(target, installRoot)) || within(installRoot, target) || within(target, legacyRoot) || within(legacyRoot, target) || within(target, root()) || within(root(), target)) throw Error('新数据目录不能位于当前项目目录、用户配置目录或软件安装目录内；程序目录仅允许专用的“豌豆AI数据”');
     if (target.split(/[\\/]/).some(part => /\.previous-|\.failed-|^wandou-ai-stage-/i.test(part))) throw Error('更新临时目录不能用来存放项目');
   }
   async function checkTarget(target, allowCompletedPending = false) {
@@ -158,7 +164,8 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
     selections.clear(); selections.set(selectionToken, { targetDirectory, createdAt: Date.now() });
     return { success:true, currentDirectory:root(), targetDirectory, selectionToken, ...stats, ...disk };
   }
-  async function prepare({targetDirectory, selectionToken} = {}) {
+  async function chooseDefault() { return choose(installRoot); }
+  async function prepare({targetDirectory, selectionToken} = {}, automaticDefault = false) {
     const selected = selections.get(selectionToken);
     if (!selected || selected.targetDirectory !== targetDirectory || Date.now()-selected.createdAt > 30*60*1000) throw Error('目录选择已失效，请重新选择目标位置');
     await available(); await checkTarget(targetDirectory, true);
@@ -166,7 +173,7 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
     const previous = config.pending;
     const reuse = Boolean(reusable);
     const id = reuse ? previous.id : crypto.randomUUID();
-    const pending = { id, source:root(), sourceId:config.active?.id || null, target:targetDirectory, stage:path.join(path.dirname(targetDirectory),`.wandou-project-migration-${id}`), status:'pending', createdAt:Date.now() };
+    const pending = { id, source:root(), sourceId:config.active?.id || null, target:targetDirectory, targetMode:normalized(targetDirectory)===normalized(portableRoot)?'portable':'custom', stage:path.join(path.dirname(targetDirectory),`.wandou-project-migration-${id}`), status:'pending', createdAt:Date.now(), ...(automaticDefault?{automaticDefault:true}:{}) };
     await saveConfig({ ...config, pending }); selections.clear();
     return { success:true, pending };
   }
@@ -176,6 +183,7 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
     const {id,source,target,stage} = pending;
     // Pending paths are validated again after restart, not trusted from JSON alone.
     if (source !== root() || stage !== path.join(path.dirname(target),`.wandou-project-migration-${id}`) || !/^[a-f0-9-]{36}$/.test(id)) throw Error('迁移计划无效，原数据未改变');
+    if ((pending.targetMode==='portable'||pending.automaticDefault) && normalized(target)!==normalized(portableRoot)) throw unavailableError('项目迁移尚未完成时程序目录发生变化，请恢复原程序位置后完成迁移');
     try {
       await available(); await checkTarget(target,true);
       progress('scanning','正在核对原目录，原数据会保留…');
@@ -224,7 +232,7 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
       }
       await fault('before-switch',{source,target});
       const lastMigration={success:true,source,target,completedAt:Date.now(),fileCount:manifest.length,sizeBytes};
-      await saveConfig({...config,active:{directory:target,id},previousDirectory:source,pending:null,lastMigration});
+      await saveConfig({...config,active:{directory:target,id,mode:normalized(target)===normalized(portableRoot)?'portable':'custom'},previousDirectory:source,pending:null,lastMigration});
       progress('complete','迁移完成，旧目录副本已保留。');
       return {migrated:true,...lastMigration};
     }catch(error){
@@ -234,20 +242,82 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
       return {migrated:false,...lastMigration};
     }
   }
+  async function prepareStartup(){
+    if(startupPrepared)return;
+    if(startupPromise)return startupPromise;
+    startupPromise=(async()=>{
+      if(invalidConfig)throw unavailableError(invalidConfig);
+      if(config.active){
+        await available();
+        if(config.active.mode==='portable' && normalized(config.active.directory)!==normalized(portableRoot)){
+          if(config.pending && config.pending.status!=='failed')throw unavailableError('项目迁移尚未完成时程序目录发生变化，请恢复原程序位置后完成迁移');
+          // Validate the same durable marker before accepting a moved program.
+          // Moving program files alone must never create an empty replacement.
+          await readMarker(portableRoot,config.active.id);
+          await saveConfig({...config,active:{...config.active,directory:portableRoot}});
+        }
+        startupPrepared=true;return;
+      }
+      // An explicit pending custom migration remains authoritative. A failed
+      // automatic default migration may be retried using its verified stage.
+      if(config.pending && !config.pending.automaticDefault){startupPrepared=true;return;}
+      if(config.pending?.automaticDefault && config.pending.status!=='failed'){startupPrepared=true;return;}
+      if(!config.pending){
+        let children=[];
+        try{await realDirectory(portableRoot);children=await fsp.readdir(portableRoot);}
+        catch(error){if(error.code!=='ENOENT')throw error;}
+        if(children.length){
+          let marker;
+          try{
+            const file=path.join(portableRoot,markerName),stat=await fsp.lstat(file);
+            if(!stat.isFile()||stat.isSymbolicLink())throw Error('Invalid marker');
+            marker=JSON.parse(await fsp.readFile(file,'utf8'));
+            if(!/^[a-f0-9-]{36}$/.test(marker.id||''))throw Error('Invalid marker ID');
+            await readMarker(portableRoot,marker.id);
+          }catch(_error){throw unavailableError(`程序旁的项目数据目录已有无法识别的内容：${portableRoot}。为保护已有文件，未创建或覆盖项目库。`);}
+          const legacyFiles=await inventory(legacyRoot);
+          if(legacyFiles.length)throw unavailableError('原用户目录和程序旁均有项目数据，不能自动合并或覆盖；请保留两个目录后选择需要使用的数据');
+          await inventory(portableRoot); // Reject redirected/non-regular entries.
+          await saveConfig({...config,active:{directory:portableRoot,id:marker.id,mode:'portable'}});
+          startupPrepared=true;return;
+        }
+      }
+      // Fresh installations and older default profiles both use the same
+      // checksum-verified migration, including the zero-file case. No image or
+      // project is written to C: as a fallback if this preparation fails.
+      try {
+        const selection=await chooseDefault();
+        await prepare(selection,true);
+      } catch(error) {
+        throw unavailableError(`无法准备项目自动迁移。\n目标目录：${portableRoot}\n原因：${error.message}\n原目录 ${legacyRoot} 中的项目和图片未修改。请释放目标磁盘空间，或将整个软件目录移到可写且空间足够的磁盘后重新启动。`);
+      }
+      startupPrepared=true;
+    })();
+    try{return await startupPromise;}finally{startupPromise=null;}
+  }
   async function initialize(){
     if(initialized)return{migrated:false};
-    await available();const result=await migratePending();initialized=true;return result;
+    if(initializePromise)return initializePromise;
+    initializePromise=(async()=>{
+      await prepareStartup();await available();
+      const automaticDefault=Boolean(config.pending?.automaticDefault);
+      const result=await migratePending();
+      if(automaticDefault && result.success===false){startupPrepared=false;throw unavailableError('无法在程序目录中保存项目：'+result.error+'。原数据保留，未切换到 C 盘空目录；请恢复写入权限或将整个软件移到可写目录后重试。');}
+      initialized=true;return result;
+    })();
+    try{return await initializePromise;}finally{initializePromise=null;}
   }
   async function read(task){
+    if(!initialized)await initialize();
     await available();
     try{const result=await task();await available();return result;}
     catch(error){await available();throw error;}
   }
   async function write(task){
     if(frozen)throw Error('正在切换项目存储位置，请等待软件重新打开');
-    const work=(async()=>{await available();if(frozen)throw Error('正在切换项目存储位置');try{const result=await task();await available();return result;}catch(error){await available();throw error;}})();
+    const work=(async()=>{if(!initialized)await initialize();await available();if(frozen)throw Error('正在切换项目存储位置');try{const result=await task();await available();return result;}catch(error){await available();throw error;}})();
     writing.add(work);try{return await work;}finally{writing.delete(work);}
   }
   async function freeze(){frozen=true;await Promise.allSettled([...writing]);}
-  return {root,info,choose,prepare,initialize,available,checkConnection,read,write,freeze,unfreeze:()=>{frozen=false;},hasPending:()=>Boolean(config.pending&&config.pending.status!=='failed'),entries:[...entries]};
+  return {root,info,choose,chooseDefault,prepare,prepareStartup,initialize,available,checkConnection,read,write,freeze,unfreeze:()=>{frozen=false;},hasPending:()=>Boolean(config.pending&&config.pending.status!=='failed'),entries:[...entries]};
 };

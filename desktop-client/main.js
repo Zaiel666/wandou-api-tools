@@ -31,7 +31,8 @@ let downloadListenerReady = false;
 let updateInProgress = false;
 let installedSkillsCache = { savedAt: 0, items: [] };
 
-// 与旧安装版共用数据目录，改成便携文件夹后用户原有的本地数据仍然可用。
+// Keep credentials/preferences in the existing profile. Project media follows
+// the portable program directory, with verified migration of legacy projects.
 app.setPath("userData", process.env.WANDOU_TEST_USER_DATA_DIR || path.join(app.getPath("appData"), "豌豆AI"));
 const primaryInstance = app.requestSingleInstanceLock();
 if (!primaryInstance) app.exit(0);
@@ -49,8 +50,12 @@ function reportProjectStorageProgress(state) {
     storageProgressWindow.webContents.executeJavaScript(`document.querySelector('p').textContent=${JSON.stringify(text)}`).catch(()=>{});
   }
 }
+const projectInstallRoot = process.env.WANDOU_TEST_USER_DATA_DIR
+  ? `${app.getPath('userData')}-portable-program`
+  : (app.isPackaged ? portableInstallContext().installDirectory : path.dirname(__dirname));
+if (process.env.WANDOU_TEST_USER_DATA_DIR) fs.mkdirSync(projectInstallRoot, { recursive: true });
 const projectStorage = require('./project-storage.cjs')({
-  legacyRoot: app.getPath('userData'), installRoot: portableInstallContext().installDirectory,
+  legacyRoot: app.getPath('userData'), installRoot: projectInstallRoot,
   onProgress: reportProjectStorageProgress
 });
 async function withProjectStorage(kind, task) {
@@ -138,6 +143,20 @@ function portableInstallContext() {
   };
 }
 
+async function hasProtectedPortableData(directory) {
+  try {
+    const stat = await fs.promises.lstat(directory);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) return true;
+    const real = await fs.promises.realpath(directory);
+    if (path.resolve(real).toLowerCase() !== path.resolve(directory).toLowerCase()) return true;
+    const children = await fs.promises.readdir(directory, { withFileTypes: true });
+    return children.some(entry => entry.isSymbolicLink()
+      || ['豌豆AI数据', '.wandou-project-storage.json', '.wandou-migration-manifest.json',
+        'canvas-media', 'canvas-backups', 'local-data', 'export-artifacts', 'project-hub-state.json'].includes(entry.name)
+      || entry.name.startsWith('.wandou-project-migration-'));
+  } catch (_error) { return true; }
+}
+
 async function cleanupStalePortableInstallBackups() {
   if (!app.isPackaged) return;
   const { installDirectory } = portableInstallContext();
@@ -148,9 +167,11 @@ async function cleanupStalePortableInstallBackups() {
   try {
     const entries = await fs.promises.readdir(installParent, { withFileTypes: true });
     for (const entry of entries) {
-      if (!entry.isDirectory() || !entry.name.startsWith(backupPrefix)) continue;
-      const backupDirectory = path.join(installParent, entry.name);
+      if (!entry.isDirectory() || entry.isSymbolicLink() || !entry.name.startsWith(backupPrefix)) continue;
+      const backupDirectory = path.resolve(installParent, entry.name);
+      if (path.dirname(backupDirectory) !== path.resolve(installParent)) continue;
       try {
+        if (await hasProtectedPortableData(backupDirectory)) continue;
         await fs.promises.rm(backupDirectory, { recursive: true, force: true, maxRetries: 12, retryDelay: 500 });
       } catch (error) {
         console.warn("Unable to remove stale portable update backup:", backupDirectory, error.message);
@@ -176,6 +197,7 @@ async function cleanupStalePortableUpdateStages() {
       try {
         const stats = await fs.promises.lstat(stageDirectory);
         if (!stats.isDirectory() || stats.isSymbolicLink()) continue;
+        if (await hasProtectedPortableData(stageDirectory)) continue;
         let completedStage = false;
         try {
           const marker = await fs.promises.lstat(path.join(stageDirectory, ".wandou-stage-cleanup-ready"));
@@ -1396,6 +1418,16 @@ ipcMain.handle("desktop:write-save-file", async (_event, payload = {}) => {
     return { success: false, error: error.message };
   }
 });
+const saveFileAs = require('./save-file-as.cjs')({
+  showSaveDialog: options => dialog.showSaveDialog(mainWindow, options),
+  defaultDirectory: () => readSavedDirectory() || app.getPath('pictures')
+});
+ipcMain.handle('desktop:save-file-as', (event, payload = {}) => {
+  if (event.senderFrame !== event.sender.mainFrame || !isLocalAppPage(event.senderFrame?.url || '')) {
+    return { success: false, error: '仅本地工具页面可以另存文件' };
+  }
+  return saveFileAs(payload);
+});
 ipcMain.handle("desktop:copy-image", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) {
     return { success: false, error: "仅本地工具页面可以复制图片" };
@@ -1584,9 +1616,10 @@ ipcMain.handle('desktop:get-project-storage-info',(event)=>{
   if(!isProjectStorageSettingsCaller(event))return{success:false,error:'仅本地存储设置可以查看项目目录'};
   return projectStorage.info();
 });
-ipcMain.handle('desktop:choose-project-storage-directory',async(event)=>{
+ipcMain.handle('desktop:choose-project-storage-directory',async(event,payload={})=>{
   if(!isProjectStorageSettingsCaller(event))return{success:false,error:'仅本地存储设置可以选择项目目录'};
   try {
+    if(payload?.useDefault===true)return await projectStorage.chooseDefault();
     const selected=await dialog.showOpenDialog(mainWindow,{title:'选择磁盘或父目录（将建立“豌豆AI数据”）',properties:['openDirectory','createDirectory']});
     if(selected.canceled||!selected.filePaths.length)return{success:false,canceled:true};
     return await projectStorage.choose(selected.filePaths[0]);
@@ -1600,7 +1633,7 @@ ipcMain.handle('desktop:request-project-storage-migration',(event,payload={})=>{
 app.whenReady().then(async () => {
   if(!primaryInstance)return;
   while(true){
-    try{await projectStorage.available();break;}
+    try{await projectStorage.prepareStartup();await projectStorage.available();break;}
     catch(error){const choice=await dialog.showMessageBox({type:'error',title:'项目存储目录不可用',message:error.message,buttons:['重试','退出'],defaultId:0,cancelId:1,noLink:true});if(choice.response!==0){app.quit();return;}}
   }
   if(projectStorage.hasPending()){

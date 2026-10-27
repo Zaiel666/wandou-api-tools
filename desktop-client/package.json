@@ -1,6 +1,6 @@
 {
   "name": "wandou-ai-desktop",
-  "version": "2.0.14",
+  "version": "2.0.16",
   "description": "豌豆AI Windows 客户端",
   "main": "main.js",
   "author": "PeaFour",
@@ -38,7 +38,8 @@
       "canvas-backup-guard.cjs",
       "canvas-media-location.cjs",
       "canvas-media-protocol.cjs",
-      "project-storage.cjs"
+      "project-storage.cjs",
+      "save-file-as.cjs"
     ],
     "extraResources": [
       {

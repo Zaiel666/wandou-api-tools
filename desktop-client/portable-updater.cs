@@ -8,6 +8,64 @@ using System.Collections.Generic;
 internal static class PortableUpdater
 {
     const string RuntimeDirectoryName = "程序文件";
+    const string ProjectDataDirectoryName = "豌豆AI数据";
+
+    static bool HasMigrationDirectory(string root)
+    {
+        foreach (var entry in Directory.GetFileSystemEntries(root, ".wandou-project-migration-*", SearchOption.TopDirectoryOnly)) return true;
+        return false;
+    }
+
+    static bool ContainsProtectedProjectData(string root)
+    {
+        if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0) return true;
+        foreach (var name in new[] { ProjectDataDirectoryName, ".wandou-project-storage.json", ".wandou-migration-manifest.json",
+            "canvas-media", "canvas-backups", "local-data", "export-artifacts", "project-hub-state.json" })
+            if (File.Exists(Path.Combine(root, name)) || Directory.Exists(Path.Combine(root, name))) return true;
+        return HasMigrationDirectory(root);
+    }
+
+    static void ValidateUpdatePackage(string package)
+    {
+        using (var archive = ZipFile.OpenRead(package))
+        {
+            foreach (var entry in archive.Entries)
+            {
+                var name = entry.FullName.Replace('\\', '/');
+                var parts = name.Split('/');
+                if (name.StartsWith("/") || name.IndexOf(':') >= 0) throw new InvalidOperationException("Unsafe update archive path.");
+                foreach (var part in parts)
+                {
+                    if (part == ".." || part == "." || part.Equals(ProjectDataDirectoryName, StringComparison.OrdinalIgnoreCase)
+                        || part.Equals(".wandou-project-storage.json", StringComparison.OrdinalIgnoreCase)
+                        || part.StartsWith(".wandou-project-migration-", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("Update packages must not contain project data or migration directories.");
+                }
+            }
+        }
+    }
+
+    // Enumerate only program files. Do not even descend into the potentially
+    // large project-data directory or retained migration copies, so neither
+    // updates nor rollback touch them. A failed migration may leave a recovery
+    // stage after a later retry succeeds; that must not block future updates.
+    static void CollectProgramEntries(string root, string directory, List<string> files, List<string> directories)
+    {
+        foreach (var entry in Directory.GetFileSystemEntries(directory))
+        {
+            if (directory.Equals(root, StringComparison.OrdinalIgnoreCase)
+                && (Path.GetFileName(entry).Equals(ProjectDataDirectoryName, StringComparison.OrdinalIgnoreCase)
+                    || Path.GetFileName(entry).StartsWith(".wandou-project-migration-", StringComparison.OrdinalIgnoreCase))) continue;
+            var attributes = File.GetAttributes(entry);
+            if ((attributes & FileAttributes.ReparsePoint) != 0) throw new InvalidOperationException("Linked program files cannot be updated safely.");
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                directories.Add(entry);
+                CollectProgramEntries(root, entry, files, directories);
+            }
+            else files.Add(entry);
+        }
+    }
 
     static string Arg(string[] args, string name)
     {
@@ -148,6 +206,15 @@ internal static class PortableUpdater
     static bool DeleteDirectoryWithRetry(string directory, string log, string description = "previous installation")
     {
         if (String.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) return true;
+        try
+        {
+            if (ContainsProtectedProjectData(directory))
+            {
+                Log(log, "Retaining " + description + " because it contains project data: " + directory);
+                return false;
+            }
+        }
+        catch (Exception ex) { Log(log, "Cannot verify cleanup safety; retaining " + directory + ": " + ex.Message); return false; }
         for (var attempt = 1; attempt <= 20; attempt++)
         {
             try
@@ -185,17 +252,23 @@ internal static class PortableUpdater
     // A browser or Explorer can hold the install directory open even after all
     // application processes exit. Replace files without renaming that directory.
     // Journal each replacement so a failure restores all already changed files.
-    static void ReplaceFilesWithRollback(string stage, string install, string previous, string log)
+    static void ReplaceFilesWithRollback(string stage, string install, string previous, string log, string executable, string target)
     {
         var replaced = new List<string>();
         var backedUp = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var oldFiles = new List<string>();
+        var oldDirectories = new List<string>();
+        CollectProgramEntries(install, install, oldFiles, oldDirectories);
+        var newFiles = new List<string>();
+        var newDirectories = new List<string>();
+        CollectProgramEntries(stage, stage, newFiles, newDirectories);
         Directory.CreateDirectory(previous);
         try
         {
             // A locked Explorer window may prevent renaming the outer directory. Move
             // every old file into the rollback area first so obsolete Electron DLLs
             // do not remain visible beside the new three-entry package.
-            foreach (var destination in Directory.GetFiles(install, "*", SearchOption.AllDirectories))
+            foreach (var destination in oldFiles)
             {
                 var relative = destination.Substring(install.Length).TrimStart(Path.DirectorySeparatorChar);
                 var backup = Path.Combine(previous, relative);
@@ -203,13 +276,12 @@ internal static class PortableUpdater
                 File.Move(destination, backup);
                 backedUp.Add(relative);
             }
-            var oldDirectories = new List<string>(Directory.GetDirectories(install, "*", SearchOption.AllDirectories));
             oldDirectories.Sort((left, right) => right.Length.CompareTo(left.Length));
             foreach (var directory in oldDirectories)
             {
                 try { if (Directory.GetFileSystemEntries(directory).Length == 0) Directory.Delete(directory); } catch { }
             }
-            foreach (var source in Directory.GetFiles(stage, "*", SearchOption.AllDirectories))
+            foreach (var source in newFiles)
             {
                 var relative = source.Substring(stage.Length).TrimStart(Path.DirectorySeparatorChar);
                 var destination = Path.Combine(install, relative);
@@ -217,6 +289,9 @@ internal static class PortableUpdater
                 replaced.Add(relative);
                 File.Copy(source, destination, false);
             }
+            // Verification belongs to the transaction: an incomplete new runtime
+            // must restore the old program while leaving the data child in place.
+            VerifyPortableLayout(install, executable, target, "Installed package");
         }
         catch
         {
@@ -255,10 +330,14 @@ internal static class PortableUpdater
             + ".failed-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
         var oldInstallMoved = false;
         var newInstallActivated = false;
+        var oldAppStopped = false;
 
         try
         {
             if (String.IsNullOrWhiteSpace(install) || !Directory.Exists(install) || !File.Exists(package)) throw new InvalidOperationException("Invalid update arguments.");
+            install = Path.GetFullPath(install).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if ((File.GetAttributes(install) & FileAttributes.ReparsePoint) != 0) throw new InvalidOperationException("Linked installation directories are not supported.");
+            ValidateUpdatePackage(package);
             // A child process inherits its parent's working directory on Windows.
             // If that directory is the portable installation, the updater itself
             // prevents Directory.Move from activating the new version.
@@ -272,6 +351,7 @@ internal static class PortableUpdater
             // Stop only remaining Electron processes whose executable lives inside this
             // installation. Unrelated portable copies with the same image name are safe.
             StopInstallProcesses(install, log);
+            oldAppStopped = true;
             Thread.Sleep(1000);
             Log(log, "Extracting verified release package.");
             Directory.CreateDirectory(stage);
@@ -280,21 +360,29 @@ internal static class PortableUpdater
             // Prefer a directory swap. If a directory handle blocks renaming, move
             // each old file to backup before copying its replacement (never overwrite
             // memory-mapped resources in place).
-            Log(log, "Activating new installation by directory swap.");
-            try
+            if (Directory.Exists(Path.Combine(install, ProjectDataDirectoryName)) || File.Exists(Path.Combine(install, ProjectDataDirectoryName)) || HasMigrationDirectory(install))
             {
-                MoveDirectoryWithRetry(install, previous, log);
-                oldInstallMoved = true;
+                Log(log, "Preserving embedded project data; replacing program files only.");
+                ReplaceFilesWithRollback(stage, install, previous, log, executable, target);
             }
-            catch (IOException)
+            else
             {
-                Log(log, "Install directory is locked; using journaled file replacement.");
-                ReplaceFilesWithRollback(stage, install, previous, log);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Log(log, "Install directory is locked; using journaled file replacement.");
-                ReplaceFilesWithRollback(stage, install, previous, log);
+                Log(log, "Activating new installation by directory swap.");
+                try
+                {
+                    MoveDirectoryWithRetry(install, previous, log);
+                    oldInstallMoved = true;
+                }
+                catch (IOException)
+                {
+                    Log(log, "Install directory is locked; using journaled file replacement.");
+                    ReplaceFilesWithRollback(stage, install, previous, log, executable, target);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Log(log, "Install directory is locked; using journaled file replacement.");
+                    ReplaceFilesWithRollback(stage, install, previous, log, executable, target);
+                }
             }
             if (oldInstallMoved)
             {
@@ -328,7 +416,7 @@ internal static class PortableUpdater
                     Log(log, "Rollback failed: " + rollbackError.Message);
                 }
             }
-            StartApplicationWithRetry(install, executable, log);
+            if (oldAppStopped) StartApplicationWithRetry(install, executable, log);
             return 1;
         }
         finally

@@ -27,7 +27,7 @@ test('freezing storage drains an already accepted asynchronous write and rejects
 test('a fully published verified target finalizes after configuration interruption without needing another full copy',async()=>{
  let published=false;
  const f=fixture(async(phase,{value}={})=>{if(phase==='before-switch')published=true;if(phase==='config-rename'&&published)throw Error('Injected config switch interruption')});
- const first=f.make();await first.initialize();const selection=await first.choose(f.disk);await first.prepare(selection);
+ const first=f.make({fault:async()=>{}});await first.initialize();const selection=await first.choose(f.disk);await first.prepare(selection);
  const restart=f.make();const interrupted=await restart.initialize();assert.equal(interrupted.migrated,false);assert.equal(fs.existsSync(path.join(selection.targetDirectory,'canvas-media','original.data')),true);
  const originalStatfs=fsp.statfs;fsp.statfs=async()=>({bavail:1024,bsize:1});
  try{const retry=f.make({fault:async()=>{}});const result=await retry.initialize();assert.equal(result.migrated,true,result.error);assert.equal(retry.root(),selection.targetDirectory);assert.equal(fs.readFileSync(path.join(f.legacy,'canvas-media','original.data'),'utf8'),'data:image/png;base64,AA==');}

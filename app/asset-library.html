@@ -52,7 +52,8 @@
     <p class="asset-location-name" id="assetLocationName"></p>
     <p class="asset-location-status" id="assetLocationStatus" role="status"></p>
     <div id="assetLocationDetails" hidden><label for="assetLocationPath">项目原图存储文件</label><input id="assetLocationPath" type="text" readonly spellcheck="false"></div>
-    <div class="asset-location-actions"><button class="button" id="assetLocationOpenFolder" type="button" disabled>打开所在文件夹</button></div>
+    <p class="asset-download-status" id="assetLocationDownloadStatus" role="status" hidden></p>
+    <div class="asset-location-actions"><button class="button" id="assetLocationOpenFolder" type="button" disabled>打开所在文件夹</button><button class="button primary" id="assetLocationDownload" type="button" disabled>另存为图片</button></div>
   </dialog>
   <div class="asset-toast" id="assetToast" role="status" aria-live="polite"></div>
   <script src="./skill-catalog.js"></script>
@@ -68,6 +69,7 @@
   </script>
   <script src="./canvas-media-urls.js"></script>
   <script src="./asset-state-reader.js"></script>
+  <script src="./image-export.js"></script>
   <script src="./asset-library.js"></script>
   <link rel="stylesheet" href="./storage-settings.css">
   <script src="./storage-settings.js"></script>
