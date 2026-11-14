@@ -4,10 +4,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const source = fs.readFileSync(path.resolve(__dirname, "../app/ai-node-canvas.html"), "utf8");
+const app = process.env.WANDOU_TEST_APP_ROOT || path.resolve(__dirname, "../app");
+const source = fs.readFileSync(path.join(app, "ai-node-canvas.html"), "utf8");
 const start = source.indexOf("    async function buildApiRequest(node, references) {");
 const end = source.indexOf("\n    function collectReferenceItems(", start);
 assert.ok(start >= 0 && end > start, "image request builder must exist");
+const editModelStart = source.indexOf("    function imageEditModelError(");
+const editModelEnd = source.indexOf("\n    async function callApi(", editModelStart);
+assert.ok(editModelStart >= 0 && editModelEnd > editModelStart, "masked-edit model validation must exist");
 const promptStart = source.indexOf("    function generatorPromptWithAnnotations(node, prompt, references = []) {");
 const promptEnd = source.indexOf("\n    async function appendGeneratorAnnotationGuide(", promptStart);
 assert.ok(promptStart >= 0 && promptEnd > promptStart, "annotation prompt builder must exist");
@@ -36,7 +40,7 @@ const context = {
   referenceToPngFile: async () => ({ name:"reference.png" }),
   referenceToFile: async () => ({ name:"mask.png" })
 };
-vm.runInNewContext(`${source.slice(start, end)}\nthis.buildApiRequest = buildApiRequest;`, context);
+vm.runInNewContext(`${source.slice(editModelStart, editModelEnd)}\n${source.slice(start, end)}\nthis.buildApiRequest = buildApiRequest;`, context);
 const promptContext = {
   generatorAnnotationItems: () => [
     { referenceNumber:1, commentNumber:1, text:"删除左上角标志", region:{ x:.1, y:.1, w:.2, h:.2 } },
@@ -68,12 +72,24 @@ test("masked edit keeps the selected GPT image model and sends one image plus on
   }
 });
 
-test("non-GPT masked edit retains the GPT mask-compatible fallback", async () => {
-  const request = await context.buildApiRequest({
+test("non-GPT masked edit fails explicitly before upload without changing the model or references", async () => {
+  const node = {
     type:"generator", model:"gemini-image", prompt:"局部修改", count:1,
     resolution:"1K", _apiTargetSize:"1024x1024"
-  }, [reference]);
-  assert.equal(request.body.get("model"), "gpt-image-2");
+  };
+  const references = [structuredClone(reference)], before = structuredClone(references);
+  const originalPng = context.referenceToPngFile, originalFile = context.referenceToFile;
+  let uploadPreparations = 0;
+  context.referenceToPngFile = context.referenceToFile = async () => { uploadPreparations++; return { name:"unexpected.png" }; };
+  try {
+    await assert.rejects(context.buildApiRequest(node, references), /当前局部重绘功能仅支持 GPT/);
+    assert.equal(node.model, "gemini-image");
+    assert.deepEqual(references, before);
+    assert.equal(uploadPreparations, 0);
+  } finally {
+    context.referenceToPngFile = originalPng;
+    context.referenceToFile = originalFile;
+  }
 });
 
 test("one-call annotation prompt includes every numbered edit and the guide role", () => {

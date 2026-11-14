@@ -479,6 +479,7 @@
   </style>
   <link rel="stylesheet" href="./fluid-glass.css">
   <link rel="stylesheet" href="./project-hub-design.css">
+  <link rel="stylesheet" href="./workspace-design.css">
 <link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script></head>
 <body id="projectLibrary" class="project-hub-page light-theme">
   <aside class="project-sidebar" aria-label="工作空间导航">
@@ -519,13 +520,13 @@
     </header>
 
     <section class="toolbar">
-      <input id="searchInput" class="search" type="search" placeholder="搜索文件夹名称">
-      <select id="sortSelect">
+      <input id="searchInput" class="search" type="search" placeholder="搜索文件夹名称" aria-label="搜索文件夹名称">
+      <select id="sortSelect" aria-label="项目排序">
         <option value="updated-desc">按操作时间排序</option>
         <option value="created-desc">按创建日期排序</option>
         <option value="name-asc">按名称排序</option>
       </select>
-      <button id="favoriteFilter" class="icon-button folder-filter" type="button" title="收藏文件夹">
+      <button id="favoriteFilter" class="icon-button folder-filter" type="button" title="收藏文件夹" aria-label="筛选收藏文件夹" aria-pressed="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg>
       </button>
       <div class="segmented" aria-label="预览大小">
@@ -534,7 +535,7 @@
         <button class="icon-button" data-size="large" type="button" title="大预览">大</button>
       </div>
     </section>
-    <p class="project-interaction-hint">单击选中 · 双击打开画布 · 双击名称重命名</p>
+    <p class="project-interaction-hint">单击选中 · 双击或 Enter 打开画布 · F2 或“重命名”修改名称</p>
     <main id="projectGrid" class="grid medium"></main>
   </div>
 
@@ -679,6 +680,10 @@
           }
           if (!cacheSaved && !options.silent) showProjectNotice("网页缓存已满，已自动改用磁盘保存，不影响继续使用。");
           return true;
+        })
+        .catch((error) => {
+          if (!options.silent) showProjectNotice(`项目文件夹保存失败：${error?.message || "存储暂不可用"}；${cacheSaved ? "当前修改仍保留在本机缓存，请恢复存储后重试。" : "当前修改尚未可靠保存，请保持窗口开启并恢复存储后重试。"}`, true);
+          return false;
         });
       return projectSaveQueue;
     }
@@ -975,6 +980,7 @@
       const project = projects.find((item) => item.id === projectId);
       if (!project) return;
       activeProjectId = projectId;
+      project.lastOpenedAt = Date.now();
       safeLocalSet(activeProjectStorageKey, projectId);
       void saveProjects({ silent: true });
       openNamedTab(canvasUrl(projectId), project.name);
@@ -983,6 +989,7 @@
     function editName(projectId) {
       const input = grid.querySelector(`[data-name="${projectId}"]`);
       if (!input) return;
+      selectProject(projectId);
       input.readOnly = false;
       input.focus();
       input.select();
@@ -993,6 +1000,7 @@
       safeLocalSet(selectedProjectStorageKey, projectId);
       grid.querySelectorAll("[data-project]").forEach((card) => {
         card.classList.toggle("selected", card.dataset.project === projectId);
+        card.setAttribute("aria-selected", String(card.dataset.project === projectId));
       });
     }
 
@@ -1062,8 +1070,7 @@
       list.sort((a, b) => {
         if (sort === "created-desc") return Number(b.createdAt || 0) - Number(a.createdAt || 0);
         if (sort === "name-asc") return String(a.name || "").localeCompare(String(b.name || ""), "zh-Hans-CN");
-        if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
-        return Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+        return Math.max(Number(b.lastOpenedAt || 0), Number(b.updatedAt || 0)) - Math.max(Number(a.lastOpenedAt || 0), Number(a.updatedAt || 0));
       });
       return list;
     }
@@ -1081,13 +1088,14 @@
       const savedAt = summary?.savedAt || project.updatedAt;
       const nodeCount = summary?.nodeCount ?? project.nodeCount ?? 0;
       const coverHtml = summary?.coverHtml || `<div class="empty-cover">正在读取预览…</div>`;
-      return `<article class="card ${project.id === selectedProjectId ? "selected" : ""} ${project.favorite ? "favorite" : ""}" data-project="${project.id}">
+      return `<article class="card ${project.id === selectedProjectId ? "selected" : ""} ${project.favorite ? "favorite" : ""}" data-project="${project.id}" tabindex="0" aria-label="项目文件夹：${escapeHtml(project.name)}" aria-selected="${project.id === selectedProjectId}">
         <div class="cover" data-cover="${project.id}">${coverHtml}</div>
         <div class="card-body">
           <div class="name-row">
             <input class="name-input" data-name="${project.id}" value="${escapeHtml(project.name)}" aria-label="文件夹名称" readonly>
-            <button class="icon-button mini-icon star ${project.favorite ? "active" : ""}" data-star="${project.id}" type="button" title="收藏文件夹">${starIcon()}</button>
-            <button class="icon-button mini-icon trash" data-delete="${project.id}" type="button" title="删除文件夹">${trashIcon()}</button>
+            <button class="button project-rename" data-rename="${project.id}" type="button" aria-label="重命名${escapeHtml(project.name)}" title="重命名（F2）">重命名</button>
+            <button class="icon-button mini-icon star ${project.favorite ? "active" : ""}" data-star="${project.id}" type="button" title="收藏文件夹" aria-label="收藏${escapeHtml(project.name)}" aria-pressed="${project.favorite}">${starIcon()}</button>
+            <button class="icon-button mini-icon trash" data-delete="${project.id}" type="button" title="删除文件夹" aria-label="删除${escapeHtml(project.name)}">${trashIcon()}</button>
           </div>
           <div class="meta">
             <span>创建 ${formatTime(project.createdAt)}</span>
@@ -1105,6 +1113,7 @@
         button.classList.toggle("active", button.dataset.size === sizeMode);
       });
       favoriteFilter.classList.toggle("active", showFavoritesOnly);
+      favoriteFilter.setAttribute("aria-pressed", String(showFavoritesOnly));
       favoriteFilter.title = showFavoritesOnly ? "显示全部文件夹" : "收藏文件夹";
       grid.className = `grid ${sizeMode}`;
       const list = sortedProjects();
@@ -1118,6 +1127,15 @@
     }
 
     function bindCard(card) {
+      card.querySelector('[data-rename]')?.addEventListener('click', event => {
+        event.stopPropagation(); editName(card.dataset.project);
+      });
+      card.addEventListener('keydown', event => {
+        if (event.target.closest('button, input')) return;
+        if (event.key === 'F2') { event.preventDefault(); editName(card.dataset.project); }
+        if (event.key === 'Enter') { event.preventDefault(); openProject(card.dataset.project); }
+        if (event.key === ' ') { event.preventDefault(); selectProject(card.dataset.project); }
+      });
       card.addEventListener("click", (event) => {
         if (event.target.closest("button, input")) return;
         selectProject(card.dataset.project);
@@ -1240,6 +1258,11 @@
       if (active) openProject(active);
     });
 
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'F2' || event.defaultPrevented || event.target.closest('input:not([readonly]), textarea, [contenteditable="true"]')) return;
+      if (!selectedProjectId) return;
+      event.preventDefault(); editName(selectedProjectId);
+    });
     searchInput.addEventListener("input", render);
     sortSelect.addEventListener("change", render);
     favoriteFilter.addEventListener("click", () => {

@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const app = process.env.WANDOU_TEST_APP_ROOT || path.resolve(__dirname, '../app');
+const capabilities = require(path.join(app, 'image-model-capabilities.js'));
 const files = ['ai-node-canvas-test.html', 'ai-node-canvas.html', 'image-workbench/customize.js'];
 const sources = Object.fromEntries(files.map(file => [file, fs.readFileSync(path.join(app, file), 'utf8').replace(/\r\n/g, '\n')]));
 
@@ -40,13 +41,15 @@ test('canvas and workbench GPT requests obey all size limits after rounding', ()
   }
 });
 
-test('known one-K-only models cannot advertise larger native resolution tiers', () => {
+test('output tiers remain selectable while known native requests stay within capabilities', () => {
   for (const file of files.filter(file => file.endsWith('.html'))) {
-    const c = vm.createContext({ imageResolutionOptions: ['1K', '2K', '4K'], modelToApiModel: value => value });
-    vm.runInContext(['imageResolutionOptionsForModel', 'isOneKOnlyImageModel'].map(name => extract(sources[file], name)).join('\n'), c);
-    assert.deepEqual(Array.from(c.imageResolutionOptionsForModel('gpt-image-2.5-1k')), ['1K']);
-    assert.deepEqual(Array.from(c.imageResolutionOptionsForModel('grok-imagine-image-2.0')), ['1K', '2K']);
+    const c = vm.createContext({ window:{WandouImageCapabilities:capabilities}, imageResolutionOptions: ['1K', '2K', '4K'], modelToApiModel: value => value });
+    vm.runInContext(['imageResolutionOptionsForModel', 'imageNativeResolutionForModel', 'isOneKOnlyImageModel'].map(name => extract(sources[file], name)).join('\n'), c);
+    assert.deepEqual(Array.from(c.imageResolutionOptionsForModel('gpt-image-2.5-1k')), ['1K', '2K', '4K']);
+    assert.deepEqual(Array.from(c.imageResolutionOptionsForModel('grok-imagine-image-2.0')), ['1K', '2K', '4K']);
     assert.deepEqual(Array.from(c.imageResolutionOptionsForModel('gpt-image-2.5-flare')), ['1K', '2K', '4K']);
+    assert.equal(c.imageNativeResolutionForModel('gpt-image-2.5-1k','4K'),'1K');
+    assert.equal(c.imageNativeResolutionForModel('grok-imagine-image-2.0','4K'),'2K');
   }
   let model = 'gpt-image-2.5-1k';
   const c = vm.createContext({ QUALITY_OPTIONS: [{ value: 'low' }, { value: 'medium' }, { value: 'high' }], readModel: () => model, modelToApiModel: value => value, localStorage: { getItem: () => 'high' } });

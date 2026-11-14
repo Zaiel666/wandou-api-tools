@@ -9,22 +9,23 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./logo.png" type="image/png">
   <link rel="stylesheet" href="./styles.css">
-  <title>豌豆 AI · 首页测试版</title>
+  <title>豌豆 AI · 首页</title>
   <link rel="stylesheet" href="./fluid-glass.css">
   <link rel="stylesheet" href="./homepage-test.css">
   <link rel="stylesheet" href="./home-motion.css">
   <link rel="stylesheet" href="./home-covers.css">
+  <link rel="stylesheet" href="./workspace-design.css">
   <script defer src="./home-motion.js"></script>
 <link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script></head>
 <body class="home-page home-test-page">
   <main class="shell home-redesign">
-    <aside class="home-test-sidebar" aria-label="测试版侧边导航">
-      <a class="home-test-brand" href="./homepage-test.html" aria-label="豌豆 AI 测试版首页"><img src="./logo.png" alt=""><strong>豌豆 AI</strong></a>
+    <aside class="home-test-sidebar" aria-label="侧边导航">
+      <a class="home-test-brand" href="./homepage-test.html" aria-label="豌豆 AI 首页"><img src="./logo.png" alt=""><strong>豌豆 AI</strong></a>
       <div class="home-test-side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>工作空间</div>
       <nav class="home-test-side-nav" aria-label="主要工作空间">
         <button class="home-test-side-main active" type="button" data-home-nav="home" aria-pressed="true"><span class="home-test-side-icon" aria-hidden="true">⌂</span><span>发现</span></button>
         <a class="home-test-side-main" href="./project-hub.html" data-tab-title="项目文件夹"><span class="home-test-side-icon" aria-hidden="true">▦</span><span>项目文件夹</span></a>
-        <a class="home-test-side-main" href="./ai-node-canvas-v2.html" data-tab-title="节点无线画布"><span class="home-test-side-icon" aria-hidden="true">◇</span><span>节点画布</span></a>
+        <a class="home-test-side-main" href="./ai-node-canvas-v2.html" data-tab-title="节点画布"><span class="home-test-side-icon" aria-hidden="true">◇</span><span>节点画布</span></a>
         <a class="home-test-side-main" href="./asset-library-test.html" data-tab-title="资产"><span class="home-test-side-icon" aria-hidden="true">□</span><span>资产</span></a>
       </nav>
       <div class="home-test-side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></svg>创作空间</div>
@@ -119,6 +120,17 @@
 
     <div class="home-content-divider" aria-hidden="true"></div>
 
+    <section class="home-recent" data-home-section aria-labelledby="homeRecentTitle">
+      <div class="home-recent-heading"><h2 id="homeRecentTitle">继续创作</h2><a href="./project-hub.html" data-tab-title="项目文件夹">所有项目 ↗</a></div>
+      <div id="homeRecentProjects" class="home-recent-grid" aria-live="polite"><p>正在读取最近项目…</p></div>
+      <details class="home-start-guide"><summary>第一次使用？查看 API、存储与导出说明</summary><div class="home-start-guide-content">
+        <p><strong>1. 设置 API</strong>：右上角设置中填写服务地址与密钥，再在画布中选择对应模型。密钥与模型额度由你的 API 服务商管理。</p>
+        <p><strong>2. 开始创作</strong>：打开项目文件夹，在画布加入生成节点；提示词描述这一次想生成的内容，绘图 Skill 为提示词补充可复用的写法与规则。</p>
+        <p><strong>3. 自动保存</strong>：项目与原图由软件自动保管，存储设置可查看实际数据目录；无需手动寻找内部 .data 文件。</p>
+        <p><strong>4. 导出与外观</strong>：需要独立图片时点击“下载图片”并选择保存位置；右上角可切换明暗主题。资产页也支持逐张或批量另存为。</p>
+      </div></details>
+    </section>
+
     <section class="home-test-hero" data-home-section aria-label="开始创作">
       <div class="home-test-eyebrow">A SPACE FOR IDEAS</div>
       <div class="home-test-hero-panel">
@@ -137,7 +149,7 @@
       <a class="tool-card module-card module-canvas" href="./project-hub.html" rel="noopener noreferrer" data-tab-title="项目文件夹">
         <span class="home-test-card-index">01 / WORKFLOW</span>
         <span class="module-copy">
-          <span class="tool-label">节点无线画布</span>
+          <span class="tool-label">节点画布</span>
           <span class="tool-desc">灵感、素材与 AI 生成，在一张画布里自由连接。</span>
           <span class="module-enter" aria-hidden="true">↗</span>
         </span>

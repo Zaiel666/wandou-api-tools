@@ -42,7 +42,7 @@ function disk(t) {
     assert.ok(path.basename(directory).startsWith('wandou-export-test-'));
     fs.rmSync(directory, {recursive:true, force:true});
   });
-  const c = {fs, path, crypto, Buffer, app:{getPath: () => directory}};
+  const c = {fs, path, crypto, Buffer, app:{getPath: () => directory}, projectStorage:{root:()=>directory}};
   vm.createContext(c);
   vm.runInContext(block(main, 'function exportArtifactPath(', 'async function readProjectHubState('), c);
   return {c, directory, bridge:{writeExportArtifact:c.writeExportArtifact, readExportArtifact:c.readExportArtifact}};
@@ -94,11 +94,11 @@ test('disk persistence rejects traversal, wrong hash and tampered data', async t
 
 test('new binary IPC is restricted to local app senders', async () => {
   const handlers = new Map(); let calls = 0;
-  const c = {ipcMain:{handle:(name, handler) => handlers.set(name, handler)},
+  const c = {handleDesktop:(name, handler) => handlers.set(name, handler), withProjectStorage:async(_kind,task)=>task(),
     isLocalAppPage:url => url === 'file:///allowed.html',
     writeExportArtifact:() => { calls++; return {success:true}; }, readExportArtifact:() => { calls++; return {success:true}; }};
   vm.createContext(c);
-  vm.runInContext(block(main, 'ipcMain.handle("desktop:write-export-artifact"', 'ipcMain.handle("desktop:get-local-data-config"'), c);
+  vm.runInContext(block(main, 'handleDesktop("desktop:write-export-artifact"', 'handleDesktop("desktop:get-local-data-config"'), c);
   for (const handler of handlers.values()) {
     assert.equal((await handler({senderFrame:{url:'https://untrusted.invalid'}})).success, false);
     assert.equal((await handler({senderFrame:{url:'file:///allowed.html'}})).success, true);

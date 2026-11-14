@@ -5,7 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const {parseHTML} = require('../tools/canvas-ui-test/node_modules/linkedom');
-const read = file => fs.readFileSync(path.join(__dirname, '../app', file), 'utf8').replace(/\r\n/g, '\n');
+const app = process.env.WANDOU_TEST_APP_ROOT || path.join(__dirname, '../app');
+const read = file => fs.readFileSync(path.join(app, file), 'utf8').replace(/\r\n/g, '\n');
 const page = read('ai-node-canvas-test.html');
 const previous = read('ai-node-canvas.html');
 const expectedOptions = ['Auto自适应','自定义尺寸','1:1 方图','21:9 超宽屏','16:9 横屏','9:16 竖屏','4:3 横图','3:4 竖图','3:2 摄影横图','2:3 摄影竖图','5:4 商品图','4:5 社媒图','3:1 屏幕横图','1:3 长竖图'];
@@ -17,7 +18,7 @@ function sourceFunction(source, name) {
   assert.ok(end >= 0, name + ' end');
   return source.slice(start, start + 1 + end).trim();
 }
-const helpers = ['resolutionLongSide','scaleToResolution','closestImageSizeFromMap','orderedAutoKeys','normalizePromptSizeText','extractPromptSizeKey','extractPromptPixelSize','sizeDecisionFromRatio','sizeFromRatio','roundToMultiple','apiSizeFromTarget','apiSafeGenerationSize','ratioKey','parseSize'];
+const helpers = ['resolutionLongSide','scaleToResolution','closestImageSizeFromMap','orderedAutoKeys','normalizePromptSizeText','extractPromptSizeKey','extractPromptPixelSize','sizeDecisionFromRatio','sizeFromRatio','roundToMultiple','apiSizeFromTarget','apiSafeGenerationSize','ratioKey','parseSize','imageEditModelError'];
 function sizing(source) {
   const context = vm.createContext({
     imageGenerationApiModel: model => model,

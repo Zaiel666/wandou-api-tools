@@ -1,18 +1,9 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="refresh" content="0; url=./程序文件/resources/app/homepage-test.html">
-  <title>豌豆AI工具网页版</title>
-  <style>
-    :root { color-scheme: dark; font-family: "Microsoft YaHei", sans-serif; }
-    body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: #0c0f0d; color: #edf7f0; }
-    a { color: #65dc91; }
-  </style>
-</head>
-<body>
-  <p>正在打开网页版……若没有自动跳转，请<a href="./程序文件/resources/app/homepage-test.html">点击这里</a>。</p>
-  <script>location.replace(new URL("./程序文件/resources/app/homepage-test.html", location.href).href);</script>
-</body>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>打开豌豆 AI 网页版</title>
+<style>
+ :root{color-scheme:light dark;font:16px/1.7 "Microsoft YaHei",sans-serif;background:#f5f5f5;color:#242424}body{margin:0;min-height:100dvh;display:grid;place-items:center}main{box-sizing:border-box;max-width:640px;margin:24px;padding:32px;background:#fff;border:1px solid #ddd;border-radius:16px}h1{font-size:24px;margin:0 0 16px}p{margin:12px 0}a{display:inline-block;margin-top:12px;border-radius:8px;padding:10px 18px;background:#252525;color:#fff;text-decoration:none}a:focus-visible{outline:3px solid #777;outline-offset:4px}small{display:block;margin-top:18px;color:#666}@media(prefers-color-scheme:dark){:root{background:#111;color:#eee}main{background:#1c1c1c;border-color:#444}a{background:#eee;color:#111}small{color:#bbb}}
+</style>
+<main><h1>网页版使用独立的浏览器存储</h1><p>网页版中的项目与桌面版项目不共享。即使使用同一个 API 密钥，也不会自动同步画布或图片。</p><p>项目保存在当前浏览器的本地数据中。更换浏览器、清除网站数据或移动网页版文件，可能使已有项目无法访问。重要项目请先导出备份。</p><p>如需打开已有桌面项目，请使用同文件夹内的“豌豆AI工具.exe”。</p><a href="./程序文件/resources/app/homepage-test.html">继续打开独立网页版</a><small>网页版不等于云同步，也不自动保存到桌面版的“豌豆AI数据”。</small></main>
 </html>

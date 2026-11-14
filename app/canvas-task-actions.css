@@ -1,0 +1,8 @@
+.canvas-task-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.canvas-task-actions:empty { display:none; }
+.canvas-task-actions button { min-height:32px; font-size:13px; }
+.canvas-task-actions small, .canvas-task-details { font-size:12px; color:var(--muted,#8e8e95); }
+.canvas-task-actions button:focus-visible, .canvas-task-details summary:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
+.canvas-task-details { margin-top:6px; overflow-wrap:anywhere; }
+.canvas-task-details summary { cursor:pointer; }
+.canvas-task-details p { margin:6px 0; user-select:text; }

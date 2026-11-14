@@ -6,6 +6,8 @@
     "gpt-image-2",
     "gpt-image-2.5-flare",
     "gpt-image-2.5-sunburst",
+    "gpt-image-2.6-flare",
+    "gpt-image-2.6-sunburst",
     "Nano Banana2",
     "Nano BananaPro"
   ];
@@ -14,6 +16,8 @@
     "gpt-image-2.5-1k": "gpt-image-2.5-1k",
     "gpt-image-2.5-flare": "gpt-image-2.5-flare",
     "gpt-image-2.5-sunburst": "gpt-image-2.5-sunburst",
+    "gpt-image-2.6-flare": "gpt-image-2.6-flare",
+    "gpt-image-2.6-sunburst": "gpt-image-2.6-sunburst",
     "Nano Banana2": "gemini-3.1-flash-image-preview",
     "Nano BananaPro": "gemini-3-pro-image-preview"
   };
@@ -75,10 +79,12 @@
   let autoSaveHandle = null;
   let autoSaveHandleLoaded = false;
   let autoSaveStatusTimer = null;
+  let workbenchDownloadPending = false;
 
   function readGlobalApiKey() {
     try {
       const globalConfig = JSON.parse(localStorage.getItem("ai-tools-api-config") || "{}");
+      if (globalConfig.channels) return String(globalConfig.channels.channel1?.gateway?.key || "");
       if (globalConfig.key) return String(globalConfig.key);
     } catch {}
     try {
@@ -91,13 +97,14 @@
   function syncWorkbenchApiConfig() {
     try {
       const key = readGlobalApiKey();
+      const structuredChannels = Boolean(JSON.parse(localStorage.getItem('ai-tools-api-config') || '{}').channels);
       const raw = localStorage.getItem("gpt-image-playground");
       const store = raw ? JSON.parse(raw) : { state: {}, version: 0 };
       store.state = store.state || {};
       store.state.settings = store.state.settings || {};
       const settings = store.state.settings;
       settings.baseUrl = API_URL;
-      if (key) settings.apiKey = key;
+      if (key || structuredChannels) settings.apiKey = key;
       settings.model = modelToApiModel(normalizeModelName(settings.model || defaultModel()));
       settings.timeout = 999;
       settings.apiMode = settings.apiMode || "images";
@@ -114,7 +121,7 @@
         name: index === 0 ? "默认" : profile.name,
         provider: profile.provider || "openai",
         baseUrl: API_URL,
-        apiKey: key || profile.apiKey || "",
+        apiKey: structuredChannels ? key : key || profile.apiKey || "",
         model: modelToApiModel(normalizeModelName(profile.model || settings.model || defaultModel())),
         timeout: 999,
         apiMode: profile.apiMode || settings.apiMode || "images"
@@ -252,7 +259,7 @@
 
   function isNanoBananaModel(model) {
     const id = String(modelToApiModel(model) || model || "");
-    return /^gemini-.*image-preview$/i.test(id) || /^gemini-(?:3\.1-flash(?:-lite)?|3-pro)-image$/i.test(id);
+    return /^gemini-.*image-preview$/i.test(id) || /^gemini-(?:2\.5-flash|3\.1-flash(?:-lite)?|3-pro)-image$/i.test(id) || id === 'gemini-nano-banana-2.1';
   }
 
   function readModel() {
@@ -265,6 +272,7 @@
   }
 
   function qualityOptionsForModel(model = readModel()) {
+    if (typeof window !== 'undefined' && window.WandouWorkbenchOutput) return QUALITY_OPTIONS;
     const id = String(modelToApiModel(model) || "").toLowerCase();
     if (/(?:^|[-.])1k(?:$|[-.])/.test(id) || /^gemini-3\.1-flash-lite-image(?:-preview)?$/.test(id)) return QUALITY_OPTIONS.slice(0, 1);
     if (id === "grok-imagine-image-2.0") return QUALITY_OPTIONS.slice(0, 2);
@@ -453,6 +461,43 @@
     }) || "auto";
   }
 
+  const GENERATION_OPTIONS_KEY = 'wd-generation-options-v221';
+  let generationOptionsNotice = '';
+  function readGenerationOptions() {
+    let saved = {}; try { saved = JSON.parse(localStorage.getItem(GENERATION_OPTIONS_KEY) || '{}') || {}; } catch {}
+    return {model: modelToApiModel(readModel()), imageOutputFormat: saved.imageOutputFormat || 'png', imageQuality: saved.imageQuality || 'high', imageComplexity: saved.imageComplexity || 'high', gifFrameCount: saved.gifFrameCount == null ? 9 : saved.gifFrameCount, gifFrameDurationMs: saved.gifFrameDurationMs == null ? 200 : saved.gifFrameDurationMs};
+  }
+  function writeGenerationOptions(node) {
+    const {model, ...saved} = node;
+    try { localStorage.setItem(GENERATION_OPTIONS_KEY, JSON.stringify(saved)); } catch {}
+  }
+  function ensureGenerationOptions() {
+    if (!window.WandouImageOptions) return;
+    const anchor = document.querySelector('.wd-model-control'); if (!anchor?.parentElement) return;
+    const node = readGenerationOptions(), options = window.WandouImageOptions.normalise(node), cap = window.WandouImageOptions.capabilities(node);
+    if (options.format !== 'png' && !cap[options.format]) {
+      node.imageOutputFormat = 'png'; writeGenerationOptions(node);
+      generationOptionsNotice = '当前模型不支持 SVG / GIF，已切换为 PNG。';
+    }
+    let host = document.querySelector('.wd-workbench-generation');
+    if (!host) { host = document.createElement('section'); host.className = 'wd-workbench-generation'; host.setAttribute('aria-label', '生成输出设置'); anchor.parentElement.append(host); }
+    const format = node.imageOutputFormat, key = JSON.stringify(node) + generationOptionsNotice;
+    if (host.dataset.optionsKey !== key) {
+      host.dataset.optionsKey = key;
+      host.innerHTML = window.WandouImageOptions.render(node, {includeFormat: true});
+      if (generationOptionsNotice) { const notice = host.querySelector('.wd-generation-error'); notice.textContent = generationOptionsNotice; notice.hidden = false; }
+      window.WandouImageOptions.bind(host, node, {onChange: () => {generationOptionsNotice = ''; writeGenerationOptions(node); if (node.imageOutputFormat !== 'png') syncCountValue(1); ensureGenerationOptions();}});
+    }
+    const pixelOutput = format === 'png';
+    const legacyFormat = getFieldLabel('格式');
+    if (legacyFormat) legacyFormat.classList.add('wd-nonpixel-hidden');
+    for (const control of [getFieldLabel('尺寸'), getQualityFieldLabel()]) {
+      if (control) { control.hidden = !pixelOutput; control.classList.toggle('wd-nonpixel-hidden', !pixelOutput); }
+    }
+    document.querySelectorAll('.wd-count-control input, .wd-count-control button').forEach(control => { control.disabled = !pixelOutput; });
+    if (!pixelOutput) syncCountValue(1);
+  }
+
   function normalizeImageBody(body, count = 1) {
     const next = { ...body };
     const model = readModel();
@@ -485,6 +530,18 @@
       delete next.response_format;
       delete next.moderation;
     }
+    if (window.WandouWorkbenchOutput) {
+      const plan = window.WandouWorkbenchOutput.plan(modelToApiModel(model), effectiveQuality, effectiveSize || '1024x1024');
+      next.size = plan.nativeSize;
+      if (plan.kind === 'gateway-1k') next.quality = 'low';
+      if (plan.kind === 'unknown') { delete next.resolution; delete next.quality; delete next.output_format; }
+      if (plan.kind === 'openai-flex' || plan.kind === 'openai-standard') next.output_format = 'png';
+      if (plan.kind === 'gemini' || plan.kind === 'grok') {
+        next.resolution = plan.kind === 'grok' ? plan.nativeTier.toLowerCase() : plan.nativeTier;
+        if (plan.kind === 'gemini') next.targetSize = plan.nativeSize;
+        if (plan.kind === 'grok') { delete next.size; delete next.quality; }
+      }
+    }
     ["timeout", "request_timeout", "requestTimeout", "timeout_seconds", "timeoutSeconds"].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(next, key)) next[key] = 999;
     });
@@ -492,6 +549,19 @@
       if (Object.prototype.hasOwnProperty.call(next, key)) next[key] = count;
     });
     if (!["n", "count", "quantity", "num_images"].some((key) => Object.prototype.hasOwnProperty.call(next, key)) && count > 1) next.n = count;
+    if (window.WandouImageOptions) {
+      const options = readGenerationOptions();
+      const references = [next.image, next.images, next.reference_images, next.image_urls, next.input_images].flat(Infinity).filter(Boolean);
+      const invalid = window.WandouImageOptions.validate({...options, mask: next.mask, markupImage: next.markup}, references);
+      if (invalid) throw new Error(invalid);
+      Object.assign(next, window.WandouImageOptions.requestFields(options));
+      if (options.imageOutputFormat !== 'png') {
+        ['count','quantity','num_images','output_compression','stream','partial_images','prompt_rewriter','resolution','targetSize','background'].forEach(key => delete next[key]);
+        next.n = 1;
+        if (options.imageOutputFormat === 'gif') { delete next.mask; delete next.markup; }
+      } else { delete next.frame_count; delete next.frame_duration_ms; }
+      if (!window.WandouImageOptions.capabilities(options).complexity) delete next.complexity;
+    }
     window.__wdLastNormalizedImageBody = next;
     return next;
   }
@@ -529,23 +599,25 @@
     return output;
   }
 
-  function extractNanoBananaImage(data) {
+  function extractNanoBananaImage(data, inheritedFormat = '') {
     if (!data) return "";
     if (typeof data === "string") return /^data:image\//i.test(data) ? data : "";
     const inlineData = data.inlineData || data.inline_data;
     if (inlineData?.data) return `data:${inlineData.mimeType || inlineData.mime_type || "image/png"};base64,${String(inlineData.data).replace(/^data:[^,]+,/, "")}`;
-    if (data.b64_json) return `data:image/png;base64,${data.b64_json}`;
-    if (data.base64) return `data:image/png;base64,${String(data.base64).replace(/^data:image\/\w+;base64,/, "")}`;
+    const format = data.output_format || inheritedFormat;
+    const mime = data.mime_type || data.mimeType || ({ png:'image/png', jpeg:'image/jpeg', webp:'image/webp', gif:'image/gif', svg:'image/svg+xml' })[format] || 'image/png';
+    if (data.b64_json) return `data:${mime};base64,${data.b64_json}`;
+    if (data.base64) return `data:${mime};base64,${String(data.base64).replace(/^data:image\/[^;]+;base64,/, "")}`;
     if (data.url || data.image_url) return data.url || data.image_url;
     if (Array.isArray(data)) {
       for (const item of data) {
-        const found = extractNanoBananaImage(item);
+        const found = extractNanoBananaImage(item, format);
         if (found) return found;
       }
     }
     if (typeof data === "object") {
       for (const item of Object.values(data)) {
-        const found = extractNanoBananaImage(item);
+        const found = extractNanoBananaImage(item, format);
         if (found) return found;
       }
     }
@@ -556,6 +628,7 @@
     const selected = String(normalized.resolution).toUpperCase();
     const liteModel = /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(String(normalized.model || ""));
     const imageConfig = { imageSize: liteModel ? "1K" : ["1K", "2K", "4K"].includes(selected) ? selected : "2K" };
+    if (/^gemini-2\.5-flash-image(?:-preview)?$/i.test(String(normalized.model || ''))) delete imageConfig.imageSize;
     const size = parseSizeText(normalized.targetSize || normalized.size);
     if (size) {
       const ratio = size.width / size.height;
@@ -682,7 +755,7 @@
   }
 
   function isGenerateButton(button) {
-    if (!button || button.closest(".wd-count-control, .wd-size-control, .wd-model-control, .wd-custom-quality-control")) return false;
+    if (!button || button.closest(".wd-count-control, .wd-size-control, .wd-model-control, .wd-custom-quality-control, .wd-workbench-generation")) return false;
     if (button.closest(".task-card-wrapper") || button.closest("[role='dialog']") || button.closest(".wd-operation-guide")) return false;
     const bar = button.closest(".fixed[class*='bottom']");
     if (!bar) return false;
@@ -696,7 +769,7 @@
     document.addEventListener("click", (event) => {
       const button = event.target?.closest?.("button");
       if (!isGenerateButton(button) || duplicatingSubmit) return;
-      const count = readVisibleCount();
+      const count = window.WandouImageOptions && readGenerationOptions().imageOutputFormat !== 'png' ? 1 : readVisibleCount();
       if (count <= 1) return;
       event.preventDefault();
       event.stopPropagation();
@@ -764,8 +837,29 @@
       let body = null;
       try { body = JSON.parse(init.body); } catch {}
       if (body && isImageRequest(body)) {
-        if (isNanoBananaModel(readModel())) return requestNanoBananaImage(input, init, body);
-        init = { ...init, body: JSON.stringify(normalizeImageBody(body, 1)) };
+        if (window.WandouImageOptions) {
+          const references=[body.image,body.images,body.reference_images,body.image_urls,body.input_images].flat(Infinity).filter(Boolean);
+          const invalid=window.WandouImageOptions.validate({...readGenerationOptions(),mask:body.mask,markupImage:body.markup},references);
+          if(invalid)return new Response(JSON.stringify({error:{message:invalid,type:'local_validation_error'}}),{status:422,headers:{'content-type':'application/json'}});
+        }
+        const outputPlan = window.WandouWorkbenchOutput?.plan(modelToApiModel(readModel()), readQuality(), readVisibleSize() || '1024x1024');
+        if (isNanoBananaModel(readModel())) {
+          const response = await requestNanoBananaImage(input, init, body);
+          return outputPlan ? window.WandouWorkbenchOutput.processResponse(response, { plan: outputPlan, signal: init.signal, fetch: nativeFetch }) : response;
+        }
+        let normalized;
+        try { normalized = normalizeImageBody(body, 1); }
+        catch (error) { return new Response(JSON.stringify({error:{message:error.message,type:'local_validation_error'}}), {status:422,headers:{'content-type':'application/json'}}); }
+        init = { ...init, body: JSON.stringify(normalized) };
+        if (outputPlan) {
+          const requestUrl = typeof input === 'string' ? input : input?.url;
+          if (new URL(requestUrl, location.href).hostname === 'api.openai.com') {
+            const nativeBody=JSON.parse(init.body);delete nativeBody.resolution;delete nativeBody.response_format;
+            init.body=JSON.stringify(nativeBody);
+          }
+          const response=await nativeFetch(input,init);
+          return window.WandouWorkbenchOutput.processResponse(response,{plan:outputPlan,outputFormat:normalized.output_format,signal:init.signal,fetch:nativeFetch});
+        }
       }
     }
     return nativeFetch(input, init);
@@ -974,6 +1068,11 @@
       if (panel) {
         panel.classList.add("wd-operation-guide");
         replaceGuideFooter(panel);
+        if(!panel.querySelector('.wd-vector-guide')){
+          const note=document.createElement('p');note.className='wd-vector-guide';
+          note.textContent='工作台支持 PNG 图片、SVG 矢量和 GIF 动图；实际可用格式取决于所选模型与渠道权限。SVG 仅支持文字生成，请移除参考图。圈画标注请在节点画布中选择 PNG 输出后使用。';
+          panel.appendChild(note);
+        }
       }
       break;
     }
@@ -1166,6 +1265,13 @@ function rewriteQualityOptions() {
       const ariaSelected = isSelected ? "true" : "false";
       if (button.getAttribute("aria-selected") !== ariaSelected) button.setAttribute("aria-selected", ariaSelected);
     });
+    if (window.WandouWorkbenchOutput) {
+      const plan=window.WandouWorkbenchOutput.plan(modelToApiModel(readModel()),current,readVisibleSize()||'1024x1024');
+      let note=control.querySelector('.wd-resolution-note');
+      if(!note){note=document.createElement('p');note.className='wd-resolution-note';control.appendChild(note);}
+      const text=plan.mayUpscale ? `输出 ${plan.tier}，原生不足时本地放大（非原生生成）` : `优先原生 ${plan.tier}，返回不足时本地放大并标记`;
+      if(note.textContent!==text)note.textContent=text;
+    }
   }
 
   function syncNativeQuality(value = readQuality()) {
@@ -1890,10 +1996,12 @@ function rewriteQualityOptions() {
   async function getDownloadSource(image) {
     const imageId = image?.getAttribute?.("data-image-id");
     const record = await readFullImageRecord(imageId);
-    return record?.dataUrl || image?.src || "";
+    return record?.dataUrl || image?.dataset?.wdAnimationOriginal || image?.src || "";
   }
 
   function imageExtension(source) {
+    if (source.startsWith("data:image/gif")) return "gif";
+    if (/^data:image\/svg\+xml(?:;|,)/i.test(source)) return "svg";
     if (source.startsWith("data:image/jpeg")) return "jpg";
     if (source.startsWith("data:image/webp")) return "webp";
     return "png";
@@ -1904,6 +2012,7 @@ function rewriteQualityOptions() {
 
   function sizeTextElements(scope) {
     return Array.from(scope.querySelectorAll("span, div"))
+      .filter((item) => !item.closest?.('.wd-output-processing'))
       .filter((item) => item.children.length === 0)
       .map((item) => ({ item, text: normalizeText(item) }))
       .filter(({ text }) => SIZE_TEXT_PATTERN.test(text));
@@ -1924,47 +2033,28 @@ function rewriteQualityOptions() {
   async function buildWorkbenchImageBlob(scope, image) {
     const imageId = image.getAttribute("data-image-id");
     const record = await readFullImageRecord(imageId);
-    const source = record?.dataUrl || image.src;
+    const source = record?.dataUrl || image.dataset.wdAnimationOriginal || image.src;
     if (!source) return null;
     // Export the original bytes. Current generation settings must not resize old results.
     const blob = await (await nativeFetch(source)).blob();
-    const extension = blob.type === "image/jpeg" ? "jpg" : blob.type === "image/webp" ? "webp" : imageExtension(source);
+    const extension = blob.type.split(';')[0] === 'image/svg+xml' ? 'svg' : blob.type === "image/gif" ? "gif" : blob.type === "image/jpeg" ? "jpg" : blob.type === "image/webp" ? "webp" : imageExtension(source);
     return { blob, extension, filename: `wandou-ai-${Date.now()}.${extension}` };
   }
 
   async function downloadImageFromScope(scope) {
+    if (workbenchDownloadPending) return;
     const image = findDownloadImage(scope);
     if (!image?.src) return;
-    let output = null;
+    workbenchDownloadPending = true;
     try {
-      output = await buildWorkbenchImageBlob(scope, image);
-    } catch {
-      const source = await getDownloadSource(image);
-      if (!source) return;
-      const fallback = document.createElement("a");
-      fallback.download = `wandou-ai-${Date.now()}.${imageExtension(source)}`;
-      fallback.rel = "noopener";
-      fallback.href = source;
-      document.body.appendChild(fallback);
-      fallback.click();
-      fallback.remove();
-      return;
-    }
-    if (!output?.blob) return;
-    const name = output.filename;
-    const link = document.createElement("a");
-    link.download = name;
-    link.rel = "noopener";
-    try {
-      const url = URL.createObjectURL(output.blob);
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      link.remove();
-    }
+      const output = await buildWorkbenchImageBlob(scope, image);
+      if (!output?.blob) throw new Error('未找到可下载的原文件。');
+      if (!window.WandouImageExport?.save) throw new Error('下载组件尚未就绪，请刷新后重试。');
+      const result = await window.WandouImageExport.save({ blob:output.blob, filename:output.filename });
+      if (!result?.success && !result?.canceled) throw new Error(result?.error || '图片保存失败，请重试。');
+    } catch (error) {
+      window.alert(error?.message || '图片保存失败，请重试。');
+    } finally { workbenchDownloadPending = false; }
   }
 
   function findCardActionRow(card) {
@@ -2033,26 +2123,46 @@ function rewriteQualityOptions() {
   }
 
   const displayedImageDimensions = new WeakMap();
+  const workbenchAnimations = new Map();
+  const animationVisibility = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
+    entries.forEach(entry => { if (!entry.isIntersecting) workbenchAnimations.get(entry.target)?.stop(); });
+  }) : null;
+  function pauseWorkbenchAnimations() { workbenchAnimations.forEach(state => state.stop()); }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseWorkbenchAnimations(); });
+  window.matchMedia?.('(prefers-reduced-motion: reduce)')?.addEventListener?.('change', pauseWorkbenchAnimations);
+  function attachAnimationPreview(scope, image, metadata, original) {
+    let state = workbenchAnimations.get(image);
+    if (state && state.original === original && state.button.isConnected) return;
+    if (state) { state.stop(); state.button.remove(); animationVisibility?.unobserve(image); }
+    const preview = metadata.previewUrl || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+    const button = document.createElement('button');button.type='button';button.className='wd-animation-toggle';button.textContent='播放 GIF';button.setAttribute('aria-pressed','false');
+    state = {original, button, playing:false, stop() {if (!state.playing) return;state.playing=false;image.src=preview;button.textContent='播放 GIF';button.setAttribute('aria-pressed','false');}};
+    image.dataset.wdAnimationOriginal=original;image.src=preview;image.alt=metadata.previewFallback?'GIF 首帧预览暂不可用，可播放或下载原件':'GIF 动画首帧预览';
+    button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();if(state.playing){state.stop();return;}pauseWorkbenchAnimations();state.playing=true;image.src=original;button.textContent='暂停 GIF';button.setAttribute('aria-pressed','true');});
+    scope.append(button);workbenchAnimations.set(image,state);animationVisibility?.observe(image);
+  }
 
   function actualWorkbenchImageSize(image) {
     const imageId = image.getAttribute("data-image-id") || "";
     const source = image.src || "";
     const cached = displayedImageDimensions.get(image);
     if (cached?.imageId === imageId && cached?.source === source) return cached.promise;
-    const promise = readFullImageRecord(imageId).then(record => {
+    const promise = readFullImageRecord(imageId).then(async record => {
       const width = Number(record?.width) || image.naturalWidth;
       const height = Number(record?.height) || image.naturalHeight;
       if (!width || !height) {
         displayedImageDimensions.delete(image);
         return null;
       }
-      return { width, height };
+      const processing = typeof window !== 'undefined' && window.WandouWorkbenchOutput ? await window.WandouWorkbenchOutput.metadata(record?.dataUrl || image.dataset.wdAnimationOriginal || source).catch(()=>null) : null;
+      return { width, height, processing, originalSource:record?.dataUrl || image.dataset.wdAnimationOriginal || source };
     });
     displayedImageDimensions.set(image, { imageId, source, promise });
     return promise;
   }
 
   function updateDisplayedImageSizes() {
+    workbenchAnimations.forEach((state,image)=>{if(!image.isConnected){state.stop();animationVisibility?.unobserve(image);workbenchAnimations.delete(image);}});
     document.querySelectorAll(".task-card-wrapper, .fixed.inset-0").forEach(scope => {
       const image = findDownloadImage(scope);
       if (!image) return;
@@ -2061,6 +2171,13 @@ function rewriteQualityOptions() {
         const source = image.src;
         const actual = await actualWorkbenchImageSize(image);
         if (!actual || image.getAttribute("data-image-id") !== imageId || image.src !== source) return;
+        if(['local-upscale','original-animation-preserved','native-vector','native-animation'].includes(actual.processing?.processing)) {
+          let badge=scope.querySelector('.wd-output-processing');
+          if(!badge){badge=document.createElement('div');badge.className='wd-output-processing';scope.appendChild(badge);}
+          const label=actual.processing.processing==='native-animation' ? `GIF 动图 · ${actual.processing.animationFrameCount} 帧 · ${actual.width}×${actual.height} · 下载保留原始动画` : actual.processing.processing==='native-vector' ? 'SVG 矢量原件 · 可无损缩放' : actual.processing.processing==='local-upscale' ? `本地放大 · 非原生生成（原图 ${actual.processing.originalWidth}×${actual.processing.originalHeight}）` : '保留动图原格式和尺寸，未进行静态放大';
+          if(badge.textContent!==label)badge.textContent=label;
+          if(actual.processing.processing==='native-animation') attachAnimationPreview(scope,image,actual.processing,actual.originalSource);
+        } else { scope.querySelector?.('.wd-output-processing')?.remove(); }
         sizeTextElements(scope).forEach(({ item }) => {
           const separator = normalizeText(item).includes("\u00d7") ? "\u00d7" : "x";
           const nextText = (item.textContent || "").replace(SIZE_TEXT_PATTERN, `${actual.width}${separator}${actual.height}`);
@@ -2134,6 +2251,7 @@ function rewriteQualityOptions() {
       enhanceSize();
       hideModerationAndCompression();
       enhanceQuantity();
+      ensureGenerationOptions();
       bindSeparateQuantitySubmit();
       bindDownloadEnhancements();
       closeCountMenusWhenForeignMenuOpens();

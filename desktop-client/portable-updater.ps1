@@ -190,7 +190,7 @@ try {
         }
     } finally { $archive.Dispose() }
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
-    Expand-Archive -LiteralPath $PackagePath -DestinationPath $stage -Force
+    [IO.Compression.ZipFile]::ExtractToDirectory($PackagePath, $stage)
 
     Set-UpdateStage 'copying'
     $copyError = $null

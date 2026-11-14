@@ -123,9 +123,9 @@ test('a pending dialog prevents a second prompt and releases the lock on cancell
 test('IPC only accepts local main frames and preload forwards a single explicit export request', async () => {
   const source = fs.readFileSync(path.join(desktop, 'main.js'), 'utf8'), handlers = new Map(), calls = [];
   const appRoot = path.resolve(desktop, '../app');
-  const env = { URL, path, fileURLToPath, getAppRoot: () => appRoot, dialog: {}, mainWindow: {}, app: {}, ipcMain: { handle: (name, fn) => handlers.set(name, fn) }, require: () => () => payload => { calls.push(payload); return { success: true }; } };
+  const env = { URL, path, fileURLToPath, getAppRoot: () => appRoot, dialog: {}, mainWindow: {}, app: {}, handleDesktop: (name, fn) => handlers.set(name, fn), require: () => () => payload => { calls.push(payload); return { success: true }; } };
   const localStart = source.indexOf('function isLocalAppPage('), localEnd = source.indexOf('\nfunction ', localStart + 1);
-  const start = source.indexOf("const saveFileAs = require("), end = source.indexOf('ipcMain.handle("desktop:copy-image"', start);
+  const start = source.indexOf("const saveFileAs = require("), end = source.indexOf('handleDesktop("desktop:copy-image"', start);
   assert.ok(start > 0 && end > start);
   vm.runInNewContext(source.slice(localStart, localEnd) + '\n' + source.slice(start, end), env);
   const handler = handlers.get('desktop:save-file-as'); assert.equal(typeof handler, 'function');

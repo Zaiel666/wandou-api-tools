@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),fsp=require('node:fs/promises'),path=require('node:path'),vm=require('node:vm');
 const {pathToFileURL,fileURLToPath}=require('node:url');
-const desktop=process.env.WANDOU_TEST_DESKTOP_ROOT||path.resolve(__dirname,'../desktop-client');
+const desktop=process.env.WANDOU_TEST_DESKTOP_ROOT||path.resolve(__dirname,'../artifacts/asset-location-20261025/desktop');
 const createLocation=require(path.join(desktop,'canvas-media-location.cjs'));
 const createProtocol=require(path.join(desktop,'canvas-media-protocol.cjs'));
 const parent=path.resolve(__dirname,'../artifacts/asset-location-20261025/test-fixtures');
@@ -53,9 +53,9 @@ test('redirected root and non-regular targets cannot escape the managed media di
 test('actual IPC handlers only permit app main frames; preload wraps the raw reference and keeps older APIs',async()=>{
  const source=fs.readFileSync(path.join(desktop,'main.js'),'utf8'),handlers=new Map(),calls=[];
  const appRoot=path.resolve(desktop,'../app');
- const env={URL,path,fileURLToPath,getAppRoot:()=>appRoot,canvasMediaRootDirectory:()=>'',canvasMediaProtocol:{getUrl:()=>{}},shell:{},withProjectStorage:async(_kind,task)=>task(),ipcMain:{handle:(name,fn)=>handlers.set(name,fn)},require:()=>()=>({get:ref=>{calls.push(['get',ref]);return{success:true}},show:ref=>{calls.push(['show',ref]);return{success:true}}})};
+ const env={URL,path,fileURLToPath,getAppRoot:()=>appRoot,canvasMediaRootDirectory:()=>'',canvasMediaProtocol:{getUrl:()=>{}},shell:{},withProjectStorage:async(_kind,task)=>task(),handleDesktop:(name,fn)=>handlers.set(name,fn),require:()=>()=>({get:ref=>{calls.push(['get',ref]);return{success:true}},show:ref=>{calls.push(['show',ref]);return{success:true}}})};
  const localStart=source.indexOf('function isLocalAppPage('),localEnd=source.indexOf('\nfunction ',localStart+1);
- const start=source.indexOf("const canvasMediaLocation = require("),end=source.indexOf('ipcMain.handle("desktop:write-export-artifact"',start);
+ const start=source.indexOf("const canvasMediaLocation = require("),end=source.indexOf('handleDesktop("desktop:write-export-artifact"',start);
  assert.ok(start>0&&end>start);vm.runInNewContext(source.slice(localStart,localEnd)+'\n'+source.slice(start,end),env);
  for(const name of ['desktop:get-canvas-media-location','desktop:show-canvas-media-in-folder']){
   const handler=handlers.get(name);assert.equal(typeof handler,'function');

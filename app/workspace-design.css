@@ -1,0 +1,39 @@
+/* Shared, scoped workspace controls. Existing feature layouts and brand assets stay intact. */
+:root { --workspace-focus:#4b4d50; --workspace-radius:8px; }
+:root[data-theme="dark"] { --workspace-focus:#d0d2d5; }
+body:is(.home-test-page,.asset-test-page,.project-hub-page) { font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif; }
+body:is(.home-test-page,.asset-test-page,.project-hub-page) :is(button,input,select,textarea) { font-family:inherit; }
+body:is(.home-test-page,.asset-test-page,.project-hub-page) :is(a,button,input,select,textarea,summary,[tabindex]):focus-visible { outline:2px solid var(--workspace-focus) !important; outline-offset:3px !important; }
+body:is(.home-test-page,.asset-test-page,.project-hub-page) :is(h1,h2,h3) { text-wrap:balance; }
+body:is(.home-test-page,.asset-test-page,.project-hub-page) p { text-wrap:pretty; }
+body:is(.home-test-page,.asset-test-page,.project-hub-page) :is(.meta,.asset-card-meta,.asset-file-facts,.home-recent-card span) { font-variant-numeric:tabular-nums; }
+body.home-test-page .home-test-side-nav :is(a,button), body.project-hub-page .project-nav a, body.asset-test-page .asset-global-nav a, body.asset-test-page .asset-filter { min-height:38px; font-size:13px; border-radius:var(--workspace-radius); }
+body.home-test-page :is(.home-nav-item,.contact-button,.theme-toggle), body.project-hub-page :is(.button,.search,select), body.asset-test-page :is(.button,.asset-search,select) { min-height:36px; font-size:13px !important; border-radius:var(--workspace-radius); }
+body.asset-test-page .asset-sidebar { width:204px; padding:24px 13px 18px; }
+body.asset-test-page .asset-workspace { margin-left:204px; }
+body.asset-test-page .asset-brand { margin:0 6px 30px; }
+body.project-hub-page .project-rename { min-height:28px; padding:0 6px; font-size:12px !important; }
+body.project-hub-page .name-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; gap:4px; }
+body.project-hub-page .name-input { width:100%; min-width:0; }
+body.project-hub-page .meta { font-size:12px; }
+body.asset-test-page .button.primary { color:var(--panel) !important; background:var(--text) !important; border-color:var(--text) !important; }
+body:is(.asset-test-page,.project-hub-page) button:disabled { opacity:.5; cursor:default; }
+.home-recent { width:min(1060px,calc(100% - 60px)); margin:26px auto 0; }
+.home-recent-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.home-recent-heading h2 { margin:0; color:var(--test-ink); font-size:20px; }
+.home-recent-heading a,.home-recent-empty a { color:var(--test-ink); font-size:13px; text-underline-offset:4px; }
+.home-recent-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.home-recent-card { position:relative; display:grid; gap:8px; min-height:88px; padding:15px 32px 15px 15px; border:1px solid var(--test-line); border-radius:10px; color:var(--test-ink); background:var(--test-surface); text-decoration:none; }
+.home-recent-card:hover { background:var(--test-surface-raised); }
+.home-recent-card strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
+.home-recent-card span { color:var(--test-muted); font-size:12px; }
+.home-recent-card .home-recent-arrow { position:absolute; top:14px; right:13px; font-size:18px; }
+.home-recent-empty { grid-column:1/-1; color:var(--test-muted); font-size:14px; }
+.home-start-guide { margin-top:14px; color:var(--test-muted); font-size:13px; }
+.home-start-guide summary { width:fit-content; cursor:pointer; padding:6px 0; }
+.home-start-guide-content { margin-top:8px; padding:6px 16px; border:1px solid var(--test-line); border-radius:10px; background:var(--test-surface); }
+.home-start-guide p { line-height:1.7; }
+@media(max-width:1100px) { .home-recent-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } body.project-hub-page .topbar { grid-template-columns:1fr; } body.project-hub-page .actions { justify-content:flex-start; flex-wrap:wrap; } }
+@media(max-width:760px) { body.asset-test-page .asset-sidebar { position:static; width:100%; height:auto; } body.asset-test-page .asset-workspace { margin-left:0; } }
+@media(max-width:700px) { .home-recent { width:calc(100% - 32px); } .home-recent-grid { grid-template-columns:minmax(0,1fr); } }
+@media(prefers-reduced-motion:reduce) { .home-recent *,body.project-hub-page .card { transition:none !important; transform:none !important; } }

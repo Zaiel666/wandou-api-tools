@@ -72,6 +72,8 @@ contextBridge.exposeInMainWorld("wandouShell", {
   readCanvasMedia: (payload) => ipcRenderer.invoke("desktop:read-canvas-media", payload),
   getCanvasMediaUrl: (payload) => ipcRenderer.invoke("desktop:get-canvas-media-url", payload),
   getProjectStorageInfo: () => ipcRenderer.invoke("desktop:get-project-storage-info"),
+  getStorageUsage: () => ipcRenderer.invoke("desktop:get-storage-usage"),
+  clearNetworkCache: () => ipcRenderer.invoke("desktop:clear-network-cache"),
   chooseProjectStorageDirectory: (options = {}) => ipcRenderer.invoke("desktop:choose-project-storage-directory", options),
   requestProjectStorageMigration: (payload) => ipcRenderer.invoke("desktop:request-project-storage-migration", payload),
   onProjectStorageProgress: (callback) => {

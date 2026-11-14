@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto');
-const desktop = process.env.WANDOU_TEST_DESKTOP_ROOT || path.resolve(__dirname, '../desktop-client');
+const desktop = process.env.WANDOU_TEST_DESKTOP_ROOT || path.resolve(__dirname, '../artifacts/theme-fix-20261025/desktop');
 const appRoot = process.env.WANDOU_TEST_APP_ROOT || path.resolve(desktop, '../app');
 const main = fs.readFileSync(path.join(desktop, 'main.js'), 'utf8');
 const makeGuard = require(path.join(desktop, 'canvas-backup-guard.cjs'));

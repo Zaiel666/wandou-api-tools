@@ -1,8 +1,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
+const path = require("node:path");
 
-const html = fs.readFileSync("app/ai-node-canvas.html", "utf8");
+const html = fs.readFileSync(path.join(process.env.WANDOU_TEST_APP_ROOT || path.resolve(__dirname, "../app"), "ai-node-canvas.html"), "utf8");
 
 function extractFunction(name) {
   const marker = `function ${name}(`;
@@ -46,7 +47,7 @@ assert.match(html, /const autoSplitMaximum = 99/);
 assert.match(html, /AI按内容决定1–99张/);
 assert.match(html, /node\.autoSplitProgress = 1/);
 assert.match(html, /分析并自动拆分 \$\{Math\.max\(1, Math\.min\(99,/);
-assert.match(html, /createAutoSplitBatchDirectory\(node\)/);
+assert.match(html, /beginAutoSplitBatch\(node\)/);
 assert.match(html, /autoSaveBatchFolder: confirmedAutoSplitPlan\.length/);
 assert.match(html, /const autoSplitCountdownSeconds = 45/);
 assert.match(html, /已暂停（剩余/);

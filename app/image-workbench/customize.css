@@ -2265,3 +2265,7 @@ html[data-wd-theme] .fixed[class*="bottom"] :is(
   stroke: currentColor !important;
 }
 
+/* The output method is kept visible beside resolution controls and restored results. */
+.wd-resolution-note, .wd-output-processing { font-size: 12px; line-height: 1.5; color: inherit; opacity: .8; margin: 6px 0 0; }
+.wd-output-processing { padding: 8px 12px; }
+#wd-output-processing-warning { padding: 10px 16px; background: Canvas; color: CanvasText; border-bottom: 1px solid currentColor; font-size: 13px; }

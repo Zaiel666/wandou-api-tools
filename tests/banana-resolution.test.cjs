@@ -3,6 +3,7 @@ const {pathToFileURL}=require('node:url');const {chromium}=require('../desktop-c
 const app=process.env.WANDOU_TEST_APP_ROOT||path.resolve(__dirname,'../app');
 const source=fs.readFileSync(path.join(app,'ai-node-canvas-test.html'),'utf8');
 const extract=name=>{const start=source.indexOf('    function '+name+'(')>=0?source.indexOf('    function '+name+'('):source.indexOf('    async function '+name+'(');assert.ok(start>=0,name);const end=source.slice(start+1).search(/\n    (?:async )?function /);return source.slice(start,start+1+end);};
+const capabilities=require(path.join(app,'image-model-capabilities.js'));
 const executablePath='C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 test('Banana 2 and Pro expose selectable 1K, 2K and 4K without resetting saved precision',async()=>{
  const browser=await chromium.launch({headless:true,executablePath});
@@ -29,8 +30,8 @@ test('workbench native adapter forwards 1K, 2K and 4K instead of relying on prom
 });
 test('native Banana requests send each selected tier as imageConfig.imageSize with matching square pixels',async()=>{
  let request;
- const env={imageResolutionOptions:['1K','2K','4K'],modelToApiModel:model=>model==='Nano Banana2'?'gemini-3.1-flash-image-preview':'gemini-3-pro-image-preview',defaultApiBaseUrl:()=>'',sizeFromRatio:()=>'',parseSize:size=>{const [width,height]=size.split('x').map(Number);return {width,height};},ratioKey:ratio=>String(ratio).split(' ')[0],ratioLabelFromSize:(w,h)=>w===h?'1:1':w>h?'16:9':'9:16',fetchMaybeProxied:async(url,options)=>{request={url,payload:JSON.parse(options.body)};return {ok:true,text:async()=>JSON.stringify({candidates:[{content:{parts:[{inlineData:{mimeType:'image/png',data:'AA=='}}]}}]})};},extractMediaUrl:()=> 'data:image/png;base64,AA==',extractMediaUrls:()=>['data:image/png;base64,AA==']};
- const names=['normalizeGeminiGenerateEndpoint','callNanoBananaApi'];if(source.includes('function nanoBananaImageSettings('))names.unshift('nanoBananaImageSettings');
+ const env={window:{WandouImageCapabilities:capabilities},imageResolutionOptions:['1K','2K','4K'],modelToApiModel:model=>model==='Nano Banana2'?'gemini-3.1-flash-image-preview':'gemini-3-pro-image-preview',defaultApiBaseUrl:()=>'',sizeFromRatio:()=>'',parseSize:size=>{const [width,height]=size.split('x').map(Number);return {width,height};},ratioKey:ratio=>String(ratio).split(' ')[0],ratioLabelFromSize:(w,h)=>w===h?'1:1':w>h?'16:9':'9:16',fetchMaybeProxied:async(url,options)=>{request={url,payload:JSON.parse(options.body)};return {ok:true,text:async()=>JSON.stringify({candidates:[{content:{parts:[{inlineData:{mimeType:'image/png',data:'AA=='}}]}}]})};},extractMediaUrl:()=> 'data:image/png;base64,AA==',extractMediaUrls:()=>['data:image/png;base64,AA==']};
+ const names=['normalizeGeminiGenerateEndpoint','callNanoBananaApi'];if(source.includes('function nanoBananaImageSettings('))names.unshift('imageNativeResolutionForModel','nanoBananaImageSettings');
  const c=vm.createContext(env);vm.runInContext(names.map(extract).join('\n'),c);
  for(const model of ['Nano Banana2','Nano BananaPro'])for(const [resolution,size] of [['1K','1024x1024'],['2K','2048x2048'],['4K','4096x4096']]){
   await c.callNanoBananaApi({model,ratio:'1:1 方图',resolution,_targetSize:resolution==='4K'?'3840x3840':size,prompt:'draw'},[],'https://example.invalid/v1',{});
@@ -38,18 +39,18 @@ test('native Banana requests send each selected tier as imageConfig.imageSize wi
   assert.ok(request.payload.contents[0].parts[0].text.includes(size));assert.ok(request.url.includes(':generateContent'));
  }
 });
-test('Banana aspect pixels scale by tier while custom sizes and other model constraints stay intact',()=>{
+test('Banana native aspect pixels follow verified table; output tier stays separate from native constraints',()=>{
  assert.ok(source.includes('function nanoBananaImageSettings('));
- const c=vm.createContext({imageResolutionOptions:['1K','2K','4K'],modelToApiModel:v=>v,parseSize:size=>{const [width,height]=size.split('x').map(Number);return {width,height};},ratioKey:r=>String(r).split(' ')[0]});
- vm.runInContext(['greatestCommonDivisor','ratioLabelFromSize','nanoBananaImageSettings','isOneKOnlyImageModel','imageResolutionOptionsForModel'].map(extract).join('\n'),c);
+ const c=vm.createContext({window:{WandouImageCapabilities:capabilities},imageResolutionOptions:['1K','2K','4K'],modelToApiModel:v=>v,parseSize:size=>{const [width,height]=size.split('x').map(Number);return {width,height};},ratioKey:r=>String(r).split(' ')[0]});
+ vm.runInContext(['greatestCommonDivisor','ratioLabelFromSize','imageNativeResolutionForModel','nanoBananaImageSettings','isOneKOnlyImageModel','imageResolutionOptionsForModel'].map(extract).join('\n'),c);
  for(const [resolution,expected] of [['1K','1376x768'],['2K','2752x1536'],['4K','5504x3072']]){
-  const got=c.nanoBananaImageSettings({resolution,ratio:'16:9 横屏'},'1920x1080');assert.equal(got.size,expected);assert.equal(got.imageConfig.aspectRatio,'16:9');
+  const got=c.nanoBananaImageSettings({model:'Nano Banana2',resolution,ratio:'16:9 横屏'},'1920x1080');assert.equal(got.size,expected);assert.equal(got.imageConfig.aspectRatio,'16:9');
  }
- assert.equal(c.nanoBananaImageSettings({resolution:'2K',ratio:'自定义尺寸'},'1200x1800').size,'1200x1800');
- assert.equal(c.nanoBananaImageSettings({resolution:'2K'},'1000x700').imageConfig.aspectRatio,undefined);
- const wide=c.nanoBananaImageSettings({resolution:'4K'},'2520x1080');
- assert.equal(wide.size,'6336x2688');assert.equal(c.nanoBananaImageSettings({resolution:'4K'},wide.size).imageConfig.aspectRatio,'21:9');
- assert.deepEqual(Array.from(c.imageResolutionOptionsForModel('grok-imagine-image-2.0')),['1K','2K']);
+ assert.equal(c.nanoBananaImageSettings({model:'Nano Banana2',resolution:'2K',ratio:'自定义尺寸'},'1200x1800').size,'1696x2528');
+ assert.equal(c.nanoBananaImageSettings({model:'Nano Banana2',resolution:'2K'},'1000x700').imageConfig.aspectRatio,'3:2');
+ const wide=c.nanoBananaImageSettings({model:'Nano Banana2',resolution:'4K'},'2520x1080');
+ assert.equal(wide.size,'6336x2688');assert.equal(c.nanoBananaImageSettings({model:'Nano Banana2',resolution:'4K'},wide.size).imageConfig.aspectRatio,'21:9');
+ assert.deepEqual(Array.from(c.imageResolutionOptionsForModel('grok-imagine-image-2.0')),['1K','2K','4K']);assert.equal(c.imageNativeResolutionForModel('grok-imagine-image-2.0','4K'),'2K');
 });
 test('generation orchestration keeps each Banana tier in the request and pending result target',async()=>{
  const browser=await chromium.launch({headless:true,executablePath});

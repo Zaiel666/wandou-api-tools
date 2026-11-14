@@ -2,7 +2,7 @@
 
 标识：`IMG-RATIO-BASELINE-v1`
 
-适用版本：`v1.0.39` 及以后
+历史适用版本：`v1.0.39`。这是旧位图流程记录，不是 v2.0.22 所有模型、SVG 或 GIF 的通用规则；当前行为与限制以 [v2.0.22 发布说明](release-v2.0.22.md) 为准。
 
 以后遇到“图片比例不对、尺寸固定、出现白边、横竖图被压缩或裁错”等问题时，直接按本基线恢复和验证。可以使用“调用图片比例与尺寸输出基线”作为问题名称。
 
@@ -39,7 +39,7 @@ node tests/image-size-regression.test.js
 浏览器 Canvas 像素与补白检测：
 
 ```powershell
-$env:NODE_PATH="C:\Users\zl761\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules"
+$env:NODE_PATH=(Resolve-Path 'desktop-client/node_modules').Path
 node tests/image-canvas-pixels.test.cjs
 ```
 

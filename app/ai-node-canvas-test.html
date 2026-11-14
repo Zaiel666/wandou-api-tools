@@ -13,7 +13,7 @@
   <link rel="icon" href="./wandou-logo-latest.png" type="image/png">
   <link rel="shortcut icon" href="./wandou-logo-latest.png" type="image/png">
   <link rel="apple-touch-icon" href="./wandou-logo-latest.png">
-  <title>豌豆 AI · 节点画布测试版</title>
+  <title>豌豆 AI · 节点画布</title>
   <style>@layer legacy {
     :root {
       color-scheme: light;
@@ -7428,7 +7428,9 @@
           <button type="button" data-add-node="outpaint">扩图</button>
           <button type="button" data-add-node="style">风格迁移</button>
           <button type="button" data-add-node="psd">分层 PSD</button>
-          <button type="button" data-add-node="vector">SVG / Adobe AI</button>
+          <button type="button" data-add-node="svg" title="通过支持的绘图模型生成原生 SVG 矢量图">SVG 矢量</button>
+          <button type="button" data-add-node="gif" title="生成 GIF 动图，可设置帧数和每帧时长">GIF 动图</button>
+          <button type="button" data-add-node="vector" title="将已有图片在本地转换为 SVG / AI / EPS">矢量转换</button>
           <button type="button" data-add-node="audio">AI音频</button>
         </div>
         <p class="hint">拖动节点标题可移动。点击一个输出圆点，再点另一个输入圆点即可连线。</p>
@@ -7510,11 +7512,11 @@
               <div class="api-label-row"><strong>独立 API 渠道</strong><span class="local-only-note">仅保存在本机浏览器</span></div>
               <div class="api-channel-list">
                 <section class="api-channel-card" aria-labelledby="apiChannelOneTitle">
-                  <div id="apiChannelOneTitle" class="api-channel-name">渠道 1 <span class="api-channel-badge">必填</span></div>
+                  <div id="apiChannelOneTitle" class="api-channel-name">渠道 1 <span class="api-channel-badge">任选一个渠道</span></div>
                   <p class="api-channel-help">用于现有模型和所有默认请求，模型名称保持不变。</p>
                   <div class="api-key-row">
                     <div class="field">
-                      <input id="apiKey" type="password" placeholder="粘贴渠道 1 API Key" required aria-required="true" autocomplete="off">
+                      <input id="apiKey" type="password" placeholder="粘贴渠道 1 API Key" autocomplete="off">
                       <button class="api-key-visibility" type="button" data-api-key-visibility="apiKey" aria-label="显示渠道 1 密钥" title="显示密钥" aria-pressed="false"><svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg><svg class="eye-off-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 6.15A10.7 10.7 0 0 1 12 6c6 0 9.5 6 9.5 6a15.8 15.8 0 0 1-2.1 2.75M6.2 6.2C3.8 7.75 2.5 12 2.5 12s3.5 6 9.5 6a9.9 9.9 0 0 0 3.1-.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
                     </div>
                     <button id="clearApiKeyButton" class="ghost clear-api-key-button" type="button" title="清除渠道 1 密钥" aria-label="清除渠道 1 密钥"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 3h6l1 4H8l1-4Zm-2 4 1 14h8l1-14M10 11v6m4-6v6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -7552,7 +7554,9 @@
         <button type="button" data-menu-node="outpaint">新建扩图</button>
         <button type="button" data-menu-node="style">新建风格迁移</button>
         <button type="button" data-menu-node="psd">新建分层 PSD</button>
-        <button type="button" data-menu-node="vector">新建 SVG / Adobe AI</button>
+        <button type="button" data-menu-node="svg">新建 SVG 矢量生成</button>
+        <button type="button" data-menu-node="gif">新建 GIF 动图生成</button>
+        <button type="button" data-menu-node="vector">新建图片转矢量（SVG / AI / EPS）</button>
         <button type="button" data-menu-node="audio">新建AI音频</button>
       </div>
       <div id="selectionBox" class="selection-box"></div>
@@ -7620,6 +7624,7 @@
     <span class="assistant-mascot-label">对话助手</span>
   </button>
   <script src="./assistant-mascot.js" defer></script>
+  <script src="./assistant-task-state.js" defer></script>
 <script src="./assets/pea-assistant-portrait.js" defer></script>
 <script src="./assistant-mascot-motion.js" defer></script>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">已完成</div>
@@ -7816,6 +7821,22 @@
   <script src="./prompt-library-data.js"></script>
   <script src="./prompt-library-sources.js"></script>
   <script src="./ai-node-canvas-test-skills.js"></script>
+  <script src="./media-content-hash.js"></script>
+  <script src="./image-model-capabilities.js"></script>
+  <script src="./native-svg-output.js"></script>
+  <script src="./canvas-native-svg.js"></script>
+  <script src="./animated-image-output.js"></script>
+  <script src="./image-generation-options.js"></script>
+  <script src="./canvas-animated-image.js"></script>
+  <script src="./image-markup.js"></script>
+  <link rel="stylesheet" href="./image-generation-options.css">
+  <link rel="stylesheet" href="./image-markup.css">
+  <link rel="stylesheet" href="./canvas-image-markup.css">
+  <script src="./image-api-channels.js"></script>
+  <link rel="stylesheet" href="./image-api-channels.css">
+  <script src="./image-output-resolution.js"></script>
+  <script src="./canvas-task-actions.js"></script>
+  <link rel="stylesheet" href="./canvas-task-actions.css">
   <script>
     const canvasWrap = document.querySelector(".canvas-wrap");
     const canvas = document.getElementById("canvas");
@@ -7828,6 +7849,8 @@
     const apiUrl2Input = document.getElementById("apiUrl2");
     const apiKeyInput = document.getElementById("apiKey");
     const apiKey2Input = document.getElementById("apiKey2");
+    let imageChannelsController = null;
+    let imageModelSyncGeneration = 0;
     const settingsPopover = document.getElementById("settingsPopover");
     const settingsBackdrop = document.getElementById("settingsBackdrop");
     const contextMenu = document.getElementById("contextMenu");
@@ -7944,6 +7967,57 @@
     const vectorExportFiles = new Map();
     const vectorJobs = new Set();
     const audioJobs = new Map();
+    const imageGenerationJobs = new Map();
+    const imageRegenerationJobs = new Map();
+    const imageResultControllers = new Map();
+    const promptEditJobs = new Map();
+    let canvasProjectTransition = false;
+    function canvasHasActiveTasks() {
+      return localResolutionJobs.size > 0 || imageGenerationJobs.size > 0 || imageRegenerationJobs.size > 0 || imageResultControllers.size > 0 || promptEditJobs.size > 0
+        || audioJobs.size > 0 || psdJobs.size > 0 || vectorJobs.size > 0
+        || assistantSending || nodes.some((node) => node.pending || node.regenerating || node.audioGenerating || Number(node.autoSplitProgress) > 0);
+    }
+    window.wandouHasActiveTasks = canvasHasActiveTasks;
+    function blockBusyCanvasAction() {
+      if (!canvasHasActiveTasks() && !canvasProjectTransition) return false;
+      showToast("当前任务尚未完成，请等待完成后再切换、重置或撤销项目。", "error", 4500);
+      return true;
+    }
+    async function withCanvasProjectTransition(action) {
+      if (blockBusyCanvasAction()) return false;
+      canvasProjectTransition = true;
+      try { return await action(); }
+      finally { canvasProjectTransition = false; }
+    }
+    function generationJobIsCurrent(job) {
+      return !job.cancelled && job.projectId === activeProjectId && nodes.includes(job.node)
+        && (!job.original || nodes.includes(job.original));
+    }
+    function cancelImageJobsForNode(id) {
+      cancelLocalResolutionForNode(id);
+      promptEditJobs.get(id)?.abort();
+      const job = imageGenerationJobs.get(id);
+      if (job) {
+        job.cancelled = true;
+        job.controllers.forEach((controller) => controller.abort(new DOMException("生成节点已删除，已停止后续请求。", "AbortError")));
+        job.pendingNodes.forEach((pending) => {
+          if (pending.pending) { pending.pending = false; pending.status = "生成节点已删除，已取消后续生成。"; }
+        });
+      }
+      imageRegenerationJobs.forEach((regeneration) => {
+        if (regeneration.node.id !== id && regeneration.original.id !== id && !regeneration.pendingNodes.some((pending) => pending.id === id)) return;
+        regeneration.cancelled = true;
+        regeneration.controllers.forEach((controller) => controller.abort(new DOMException("重新生成所需节点已删除。", "AbortError")));
+        regeneration.pendingNodes.forEach((pending) => {
+          if (pending.pending) { pending.pending = false; pending.status = "重新生成已取消，所需节点已删除。"; }
+        });
+      });
+      imageResultControllers.forEach((entry) => {
+        if (entry.pending.id === id || entry.sourceId === id) {
+          entry.controller.abort(new DOMException("生成节点或结果已删除。", "AbortError"));
+        }
+      });
+    }
     const vectorJobTokens = new Map();
     const psdJobs = new Set();
     const psdReviewPlans = new Map();
@@ -8156,7 +8230,9 @@
       "gpt-image-2.5-1k",
       "GPT-image-2",
       "gpt-image-2.5-flare",
-      "gpt-image-2.5-sunburst"
+      "gpt-image-2.5-sunburst",
+      "gpt-image-2.6-flare",
+      "gpt-image-2.6-sunburst"
     ];
     const imageModelOptions = [
       ...gptImageModelOptions,
@@ -8509,15 +8585,47 @@
     }
 
     function imageResolutionOptionsForModel(model) {
-      const apiModel = modelToApiModel(model);
-      if (isOneKOnlyImageModel(model)) return ["1K"];
-      if (apiModel === "grok-imagine-image-2.0") return ["1K", "2K"];
-      return imageResolutionOptions;
+      return ["1K", "2K", "4K"];
+    }
+
+    function imageNativeResolutionForModel(model, resolution) {
+      const selected = String(resolution || "1K").toUpperCase();
+      const options = window.WandouImageCapabilities.resolve(modelToApiModel(model)).nativeTiers;
+      if (!options.length) return selected;
+      return options.includes(selected) ? selected : options[options.length - 1];
+    }
+
+    function nativeImageApiHost(model) {
+      try { return new URL(apiProfileForModel(model).url).hostname.toLowerCase(); } catch (_) { return ""; }
+    }
+
+    function imageOutputEdge(resolution) {
+      return { "1K":1024, "2K":2048, "4K":4096 }[String(resolution || "1K").toUpperCase()] || 1024;
+    }
+
+    function imageResolutionChoiceLabel(model, resolution) {
+      const capability = window.WandouImageCapabilities.resolve(modelToApiModel(model));
+      return capability.nativeTiers.length && !capability.nativeTiers.includes(resolution) ? resolution + "·非原生" : resolution;
+    }
+
+    function imageResolutionHint(node) {
+      if (nativeGifRequested(node)) return "原生 GIF：模型自动选择尺寸，保留完整动画；画布使用静态首帧预览，点击大图播放。";
+      if (nativeSvgRequested(node)) return "原生 SVG：保留可编辑矢量路径，可缩放；不进行位图放大。当前支持文字生成，逐张请求。";
+      const capability = window.WandouImageCapabilities.resolve(modelToApiModel(node.model));
+      const tier = String(node.resolution || "1K").toUpperCase();
+      const edge = imageOutputEdge(tier);
+      const rough = sizeFromRatio(node.ratio || "1:1", tier, [], {customWidth:node.customWidth,customHeight:node.customHeight});
+      const requested = window.WandouImageCapabilities.nativeSize(modelToApiModel(node.model), imageNativeResolutionForModel(node.model,tier), rough);
+      const size = parseSize(requested), scale = Math.max(1, edge/Math.max(size.width,size.height));
+      const predicted = Math.round(size.width*scale) + "×" + Math.round(size.height*scale);
+      if (!capability.verified) return "输出长边至少 " + edge + "px；" + capability.label + "。不足时本地放大（非原生生成），不会增加生图请求。";
+      if (capability.kind === "grok") return "原生请求 " + imageNativeResolutionForModel(node.model,tier) + "；输出长边至少 " + edge + "px。不足时本地等比放大（非原生生成）。";
+      return "原生请求 " + requested.replace("x","×") + " → 预计输出 " + predicted + (scale>1 ? "（本地放大，非原生生成）" : "（按实际返回像素）") + "；保留原图，不裁切。";
     }
 
     function isOneKOnlyImageModel(model) {
       const id = String(modelToApiModel(model) || "");
-      return /(?:^|[-.])1k(?:$|[-.])/i.test(id) || /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(id);
+      return /^gemini-2\.5-flash-image(?:-preview)?$/i.test(id) || /(?:^|[-.])1k(?:$|[-.])/i.test(id) || /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(id);
     }
 
     function videoCapabilitiesForModel(model) {
@@ -8618,6 +8726,7 @@
 
     function apiProfileForModel(model = "") {
       const channelTwo = isChannelTwoModel(model);
+      if (imageChannelsController) return imageChannelsController.profile(channelTwo ? "channel2" : "channel1");
       return {
         id: channelTwo ? "channel2" : "channel1",
         label: channelTwo ? "渠道 2" : "渠道 1",
@@ -8715,12 +8824,7 @@
     let modelSyncSummary = { channel1: false, channel2: null };
 
     function normalizedApiConfig(config = {}) {
-      return {
-        url: defaultApiBaseUrl(),
-        key: String(config.key || "").trim(),
-        key2: String(config.key2 || "").trim(),
-        savedAt: String(config.savedAt || "")
-      };
+      return window.WandouImageChannels.normalize(config);
     }
 
     function localApiConfig() {
@@ -8728,7 +8832,7 @@
       for (const storageKey of ["aiCanvasApi", "ai-tools-api-config"]) {
         try {
           const value = JSON.parse(canvasTestStorage.getItem(storageKey) || "{}");
-          if (value && (value.key || value.key2)) candidates.push(normalizedApiConfig(value));
+          if (value && (value.key || value.key2 || value.channels)) candidates.push(normalizedApiConfig(value));
         } catch (_error) {}
       }
       return candidates.sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)))[0] || null;
@@ -8744,11 +8848,11 @@
 
     async function persistApiConfig(key, key2) {
       const savedAt = new Date().toISOString();
-      const config = normalizedApiConfig({ key, key2, savedAt });
+      const config = normalizedApiConfig({ ...(imageChannelsController?.snapshot() || {key,key2}), savedAt });
       let localSaved = true;
       try {
         canvasTestStorage.setItem("aiCanvasApi", JSON.stringify(config));
-        canvasTestStorage.setItem("ai-tools-api-config", JSON.stringify({ key: config.key, key2: config.key2, savedAt }));
+        canvasTestStorage.setItem("ai-tools-api-config", JSON.stringify(config));
       } catch (error) {
         localSaved = false;
         console.warn("API config canvasTestStorage write failed; using durable cache", error);
@@ -8764,65 +8868,53 @@
       return { localSaved, durableSaved };
     }
 
+    function channelModelCacheKey(profile, images = false) {
+      return (images ? 'aiCanvasImageModels' : 'aiCanvasAllModels') + (profile.id === 'channel2' ? 'Channel2' : '') + (profile.provider === 'openai' ? 'OpenAI' : '');
+    }
+
+    function cachedChannelModels(profile) {
+      let models = [];
+      try { models = JSON.parse(canvasTestStorage.getItem(channelModelCacheKey(profile)) || '[]'); } catch (_) {}
+      if (!Array.isArray(models)) models = [];
+      return profile.provider === 'openai' ? models.filter(isOfficialImageModelId) : models;
+    }
+
     async function syncImageModelsFromApi(options = {}) {
-      const channelOne = apiProfileForModel();
-      const channelTwo = apiProfileForModel(`placeholder${channelTwoModelSuffix}`);
-      if (!channelOne.key) {
-        try { applySyncedAssistantModels(JSON.parse(canvasTestStorage.getItem("aiCanvasAllModels") || "[]")); } catch (_error) {}
-        return false;
-      }
-      const requests = [fetchModelsForApiChannel(channelOne.url, channelOne.key, "渠道 1")];
-      if (channelTwo.key) requests.push(fetchModelsForApiChannel(channelTwo.url, channelTwo.key, "渠道 2"));
-      const results = await Promise.allSettled(requests);
-      const channelOneOk = results[0]?.status === "fulfilled";
-      const channelTwoOk = channelTwo.key ? results[1]?.status === "fulfilled" : null;
-      modelSyncSummary = { channel1: channelOneOk, channel2: channelTwoOk };
-      let channelOneIds = channelOneOk ? results[0].value : [];
-      let channelTwoIds = channelTwoOk ? results[1].value : [];
-      if (channelOneOk) {
-        try {
-          canvasTestStorage.setItem("aiCanvasAllModels", JSON.stringify(channelOneIds));
-          canvasTestStorage.setItem("aiCanvasImageModels", JSON.stringify(channelOneIds.filter(isDrawingModelId)));
-        } catch (error) {
-          console.warn("Channel 1 model cache write skipped", error);
+      const syncGeneration = ++imageModelSyncGeneration;
+      const profiles = [apiProfileForModel(), apiProfileForModel('placeholder' + channelTwoModelSuffix)];
+      const results = await Promise.allSettled(profiles.map(profile => profile.key ? fetchModelsForApiChannel(profile.url,profile.key,profile.label) : Promise.resolve([])));
+      const sameProfile = (before, after) => before.url === after.url && before.key === after.key;
+      if (syncGeneration !== imageModelSyncGeneration || !sameProfile(profiles[0],apiProfileForModel()) || !sameProfile(profiles[1],apiProfileForModel('placeholder' + channelTwoModelSuffix))) return false;
+      const ok = profiles.map((profile,index) => Boolean(profile.key) && results[index].status === 'fulfilled');
+      modelSyncSummary = {channel1:profiles[0].key ? ok[0] : null,channel2:profiles[1].key ? ok[1] : null};
+      const models = profiles.map((profile,index) => {
+        if (!profile.key) return [];
+        let ids = ok[index] ? results[index].value : cachedChannelModels(profile);
+        if (profile.provider === 'openai') ids = ids.filter(isOfficialImageModelId);
+        if (ok[index]) {
+          try {
+            canvasTestStorage.setItem(channelModelCacheKey(profile),JSON.stringify(ids));
+            canvasTestStorage.setItem(channelModelCacheKey(profile,true),JSON.stringify(ids.filter(isDrawingModelId)));
+          } catch (_) {}
         }
-      } else {
-        try { channelOneIds = JSON.parse(canvasTestStorage.getItem("aiCanvasAllModels") || "[]"); } catch (_error) {}
-      }
-      if (channelTwoOk) {
-        try {
-          canvasTestStorage.setItem("aiCanvasAllModelsChannel2", JSON.stringify(channelTwoIds));
-          canvasTestStorage.setItem("aiCanvasImageModelsChannel2", JSON.stringify(channelTwoIds.filter(isDrawingModelId)));
-        } catch (error) {
-          console.warn("Channel 2 model cache write skipped", error);
-        }
-      } else if (channelTwo.key) {
-        try { channelTwoIds = JSON.parse(canvasTestStorage.getItem("aiCanvasAllModelsChannel2") || "[]"); } catch (_error) {}
-      }
-      if (!channelTwo.key) channelTwoIds = [];
-      applySyncedAssistantModels(
-        Array.isArray(channelOneIds) ? channelOneIds : [],
-        Array.isArray(channelTwoIds) ? channelTwoIds : []
-      );
-      const imageModelsApplied = applySyncedImageModels(
-        Array.isArray(channelOneIds) ? channelOneIds : [],
-        Array.isArray(channelTwoIds) ? channelTwoIds : []
-      );
-      applySyncedAudioModels(
-        Array.isArray(channelOneIds) ? channelOneIds : [],
-        Array.isArray(channelTwoIds) ? channelTwoIds : []
-      );
+        return ids;
+      });
+      const nonImage = models.map((ids,index) => profiles[index].provider === 'openai' ? [] : ids);
+      applySyncedAssistantModels(nonImage[0],nonImage[1]);
+      applySyncedAudioModels(nonImage[0],nonImage[1]);
+      const displayModels = models.map((ids,index) => !ids.length && profiles[index].provider === 'openai' && profiles[index].key ? ['gpt-image-2.6-flare','gpt-image-2.6-sunburst'] : ids);
+      const imageModelsApplied = applySyncedImageModels(displayModels[0],displayModels[1]);
       if (options.render !== false && Array.isArray(nodes)) render();
-      return channelOneOk && imageModelsApplied;
+      return ok.some(Boolean) && imageModelsApplied;
     }
 
     async function saveApiConfig() {
       const key = apiKeyInput.value.trim();
       const key2 = apiKey2Input.value.trim();
       const saveButton = document.getElementById("saveApiButton");
-      if (!key) {
+      if (!key && !key2) {
         apiKeyInput.focus();
-        showToast("请先填写渠道 1 API 密钥");
+        showToast("请先填写至少一个渠道的 API 密钥");
         return;
       }
       const originalLabel = saveButton?.textContent || "保存并识别两个渠道";
@@ -8843,7 +8935,9 @@
         const synced = await syncImageModelsFromApi({ render: true });
         const storageNote = storageResult.localSaved ? "" : "（已改用本地数据库保存）";
         const message = !synced
-          ? `API 配置已保存${storageNote}，渠道 1 模型同步暂时不可用`
+          ? `API 配置已保存${storageNote}，模型同步暂时不可用，请检查所选服务与密钥`
+          : !key && key2
+          ? `渠道 2 已保存并识别模型${storageNote}`
           : key2 && modelSyncSummary.channel2 === false
           ? `渠道 1 已同步；渠道 2 模型同步暂时不可用${storageNote}`
           : key2
@@ -8893,13 +8987,24 @@
     async function loadApiConfig() {
       const localConfig = localApiConfig();
       const fallbackConfig = await durableApiConfig();
-      const config = fallbackConfig.key && (!localConfig?.key || String(fallbackConfig.savedAt) > String(localConfig.savedAt || ""))
-        ? fallbackConfig
-        : localConfig || fallbackConfig;
-      apiUrlInput.value = defaultApiBaseUrl();
-      apiUrl2Input.value = defaultApiBaseUrl();
-      apiKeyInput.value = config.key || "";
-      apiKey2Input.value = config.key2 || "";
+      const config = !localConfig || String(fallbackConfig.savedAt) > String(localConfig.savedAt || "") ? fallbackConfig : localConfig;
+      const onProviderChange = ({id}) => {
+        imageModelSyncGeneration++;
+
+        const defaults = ['gpt-image-2.6-flare','gpt-image-2.6-sunburst'];
+        const cached = (channel) => {
+          if (imageChannelsController.profile(channel).provider === 'openai') return defaults;
+          return cachedChannelModels(imageChannelsController.profile(channel));
+        };
+        const one=cached('channel1'),two=cached('channel2');
+        applySyncedImageModels(one.length ? one : (id === 'channel1' ? ['gpt-image-2.6-flare','gpt-image-2.6-sunburst','gpt-image-2.5-1k'] : imageModelOptions.filter(model => !isChannelTwoModel(model))), two);
+        applySyncedAssistantModels(imageChannelsController.profile('channel1').provider === 'openai' ? [] : one, imageChannelsController.profile('channel2').provider === 'openai' ? [] : two);
+        render();
+      };
+      if (imageChannelsController) imageChannelsController.load(config);
+      else imageChannelsController = window.WandouImageChannels.mount({config,keyInputs:[apiKeyInput,apiKey2Input],urlInputs:[apiUrlInput,apiUrl2Input],
+        isBusy:()=>window.wandouHasActiveTasks?.() || document.getElementById('saveApiButton')?.disabled,
+        onBlocked:message=>showToast(message),onChange:onProviderChange});
     }
 
     function updateThemeLabel() {
@@ -8987,7 +9092,7 @@
     function canvasStateHasMedia(state) {
       return (state?.nodes || []).some((node) =>
         Boolean(node?.mediaUrl || node?.previewUrl || node?.fullUrl || node?.mediaSourceUrl || node?.previewSourceUrl || node?.fullSourceUrl)
-        || (Array.isArray(node?.references) && node.references.some((item) => item?.url || item?.maskUrl || item?.maskSelectionUrl))
+        || (Array.isArray(node?.references) && node.references.some((item) => item?.url || item?.maskUrl || item?.maskSelectionUrl || item?.markupUrl))
       );
     }
 
@@ -9315,6 +9420,9 @@
     }
 
     async function switchProject(projectId) {
+      return withCanvasProjectTransition(() => performswitchProject(projectId));
+    }
+    async function performswitchProject(projectId) {
       if (!projectId || projectId === activeProjectId) return;
       const saved = await saveCanvasState();
       if (!saved) {
@@ -9338,6 +9446,9 @@
     }
 
     async function deleteProject(projectId) {
+      return withCanvasProjectTransition(() => performdeleteProject(projectId));
+    }
+    async function performdeleteProject(projectId) {
       if (projects.length <= 1) {
         showToast("至少保留一个项目");
         return;
@@ -9364,14 +9475,20 @@
       showToast("项目已删除");
     }
 
-    function createProject() {
+    async function createProject() {
+      return withCanvasProjectTransition(performCreateProject);
+    }
+    async function performCreateProject() {
       if (projects.length >= maxProjectCount) {
         showToast(`最多只能新建 ${maxProjectCount} 个项目`);
         projectHub.classList.add("open");
         projectHubButton.setAttribute("aria-expanded", "true");
         return;
       }
-      saveCanvasState();
+      if (!await saveCanvasState()) {
+        showToast("当前项目尚未保存成功，请稍后再新建项目。", "error", 4200);
+        return;
+      }
       const next = projects.length + 1;
       const project = {
         id: `project-${Date.now()}`,
@@ -9436,6 +9553,7 @@
           url: await portableProjectMedia(item.url),
           maskUrl: await portableProjectMedia(item.maskUrl),
           maskSelectionUrl: await portableProjectMedia(item.maskSelectionUrl),
+          markupUrl: await portableProjectMedia(item.markupUrl),
           doodleUrl: await portableProjectMedia(item.doodleUrl)
         })));
       }
@@ -9490,6 +9608,9 @@
     }
 
     async function importProjectFile(file) {
+      return withCanvasProjectTransition(() => performimportProjectFile(file));
+    }
+    async function performimportProjectFile(file) {
       if (!file) return;
       if (projects.length >= maxProjectCount) {
         showToast(`最多只能保留 ${maxProjectCount} 个项目`);
@@ -9501,7 +9622,7 @@
         if (payload?.format !== "wandou-node-project" || !Array.isArray(payload?.canvas?.nodes) || !Array.isArray(payload?.canvas?.links)) {
           throw new Error("Unsupported project file");
         }
-        await saveCanvasState();
+        if (!await saveCanvasState()) throw new Error("当前项目尚未保存成功，请稍后再导入项目。");
         const now = Date.now();
         const importedProject = {
           id: `project-${now}`,
@@ -9601,6 +9722,7 @@
     }
 
     function cancelAssistantRequest(reason = "请求已取消。", record = false) {
+      window.WandouMascotState?.set('assistant', 'idle');
       const task = assistantTask;
       if (!task) return;
       assistantTask = null;
@@ -10043,6 +10165,7 @@
     }
 
     async function sendAssistantMessage(textValue = assistantInput?.value) {
+      if (canvasProjectTransition) return;
       const text = String(textValue || "").trim();
       if ((!text && !assistantAttachments.length) || assistantSending) return;
       let selectedModel = assistantModelSelect?.value || "";
@@ -10059,6 +10182,7 @@
           || availableModels[0] || "";
       }
       const profile = apiProfileForModel(selectedModel || (!apiKeyInput.value.trim() && apiKey2Input.value.trim() ? `自动${channelTwoModelSuffix}` : ""));
+      if (profile.provider === 'openai') { showToast('OpenAI 官方渠道当前仅用于绘图；对话请使用已配置的其他渠道。', 'error'); return; }
       const automaticCandidates = selectedModel
         ? [...new Set([selectedModel, ...availableModels.filter((model) => apiProfileForModel(model).id === profile.id)].map(modelToApiModel))]
         : null;
@@ -10076,6 +10200,7 @@
       };
       assistantTask = task;
       assistantSending = true;
+      window.WandouMascotState?.set('assistant', 'thinking');
       assistantMessages.push({ role: "user", text: messageText, images: messageImages });
       assistantAttachments = [];
       renderAssistantAttachments();
@@ -10125,6 +10250,7 @@
         if (assistantTask === task) {
           assistantTask = null;
           assistantSending = false;
+          window.WandouMascotState?.set('assistant', task.messages.at(-1)?.status === 'error' ? 'error' : 'complete');
           if (assistantConversationStorageKey() === task.storageKey && assistantMessages === task.messages) {
             saveAssistantConversation(task.messages, task.storageKey);
             renderAssistantConversation();
@@ -10201,7 +10327,8 @@
           ...item,
           url: compactMediaForSnapshot(item.url),
           maskUrl: compactMediaForSnapshot(item.maskUrl),
-          maskSelectionUrl: compactMediaForSnapshot(item.maskSelectionUrl)
+          maskSelectionUrl: compactMediaForSnapshot(item.maskSelectionUrl),
+          markupUrl: compactMediaForSnapshot(item.markupUrl)
         }));
       }
       return copy;
@@ -10267,6 +10394,7 @@
     }
 
     async function undoCanvas() {
+      if (blockBusyCanvasAction()) return;
       const current = getCanvasSnapshot();
       while (historyStack.length) {
         const snapshot = historyStack.pop();
@@ -10278,6 +10406,7 @@
     }
 
     async function redoCanvas() {
+      if (blockBusyCanvasAction()) return;
       const current = getCanvasSnapshot();
       while (redoStack.length) {
         const snapshot = redoStack.pop();
@@ -10289,6 +10418,23 @@
     }
 
     function createNode(type, x, y, extra = {}) {
+      // Sidebar and context-menu shortcuts share the existing generation path.
+      // Persist an ordinary generator, so old projects and task ownership stay compatible.
+      if (type === "svg" || type === "gif") {
+        const format = type;
+        const supports = (model) => Boolean(window.WandouImageOptions?.capabilities({ model })[format]);
+        const selectedModel = nodes.find((node) => node.id === selectedNodeId)?.model;
+        const preferredModel = [extra.model, selectedModel].find((model) => model && supports(model));
+        const supportedModels = imageModelOptions.filter(supports);
+        const model = preferredModel || supportedModels[0] || "gpt-image-2.6-flare";
+        type = "generator";
+        extra = {
+          prompt: "", imageQuality: "high", imageComplexity: "high",
+          gifFrameCount: 9, gifFrameDurationMs: 200, skillId: "", skillName: "",
+          ...extra, model, imageOutputFormat: format, outputFormat: format,
+          count: 1, autoSplit: false, transparentBackground: false
+        };
+      }
       const deferRender = Boolean(extra?._deferRender);
       const nodeExtra = { ...extra };
       delete nodeExtra._deferRender;
@@ -10799,6 +10945,9 @@
         body.appendChild(renderMediaBody(node));
       }
 
+      if (["style", "png", "upscale", "outpaint"].includes(node.type)) body.insertAdjacentHTML("beforeend", generatorTaskActionsHtml(node));
+      el.querySelector("[data-stop-task]")?.addEventListener("click", () => stopCanvasImageTask(node.id));
+      el.querySelector("[data-retry-failed]")?.addEventListener("click", () => retryFailedFromNode(node.id));
       el.addEventListener("pointerdown", () => {
         activePasteNodeId = node.id;
         if (node.type === "image" || node.type === "result") {
@@ -10943,6 +11092,7 @@
     }
 
     async function optimizeKeywordOutput(node) {
+      if (canvasProjectTransition || promptEditJobs.has(node.id)) return;
       const source = String(node.text || "").trim();
       if (!source) return;
       node.promptOptimizeChoice = "yes";
@@ -10950,6 +11100,7 @@
       render();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 120000);
+      promptEditJobs.set(node.id, controller);
       try {
         const configuredUrl = apiUrlInput.value.trim() || defaultApiBaseUrl();
         const headers = { "Content-Type":"application/json", Authorization:`Bearer ${apiKeyInput.value.trim()}` };
@@ -10960,6 +11111,7 @@
           ], temperature:0.35
         }, controller.signal);
         const optimized = String(response.text || "").trim();
+        if (!nodes.includes(node) || controller.signal.aborted) return;
         if (!optimized) throw new Error("没有返回优化结果");
         pushHistory();
         node.text = optimized;
@@ -10969,6 +11121,7 @@
         node.status = `提示词优化失败：${friendlyErrorMessage(error)}`;
       } finally {
         clearTimeout(timeout);
+        promptEditJobs.delete(node.id);
         render();
         scheduleCanvasSave();
       }
@@ -12565,13 +12718,21 @@
 
     function renderGeneratorBody(node) {
       const wrap = document.createElement("div");
-      const actionText = node.type === "keyword" ? "提取提示词" : node.type === "video" ? "生成视频" : "生成图片";
+      const actionText = node.type === "keyword" ? "提取提示词" : node.type === "video" ? "生成视频" : nativeSvgRequested(node) ? "生成 SVG 矢量图" : nativeGifRequested(node) ? "生成 GIF 动图" : "生成图片";
       const isVideoNode = node.type === "video";
+      if (!isVideoNode && specialImageRequested(node)) { node.count = 1; node.autoSplit = false; }
       const autoSplitAnalyzing = !isVideoNode && node.autoSplit && Number(node.autoSplitProgress) > 0;
       if (typeof node.autoSplit !== "boolean") node.autoSplit = false;
       if (!Array.isArray(node.autoSplitPlan)) node.autoSplitPlan = [];
       if (!['series', 'frame'].includes(node.autoSplitConsistency)) node.autoSplitConsistency = "series";
-      const models = isVideoNode ? videoModelOptions : imageModelOptions;
+      const availableModels = isVideoNode ? videoModelOptions : imageModelOptions;
+      // A channel's cached list can omit a supported special-format model.
+      // Keep that explicit choice visible instead of silently changing model/channel.
+      const requestedFormat = nativeSvgRequested(node) ? "svg" : nativeGifRequested(node) ? "gif" : "";
+      const keepSpecialModel = !isVideoNode && requestedFormat && node.model &&
+        Boolean(window.WandouImageOptions?.capabilities({ model: node.model })[requestedFormat]);
+      const models = keepSpecialModel && !availableModels.includes(node.model)
+        ? [node.model, ...availableModels] : availableModels;
       if (!models.includes(node.model)) node.model = models[0];
       const transparentBackgroundSupported = !isVideoNode && isGptImageModel(imageGenerationApiModel(node.model));
       if (!transparentBackgroundSupported) node.transparentBackground = false;
@@ -12598,10 +12759,10 @@
       const ratioMenuHtml = ratios.map((ratio) => `<button class="node-select-option ${node.ratio === ratio ? "active" : ""}" data-node-ratio="${escapeHtml(ratio)}" type="button" role="option" aria-selected="${node.ratio === ratio}" tabindex="${node.ratio === ratio ? 0 : -1}"><span>${escapeHtml(ratio)}</span>${node.ratio === ratio ? '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>' : ""}</button>`).join("");
       const durationHtml = `<button class="count-option active model-default" type="button" disabled>默认时长</button>`;
       const countHtml = (isVideoNode ? videoCountOptions : [1, 2, 3, 4, 5, 6, 7, 8, 9]).map((count) => (
-        `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button" ${!isVideoNode && node.autoSplit ? "disabled" : ""}>${count}</button>`
+        `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button" ${(!isVideoNode && node.autoSplit) || (specialImageRequested(node) && count !== 1) ? "disabled" : ""}>${count}</button>`
       )).join("");
       const resolutionHtml = resolutions.map((resolution) => (
-        `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-resolution="${resolution}" type="button" ${resolution === "DEFAULT" ? "disabled" : ""}>${resolutionLabel(resolution)}</button>`
+        `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-resolution="${resolution}" type="button" ${resolution === "DEFAULT" ? "disabled" : ""}>${isVideoNode ? resolutionLabel(resolution) : imageResolutionChoiceLabel(node.model,resolution)}</button>`
       )).join("");
       const modeHtml = [1, 2].map((row) => (
         `<div class="choice-options mode-choice-row">
@@ -12682,7 +12843,7 @@
           <label>模型</label>
           <div class="node-select" data-node-select><button class="node-select-trigger" data-node-select-toggle type="button" aria-haspopup="listbox" aria-expanded="false">${isVideoNode ? `<span>${escapeHtml(node.model)}</span>` : modelValueHtml(node.model)}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu" role="listbox">${modelMenuHtml}</div></div>
         </div>
-        <div class="form-row">
+        <div class="form-row image-ratio-row" ${nativeGifRequested(node) ? 'hidden' : ''}>
           <label>比例尺寸</label>
           <div>
             <div class="node-select" data-node-select><button class="node-select-trigger" data-node-select-toggle type="button" aria-haspopup="listbox" aria-expanded="false"><span>${escapeHtml(node.ratio)}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></button><div class="node-select-menu ratio-menu" role="listbox">${ratioMenuHtml}</div></div>
@@ -12690,11 +12851,12 @@
             <div class="ratio-readout" data-ratio-readout>当前画面比例：${node.ratio}</div>
           </div>
         </div>
-        <div class="form-row resolution-row">
+        ${nativeSvgFormatRowHtml(node)}
+        <div class="form-row resolution-row" ${specialImageRequested(node) ? 'hidden' : ''}>
           <label>分辨率</label>
           <div><div class="choice-options ${(isVideoNode || resolutions.length === 1) ? "align-right" : ""} ${resolutions.length === 1 ? "single-option" : ""}" style="--resolution-option-count:${resolutions.length}">${resolutionHtml}</div></div>
         </div>
-        ${!isVideoNode ? transparentBackgroundRowHtml(node, transparentBackgroundSupported) : ""}
+        ${!isVideoNode && !specialImageRequested(node) ? transparentBackgroundRowHtml(node, transparentBackgroundSupported) : ""}
         ${isVideoNode ? `
         <div class="form-row video-duration-row">
           <label>时长</label>
@@ -12711,7 +12873,7 @@
         ` : `
         <div class="form-row auto-split-row">
           <label>自动拆分</label>
-          <div class="auto-split-control"><button class="auto-split-toggle ${node.autoSplit ? "active" : ""}" data-auto-split-toggle type="button">${node.autoSplit ? "已打开" : "已关闭"}</button><span class="auto-split-hint">AI按内容决定1–99张，并为每张生成独立提示词</span></div>
+          <div class="auto-split-control"><button class="auto-split-toggle ${node.autoSplit ? "active" : ""}" data-auto-split-toggle type="button" ${specialImageRequested(node) ? "disabled" : ""}>${node.autoSplit ? "已打开" : "已关闭"}</button><span class="auto-split-hint">AI按内容决定1–99张，并为每张生成独立提示词</span></div>
         </div>
         ${node.autoSplit ? `<div class="form-row auto-split-consistency-row">
           <label>一致性</label>
@@ -12727,12 +12889,19 @@
           </div>
         </div>
         ${renderAutoSplitPlanHtml(node)}`}
-        <button data-generate class="wide-button ${autoSplitAnalyzing || /^正在生成|^正在分析/.test(node.status || "") ? "generating" : ""}" type="button" ${autoSplitAnalyzing ? "disabled" : ""}>${autoSplitAnalyzing ? `分析并自动拆分 ${Math.max(1, Math.min(99, Number(node.autoSplitProgress) || 1))}%` : node.autoSplit && !isVideoNode ? "分析并自动拆分" : actionText}</button>
-        <div class="status">${node.status || referenceHint}</div>
+        ${!isVideoNode ? `<div class="status image-resolution-hint" data-resolution-hint>${escapeHtml(imageResolutionHint(node))}</div>` : ""}
+        <button data-generate class="wide-button ${autoSplitAnalyzing || /^正在生成|^正在分析/.test(node.status || "") ? "generating" : ""}" type="button" ${autoSplitAnalyzing || imageGenerationJobs.has(node.id) ? "disabled" : ""}>${autoSplitAnalyzing ? `分析并自动拆分 ${Math.max(1, Math.min(99, Number(node.autoSplitProgress) || 1))}%` : node.autoSplit && !isVideoNode ? "分析并自动拆分" : actionText}</button>
+        ${generatorTaskActionsHtml(node)}
+        <div class="status">${escapeHtml(node.status || referenceHint)}</div>
         ${promptRefinePanelHtml}
       `;
 
       bindFields(wrap, node);
+      window.WandouImageOptions.bind(wrap, node, {
+        isBusy:() => imageGenerationJobs.has(node.id),
+        onBeforeChange:() => pushHistory(),
+        onChange:() => render()
+      });
       const promptField = wrap.querySelector('[data-field="prompt"]');
       const promptOverlay = wrap.querySelector("[data-prompt-token-overlay]");
       const syncPromptReferenceTokens = () => {
@@ -13029,6 +13198,7 @@
         button.addEventListener("click", () => {
           pushHistory();
           node.model = button.dataset.nodeModel;
+          if (specialImageRequested(node) && !nativeSvgModelSupported(node.model)) { node.imageOutputFormat = 'png'; node.outputFormat = 'png'; node.status = '此模型使用 PNG 输出。'; }
           if (isVideoNode) {
             const capabilities = videoCapabilitiesForModel(node.model);
             node.resolution = capabilities.resolutions[0];
@@ -13128,12 +13298,14 @@
           openReferencePreview();
         });
         thumb.addEventListener("keydown", (event) => {
+          if (event.target.closest("button, input")) return;
           if (event.key !== "Enter" && event.key !== " ") return;
           event.preventDefault();
           event.stopPropagation();
           openReferencePreview();
         });
       });
+      bindReferenceMarkupButtons(wrap, node);
       autoGrowTextareas(wrap);
       syncPromptReferenceTokens();
       return wrap;
@@ -13149,7 +13321,7 @@
     }
 
     function previewRegenerateButton(node) {
-      const unavailable = node.pending || node.mediaType !== "image" || (!node.mediaUrl && !node.fullUrl && !node.previewUrl);
+      const unavailable = !canRegenerateResult(node);
       const generating = Boolean(node.regenerating);
       const status = generating ? `<span class="preview-regenerate-status" data-regenerate-status>生成中 ${Math.max(0, Number(node.regenerationElapsed) || 0)}s</span>` : "";
       return `<button class="preview-regenerate ${generating ? "generating" : ""}" data-regenerate type="button" title="重新生成一张" aria-label="重新生成一张" ${unavailable || generating ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>${status}`;
@@ -13335,6 +13507,21 @@
     function psdSourceReference(node) {
       const linked = getInputMediaList(node.id).flatMap((source) => normalizeReferences(source));
       return [...normalizeReferences(node), ...linked].find((item) => isRenderableImageUrl(item?.url) || String(item?.url || "").startsWith(localMediaPrefix)) || null;
+    }
+
+    async function assertStaticExportSource(resolvedUrl, format, signal) {
+      const ensureActive = () => { if (signal?.aborted) throw new DOMException('文件转换已取消。', 'AbortError'); };
+      ensureActive();
+      const response = await fetchMediaWithTimeout(resolvedUrl, {cache:'default', signal}, 45000);
+      if (!response.ok) throw new Error('无法读取转换源文件。');
+      const blob = await response.blob();
+      ensureActive();
+      const header = new Uint8Array(await blob.slice(0, 6).arrayBuffer());
+      ensureActive();
+      if (blob.type.split(';')[0].toLowerCase() === 'image/gif' || /^GIF8[79]a$/.test(String.fromCharCode(...header))) {
+        throw new Error(`GIF 动画不支持${format}转换，不能将动画帧当作分层内容；请选择静态 PNG / JPEG 图片。原动画已保留，未调用生成接口。`);
+      }
+      return blob;
     }
 
     function waitForUiPaint() {
@@ -13699,6 +13886,7 @@
     }
 
     async function generateVectorFromNode(id) {
+      if (canvasProjectTransition) return;
       const node = nodes.find((item) => item.id === id && item.type === "vector");
       if (!node || vectorJobs.has(id)) return;
       const source = psdSourceReference(node);
@@ -13728,8 +13916,9 @@
         await waitForUiPaint();
         const resolved = await getLocalMedia(source.url);
         if (!resolved) throw new Error("本地图片数据不存在或尚未保存完成，请重新上传图片");
-        const blob = await sourceToBlob(resolved, "image/png");
-        if (!blob) throw new Error("无法读取源图片");
+        if (!isCurrent()) return;
+        const blob = await assertStaticExportSource(resolved, ' SVG / AI / EPS 矢量');
+        if (!isCurrent()) return;
         const dataUrl = await blobToDataUrl(blob);
         const dimensions = await getImageDimensions(dataUrl);
         if (!dimensions.width || !dimensions.height) throw new Error("无法识别图片尺寸");
@@ -14326,6 +14515,7 @@
     }
 
     async function analyzePsdFromNode(id) {
+      if (canvasProjectTransition) return;
       const node = nodes.find((item) => item.id === id && item.type === "psd");
       if (!node || psdJobs.has(id)) return;
       const source = psdSourceReference(node);
@@ -14353,6 +14543,8 @@
         await waitForUiPaint();
         const resolved = await runPsdStage(controller, () => getLocalMedia(source.url), "读取本地原图", 45000);
         if (!resolved) throw new Error("本地图片数据不存在，请重新上传图片");
+        await runPsdStage(controller, () => assertStaticExportSource(resolved, ' PSD 分层', controller.signal), "检查源文件格式", 45000);
+        if (!current()) return;
         const { width, height } = await runPsdStage(controller, () => getImageDimensions(resolved), "读取原图", 45000);
         if (!width || !height) throw new Error("无法读取原图尺寸");
         if (width > 3072 || height > 3072 || width * height > 8000000) throw new Error("当前 PSD 拆层上限为 3072px 长边、800 万像素；请先缩小原图。");
@@ -14389,6 +14581,7 @@
     }
 
     async function generatePsdFromNode(id) {
+      if (canvasProjectTransition) return;
       const node = nodes.find((item) => item.id === id && item.type === "psd");
       if (!node || psdJobs.has(id)) return;
       const source = psdSourceReference(node);
@@ -14435,6 +14628,8 @@
         await waitForUiPaint();
         const resolvedSourceUrl = await runPsdStage(controller, () => getLocalMedia(source.url), "读取本地原图", 45000);
         if (!resolvedSourceUrl) throw new Error("本地图片数据不存在或尚未保存完成，请重新上传图片");
+        await runPsdStage(controller, () => assertStaticExportSource(resolvedSourceUrl, ' PSD 分层', controller.signal), "检查源文件格式", 45000);
+        if (!isCurrent()) return;
         const dimensions = await runPsdStage(controller, () => getImageDimensions(resolvedSourceUrl), "读取原图", 45000);
         const width = dimensions.width;
         const height = dimensions.height;
@@ -14832,14 +15027,14 @@
 
     function visibleResultStatus(text) {
       const status = publicNodeStatus(text);
-      return /失败|错误|超时|中断/.test(status) ? status : "";
+      return /失败|错误|超时|中断|取消|未完成/.test(status) ? status : "";
     }
 
     function renderMediaBody(node) {
       const wrap = document.createElement("div");
       const isVideo = node.mediaType === "video";
       const isAudio = node.mediaType === "audio";
-      const refs = normalizeReferences(node);
+      const refs = node.type === "result" ? (Array.isArray(node.references) ? node.references : []) : normalizeReferences(node);
       const publicStatus = publicNodeStatus(node.status);
       const visibleMediaStatus = node.type === "image" && publicStatus === "参考图已自动转换为 JPG。" ? "" : publicStatus;
       const media = node.pending
@@ -14874,10 +15069,14 @@
           ${node.type === "image" ? "" : `<button class="mini ghost" data-download type="button">下载</button>`}
         </div>`}
         ${node.type === "result"
-          ? (visibleResultStatus(publicStatus) ? `<div class="status">${visibleResultStatus(publicStatus)}</div>` : "")
+          ? (visibleResultStatus(publicStatus) ? `<div class="status">${escapeHtml(visibleResultStatus(publicStatus))}</div>` : "")
           : (node.type === "image" ? "" : `<div class="status">${visibleMediaStatus || "可作为参考图输入，或保存生成结果。"}</div>`)}
       `;
 
+      if (node.type === "result") wrap.insertAdjacentHTML("beforeend", resultTaskActionsHtml(node));
+      wrap.querySelector("[data-retry-result]")?.addEventListener("click", () => regenerateResultNode(node.id));
+      wrap.querySelector("[data-retry-output]")?.addEventListener("click", () => retryResultResolution(node.id));
+      wrap.querySelector("[data-stop-output]")?.addEventListener("click", () => cancelLocalResolutionForNode(node.id));
       const uploadInput = wrap.querySelector("[data-upload]");
       if (uploadInput) uploadInput.addEventListener("change", async (event) => {
         pushHistory();
@@ -14975,9 +15174,10 @@
         const syncRatio = () => {
           if (!previewImg.naturalWidth || !previewImg.naturalHeight) return;
           const original = window.WandouCanvasPreview?.dimensions(previewImg);
+          const recoveredDimensions = !node.width || !node.height;
           if (!node.width) node.width = original?.width || previewImg.naturalWidth;
           if (!node.height) node.height = original?.height || previewImg.naturalHeight;
-          node.ratio = `${node.width}:${node.height}`;
+          if (recoveredDimensions) node.ratio = `${node.width}:${node.height}`;
           const nodeEl = canvas.querySelector(`[data-id="${node.id}"]`);
           if (nodeEl) nodeEl.style.setProperty("--preview-ratio", `${previewImg.naturalWidth} / ${previewImg.naturalHeight}`);
           const meta = nodeEl?.querySelector("[data-meta]");
@@ -15117,6 +15317,18 @@
       root.querySelectorAll("textarea[data-autogrow]").forEach(autoGrowTextarea);
     }
 
+    function readNodeReferences(node) {
+      const seen = new Set();
+      const refs = (Array.isArray(node?.references) ? node.references : []).flatMap(item => {
+        const url = typeof item?.url === "string" ? item.url.trim() : "";
+        if (!url || seen.has(url)) return [];
+        seen.add(url);
+        return [{...item, url}];
+      });
+      if (!refs.length && node?.mediaUrl) refs.push({url:node.mediaUrl, mediaType:node.mediaType || "image"});
+      return refs;
+    }
+
     function normalizeReferences(node) {
       if (!Array.isArray(node.references)) node.references = [];
       const seen = new Set();
@@ -15234,7 +15446,7 @@
       const annotated = references.filter((reference) => Array.isArray(reference.comments) && reference.comments.some((comment) => String(comment?.text || "").trim()));
       // A single image-edit mask can target only one source image. For multiple
       // annotated references, keep the coordinate instructions without guessing.
-      if (annotated.length !== 1 || annotated[0].maskUrl) return references;
+      if (annotated.length !== 1 || annotated[0].maskUrl || references.some(item => item?.markupUrl)) return references;
       const reference = annotated[0];
       const width = Math.max(1, Math.round(Number(reference.width) || 0));
       const height = Math.max(1, Math.round(Number(reference.height) || 0));
@@ -15303,6 +15515,7 @@
           ${referenceMaskOverlayHtml(item)}
            ${referenceAnnotationHtml(item)}
           <span class="thumb-index">${label}</span>
+          ${referenceMarkupActionsHtml(item, index, node, true)}
         </div>
       `;
       }).join("");
@@ -15326,6 +15539,7 @@
           <span class="thumb-index">${index + 1}</span>
           <button class="thumb-remove" data-remove-ref="${index}" type="button">×</button>
           ${referenceOrderControls(index, ownRefs.length)}
+          ${referenceMarkupActionsHtml(item, index, node)}
         </div>
       `).join("");
       return linkedHtml || ownHtml ? `${linkedHtml}${ownHtml}` : "";
@@ -15337,10 +15551,12 @@
     }
 
     function referenceAnnotationHtml(item) {
+      const markup = isRenderableImageUrl(item?.markupUrl)
+        ? `<img class="reference-doodle-overlay reference-markup-overlay" src="${escapeHtml(item.markupUrl)}" alt="圈画修改标注">` : "";
       const doodle = isRenderableImageUrl(item?.doodleUrl)
         ? `<img class="reference-doodle-overlay" src="${item.doodleUrl}" alt="图片涂鸦">` : "";
       const comments = Array.isArray(item?.comments) ? item.comments : [];
-      return doodle + comments.map((comment, index) => {
+      return markup + doodle + comments.map((comment, index) => {
         const region = imageCommentRegion(comment);
         return `<span class="reference-comment-marker${region.point ? " point" : ""}" data-comment-x="${region.x}" data-comment-y="${region.y}" data-comment-width="${region.w}" data-comment-height="${region.h}" data-comment-number="${index + 1}" title="${escapeHtml(comment.text || "图片批注")}"></span>`;
       }).join("");
@@ -15396,6 +15612,7 @@
           <span class="thumb-index">${refs.length === 1 ? nodes.filter((entry) => entry.type === "image").indexOf(node) + 1 : index + 1}</span>
           <button class="thumb-remove" data-remove-ref="${index}" type="button">×</button>
           ${referenceOrderControls(index, visibleRefs.length)}
+          ${referenceMarkupActionsHtml(item, index, node)}
         </div>
       `).join("")}
         <button class="reference-add-thumb" data-reference-upload-trigger type="button" aria-label="继续添加参考图片" title="继续添加参考图片">
@@ -15449,12 +15666,67 @@
     }
 
     function bindReferenceOrderButtons(root, node) {
+      bindReferenceMarkupButtons(root, node);
       root.querySelectorAll("[data-ref-move]").forEach((button) => {
         button.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
           const fromIndex = Number(button.dataset.refIndex);
           reorderReference(node, fromIndex, fromIndex + Number(button.dataset.refMove));
+        });
+      });
+    }
+
+    function referenceMarkupSupported(node) {
+      return node.type !== "generator" || /^gpt-image-2\.[56]-(?:flare|sunburst)$/i.test(modelToApiModel(node.model || ""));
+    }
+
+    function referenceMarkupActionsHtml(reference, index, node, generator = false) {
+      if (!['image', 'prompt', 'generator'].includes(node.type)) return "";
+      const unavailable = !referenceMarkupSupported(node) || Boolean(reference.maskUrl || reference.maskSelectionUrl);
+      const reason = !referenceMarkupSupported(node) ? "圈画修改需要 GPT Image 2.5 / 2.6 Flare 或 Sunburst" : reference.maskUrl || reference.maskSelectionUrl ? "先在局部编辑中清除遮罩，再使用圈画修改" : reference.markupUrl ? "编辑圈画标注" : "圈画修改（GPT Image 2.5 / 2.6 Flare 或 Sunburst）";
+      return `<div class="reference-markup-actions"><button type="button" data-markup-ref="${index}" data-markup-generator="${generator}" aria-label="${reason}" title="${reason}"${unavailable ? " disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 1 3 3-1L20 7l-3-3Z"/></svg><span>圈画</span></button>${reference.markupUrl ? `<button type="button" data-markup-clear="${index}" data-markup-generator="${generator}" aria-label="清除圈画标注" title="清除圈画标注">×</button>` : ""}</div>`;
+    }
+
+    function bindReferenceMarkupButtons(root, node) {
+      root.querySelectorAll('[data-markup-ref],[data-markup-clear]').forEach(button => {
+        if (button.dataset.markupBound) return;
+        button.dataset.markupBound = 'true';
+        button.addEventListener('pointerdown', event => event.stopPropagation());
+        button.addEventListener('click', async event => {
+          event.preventDefault();event.stopPropagation();
+          const clear = button.hasAttribute('data-markup-clear');
+          const index = Number(clear ? button.dataset.markupClear : button.dataset.markupRef);
+          const reference = (button.dataset.markupGenerator === 'true' ? generatorReferenceItems(node) : normalizeReferences(node))[index];
+          const owner = nodes.find(candidate => candidate.references?.includes(reference));
+          if (!owner || !reference?.url) return;
+          if (clear) {
+            pushHistory();delete reference.markupUrl;delete reference.markupWidth;delete reference.markupHeight;delete reference.markupUpdatedAt;
+            owner.status = '圈画标注已清除，参考原图保持不变。';render();scheduleCanvasSave();return;
+          }
+          if (!referenceMarkupSupported(node)) {showToast('圈画修改需要 GPT Image 2.5 / 2.6 Flare 或 Sunburst');return;}
+          if (reference.maskUrl || reference.maskSelectionUrl) {showToast('请先清除局部遮罩，再使用圈画修改');return;}
+          if (!window.WandouImageMarkup) {showToast('圈画组件尚未就绪，请重新打开软件');return;}
+          const folderId = currentFolderId, projectId = activeProjectId, originalUrl = reference.url;
+          const mediaIdentity = value => window.WandouMediaUrls?.storedReference(value) || (String(value || '').startsWith('data:') ? localMediaPrefix + mediaStorageId(value) : value);
+          const originalIdentity = mediaIdentity(originalUrl);
+          button.disabled = true;
+          try {
+            const result = await window.WandouImageMarkup.open({imageUrl:originalUrl,existingMarkup:reference.markupUrl,resolve:async(source,{signal})=>{
+              if (signal.aborted) throw new DOMException('已取消圈画编辑','AbortError');
+              const url = String(source || '').startsWith(localMediaPrefix) ? await resolveLoadedMedia(source, new Map()) : source;
+              if (signal.aborted) throw new DOMException('已取消圈画编辑','AbortError');
+              const response = await fetchMaybeProxied(url, {signal});
+              if (!response.ok) throw Error('参考图片读取失败，请重新打开项目后重试');
+              return response.blob();
+            }});
+            if (!result) return;
+            if (currentFolderId !== folderId || activeProjectId !== projectId || !nodes.includes(owner) || !owner.references?.includes(reference) || mediaIdentity(reference.url) !== originalIdentity) {showToast('参考图或项目已变化，本次标注未覆盖其他图片');return;}
+            if (reference.maskUrl || reference.maskSelectionUrl) {showToast('参考图已有遮罩，本次圈画未覆盖它');return;}
+            pushHistory();reference.markupUrl = result.markupUrl;reference.markupWidth = result.width;reference.markupHeight = result.height;reference.markupUpdatedAt = Date.now();
+            owner.status = '圈画标注已保存；使用 GPT Image 2.5 / 2.6 Flare 或 Sunburst 并描述修改要求。';render();scheduleCanvasSave();showToast('圈画标注已保存，参考原图保持不变');
+          } catch (error) {if(error?.name !== 'AbortError')showToast(error?.message || '圈画修改暂不可用，请重试');}
+          finally {if(button.isConnected)button.disabled = !referenceMarkupSupported(node) || Boolean(reference.maskUrl || reference.maskSelectionUrl);}
         });
       });
     }
@@ -15892,7 +16164,7 @@
         return `<span class="result-size-meta">${escapeHtml(String(node.audioFormat || "audio").toUpperCase())}</span><span class="result-time-meta"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>${node.pending ? `${Number(node.elapsed) || 0}s` : seconds ? `${seconds}s` : "已完成"}</span>`;
       }
       const size = node.width && node.height
-        ? `${node.width}×${node.height}`
+        ? `${node.width}×${node.height}${node.resolutionProcessing === "local-upscale" ? " · 非原生" : ""}`
         : node.mediaUrl ? "识别中" : "--×--";
       const seconds = resultElapsedSeconds(node);
       const elapsed = node.pending
@@ -16109,7 +16381,7 @@
       if (lines.getAttribute("viewBox") !== "0 0 6200 4200") lines.setAttribute("viewBox", "0 0 6200 4200");
       if (lines.getAttribute("overflow") !== "visible") lines.setAttribute("overflow", "visible");
       const activeKeys = new Set();
-      links.forEach((link) => {
+      (window.WandouCanvasViewport?.visibleLinks(links, metricCache) || links).forEach((link) => {
         const key = `${link.from}:${link.to}`;
         activeKeys.add(key);
         const from = getPortCenterFast(link.from, "out", metricCache);
@@ -16785,6 +17057,7 @@
       boxSelectedIds.forEach((id) => canvas.querySelector(`[data-id="${id}"]`)?.classList.add("deleting-confirm"));
       pushHistory();
       const selected = new Set(boxSelectedIds);
+      selected.forEach(cancelImageJobsForNode);
       const previousNodeCount = nodes.length;
       nodes.forEach((node) => {
         if (selected.has(node.id)) archiveDeletedResult(node);
@@ -16912,8 +17185,23 @@
       if (event.target.closest(".node") || event.target.closest(".topbar") || event.target.closest(".project-hub")) return;
       event.preventDefault();
       contextMenuWorld = screenToWorld(event.clientX, event.clientY);
-      positionCanvasOverlay(contextMenu, event.clientX, event.clientY);
+      // Keep every creation shortcut reachable at canvas/window edges. The
+      // node still uses the original world position, not the shifted menu.
+      const bounds = canvasWrap.getBoundingClientRect();
+      const panelBounds = assistantPanel.getBoundingClientRect();
+      const toolbarBounds = document.querySelector(".test-canvas-toolbar")?.getBoundingClientRect();
+      const leftEdge = Math.max(bounds.left, 0) + 8;
+      const topEdge = Math.max(bounds.top, 0) + 8;
+      const rightEdge = Math.min(bounds.right, innerWidth,
+        assistantPanel.closest(".app")?.classList.contains("assistant-open") ? panelBounds.left : innerWidth) - 8;
+      const bottomEdge = Math.min(bounds.bottom, innerHeight,
+        toolbarBounds?.height ? toolbarBounds.top : innerHeight) - 8;
+      contextMenu.style.maxWidth = `${Math.max(1, rightEdge - leftEdge)}px`;
+      contextMenu.style.maxHeight = `${Math.max(1, bottomEdge - topEdge)}px`;
       contextMenu.classList.add("open");
+      positionCanvasOverlay(contextMenu,
+        Math.max(leftEdge, Math.min(event.clientX, rightEdge - contextMenu.offsetWidth)),
+        Math.max(topEdge, Math.min(event.clientY, bottomEdge - contextMenu.offsetHeight)));
     };
     canvasWrap.addEventListener("contextmenu", (event) => event.preventDefault());
     canvasWrap.addEventListener("dblclick", openCanvasContextMenu);
@@ -16939,6 +17227,7 @@
     }
 
     function deleteNode(id) {
+      cancelImageJobsForNode(id);
       audioJobs.forEach((job) => {
         if (job.node.id === id || job.pending.id === id) job.controller.abort(new Error("音频节点或结果节点已删除，生成已取消。"));
       });
@@ -17085,7 +17374,7 @@
 
     function canRegenerateResult(resultNode) {
       if (!resultNode || resultNode.type !== "result" || resultNode.pending || resultNode.regenerating) return false;
-      const failedAutoSplitResult = Number(resultNode.autoSplitIndex) > 0 && /失败|错误|超时|中断/.test(resultNode.status || "");
+      const failedAutoSplitResult = failedImageResult(resultNode);
       if (resultNode.mediaType !== "image" || (!favoriteMediaUrl(resultNode) && !failedAutoSplitResult)) return false;
       return Boolean(resultGenerationSource(resultNode));
     }
@@ -17106,6 +17395,7 @@
     }
 
     async function regenerateResultNode(resultId) {
+      if (canvasProjectTransition) return;
       const original = nodes.find((item) => item.id === resultId);
       if (!canRegenerateResult(original)) {
         showToast(original?.regenerating ? "这张图片正在重新生成" : "当前图片暂时不能重新生成");
@@ -17126,7 +17416,10 @@
         return;
       }
       const regenerationReferences = collectReferenceItems([...getInputMediaList(sourceNode.id), sourceNode]);
-      const editModelError = imageEditModelError({ ...sourceNode, model: original.model || sourceNode.model }, regenerationReferences);
+      const editModelError = imageEditModelError({ ...sourceNode, model: original.model || sourceNode.model,
+        ...capturedImageOptions(original), autoSplit:false,
+        imageOutputFormat:original.imageOutputFormat || original.outputFormat || sourceNode.imageOutputFormat || 'png',
+        outputFormat:original.imageOutputFormat || original.outputFormat || sourceNode.imageOutputFormat || 'png' }, regenerationReferences);
       if (editModelError) {
         sourceNode.status = editModelError;
         showToast(editModelError, "error", 7000);
@@ -17180,6 +17473,12 @@
         updatePendingElapsed(pending.id, pending.elapsed);
       }, 1000);
 
+      // Reference preparation belongs to this task too. Keep its owner identity
+      // until finally so deleting a node cannot turn a late preparation into a paid request.
+      const job = { node: sourceNode, original, projectId: activeProjectId, cancelled: false, controllers: new Set(), pendingNodes: [pending] };
+      imageRegenerationJobs.set(original.id, job);
+      window.WandouMascotState?.set('regenerate:' + original.id, 'thinking');
+      const isCurrent = () => generationJobIsCurrent(job) && nodes.includes(pending);
       try {
         const sourceReferences = collectReferenceItems([
           ...getInputMediaList(sourceNode.id),
@@ -17198,9 +17497,16 @@
           ...sourceReferences
         ].filter((item, index, list) => item?.url && list.findIndex((other) => other.url === item.url) === index);
         await ensureReferenceDimensions(references);
+        if (!isCurrent()) return;
         const regenerationSource = {
           ...sourceNode,
+          _generationJob: job,
           model: original.model || sourceNode.model,
+          resolution: original.requestedResolution || original.resolution || sourceNode.resolution,
+          imageOutputFormat: original.imageOutputFormat || original.outputFormat || sourceNode.imageOutputFormat || 'png',
+          outputFormat: original.imageOutputFormat || original.outputFormat || sourceNode.imageOutputFormat || 'png',
+          ...capturedImageOptions(original),
+          autoSplit: false,
           prompt: String(original.generationPrompt || original.prompt || sourceNode.prompt || ""),
           references,
           count: 1,
@@ -17210,6 +17516,7 @@
           _deferCanvasSave: true
         };
         await generateOneResult(regenerationSource, pending, 0, targetSize);
+        if (!isCurrent()) return;
         if (pending.fullUrl || pending.mediaUrl) {
           original.status = "重新生成完成，新图已追加到效果图组最下方。";
           showToast("重新生成完成：原图已保留，新图已添加到最下方");
@@ -17219,15 +17526,24 @@
         }
       } finally {
         clearInterval(timer);
+        if (imageRegenerationJobs.get(original.id) === job) imageRegenerationJobs.delete(original.id);
+        window.WandouMascotState?.set('regenerate:' + original.id, job.cancelled ? 'idle' : pending.fullUrl ? 'complete' : 'error');
         original.regenerating = false;
         original.regenerationElapsed = 0;
-        render();
-        refreshRenderedNode(sourceNode.id);
-        await saveCanvasState();
+        if (pending.pending) {
+          pending.pending = false;
+          pending.status = job.cancelled ? "重新生成已取消，原图未受影响。" : "重新生成已结束，请检查结果或重试。";
+        }
+        if (activeProjectId === job.projectId) {
+          render();
+          refreshRenderedNode(sourceNode.id);
+          await saveCanvasState();
+        }
       }
     }
 
     async function generateAudioFromNode(id) {
+      if (canvasProjectTransition) return;
       const node = nodes.find((item) => item.id === id && item.type === "audio");
       if (!node || node.audioGenerating) return;
       const prompt = String(node.prompt || "").trim();
@@ -17319,7 +17635,36 @@
 
     async function generateFromNode(id, options = {}) {
       const node = nodes.find((item) => item.id === id);
+      if (!node || canvasProjectTransition) return;
+      if (imageGenerationJobs.has(id)) { showToast("此节点正在生成，请等待当前任务完成。"); return; }
+      // Claim before the first await: reference preparation and skill analysis also belong to this task.
+      const job = { node, projectId: activeProjectId, cancelled: false, controllers: new Set(), pendingNodes: [], timer: null };
+      imageGenerationJobs.set(id, job);
+      window.WandouMascotState?.set(id, 'thinking');
+      setNodeStatus(id, node.status || "正在准备生成...");
+      try { await runGenerationJob(id, options, job); }
+      catch (error) {
+        if (generationJobIsCurrent(job)) { node.status = "生成失败：" + friendlyApiError(error); }
+      } finally {
+        if (job.timer) clearInterval(job.timer);
+        if (imageGenerationJobs.get(id) === job) imageGenerationJobs.delete(id);
+        window.WandouMascotState?.set(id, job.cancelled ? 'idle' : /失败|未完成|未生成/.test(node.status || '') ? 'error' : 'complete');
+        if (job.projectId === activeProjectId) {
+          if (nodes.includes(node)) setNodeStatus(id, node.status);
+          job.pendingNodes.forEach((pending) => {
+            if (pending.pending) { pending.pending = false; pending.status = job.cancelled ? "已取消后续生成。" : "任务已结束，请重试未完成的图片。"; }
+          });
+          render();
+          await saveCanvasState();
+        }
+      }
+    }
+    async function runGenerationJob(id, options, job) {
+      const node = nodes.find((item) => item.id === id);
       if (!node) return;
+      const formatReferences = collectReferenceItems([...getInputMediaList(node.id),node]);
+      const formatError = imageGenerationOptionsError(node, formatReferences) || nativeSvgRequestError(node, formatReferences);
+      if (formatError) { node.status = formatError; showToast(formatError, 'error', 6000); return; }
       const generationProfile = apiProfileForModel(node.model);
       if (!generationProfile.key) {
         setSettingsOpen(true);
@@ -17337,8 +17682,8 @@
           return;
         }
       }
-      const transparentPngOutput = (node.type === "png" && node.transparentBackground !== false)
-        || ((node.type === "generator" || node.type === "outpaint") && (node.transparentBackground || promptRequestsTransparentPng(node.prompt)));
+      const transparentPngOutput = !specialImageRequested(node) && ((node.type === "png" && node.transparentBackground !== false)
+        || ((node.type === "generator" || node.type === "outpaint") && (node.transparentBackground || promptRequestsTransparentPng(node.prompt))));
       pausePerformanceMonitor(30000);
       const inputMedia = getInputMedia(node.id);
       const inputMediaList = getInputMediaList(node.id);
@@ -17354,6 +17699,7 @@
       if (node.type === "outpaint") references = collectReferenceItems([node, ...inputMediaList]);
       if (node.type === "upscale" || node.type === "outpaint") references = references.slice(0, 1);
       await ensureReferenceDimensions(references);
+      if (!generationJobIsCurrent(job)) return;
       references = applyGeneratorAnnotationMask(node, references);
       const editModelError = imageEditModelError(node, references);
       if (editModelError) {
@@ -17368,6 +17714,7 @@
         showToast(`检测到透明底需求，已自动切换为 ${node.model} 并启用真实 PNG 透明通道。`, "success", 4200);
       }
       references = await appendGeneratorAnnotationGuide(node, references);
+      if (!generationJobIsCurrent(job)) return;
       if (node.type === "outpaint" && references[0]?.url) {
         const actualSize = await getImageDimensions(references[0].url);
         if (actualSize.width && actualSize.height) Object.assign(references[0], actualSize);
@@ -17444,9 +17791,12 @@
         }, 450);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 120000);
+        job.controllers.add(controller);
         try {
+          if (!generationJobIsCurrent(job)) return;
           beginAutoSplitBatch(node);
           const analysis = await analyzeAutoSplitPlan(node, references, node.autoSplitLockedSize, controller.signal);
+          if (!generationJobIsCurrent(job)) return;
           node.autoSplitPlan = analysis.items;
           node.autoSplitSeriesSpec = analysis.seriesSpec;
           node.autoSplitPlanConfirmed = false;
@@ -17462,6 +17812,7 @@
         } finally {
           clearInterval(progressTimer);
           clearTimeout(timeout);
+          job.controllers.delete(controller);
         }
         return;
       }
@@ -17471,12 +17822,13 @@
       const effectiveTargetSize = confirmedAutoSplitPlan.length
         ? (node.autoSplitLockedSize || targetSize)
         : targetSize;
-      const count = node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint" || node.type === "style"
+      const count = specialImageRequested(node) || node.type === "keyword" || node.type === "png" || node.type === "upscale" || node.type === "outpaint" || node.type === "style"
         ? 1
         : node.type === "video"
         ? (videoCountOptions.includes(Number(node.count)) ? Number(node.count) : 1)
         : confirmedAutoSplitPlan.length || Math.max(1, Math.min(9, Number(node.count) || 1));
-      const pendingNodes = [];
+      const pendingNodes = job.pendingNodes;
+      if (!generationJobIsCurrent(job)) return;
       const parsed = parseSize(effectiveTargetSize);
 
       if (node.type === "keyword") {
@@ -17487,7 +17839,10 @@
         }
         setNodeStatus(id, "正在反推/生成提示词...");
         try {
-          const apiResult = await callApi({ ...node, count: 1 }, new AbortController().signal);
+          const controller = new AbortController();
+          job.controllers.add(controller);
+          const apiResult = await callApi({ ...node, count: 1 }, controller.signal);
+          if (!generationJobIsCurrent(job)) return;
           node.text = apiResult.text || "";
           node.promptOptimizeOpen = false;
           node.promptOptimizeChoice = "";
@@ -17514,6 +17869,8 @@
           autoSplitIndex: confirmedAutoSplitPlan.length ? index + 1 : 0,
           autoSaveBatchFolder: confirmedAutoSplitPlan.length ? String(node.autoSplitBatchFolder || "") : "",
           model: node.model,
+          resolution: node.resolution,
+          requestedResolution: node.resolution,
           mediaType: node.type === "video" ? "video" : node.type === "keyword" ? "text" : "image",
           transparent: transparentPngOutput,
           pending: true,
@@ -17545,11 +17902,13 @@
         });
       }, 1000);
 
+      job.timer = timer;
       // Freeze the batch parameters, then run a deliberately bounded queue.
       // Large plans use two concurrent requests to avoid locking the renderer
       // and to reduce provider rate-limit spikes; frame sequences stay serial.
       const batchSource = {
         ...node,
+        _generationJob: job,
         prompt: node.type === "outpaint" ? outpaintPromptFor(node, effectiveTargetSize, references[0]) : node.type === "style" ? styleTransferPrompt(node) : generatorPromptWithAnnotations(node, creativeStylePrompt(node, node.prompt), references),
         references: references.map((item) => ({ ...item })),
         ...(node.type === "style" ? { _directReferencesOnly: true, count: 1 } : ["outpaint", "generator"].includes(node.type) ? { _directReferencesOnly: true } : {})
@@ -17561,9 +17920,11 @@
         : "";
       const generationConcurrency = consistencyMode === "frame" ? 1 : pendingNodes.length >= 10 ? 2 : 3;
       for (let offset = 0; offset < pendingNodes.length;) {
+        if (!generationJobIsCurrent(job)) break;
         const activeConcurrency = confirmedAutoSplitPlan.length && !motherReference ? 1 : generationConcurrency;
         const batch = pendingNodes.slice(offset, offset + activeConcurrency);
         await Promise.all(batch.map((pending, batchIndex) => {
+          if (!generationJobIsCurrent(job) || !nodes.includes(pending)) return Promise.resolve();
           const planIndex = offset + batchIndex;
           const planItem = confirmedAutoSplitPlan[planIndex];
           const referenceList = motherReference
@@ -17589,9 +17950,9 @@
               }
             : batchSource;
           return generateOneResult(sourceForResult, pending, planIndex, effectiveTargetSize).then(async () => {
-            if (consistencyMode !== "frame" || !previousFrameReference?.url || !pending.fullUrl) return;
+            if (!generationJobIsCurrent(job) || !nodes.includes(pending) || consistencyMode !== "frame" || !previousFrameReference?.url || !pending.fullUrl) return;
             const repeated = await imagesAreNearDuplicate(previousFrameReference.url, pending.fullUrl);
-            if (!repeated) return;
+            if (!repeated || !generationJobIsCurrent(job) || !nodes.includes(pending)) return;
             const progress = confirmedAutoSplitPlan.length <= 1 ? 100 : Math.round(planIndex * 100 / (confirmedAutoSplitPlan.length - 1));
             pending.pending = true;
             pending.status = `第 ${planIndex + 1} 帧与上一帧过于相似，正在强化动作进度后重试...`;
@@ -17636,10 +17997,16 @@
         await new Promise((resolve) => requestAnimationFrame(resolve));
       }
       clearInterval(timer);
+      if (!generationJobIsCurrent(job)) return;
       const failed = pendingNodes.filter((pending) => !pending.mediaUrl && pending.mediaType !== "text").length;
       const ratioMismatches = pendingNodes.filter((pending) => pending.outputRatioMismatch).length;
-      node.status = failed
-        ? `已完成，${failed} 张失败；其余图片已按 ${effectiveTargetSize} 输出。`
+      const incompleteOutputs = pendingNodes.filter((pending) => pending.resolutionProcessing === "incomplete").length;
+      node.status = incompleteOutputs
+        ? "原图已返回，但 " + incompleteOutputs + " 张输出尺寸处理未完成；原图已保留，未重复生图。"
+        : failed === pendingNodes.length
+        ? `生成失败：${failed} 张均未生成成功，请查看结果提示后重试。`
+        : failed
+        ? `生成结束：${pendingNodes.length - failed} 张成功，${failed} 张失败；请查看失败原因。`
         : ratioMismatches
         ? `接口已返回，但 ${ratioMismatches} 张没有遵循所选比例；请查看效果图提示并检查模型。`
         : confirmedAutoSplitPlan.length
@@ -17771,7 +18138,7 @@
 
     function isRetryableGenerationError(error) {
       const message = String(error?.message || error || "");
-      return !/HTTP 4(?:00|01|03|04)|额度不足|spending limit|credits|model.not.found|No available channel|invalid api|API 密钥/i.test(message);
+      return !/HTTP 4(?:00|01|03|04)|额度不足|余额不足|预扣.*(?:失败|不足)|insufficient[_ ](?:quota|balance)|spending limit|credits|model.not.found|No available channel|invalid api|API 密钥/i.test(message);
     }
 
     function generationRetryDelay(attempt) {
@@ -17779,9 +18146,29 @@
     }
 
     async function generateOneResult(sourceNode, pending, index, targetSize, attempt = 1) {
+      if (sourceNode.type !== "video") {
+        pending.imageOutputFormat = sourceNode.imageOutputFormat || sourceNode.outputFormat || 'png';
+        pending.outputFormat = pending.imageOutputFormat;
+        Object.assign(pending, capturedImageOptions(sourceNode));
+        pending.requestedResolution = sourceNode.resolution || pending.requestedResolution || "1K";
+        pending.outputLongEdgeTarget = imageOutputEdge(pending.requestedResolution);
+      }
+      const projectId = activeProjectId;
+      const job = sourceNode._generationJob;
+      const ownerNode = job?.node || nodes.find((node) => node.id === sourceNode.id);
+      const isCurrent = () => activeProjectId === projectId && nodes.includes(pending) && nodes.includes(ownerNode)
+        && (!job || generationJobIsCurrent(job));
+      if (!isCurrent()) return;
       const controller = new AbortController();
+      const entry = { pending, sourceId: sourceNode.id, controller };
+      imageResultControllers.set(pending, entry);
+      job?.controllers.add(controller);
+      const ensureCurrent = () => {
+        if (!isCurrent() || controller.signal.aborted) throw new DOMException("生成任务已取消。", "AbortError");
+      };
       const timeout = sourceNode.type === "video" ? 0 : setTimeout(() => controller.abort(), generationTimeoutMs);
       const totalStartedAt = Date.now();
+      let apiReturnedThisAttempt = false;
       try {
         if (sourceNode.type === "png" && sourceNode.transparentBackground !== false) {
           const reference = collectReferenceItems([sourceNode])[0];
@@ -17790,7 +18177,10 @@
           let apiSeconds = 0;
           try {
             const apiStartedAt = Date.now();
+            ensureCurrent();
             const apiResult = await callApi({ ...sourceNode, count: 1 }, controller.signal);
+            apiReturnedThisAttempt = true;
+            ensureCurrent();
             apiSeconds = Math.max(1, Math.round((Date.now() - apiStartedAt) / 1000));
             pending.apiReturned = true;
             pending.apiSeconds = apiSeconds;
@@ -17798,12 +18188,30 @@
             setNodeStatus(pending.id, pending.status);
             maskUrl = apiResult.urls?.[0] || apiResult.url || "";
           } catch (maskError) {
+            ensureCurrent();
             console.warn("PNG mask model fallback", maskError);
           }
-          const url = maskUrl
+          let url = maskUrl
             ? await makeTransparentPngFromOriginalAndMask(reference.url, maskUrl, targetSize)
             : await makeTransparentPngDataUrl(reference.url, targetSize);
-          const parsed = parseSize(targetSize);
+          ensureCurrent();
+          const originalOutputUrl = url;
+          pending.sourceUrl = url;
+          pending.mediaUrl = url;
+          pending.fullUrl = url;
+          const outputEdge = imageOutputEdge(sourceNode.resolution || "1K");
+          pending.outputResolutionReady = true;
+          pending.resolutionProcessing = "incomplete";
+          const pngOutput = await window.WandouImageOutput.process({url,targetSize:outputEdge+"x"+outputEdge,signal:controller.signal,fetch:(mediaUrl,options)=>fetchMediaWithTimeout(mediaUrl,options,20000)});
+          ensureCurrent();
+          url = pngOutput.url;
+          pending.sourceUrl = originalOutputUrl;
+          pending.resolutionProcessing = pngOutput.processing;
+          pending.originalWidth = pngOutput.originalWidth;
+          pending.originalHeight = pngOutput.originalHeight;
+          pending.requestedResolution = sourceNode.resolution || "1K";
+          pending.outputLongEdgeTarget = outputEdge;
+          const parsed = {width:pngOutput.width,height:pngOutput.height};
           pending.pending = false;
           pending.mediaUrl = url;
           pending.previewUrl = url;
@@ -17819,6 +18227,7 @@
           pending.status = apiSeconds
             ? `透明 PNG 已生成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。`
             : "透明 PNG 已从原图抠出，未重新绘制主体，可放大预览、收藏和下载。";
+          if (pngOutput.nonNative) pending.status += " 本地等比放大（非原生生成）：" + parsed.width + "×" + parsed.height + "。";
           setNodeStatus(pending.id, pending.status);
           if (!sourceNode._deferCanvasSave) await saveCanvasState();
           return;
@@ -17831,11 +18240,22 @@
           _apiTargetSize: targetSize,
           _forceBaseGeneration: false
         };
+        ensureCurrent();
         const apiResult = await callApi(requestNode, controller.signal);
+        apiReturnedThisAttempt = true;
+        ensureCurrent();
         const apiSeconds = Math.max(1, Math.round((Date.now() - apiStartedAt) / 1000));
         const rawUrl = apiResult.urls?.[0] || apiResult.url || "";
         if (!rawUrl && apiResult.mediaType !== "text") throw new Error("接口没有返回可显示的图片地址。");
         const parsed = parseSize(targetSize);
+        if (nativeGifRequested(sourceNode) || apiResult.outputFormat === 'gif' || /^data:image\/gif[;,]/i.test(rawUrl)) {
+          await completeNativeGifResult({sourceNode,pending,rawUrl,signal:controller.signal,ensureCurrent,apiSeconds,startedAt:totalStartedAt});
+          return;
+        }
+        if (nativeSvgRequested(sourceNode) || apiResult.outputFormat === 'svg' || /^data:image\/svg\+xml[;,]/i.test(rawUrl)) {
+          await completeNativeSvgResult({sourceNode,pending,rawUrl,signal:controller.signal,ensureCurrent,apiSeconds,startedAt:totalStartedAt});
+          return;
+        }
         pending.apiReturned = true;
         pending.apiSeconds = apiSeconds;
         pending.pending = false;
@@ -17864,7 +18284,7 @@
         // 生图接口只接受标准方图/横图/竖图。保留接口返回的完整画面，
         // 不再为了匹配自定义目标比例而居中放大裁切，避免标题和人物被切掉。
         const outpaintComposition = {};
-        const url = apiResult.mediaType === "image" && rawUrl
+        let url = apiResult.mediaType === "image" && rawUrl
           ? (sourceNode.type === "png" && sourceNode.transparentBackground !== false
             ? await normalizeGeneratedImage(rawUrl, targetSize, true)
             : sourceNode.type === "png"
@@ -17873,14 +18293,26 @@
             ? await composeOutpaintImage(rawUrl, collectReferenceItems([sourceNode])[0], targetSize, sourceNode.outpaintDirection, sourceNode.outpaintAmount, sourceNode.outpaintCustomInsets, outpaintComposition)
             : maskedReference
             ? await settleWithin(composeMaskedEditImage(rawUrl, maskedReference, targetSize), 24000, rawUrl, "局部遮罩合成")
-            : (isOneKOnlyImageModel(sourceNode.model) && String(sourceNode.resolution || "1K").toUpperCase() !== "1K") || ratioKey(sourceNode.ratio) === "自定义尺寸"
-            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 24000, rawUrl, "目标分辨率处理")
-            : sourceNode._lockOutputSize
-            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 18000, rawUrl, "批次统一尺寸处理")
             : rawUrl)
           : rawUrl;
+        ensureCurrent();
+        let resolutionOutput = null;
+        if (apiResult.mediaType === "image" && url && window.WandouImageOutput) {
+          pending.status = "原图已返回，正在核验实际像素并处理输出尺寸...";
+          setNodeStatus(pending.id,pending.status);
+          const outputEdge = imageOutputEdge(sourceNode.resolution || pending.resolution || "1K");
+          pending.outputResolutionReady = true;
+          pending.resolutionProcessing = "incomplete";
+          pending.fullUrl = url;
+          pending.mediaUrl = url;
+          resolutionOutput = await window.WandouImageOutput.process({
+            url, targetSize: outputEdge + "x" + outputEdge, signal:controller.signal,
+            fetch:(mediaUrl,options)=>fetchMediaWithTimeout(mediaUrl, options, 20000)
+          });
+          url = resolutionOutput.url;
+        }
         const detectedDimensions = apiResult.mediaType === "image" && url
-          ? await settleWithin(getImageDimensions(url), 12000, parsed, "原图尺寸识别")
+          ? resolutionOutput || await settleWithin(getImageDimensions(url), 12000, {}, "原图尺寸识别")
           : parsed;
         const finalWidth = Math.max(1, Number(detectedDimensions?.width) || parsed.width);
         const finalHeight = Math.max(1, Number(detectedDimensions?.height) || parsed.height);
@@ -17891,10 +18323,16 @@
         const previewUrl = apiResult.mediaType === "image" && url
           ? await settleWithin(createPreviewImageUrl(url, 320, sourceNode.type === "png"), 12000, url, "预览图生成")
           : "";
+        ensureCurrent();
         pending.mediaUrl = url;
         pending.previewUrl = previewUrl || url;
         pending.fullUrl = url;
         pending.sourceUrl = rawUrl;
+        if (resolutionOutput) {
+          pending.resolutionProcessing = resolutionOutput.processing;
+          pending.originalWidth = resolutionOutput.originalWidth;
+          pending.originalHeight = resolutionOutput.originalHeight;
+        }
         pending.mediaType = apiResult.mediaType;
         pending.transparent = sourceNode.type === "png" || await settleWithin(
           imageHasTransparentPixels(url),
@@ -17902,6 +18340,7 @@
           false,
           "透明通道检测"
         );
+        ensureCurrent();
         pending.text = apiResult.text || "";
         pending.width = finalWidth;
         pending.height = finalHeight;
@@ -17919,32 +18358,57 @@
           : sourceNode.type === "png"
           ? (apiResult.fromApi ? "透明 PNG 已生成，可放大预览、收藏和下载。" : "透明 PNG 演示图已生成，可下载测试。")
           : apiResult.fromApi ? `接口生成完成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。` : "演示生成完成，可下载。";
+        if (resolutionOutput?.processing === "original-animation-preserved") pending.status += " 已保留动图原文件与原尺寸，未执行静态放大。";
+        if (resolutionOutput?.nonNative) pending.status += " 本地等比放大：" + resolutionOutput.originalWidth + "×" + resolutionOutput.originalHeight + " → " + finalWidth + "×" + finalHeight + "（非原生生成，不增加 AI 细节）。";
         setNodeStatus(pending.id, pending.status);
         refreshRenderedNode(pending.id);
         if (!sourceNode._deferCanvasSave) {
           await settleWithin(saveCanvasState(), 10000, null, "生成结果保存");
         }
       } catch (error) {
-        if (sourceNode.type === "generator" && !sourceNode._forceStandardApiSize && /size|dimension|resolution|尺寸|分辨率/i.test(String(error?.message || error))) {
+        if (!isCurrent()) return;
+        if (controller.signal.aborted) {
+          pending.pending = false;
+          pending.status = "生成已停止：请求被取消或等待超时，请检查后重试。";
+          setNodeStatus(pending.id, pending.status);
+          return;
+        }
+        if (apiReturnedThisAttempt && pending.sourceUrl) {
+          pending.pending = false;
+          pending.resolutionProcessing = "incomplete";
+          pending.resolutionError = friendlyApiError(error);
+          pending.status = "原图已生成并保留，但输出尺寸处理未完成：" + pending.resolutionError + "。未重复发送生图请求，可先下载原图。";
+          const actual = await getImageDimensions(pending.fullUrl || pending.sourceUrl);
+          if (actual.width && actual.height) { pending.width = actual.width; pending.height = actual.height; }
+          setNodeStatus(pending.id, pending.status);
+          refreshRenderedNode(pending.id);
+          if (!sourceNode._deferCanvasSave) await saveCanvasState();
+          return;
+        }
+        if (!apiReturnedThisAttempt && !specialImageRequested(sourceNode) && sourceNode.type === "generator" && !sourceNode._forceStandardApiSize && /size|dimension|resolution|尺寸|分辨率/i.test(String(error?.message || error))) {
           pending.pending = true;
           pending.status = `第 ${index + 1} 张的自定义尺寸不被当前接口接受，正在兼容生成并统一输出...`;
           setNodeStatus(pending.id, pending.status);
           return generateOneResult({ ...sourceNode, _forceStandardApiSize: true }, pending, index, targetSize, attempt);
         }
-        if ((sourceNode.type === "generator" || sourceNode.type === "outpaint") && attempt < 3 && isRetryableGenerationError(error)) {
+        if (!apiReturnedThisAttempt && !specialImageRequested(sourceNode) && (sourceNode.type === "generator" || sourceNode.type === "outpaint") && attempt < 3 && isRetryableGenerationError(error)) {
           if (timeout) clearTimeout(timeout);
           pending.pending = true;
           pending.status = `第 ${index + 1} 张正在重试（${attempt}/2）...`;
           setNodeStatus(pending.id, pending.status);
           await generationRetryDelay(attempt);
+          if (!isCurrent() || controller.signal.aborted) return;
           return generateOneResult(sourceNode, pending, index, targetSize, attempt + 1);
         }
         pending.pending = false;
-        pending.status = `第 ${index + 1} 张生成失败：${friendlyApiError(error)}`;
+        pending.errorDetails = taskErrorDetails(error);
+        pending.status = `第 ${index + 1} 张生成失败：${friendlyApiError(error)}` + (specialImageRequested(sourceNode) ? "。未自动重复发送生成请求。" : "");
         setNodeStatus(pending.id, pending.status);
         if (!sourceNode._deferCanvasSave) await saveCanvasState();
       } finally {
         if (timeout) clearTimeout(timeout);
+        job?.controllers.delete(controller);
+        if (imageResultControllers.get(pending) === entry) imageResultControllers.delete(pending);
       }
     }
 
@@ -17953,10 +18417,14 @@
       if (!node) return;
       const publicText = publicNodeStatus(text);
       node.status = publicText;
-      const el = canvas.querySelector(`[data-id="${id}"] .status`);
+      const el = canvas.querySelector(`[data-id="${id}"] .status:not([data-resolution-hint])`);
       if (el) el.textContent = publicText;
       const generateButton = canvas.querySelector(`[data-id="${id}"] [data-generate]`);
-      if (generateButton) generateButton.classList.toggle("generating", /^正在生成/.test(publicText));
+      if (generateButton) {
+        generateButton.classList.toggle("generating", imageGenerationJobs.has(id) || /^正在生成/.test(publicText));
+        generateButton.disabled = imageGenerationJobs.has(id);
+        generateButton.setAttribute("aria-busy", String(imageGenerationJobs.has(id)));
+      }
     }
 
     function updatePendingElapsed(id, seconds, overrideText = "") {
@@ -17991,6 +18459,7 @@
     }
 
     async function refineNodePrompt(node) {
+      if (canvasProjectTransition || promptEditJobs.has(node.id)) return;
       const source = String(node.prompt || "").trim();
       if (!source) {
         showToast("请先输入需要修改的提示词");
@@ -18007,6 +18476,7 @@
       render();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 120000);
+      promptEditJobs.set(node.id, controller);
       try {
         const language = /[\u3400-\u9fff]/.test(source) ? "中文" : "英文";
         const configuredUrl = apiUrlInput.value.trim() || defaultApiBaseUrl();
@@ -18018,6 +18488,7 @@
           ],
           temperature: 0.65
         }, controller.signal);
+        if (!nodes.includes(node) || controller.signal.aborted) return;
         node.promptRefineResult = String(response.text || "").trim();
         node.promptRefineProvider = response.provider || "GPT";
         if (!node.promptRefineResult) throw new Error("接口没有返回修改后的提示词");
@@ -18025,6 +18496,7 @@
         node.promptRefineResult = `修改失败：${friendlyErrorMessage(error)}`;
       } finally {
         clearTimeout(timeout);
+        promptEditJobs.delete(node.id);
         node.promptRefineLoading = false;
         node.promptRefineOpen = true;
         render();
@@ -18158,6 +18630,7 @@
     async function callAudioApi(node, signal, capturedProfile = null) {
       node = normalizedAudioRequest(node);
       const profile = capturedProfile || apiProfileForModel(node.model);
+      if (profile.provider === 'openai') throw new Error('OpenAI 官方渠道当前仅用于绘图，音频请使用其他渠道。');
       if (!profile.key) throw new Error(`请先配置${profile.label} API 密钥。`);
       const model = modelToApiModel(node.model);
       if (isGeminiTtsModel(model)) {
@@ -18232,7 +18705,16 @@
       return { url:extracted.url, mediaType:"audio", mimeType:extracted.mimeType || "audio/mpeg", fromApi:true };
     }
 
+    function isOfficialImageModelId(model) {
+      return /^(?:gpt-image-(?:1\.5|1-mini|2(?:-2026-04-21)?|2\.[56]-(?:sunburst|flare)(?:-2026-09-08)?)|chatgpt-image-latest)$/i.test(String(model || ''));
+    }
+
     function imageEditModelError(node, references = []) {
+      const optionsError = imageGenerationOptionsError(node, references);
+      if (optionsError) return optionsError;
+      const svgError = nativeSvgRequestError(node, references);
+      if (svgError) return svgError;
+      if (apiProfileForModel(node.model).provider === 'openai' && (!isOfficialImageModelId(imageGenerationApiModel(node.model)) || ['video','audio','keyword'].includes(node.type))) return '此渠道只用于 OpenAI 官方绘图，请选择可用的 GPT 图像模型。';
       if (["video", "keyword", "audio", "outpaint"].includes(node.type)) return "";
       if (!references.some(item => item?.url && item?.maskUrl)) return "";
       if (isGptImageModel(imageGenerationApiModel(node.model))) return "";
@@ -18264,11 +18746,12 @@
       if (node.type !== "video" && node.type !== "keyword" && node.type !== "png" && !hasLocalEditMask && isNanoBananaModel(modelToApiModel(node.model))) {
         return callNanoBananaApi(node, references, configuredUrl, jsonHeaders, signal);
       }
-      const request = await buildApiRequest(node, references);
+      const request = await buildApiRequest(node, references, signal);
+      if (signal?.aborted) throw new DOMException('生成任务已取消。', 'AbortError');
       const headers = request.isFormData ? {} : { ...jsonHeaders };
       if (request.isFormData && apiProfile.key) headers.Authorization = `Bearer ${apiProfile.key}`;
 
-      const useOfficialAsyncImageApi = node.type !== "video"
+      const useOfficialAsyncImageApi = !specialImageRequested(node) && node.type !== "video"
         && node.type !== "keyword"
         && !request.isFormData
         && isZexiAsyncImageApiEndpoint(configuredUrl);
@@ -18408,11 +18891,12 @@
         const pollUrl = videoPollEndpoint(url, videoTaskId);
         data = await pollVideoResult(pollUrl, headers, signal, node.type === "video");
       }
-      const mediaUrl = node.type === "video" ? extractMediaUrl(data) : extractOutputMediaUrl(data);
+      const mediaUrl = node.type === "video" ? extractMediaUrl(data) : extractOutputMediaUrl(data, 0, imageResponseMime(data, requestedImageMime(node)));
       if (!mediaUrl) throw new Error(`接口返回里没有找到图片或视频地址（返回结构：${describeApiResponseShape(data)}）`);
       return {
         url: mediaUrl,
-        urls: [mediaUrl, ...extractMediaUrls(data).filter((item) => item !== mediaUrl)],
+        urls: [mediaUrl, ...extractMediaUrls(data, imageResponseMime(data, requestedImageMime(node))).filter((item) => item !== mediaUrl)],
+        outputFormat: data.output_format || (nativeSvgRequested(node) ? 'svg' : nativeGifRequested(node) ? 'gif' : 'png'),
         mediaType: node.type === "video" ? "video" : "image",
         fromApi: true
       };
@@ -18693,12 +19177,13 @@ ${formatInstruction}`;
       return String(error.message || error.detail || error.code || error.type || describeApiResponseShape(error));
     }
 
-    function extractMediaUrls(data) {
+    function extractMediaUrls(data, mimeType = imageResponseMime(data)) {
       const urls = [];
       const add = (value) => {
         if (value && !urls.includes(value)) urls.push(value);
       };
-      const visit = (value) => {
+      const visit = (value, inheritedMime) => {
+        const currentMime = imageResponseMime(value, inheritedMime);
         if (!value) return;
         if (typeof value === "string") {
           const trimmed = value.trim();
@@ -18711,19 +19196,19 @@ ${formatInstruction}`;
           return;
         }
         if (Array.isArray(value)) {
-          value.forEach(visit);
+          value.forEach(item => visit(item, currentMime));
           return;
         }
         if (typeof value === "object") {
           const encoded = value.b64_json || value.image_base64 || value.imageBase64 || value.base64_image || value.base64Image;
-          if (encoded) add(imageDataUrlFromBase64(encoded, value.mime_type || value.mimeType || "image/png"));
+          if (encoded) add(imageDataUrlFromBase64(encoded, currentMime));
           if (/image/i.test(String(value.type || "")) && typeof value.result === "string") {
-            add(imageDataUrlFromBase64(value.result, value.mime_type || value.mimeType || "image/png"));
+            add(imageDataUrlFromBase64(value.result, currentMime));
           }
-          Object.values(value).forEach(visit);
+          Object.values(value).forEach(item => visit(item, currentMime));
         }
       };
-      visit(data);
+      visit(data, mimeType);
       return urls;
     }
 
@@ -18770,12 +19255,13 @@ ${formatInstruction}`;
         .trim();
     }
 
-    function extractOutputMediaUrl(data, depth = 0) {
+    function extractOutputMediaUrl(data, depth = 0, mimeType = imageResponseMime(data)) {
       if (!data || depth > 7) return "";
+      mimeType = imageResponseMime(data, mimeType);
       if (typeof data === "string") return extractMediaUrl(data);
       if (Array.isArray(data)) {
         for (const item of data) {
-          const found = extractOutputMediaUrl(item, depth + 1);
+          const found = extractOutputMediaUrl(item, depth + 1, mimeType);
           if (found) return found;
         }
         return "";
@@ -18785,13 +19271,14 @@ ${formatInstruction}`;
       // reference image or prompt URL, which is not the generated result.
       for (const key of ["data", "images", "image", "output", "result", "videos", "choices"]) {
         if (data[key] == null) continue;
-        const found = extractOutputMediaUrl(data[key], depth + 1);
+        const found = extractOutputMediaUrl(data[key], depth + 1, mimeType);
         if (found) return found;
       }
       for (const key of ["result_url", "output_url", "download_url", "image_url", "video_url", "url"]) {
         if (typeof data[key] === "string" && data[key].trim()) return data[key].trim();
       }
       return extractMediaUrl({
+        mime_type: mimeType,
         b64_json:data.b64_json,
         image_base64:data.image_base64,
         imageBase64:data.imageBase64,
@@ -18860,9 +19347,7 @@ ${formatInstruction}`;
     }
 
     function isNanoBananaModel(model) {
-      const id = String(model || "");
-      // Keep existing preview aliases and recognize the verified stable image IDs.
-      return /^gemini-.*image-preview$/i.test(id) || /^gemini-(?:3\.1-flash(?:-lite)?|3-pro)-image$/i.test(id);
+      return window.WandouImageCapabilities.resolve(model).kind === "gemini";
     }
 
     function isGrokImageModel(model) {
@@ -18895,29 +19380,13 @@ ${formatInstruction}`;
     }
 
     function nanoBananaImageSettings(node, targetSize) {
-      const selected = String(node.resolution || "1K").toUpperCase();
-      const liteModel = /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(String(modelToApiModel(node.model) || ""));
-      const imageSize = !liteModel && imageResolutionOptions.includes(selected) ? selected : "1K";
-      const { width, height } = parseSize(targetSize);
-      const requestedRatio = ratioLabelFromSize(width, height);
-      // Native Gemini image tiers use model pixels, not video long-edge sizes.
-      // https://ai.google.dev/gemini-api/docs/generate-content/image-generation
-      const oneK = {
-        "1:1": [1024, 1024], "2:3": [848, 1264], "3:2": [1264, 848],
-        "3:4": [896, 1200], "4:3": [1200, 896], "4:5": [928, 1152],
-        "5:4": [1152, 928], "9:16": [768, 1376], "16:9": [1376, 768],
-        "21:9": [1584, 672]
-      };
-      const aspectRatio = oneK[requestedRatio] ? requestedRatio : Object.keys(oneK).find(key => {
-        const [w, h] = oneK[key];
-        return Math.abs(width / height - w / h) < .00001;
-      });
-      const base = oneK[aspectRatio];
-      const imageConfig = { imageSize };
-      if (base) imageConfig.aspectRatio = aspectRatio;
-      const keepExactSize = node.type === "outpaint" || node.type === "png" || ratioKey(node.ratio) === "自定义尺寸";
-      const scale = { "1K": 1, "2K": 2, "4K": 4 }[imageSize];
-      return { imageConfig, size: base && !keepExactSize ? base.map(value => value * scale).join("x") : targetSize };
+      const model = modelToApiModel(node.model);
+      const capability = window.WandouImageCapabilities.resolve(model);
+      const selected = imageNativeResolutionForModel(node.model,node.resolution);
+      const imageConfig = capability.omitImageSize ? {} : { imageSize:selected };
+      const aspectRatio = window.WandouImageCapabilities.closestRatio(targetSize, capability.ratios || ["1:1"]);
+      imageConfig.aspectRatio = aspectRatio;
+      return {imageConfig,size:window.WandouImageCapabilities.nativeSize(model,selected,targetSize)};
     }
 
     async function callNanoBananaApi(node, references, configuredUrl, headers, signal) {
@@ -18932,7 +19401,7 @@ ${formatInstruction}`;
         text: [
           node.prompt || "",
           targetSize ? `输出比例和尺寸参考：${targetSize}` : "",
-          `分辨率：${imageConfig.imageSize}`
+          imageConfig.imageSize ? `分辨率：${imageConfig.imageSize}` : ""
         ].filter(Boolean).join("\n")
       }];
       for (let index = 0; index < inputReferences.length; index += 1) {
@@ -18978,11 +19447,17 @@ ${formatInstruction}`;
       return /透明\s*(?:底|背景|通道|png)|(?:png|alpha)\s*(?:透明|通道|抠图)|抠\s*图|去\s*背(?:景)?|移除\s*背景|无\s*背景|transparent\s*(?:background|png)|background\s*transparent/i.test(text);
     }
 
-    async function buildApiRequest(node, references) {
+    async function buildApiRequest(node, references, signal) {
       const editModelError = imageEditModelError(node, references);
       if (editModelError) throw new Error(editModelError);
       references = globalThis.WandouMediaUrls ? await globalThis.WandouMediaUrls.materializeReferences(references) : references;
-      const targetSize = node._apiTargetSize || node._targetSize || (node.type === "png" ? transparentTargetSize(references, node.resolution) : sizeFromRatio(node.ratio, node.resolution, references));
+      let targetSize = node._apiTargetSize || node._targetSize || (node.type === "png" ? transparentTargetSize(references, node.resolution) : sizeFromRatio(node.ratio, node.resolution, references));
+      if (!["keyword", "video"].includes(node.type)) {
+        const capability = window.WandouImageCapabilities.resolve(imageGenerationApiModel(node.model));
+        if (["openai-flex", "openai-standard", "gateway-1k"].includes(capability.kind)) targetSize = ratioKey(node.ratio) === "自定义尺寸" && capability.kind === "openai-flex"
+          ? window.WandouImageCapabilities.gptSize(targetSize)
+          : window.WandouImageCapabilities.nativeSize(imageGenerationApiModel(node.model), imageNativeResolutionForModel(node.model,node.resolution), targetSize);
+      }
       if (node.type === "keyword") {
         const formatInstruction = node.promptFormat === "sentence"
           ? "提示词请写成一整句，用逗号自然连接，不要分行排列。"
@@ -19082,13 +19557,21 @@ ${formatInstruction}`;
         "输出透明背景 PNG，主体必须与上传图片保持一致，只把背景变成完全透明；边缘干净自然，不要白底、灰底、纯色底、阴影底或棋盘格底。"
       ].filter(Boolean).join("\n\n");
       const selectedResolution = String(node.resolution || "1K").toUpperCase();
-      const requestResolution = node._forceBaseGeneration || isOneKOnlyImageModel(node.model) ? "1K" : selectedResolution;
+      const requestResolution = node._forceBaseGeneration ? "1K" : imageNativeResolutionForModel(node.model, selectedResolution);
       const maskedReference = node.type === "outpaint" ? null : references.find((item) => item?.maskUrl && item?.url) || null;
+      const markupReference = references.find(item => item?.markupUrl && item?.url) || null;
+      let preparedMarkup = null;
+      if (markupReference) {
+        const original = await referenceToFile(markupReference, 0);
+        const overlay = await referenceToFile({url:markupReference.markupUrl}, 1);
+        if (!original || !overlay) throw new Error('圈画原图或标注无法读取，请重新打开圈画编辑器。');
+        preparedMarkup = await window.WandouImageMarkup.prepare(original, overlay, {signal, mask:maskedReference?.maskUrl});
+      }
       const selectedImageModel = imageGenerationApiModel(node.model, requestResolution);
       // Unsupported masked edits are rejected before request construction.
       const imageModel = selectedImageModel;
       const grokImageModel = isGrokImageModel(imageModel);
-      const orderedImageReferences = maskedReference
+      const orderedImageReferences = markupReference ? [markupReference, ...references.filter(item => item !== markupReference)] : maskedReference
         ? [maskedReference, ...references.filter((item) => item !== maskedReference)]
         : references;
       const imagePrompt = node.type === "png" && transparentPngRequested
@@ -19124,7 +19607,12 @@ ${formatInstruction}`;
         imagePayload.resolution = requestResolution.toLowerCase();
         if (!grokImageModel) imagePayload.output_format = "png";
       }
-      if (grokImageModel) imagePayload.aspect_ratio = imagePayload.size;
+      if (grokImageModel) {
+        const capability = window.WandouImageCapabilities.resolve(imageModel);
+        imagePayload.aspect_ratio = capability.ratios ? window.WandouImageCapabilities.closestRatio(targetSize, capability.ratios) : imagePayload.size;
+        // xAI uses aspect_ratio, not the OpenAI pixel size field.
+        if (nativeImageApiHost(node.model) === "api.x.ai") delete imagePayload.size;
+      }
       if (transparentPngRequested && isGptImageModel(imageModel)) {
         imagePayload.output_format = "png";
         imagePayload.background = "transparent";
@@ -19132,6 +19620,38 @@ ${formatInstruction}`;
       if (node.type === "png") imagePayload.n = 1;
       // 强制基础图时只发送兼容性最高的标准参数；接口可自行返回 URL 或 base64。
       if (requestResolution === "1K" && !node._forceBaseGeneration) imagePayload.response_format = "b64_json";
+      // Gateway extensions remain available. The native OpenAI endpoint does not accept them.
+      if (nativeImageApiHost(node.model) === "api.openai.com" && isGptImageModel(imageModel)) {
+        delete imagePayload.resolution;
+        delete imagePayload.response_format;
+      }
+
+      const requestCapability = window.WandouImageCapabilities.resolve(imageModel);
+      if (requestCapability.kind === "unknown") {
+        // Unknown gateway models retain their names and output options, but do not
+        // receive speculative 4K/quality/output-format extensions.
+        delete imagePayload.resolution;
+        delete imagePayload.quality;
+        delete imagePayload.output_format;
+        imagePayload.size = /^dall-e-[23]$/i.test(imageModel) ? "1024x1024" : apiSizeFromTarget(targetSize);
+      }
+
+      Object.assign(imagePayload, window.WandouImageOptions.requestFields({...node,model:imageModel}));
+      // The documented transparent-background parameter requires PNG or WebP.
+      // Preserve any transparency in returned SVG/GIF bytes without promising it in the request.
+      if (specialImageRequested(node)) delete imagePayload.background;
+      if (nativeGifRequested(node)) {
+        imagePayload.prompt = String(node.prompt || '') + '\n生成完整的循环 GIF 动画，保持主体与背景一致，衔接首尾动作。';
+        delete imagePayload.resolution; delete imagePayload.response_format;
+        delete imagePayload.stream; delete imagePayload.partial_images; delete imagePayload.output_compression;
+      }
+      if (nativeSvgRequested(node)) {
+        imagePayload.output_format = 'svg';
+        imagePayload.n = 1;
+        imagePayload.prompt = String(node.prompt || '') + '\n输出可编辑的静态 SVG 矢量图，使用路径、形状与分组，保持完整构图。';
+        delete imagePayload.resolution; delete imagePayload.response_format;
+        return {body:JSON.stringify(imagePayload),isFormData:false,forceGenerationEndpoint:true};
+      }
 
       if (node.type === "outpaint" && references[0]?.url) {
         const guide = await createOutpaintGuide(references[0], targetSize, node.outpaintDirection, node.outpaintAmount, node.outpaintCustomInsets);
@@ -19161,7 +19681,7 @@ ${formatInstruction}`;
       let urlFallbackCount = 0;
       for (let index = 0; index < orderedImageReferences.length; index++) {
         const reference = orderedImageReferences[index];
-        const file = maskedReference && reference === maskedReference
+        const file = markupReference && reference === markupReference ? preparedMarkup.imageFile : maskedReference && reference === maskedReference
           ? await referenceToPngFile(reference, index, maskedReference.maskWidth, maskedReference.maskHeight)
           : await referenceToFile(reference, index);
         if (file) {
@@ -19174,6 +19694,7 @@ ${formatInstruction}`;
           urlFallbackCount += 1;
         }
       }
+      if (preparedMarkup) form.append('markup', preparedMarkup.markupFile, 'markup.png');
       if (maskedReference) {
         const maskFile = await referenceToFile({ url: maskedReference.maskUrl }, 999);
         if (!maskFile) throw new Error("局部遮罩无法转换为接口可读取的 PNG，请重新涂抹并保存遮罩。");
@@ -19236,12 +19757,14 @@ ${formatInstruction}`;
       if (/^data:image\//i.test(reference.url)) {
         const response = await fetch(reference.url);
         const blob = await response.blob();
+        if (blob.type.split(';')[0] === 'image/svg+xml') return nativeSvgReferenceFile(blob, index);
         const ext = blob.type.includes("jpeg") ? "jpg" : blob.type.includes("webp") ? "webp" : "png";
         return new File([blob], `reference-${index + 1}.${ext}`, { type: blob.type || "image/png" });
       }
       try {
         const response = await fetchMaybeProxied(reference.url);
         const blob = await response.blob();
+        if (blob.type.split(';')[0] === 'image/svg+xml') return nativeSvgReferenceFile(blob, index);
         return new File([blob], `reference-${index + 1}.png`, { type: blob.type || "image/png" });
       } catch (error) {
         return null;
@@ -19378,7 +19901,8 @@ ${formatInstruction}`;
           "zayapi.top",
           "www.zayapi.top",
           "zexitongxue.com",
-          "www.zexitongxue.com"
+          "www.zexitongxue.com",
+          "api.openai.com"
         ].includes(parsed.hostname.toLowerCase());
       } catch (error) {
         return false;
@@ -19434,6 +19958,14 @@ ${formatInstruction}`;
 
     async function fetchMaybeProxied(url, options = {}) {
       const targetUrl = proxiedUrl(url);
+      const target = new URL(targetUrl, location.href);
+      if (target.hostname.toLowerCase() === 'api.openai.com') {
+        const method = String(options.method || 'GET').toUpperCase();
+        const allowed = method === 'GET' && target.pathname === '/v1/models'
+          || method === 'POST' && ['/v1/images/generations','/v1/images/edits'].includes(target.pathname);
+        if (!allowed || target.protocol !== 'https:' || target.username || target.password || target.port || target.search || target.hash) throw new Error('OpenAI 官方渠道仅用于绘图与模型列表；此操作请使用其他渠道。');
+        options = {...options,redirect:'error'};
+      }
       if (window.wandouDesktopApi?.fetch && isDesktopApiEndpoint(targetUrl)) {
         const headers = Object.fromEntries(new Headers(options.headers || {}).entries());
         const body = await serializeDesktopApiBody(options.body);
@@ -19575,7 +20107,20 @@ ${formatInstruction}`;
     }
 
     function friendlyApiError(error) {
-      const message = error && error.message ? error.message : String(error);
+      const rawMessage = error && error.message ? error.message : String(error);
+      let message = rawMessage;
+      const jsonStart = rawMessage.indexOf("{");
+      if (jsonStart >= 0) {
+        try { const payload = JSON.parse(rawMessage.slice(jsonStart)); message = String(payload?.error?.message || payload?.message || rawMessage); } catch (_) {}
+      }
+      if (/预扣.*(?:额度|余额).*失败|余额不足|额度不足|insufficient[_ ](?:quota|balance|credits)|used all available credits|monthly spending limit|purchase more credits|raise your spending limit/i.test(message)) {
+        const remaining = message.match(/(?:用户剩余额度|剩余(?:余额|额度))[:：]\s*([¥￥]?[\d.]+)/)?.[1];
+        const required = message.match(/(?:需要预扣费额度|需要额度)[:：]\s*([¥￥]?[\d.]+)/)?.[1];
+        return "接口余额不足或已达额度上限。" + (remaining && required ? "当前余额 " + remaining + "，本次预扣需要 " + required + "。" : "") + "请到当前 API 服务商补充额度或调整限额后重试。";
+      }
+      if (/HTTP 401|invalid[_ ]api[_ ]key|invalid token|无效.*(?:密钥|令牌)/i.test(rawMessage)) return "API 密钥无效或已过期，请在设置中检查当前渠道的密钥。";
+      if (/HTTP 403|permission_denied|forbidden/i.test(rawMessage)) return "接口拒绝访问。请检查当前密钥的模型权限、渠道配置或服务商限制。";
+      if (/HTTP 429|rate.?limit|too many requests/i.test(rawMessage)) return "请求过于频繁，服务商已限流，请稍后重试或减少并发数量。";
       if (message.includes("视觉分析接口不可用。已尝试")) return message;
       if (error && error.name === "AbortError") {
         return `生成超过 ${generationTimeoutSeconds}s，已自动停止。`;
@@ -19589,13 +20134,13 @@ ${formatInstruction}`;
         return "接口模型列表里有 grok-imagine-video，但当前网关没有把 XAI 视频路由转发成功。请在接口后台确认视频路由是否支持 /v1/video/generations 或换官方 xAI 地址和 Key。";
       }
       if (/No available channel for model grok-imagine-image-pro|Model not found: grok-imagine-image-pro/i.test(message)) {
-        return "接口后台没有开通 grok-imagine-image-pro 图片模型通道。1K、2K、4K 参数都已测试，当前都被接口拒绝，需要在接口后台添加这个模型通道后才能生成。";
+        return "接口后台没有开通 grok-imagine-image-pro 图片模型通道，请检查当前渠道是否支持该模型。";
       }
       if (/model_not_found|No available channel for model|Model not found:/i.test(message)) {
         return "接口后台没有开通当前选择的图片模型通道。请确认后台已启用所选模型，然后重新生成。";
       }
       if (/used all available credits|monthly spending limit|purchase more credits|raise your spending limit/i.test(message)) {
-        return "接口额度不足或已达到月度限额。grok-imagine-image-pro 的 1K、2K、4K 请求已能到达模型通道，但需要补充额度后才能真正生成图片。";
+        return "接口额度不足或已达到月度限额，请到当前 API 服务商检查余额和使用限额。";
       }
       if (/接口返回里没有找到图片或视频地址/i.test(message) && /veo/i.test(message)) {
         return "Veo 请求已到达中转站，但接口没有返回最终视频地址。请在中转站确认这个模型是否支持同步返回视频 URL，或是否需要异步任务查询接口。";
@@ -20812,6 +21357,7 @@ ${formatInstruction}`;
       lightboxContextRegenerate.hidden = isVideo || !canRegenerateResult(nodes.find((item) => item.id === activeLightbox.nodeId));
       closeLightboxImageMenu();
       lightbox.classList.add("open");
+      configureGifLightbox(nodes.find(item => item.id === activeLightbox.nodeId));
       updateLightboxFavoriteButton();
       if (activeLightbox.mode === "paint") {
         loadPaintCanvas(src).catch((error) => {
@@ -20826,6 +21372,7 @@ ${formatInstruction}`;
     }
 
     function closeLightbox() {
+      canvasGifLightboxCleanup?.(); canvasGifLightboxCleanup = null;
       lightbox.classList.remove("open");
       lightbox.classList.remove("paint-mode");
       lightbox.classList.remove("prompt-mode");
@@ -21242,6 +21789,11 @@ ${formatInstruction}`;
         imageCommentText.focus();
         return;
       }
+      const currentReference = normalizeReferences(node)[activeLightbox.refIndex];
+      if (currentReference?.markupUrl && paintSelectionHasPixels()) {
+        showToast('圈画标注与局部遮罩不能同时使用，请先清除圈画标注');
+        return;
+      }
       pushHistory();
       const refs = normalizeReferences(node);
       const reference = refs[activeLightbox.refIndex];
@@ -21295,10 +21847,11 @@ ${formatInstruction}`;
           return {
             id: source.id,
             mediaUrl: compactMediaRenderKey(source.mediaUrl),
-            references: normalizeReferences(source).map((item) => ({
+            references: readNodeReferences(source).map((item) => ({
               url: compactMediaRenderKey(item?.url),
               maskUrl: compactMediaRenderKey(item?.maskUrl),
               maskSelectionUrl: compactMediaRenderKey(item?.maskSelectionUrl),
+              markupUrl: compactMediaRenderKey(item?.markupUrl),
               doodleUrl: compactMediaRenderKey(item?.doodleUrl),
               comments: Array.isArray(item?.comments) ? item.comments.map((comment) => ({
                 id:comment?.id, text:comment?.text, shape:comment?.shape,
@@ -21309,6 +21862,7 @@ ${formatInstruction}`;
         });
       return JSON.stringify({
         ...rest,
+        taskControls: canvasTaskRenderKey(node),
         displayOrdinal: node.type === "image" ? imageNodeOrdinal(node) : 0,
         upstream,
         mediaUrl: compactMediaRenderKey(mediaUrl),
@@ -21324,6 +21878,7 @@ ${formatInstruction}`;
           url: compactMediaRenderKey(item?.url),
           maskUrl: compactMediaRenderKey(item?.maskUrl),
           maskSelectionUrl: compactMediaRenderKey(item?.maskSelectionUrl),
+          markupUrl: compactMediaRenderKey(item?.markupUrl),
           doodleUrl: compactMediaRenderKey(item?.doodleUrl),
           previewUrl: compactMediaRenderKey(item?.previewUrl),
           sourceUrl: compactMediaRenderKey(item?.sourceUrl)
@@ -21691,6 +22246,15 @@ ${formatInstruction}`;
           return;
         }
         showToast("正在准备下载…", "loading");
+        if (nativeGifRequested(node)) {
+          await triggerDownload(node.fullUrl || node.sourceUrl || downloadUrl, downloadFileName(node, 'gif'), 'image/gif');
+          return;
+        }
+        if (nativeSvgRequested(node)) {
+          const source = node.fullUrl || node.sourceUrl || downloadUrl;
+          await triggerDownload(source, downloadFileName(node, 'svg'), 'image/svg+xml');
+          return;
+        }
         if (node.mediaType === "image") {
           objectUrl = await sourceToLosslessPngUrl(downloadUrl, node.width, node.height);
         }
@@ -21822,6 +22386,7 @@ ${formatInstruction}`;
     }
 
     function clearCanvas() {
+      if (blockBusyCanvasAction()) return;
       pushHistory();
       writeDesktopCanvasBackup(createCanvasSaveContext(), true);
       canvasTestStorage.removeItem(projectCanvasStorageKey());
@@ -21905,15 +22470,11 @@ ${formatInstruction}`;
     }
 
     function mediaStorageId(value) {
-      let hash = 0;
-      for (let index = 0; index < value.length; index += Math.max(1, Math.floor(value.length / 4096))) {
-        hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
-      }
-      return `${Math.abs(hash).toString(36)}-${value.length}`;
+      return window.WandouMediaHash.id(value);
     }
 
     async function putLocalMedia(value) {
-      const id = mediaStorageId(value);
+      const id = await window.WandouMediaHash.idAsync(value);
       const storedValue = `${localMediaPrefix}${id}`;
       if (persistedLocalMediaIds.has(id)) return storedValue;
       if (pendingLocalMediaWrites.has(id)) return pendingLocalMediaWrites.get(id);
@@ -22403,7 +22964,7 @@ ${formatInstruction}`;
       if (!isCurrent()) return;
       const liveById = new Map(nodes.map(node => [node.id, node]));
       const nodeFields = ['mediaUrl', 'previewUrl', 'fullUrl', 'sourceUrl', 'outpaintSourceUrl'];
-      const referenceFields = ['url', 'maskUrl', 'maskSelectionUrl', 'doodleUrl'];
+      const referenceFields = ['url', 'maskUrl', 'maskSelectionUrl', 'doodleUrl', 'markupUrl'];
       await WandouSavePipeline.mapLimited(originalNodes, 1, async (original, index) => {
         const live = liveById.get(original.id), saved = storedNodes[index];
         if (!isCurrent() || context.liveIdentities?.get(original.id) !== live || !live || saved?.id !== original.id) return;
@@ -22462,7 +23023,8 @@ ${formatInstruction}`;
         ? await writeDesktopCanvasBackup(context, true)
         : null;
       const localVerified = verifyCanvasStateSaved(context);
-      const success = Boolean(
+      const busy = canvasHasActiveTasks();
+      const success = !busy && Boolean(
         durableSaved
         && (desktopBackupRequired
           ? desktopBackup?.success
@@ -22470,6 +23032,8 @@ ${formatInstruction}`;
       );
       const error = success
         ? ""
+        : busy
+        ? "当前项目仍有生成或处理任务。已尝试保存当前进度，请等待任务完成后再关闭、更新或切换账户。"
         : !durableSaved
         ? `图片或画布状态未能写入本地存储${context.saveError ? `：${context.saveError}` : ""}`
         : desktopBackupRequired && !desktopBackup?.success
@@ -22481,6 +23045,7 @@ ${formatInstruction}`;
         success,
         supported: true,
         projectId: context.projectId,
+        busy,
         projectName: project?.name || "当前项目",
         nodeCount: context.state.nodes.length,
         savedAt: context.state.savedAt,
@@ -22565,6 +23130,7 @@ ${formatInstruction}`;
           url: await persistField(item.url, "references.url"),
           maskUrl: await persistField(item.maskUrl, "references.maskUrl"),
           maskSelectionUrl: await persistField(item.maskSelectionUrl, "references.maskSelectionUrl"),
+          markupUrl: await persistField(item.markupUrl, "references.markupUrl"),
           doodleUrl: await persistField(item.doodleUrl, "references.doodleUrl")
         }));
       }
@@ -22653,9 +23219,10 @@ ${formatInstruction}`;
           url: await resolveLoadedMedia(item.url, mediaCache),
           maskUrl: await resolveLoadedMedia(item.maskUrl, mediaCache),
           maskSelectionUrl: await resolveLoadedMedia(item.maskSelectionUrl, mediaCache),
+          markupUrl: await resolveLoadedMedia(item.markupUrl, mediaCache),
           doodleUrl: await resolveLoadedMedia(item.doodleUrl, mediaCache)
         })))).filter((item) => item?.url);
-        await Promise.all(node.references.flatMap((item) => [item.url, item.maskUrl, item.maskSelectionUrl, item.doodleUrl]).filter(Boolean).map(mirrorLargeLoadedMedia));
+        await Promise.all(node.references.flatMap((item) => [item.url, item.maskUrl, item.maskSelectionUrl, item.doodleUrl, item.markupUrl]).filter(Boolean).map(mirrorLargeLoadedMedia));
       } else {
         node.references = [];
       }
@@ -22806,7 +23373,7 @@ ${formatInstruction}`;
     };
 
     window.wandouPrepareTabSuspend = async () => {
-      if (nodes.some((node) => node.pending)) {
+      if (canvasHasActiveTasks()) {
         return { safe: false, reason: "generation-in-progress" };
       }
       const result = await window.wandouSaveBeforeClose();
@@ -23131,7 +23698,8 @@ ${formatInstruction}`;
     }
 
     function favoriteMediaUrl(node) {
-      const ref = normalizeReferences(node)[0];
+      const ref = readNodeReferences(node)[0];
+      if (specialImageRequested(node)) return node.fullUrl || node.sourceUrl || node.mediaUrl || ref?.url || node.previewUrl || "";
       if (node.transparent) return node.mediaUrl || node.previewUrl || ref?.url || node.fullUrl || "";
       return node.fullUrl || node.mediaUrl || node.previewUrl || ref?.url || "";
     }
@@ -23702,6 +24270,7 @@ ${formatInstruction}`;
       const extension = activeLightbox.mode === "video" ? "mp4" : "png";
       let sizedDownloadUrl = "";
       try {
+        if (specialImageRequested(node) && activeLightbox.mode !== 'paint') { await downloadNodeMedia(node); return; }
         const src = activeLightbox.mode === "paint"
           ? paintCanvas.toDataURL("image/png")
           : activeLightbox.downloadSrc || activeLightbox.src;

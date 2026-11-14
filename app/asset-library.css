@@ -195,3 +195,31 @@ body.dark {
   .asset-layout { grid-template-columns:1fr; }
   .asset-grid { grid-template-columns:1fr; }
 }
+
+/* Explicit viewing and exporting controls; metadata is read only when requested. */
+.asset-selection-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 20px; }
+.asset-selection-toolbar[hidden] { display:none; }
+.asset-preview-switch { display:flex; gap:3px; padding:3px; border:1px solid var(--line); border-radius:10px; }
+.asset-preview-switch .button { border:0; min-height:30px; background:transparent; }
+.asset-preview-switch [aria-pressed="true"] { color:var(--text); background:var(--panel-soft); box-shadow:0 0 0 1px var(--line-strong); }
+#assetSelectionStatus { flex-basis:100%; color:var(--muted); font-size:12px; line-height:1.6; }
+.asset-select-label { display:flex; align-items:center; gap:7px; padding:8px 0 0; color:var(--muted); font-size:12px; cursor:pointer; }
+.asset-select-label input { width:16px; height:16px; accent-color:var(--text); }
+.asset-card .asset-media-actions { flex-wrap:wrap; gap:6px; }
+.asset-info-button { min-height:30px; padding:4px 8px; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--text); font:inherit; font-size:12px; cursor:pointer; }
+.asset-file-facts { padding:14px; background:var(--panel-soft); border:1px solid var(--line); border-radius:8px; font-size:14px; line-height:1.7; font-variant-numeric:tabular-nums; }
+.asset-info-note { color:var(--muted); font-size:12px; line-height:1.7; }
+.asset-export-format { display:flex; align-items:center; gap:12px; margin-top:18px; font-size:13px; }
+.asset-export-format select { min-height:36px; padding:0 10px; border:1px solid var(--line); border-radius:8px; color:var(--text); background:var(--panel); }
+.asset-info-dialog { max-height:calc(100dvh - 40px); overflow:auto; }
+.asset-card button.media-preview { display:grid; width:100%; padding:0; border:0; cursor:zoom-in; color:var(--muted); }
+body .media-preview { background-color:var(--panel-soft) !important; background-image:conic-gradient(#80808022 25%,transparent 0 50%,#80808022 0 75%,transparent 0) !important; background-size:16px 16px !important; }
+body .media-preview :is(img,video) { background:transparent !important; object-fit:contain !important; }
+body[data-asset-fit="cover"] .media-preview :is(img,video) { object-fit:cover !important; }
+dialog.asset-lightbox { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; margin:0; border:0; background:rgba(10,10,10,.9); }
+dialog.asset-lightbox:not([open]) { display:none; }
+dialog.asset-lightbox::backdrop { background:rgba(10,10,10,.65); }
+#lightboxMedia { max-width:92vw; max-height:86dvh; background-image:conic-gradient(#80808044 25%,transparent 0 50%,#80808044 0 75%,transparent 0); background-size:20px 20px; }
+#lightboxMedia img { display:block; }
+.asset-selection-toolbar :focus-visible,.asset-info-dialog :focus-visible,.asset-card :focus-visible { outline:2px solid var(--text); outline-offset:3px; }
+.asset-card-meta { line-height:1.6; overflow-wrap:anywhere; }

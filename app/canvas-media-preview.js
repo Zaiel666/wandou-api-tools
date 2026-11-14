@@ -4,6 +4,10 @@
   const records = new WeakMap(), cache = new Map(), pending = new Map(), inflight = new Map();
   const CACHE_BUDGET = 24 * 1024 * 1024;
   const CACHE_ENTRY_LIMIT = 1024;
+  // A decode queue alone does not bound memory: completed remote downloads
+  // would retain every full-size Blob while waiting for that single decoder.
+  const REMOTE_WORK_LIMIT = 3, remoteWaiters = [];
+  let remoteActive = 0, remoteBufferedBytes = 0, peakRemoteBufferedBytes = 0;
   let cacheBytes = 0, queuedDecodes = 0, completedDecodes = 0;
   let worker, workerUrl, nextId = 0, observer;
   const workerCode = `
@@ -113,6 +117,22 @@
       return imageHeaderSize(Uint8Array.from(header,char=>char.charCodeAt(0)));
     } catch (_) { return null; }
   }
+  function smallStaticPreview(source) {
+    if(typeof source!=='string'||source.length>400000||!/^data:image\/(?:png|jpeg);base64,/i.test(source))return '';
+    try {
+      const comma=source.indexOf(','),encoded=source.slice(comma+1,comma+1+32768);
+      const bytes=Uint8Array.from(atob(encoded.slice(0,encoded.length-encoded.length%4)),char=>char.charCodeAt(0));
+      const png=/^data:image\/png;/i.test(source),isPng=bytes[0]===137&&String.fromCharCode(...bytes.subarray(1,8))==='PNG\r\n\x1a\n';
+      if(png?!isPng:bytes[0]!==255||bytes[1]!==216)return '';
+      const size=imageHeaderSize(bytes);if(!size?.width||!size?.height||Math.max(size.width,size.height)>640||size.width*size.height>409600)return '';
+      if(!png)return source;
+      // An APNG animation-control chunk must precede the first image-data chunk.
+      // Unknown/oversized metadata remains a plain shell; never decode it here.
+      const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=8;
+      while(offset+8<=bytes.length){const kind=String.fromCharCode(...bytes.subarray(offset+4,offset+8));if(kind==='acTL')return '';if(kind==='IDAT')return source;const length=view.getUint32(offset);offset+=length+12;}
+    }catch(_error){/* Invalid headers are never used for an overview image. */}
+    return '';
+  }
   async function sourceCacheKey(source) {
     if(source.startsWith('data:') && global.crypto?.subtle) {
       try {
@@ -149,6 +169,31 @@
   function hasConsumers(entry) {
     return !entry.cancelled && [...entry.consumers].some(record=>record.active && record.source===entry.source && record.image.isConnected);
   }
+  function drainRemoteQueue() {
+    while(remoteActive < REMOTE_WORK_LIMIT && remoteWaiters.length) {
+      const ticket=remoteWaiters.shift(),entry=ticket.entry;
+      entry.remoteTicket=null;
+      if(!hasConsumers(entry)){ticket.resolve(null);continue;}
+      remoteActive++;
+      let released=false;
+      ticket.resolve(()=>{
+        if(released)return;released=true;
+        remoteActive--;remoteBufferedBytes-=entry.bufferedBytes||0;entry.bufferedBytes=0;
+        drainRemoteQueue();
+      });
+    }
+  }
+  function acquireRemoteWork(entry) {
+    return new Promise(resolve=>{
+      const ticket={entry,resolve};entry.remoteTicket=ticket;remoteWaiters.push(ticket);drainRemoteQueue();
+    });
+  }
+  function cancelRemoteWait(entry) {
+    const ticket=entry.remoteTicket;if(!ticket)return;
+    entry.remoteTicket=null;
+    const index=remoteWaiters.indexOf(ticket);if(index>=0)remoteWaiters.splice(index,1);
+    ticket.resolve(null);
+  }
   function detachRequest(record) {
     const entry=record.request;
     record.request=null;
@@ -156,6 +201,7 @@
     entry.consumers.delete(record);
     if(!entry.settled && !hasConsumers(entry)){
       entry.cancelled=true;entry.controller?.abort();
+      cancelRemoteWait(entry);
       if(inflight.get(entry.source)===entry)inflight.delete(entry.source);
     }
   }
@@ -168,17 +214,25 @@
     if(existing && !existing.cancelled){existing.consumers.add(record);record.request=existing;return existing.task;}
     const entry={source,consumers:new Set([record]),cancelled:false,settled:false};
     record.request=entry;inflight.set(source,entry);
-    // Download outside the decode queue: a slow remote image must not hold up
-    // already available local results. Decoding still runs one image at a time.
+    // Remote slots cover download AND decode, so at most three original Blobs
+    // wait in memory. Local/small previews still bypass the remote queue.
     const remote = /^(https?:|wandou-media:)/i.test(source);
     const task=sourceCacheKey(source).then(async key=>{
+      let releaseRemote;
+      try {
       entry.cacheKey=key;
       if(!hasConsumers(entry))return null;
       const cached=cache.get(key);
       if(cached){cache.delete(key);cache.set(key,cached);return cached.result;}
+      if(remote) {
+        releaseRemote=await acquireRemoteWork(entry);
+        if(!releaseRemote || !hasConsumers(entry))return null;
+      }
       const blob=remote ? await download(source,entry) : null;
       if (!hasConsumers(entry) || (remote && !blob)) return null; // Native img may still load a non-CORS URL.
       if(blob) {
+        entry.bufferedBytes=blob.size;remoteBufferedBytes+=blob.size;
+        peakRemoteBufferedBytes=Math.max(peakRemoteBufferedBytes,remoteBufferedBytes);
         const size=imageHeaderSize(new Uint8Array(await blob.slice(0,24576).arrayBuffer()));
         if(!hasConsumers(entry))return null;
         if(boundedSize(size))return {...size,blob};
@@ -198,7 +252,8 @@
         } catch (_) { resolve(null); }
         });
       });
-      queue=decoded;return decoded;
+      queue=decoded;return await decoded;
+      } finally {releaseRemote?.();}
     }).then(result=>{
       if(!entry.noCache && hasConsumers(entry))cacheResult(entry.cacheKey,result);
       return result;
@@ -327,8 +382,8 @@
   function releaseSource(source) {
     const entry=inflight.get(source);
     if(entry)entry.noCache=true;
-    if(entry && !hasConsumers(entry)){entry.cancelled=true;entry.controller?.abort();inflight.delete(source);}
+    if(entry && !hasConsumers(entry)){entry.cancelled=true;entry.controller?.abort();cancelRemoteWait(entry);inflight.delete(source);}
     sourceCacheKey(source).then(dropCached).catch(()=>{});
   }
-  global.WandouCanvasPreview={prepare,setSource,release,releaseSource,dimensions:image=>records.get(image),stats:()=>({cacheEntries:cache.size,cacheBytes,cacheBudget:CACHE_BUDGET,cacheEntryLimit:CACHE_ENTRY_LIMIT,inflight:inflight.size,queuedDecodes,completedDecodes})};
+  global.WandouCanvasPreview={prepare,setSource,release,releaseSource,smallStaticPreview,dimensions:image=>records.get(image),stats:()=>({cacheEntries:cache.size,cacheBytes,cacheBudget:CACHE_BUDGET,cacheEntryLimit:CACHE_ENTRY_LIMIT,inflight:inflight.size,queuedDecodes,completedDecodes,remoteActive,remoteQueued:remoteWaiters.length,remoteWorkLimit:REMOTE_WORK_LIMIT,remoteBufferedBytes,peakRemoteBufferedBytes})};
 })(window);

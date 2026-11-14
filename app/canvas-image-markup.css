@@ -1,0 +1,9 @@
+.reference-markup-actions{position:absolute;z-index:4;left:4px;bottom:25px;display:flex;align-items:center;gap:3px;max-width:calc(100% - 8px)}
+body.node-canvas-page .node .reference-markup-actions button{display:inline-flex;align-items:center;justify-content:center;gap:3px;min-height:24px;height:24px;width:auto;min-width:24px;padding:3px 5px;border:1px solid var(--line,#bfc1c5);border-radius:6px;background:var(--panel,#fff);color:var(--text,#202124);font-size:10px;line-height:1;box-shadow:none}
+body.node-canvas-page .node .reference-markup-actions button:disabled{opacity:.6;cursor:not-allowed}
+body.node-canvas-page .node .reference-markup-actions button:focus-visible{outline:2px solid var(--text,#202124);outline-offset:2px}
+body.node-canvas-page .node .reference-markup-actions button svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6}
+.generator-reference-field .reference-markup-actions{left:2px;right:2px;bottom:2px;gap:2px;max-width:none}
+.generator-reference-field .reference-markup-actions span{display:none}
+body.node-canvas-page .node .generator-reference-field .reference-markup-actions button{min-width:20px;width:20px;min-height:20px;height:20px;padding:2px}
+body.node-canvas-page .reference-markup-overlay{opacity:1;filter:none;pointer-events:none}

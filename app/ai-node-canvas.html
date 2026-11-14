@@ -7381,7 +7381,7 @@
     }
     @media (max-width:900px) { .image-comment-panel { top:68px; right:10px; width:220px; max-height:30vh; } }
   </style>
-<link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script></head>
+<link rel="stylesheet" href="./action-motion.css"><script defer src="./action-motion.js"></script><script src="./image-model-capabilities.js"></script><script src="./image-output-resolution.js"></script></head>
 <body class="node-canvas-page">
   <div class="app assistant-open">
     <aside class="sidebar">
@@ -8477,15 +8477,45 @@
     }
 
     function imageResolutionOptionsForModel(model) {
-      const apiModel = modelToApiModel(model);
-      if (isOneKOnlyImageModel(model)) return ["1K"];
-      if (apiModel === "grok-imagine-image-2.0") return ["1K", "2K"];
-      return imageResolutionOptions;
+      return ["1K", "2K", "4K"];
+    }
+
+    function imageNativeResolutionForModel(model, resolution) {
+      const selected = String(resolution || "1K").toUpperCase();
+      const options = window.WandouImageCapabilities.resolve(modelToApiModel(model)).nativeTiers;
+      if (!options.length) return selected;
+      return options.includes(selected) ? selected : options[options.length - 1];
+    }
+
+    function nativeImageApiHost(model) {
+      try { return new URL(apiProfileForModel(model).url).hostname.toLowerCase(); } catch (_) { return ""; }
+    }
+
+    function imageOutputEdge(resolution) {
+      return { "1K":1024, "2K":2048, "4K":4096 }[String(resolution || "1K").toUpperCase()] || 1024;
+    }
+
+    function imageResolutionChoiceLabel(model, resolution) {
+      const capability = window.WandouImageCapabilities.resolve(modelToApiModel(model));
+      return capability.nativeTiers.length && !capability.nativeTiers.includes(resolution) ? resolution + "·非原生" : resolution;
+    }
+
+    function imageResolutionHint(node) {
+      const capability = window.WandouImageCapabilities.resolve(modelToApiModel(node.model));
+      const tier = String(node.resolution || "1K").toUpperCase();
+      const edge = imageOutputEdge(tier);
+      const rough = sizeFromRatio(node.ratio || "1:1", tier, [], {customWidth:node.customWidth,customHeight:node.customHeight});
+      const requested = window.WandouImageCapabilities.nativeSize(modelToApiModel(node.model), imageNativeResolutionForModel(node.model,tier), rough);
+      const size = parseSize(requested), scale = Math.max(1, edge/Math.max(size.width,size.height));
+      const predicted = Math.round(size.width*scale) + "×" + Math.round(size.height*scale);
+      if (!capability.verified) return "输出长边至少 " + edge + "px；" + capability.label + "。不足时本地放大（非原生生成），不会增加生图请求。";
+      if (capability.kind === "grok") return "原生请求 " + imageNativeResolutionForModel(node.model,tier) + "；输出长边至少 " + edge + "px。不足时本地等比放大（非原生生成）。";
+      return "原生请求 " + requested.replace("x","×") + " → 预计输出 " + predicted + (scale>1 ? "（本地放大，非原生生成）" : "（按实际返回像素）") + "；保留原图，不裁切。";
     }
 
     function isOneKOnlyImageModel(model) {
       const id = String(modelToApiModel(model) || "");
-      return /(?:^|[-.])1k(?:$|[-.])/i.test(id) || /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(id);
+      return /^gemini-2\.5-flash-image(?:-preview)?$/i.test(id) || /(?:^|[-.])1k(?:$|[-.])/i.test(id) || /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(id);
     }
 
     function videoCapabilitiesForModel(model) {
@@ -12388,7 +12418,7 @@
         `<button class="count-option ${Number(node.count) === count ? "active" : ""}" data-count="${count}" type="button" ${!isVideoNode && node.autoSplit ? "disabled" : ""}>${count}</button>`
       )).join("");
       const resolutionHtml = resolutions.map((resolution) => (
-        `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-resolution="${resolution}" type="button" ${resolution === "DEFAULT" ? "disabled" : ""}>${resolutionLabel(resolution)}</button>`
+        `<button class="choice-option ${node.resolution === resolution ? "active" : ""}" data-resolution="${resolution}" type="button" ${resolution === "DEFAULT" ? "disabled" : ""}>${isVideoNode ? resolutionLabel(resolution) : imageResolutionChoiceLabel(node.model,resolution)}</button>`
       )).join("");
       const modeHtml = [1, 2].map((row) => (
         `<div class="choice-options mode-choice-row">
@@ -12514,6 +12544,7 @@
           </div>
         </div>
         ${renderAutoSplitPlanHtml(node)}`}
+        ${!isVideoNode ? `<div class="status image-resolution-hint" data-resolution-hint>${escapeHtml(imageResolutionHint(node))}</div>` : ""}
         <button data-generate class="wide-button ${autoSplitAnalyzing || /^正在生成|^正在分析/.test(node.status || "") ? "generating" : ""}" type="button" ${autoSplitAnalyzing ? "disabled" : ""}>${autoSplitAnalyzing ? `分析并自动拆分 ${Math.max(1, Math.min(99, Number(node.autoSplitProgress) || 1))}%` : node.autoSplit && !isVideoNode ? "分析并自动拆分" : actionText}</button>
         <div class="status">${node.status || referenceHint}</div>
         ${promptRefinePanelHtml}
@@ -15652,7 +15683,7 @@
         return `<span class="result-size-meta">${escapeHtml(String(node.audioFormat || "audio").toUpperCase())}</span><span class="result-time-meta"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>${node.pending ? `${Number(node.elapsed) || 0}s` : seconds ? `${seconds}s` : "已完成"}</span>`;
       }
       const size = node.width && node.height
-        ? `${node.width}×${node.height}`
+        ? `${node.width}×${node.height}${node.resolutionProcessing === "local-upscale" ? " · 非原生" : ""}`
         : node.mediaUrl ? "识别中" : "--×--";
       const seconds = resultElapsedSeconds(node);
       const elapsed = node.pending
@@ -16871,6 +16902,7 @@
         const regenerationSource = {
           ...sourceNode,
           model: original.model || sourceNode.model,
+          resolution: original.requestedResolution || original.resolution || sourceNode.resolution,
           prompt: String(original.generationPrompt || original.prompt || sourceNode.prompt || ""),
           references,
           count: 1,
@@ -17184,6 +17216,8 @@
           autoSplitIndex: confirmedAutoSplitPlan.length ? index + 1 : 0,
           autoSaveBatchFolder: confirmedAutoSplitPlan.length ? String(node.autoSplitBatchFolder || "") : "",
           model: node.model,
+          resolution: node.resolution,
+          requestedResolution: node.resolution,
           mediaType: node.type === "video" ? "video" : node.type === "keyword" ? "text" : "image",
           transparent: transparentPngOutput,
           pending: true,
@@ -17452,6 +17486,7 @@
       const controller = new AbortController();
       const timeout = sourceNode.type === "video" ? 0 : setTimeout(() => controller.abort(), generationTimeoutMs);
       const totalStartedAt = Date.now();
+      let apiReturnedThisAttempt = false;
       try {
         if (sourceNode.type === "png" && sourceNode.transparentBackground !== false) {
           const reference = collectReferenceItems([sourceNode])[0];
@@ -17461,6 +17496,7 @@
           try {
             const apiStartedAt = Date.now();
             const apiResult = await callApi({ ...sourceNode, count: 1 }, controller.signal);
+            apiReturnedThisAttempt = true;
             apiSeconds = Math.max(1, Math.round((Date.now() - apiStartedAt) / 1000));
             pending.apiReturned = true;
             pending.apiSeconds = apiSeconds;
@@ -17470,10 +17506,23 @@
           } catch (maskError) {
             console.warn("PNG mask model fallback", maskError);
           }
-          const url = maskUrl
+          let url = maskUrl
             ? await makeTransparentPngFromOriginalAndMask(reference.url, maskUrl, targetSize)
             : await makeTransparentPngDataUrl(reference.url, targetSize);
-          const parsed = parseSize(targetSize);
+          const originalOutputUrl = url;
+          pending.sourceUrl = url;
+          pending.mediaUrl = url;
+          pending.fullUrl = url;
+          const outputEdge = imageOutputEdge(sourceNode.resolution || "1K");
+          const pngOutput = await window.WandouImageOutput.process({url,targetSize:outputEdge+"x"+outputEdge,signal:controller.signal,fetch:(mediaUrl,options)=>fetchMediaWithTimeout(mediaUrl,options,20000)});
+          url = pngOutput.url;
+          pending.sourceUrl = originalOutputUrl;
+          pending.resolutionProcessing = pngOutput.processing;
+          pending.originalWidth = pngOutput.originalWidth;
+          pending.originalHeight = pngOutput.originalHeight;
+          pending.requestedResolution = sourceNode.resolution || "1K";
+          pending.outputLongEdgeTarget = outputEdge;
+          const parsed = {width:pngOutput.width,height:pngOutput.height};
           pending.pending = false;
           pending.mediaUrl = url;
           pending.previewUrl = url;
@@ -17489,6 +17538,7 @@
           pending.status = apiSeconds
             ? `透明 PNG 已生成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。`
             : "透明 PNG 已从原图抠出，未重新绘制主体，可放大预览、收藏和下载。";
+          if (pngOutput.nonNative) pending.status += " 本地等比放大（非原生生成）：" + parsed.width + "×" + parsed.height + "。";
           setNodeStatus(pending.id, pending.status);
           if (!sourceNode._deferCanvasSave) await saveCanvasState();
           return;
@@ -17502,6 +17552,7 @@
           _forceBaseGeneration: false
         };
         const apiResult = await callApi(requestNode, controller.signal);
+        apiReturnedThisAttempt = true;
         const apiSeconds = Math.max(1, Math.round((Date.now() - apiStartedAt) / 1000));
         const rawUrl = apiResult.urls?.[0] || apiResult.url || "";
         if (!rawUrl && apiResult.mediaType !== "text") throw new Error("接口没有返回可显示的图片地址。");
@@ -17534,7 +17585,7 @@
         // 生图接口只接受标准方图/横图/竖图。保留接口返回的完整画面，
         // 不再为了匹配自定义目标比例而居中放大裁切，避免标题和人物被切掉。
         const outpaintComposition = {};
-        const url = apiResult.mediaType === "image" && rawUrl
+        let url = apiResult.mediaType === "image" && rawUrl
           ? (sourceNode.type === "png" && sourceNode.transparentBackground !== false
             ? await normalizeGeneratedImage(rawUrl, targetSize, true)
             : sourceNode.type === "png"
@@ -17543,14 +17594,26 @@
             ? await composeOutpaintImage(rawUrl, collectReferenceItems([sourceNode])[0], targetSize, sourceNode.outpaintDirection, sourceNode.outpaintAmount, sourceNode.outpaintCustomInsets, outpaintComposition)
             : maskedReference
             ? await settleWithin(composeMaskedEditImage(rawUrl, maskedReference, targetSize), 24000, rawUrl, "局部遮罩合成")
-            : (isOneKOnlyImageModel(sourceNode.model) && String(sourceNode.resolution || "1K").toUpperCase() !== "1K") || ratioKey(sourceNode.ratio) === "自定义尺寸"
-            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 24000, rawUrl, "目标分辨率处理")
-            : sourceNode._lockOutputSize
-            ? await settleWithin(normalizeGeneratedImage(rawUrl, targetSize, false, false), 18000, rawUrl, "批次统一尺寸处理")
             : rawUrl)
           : rawUrl;
+        let resolutionOutput = null;
+        if (apiResult.mediaType === "image" && url && window.WandouImageOutput) {
+          pending.status = "原图已返回，正在核验实际像素并处理输出尺寸...";
+          setNodeStatus(pending.id,pending.status);
+          const outputEdge = imageOutputEdge(sourceNode.resolution || pending.resolution || "1K");
+          resolutionOutput = await window.WandouImageOutput.process({
+            url, targetSize: outputEdge + "x" + outputEdge, signal:controller.signal,
+            fetch:(mediaUrl,options)=>fetchMediaWithTimeout(mediaUrl, options, 20000)
+          });
+          url = resolutionOutput.url;
+          pending.resolutionProcessing = resolutionOutput.processing;
+          pending.originalWidth = resolutionOutput.originalWidth;
+          pending.originalHeight = resolutionOutput.originalHeight;
+          pending.requestedResolution = sourceNode.resolution || pending.resolution || "1K";
+          pending.outputLongEdgeTarget = outputEdge;
+        }
         const detectedDimensions = apiResult.mediaType === "image" && url
-          ? await settleWithin(getImageDimensions(url), 12000, parsed, "原图尺寸识别")
+          ? resolutionOutput || await settleWithin(getImageDimensions(url), 12000, {}, "原图尺寸识别")
           : parsed;
         const finalWidth = Math.max(1, Number(detectedDimensions?.width) || parsed.width);
         const finalHeight = Math.max(1, Number(detectedDimensions?.height) || parsed.height);
@@ -17589,12 +17652,26 @@
           : sourceNode.type === "png"
           ? (apiResult.fromApi ? "透明 PNG 已生成，可放大预览、收藏和下载。" : "透明 PNG 演示图已生成，可下载测试。")
           : apiResult.fromApi ? `接口生成完成。接口用时 ${apiSeconds}s，页面总用时 ${totalSeconds}s，可下载。` : "演示生成完成，可下载。";
+        if (resolutionOutput?.processing === "original-animation-preserved") pending.status += " 已保留动图原文件与原尺寸，未执行静态放大。";
+        if (resolutionOutput?.nonNative) pending.status += " 本地等比放大：" + resolutionOutput.originalWidth + "×" + resolutionOutput.originalHeight + " → " + finalWidth + "×" + finalHeight + "（非原生生成，不增加 AI 细节）。";
         setNodeStatus(pending.id, pending.status);
         refreshRenderedNode(pending.id);
         if (!sourceNode._deferCanvasSave) {
           await settleWithin(saveCanvasState(), 10000, null, "生成结果保存");
         }
       } catch (error) {
+        if (apiReturnedThisAttempt && pending.sourceUrl) {
+          pending.pending = false;
+          pending.resolutionProcessing = "incomplete";
+          pending.resolutionError = friendlyApiError(error);
+          pending.status = "原图已生成并保留，但输出尺寸处理未完成：" + pending.resolutionError + "。未重复发送生图请求，可先下载原图。";
+          const actual = await getImageDimensions(pending.fullUrl || pending.sourceUrl);
+          if (actual.width && actual.height) { pending.width = actual.width; pending.height = actual.height; }
+          setNodeStatus(pending.id, pending.status);
+          refreshRenderedNode(pending.id);
+          if (!sourceNode._deferCanvasSave) await saveCanvasState();
+          return;
+        }
         if (sourceNode.type === "generator" && !sourceNode._forceStandardApiSize && /size|dimension|resolution|尺寸|分辨率/i.test(String(error?.message || error))) {
           pending.pending = true;
           pending.status = `第 ${index + 1} 张的自定义尺寸不被当前接口接受，正在兼容生成并统一输出...`;
@@ -18529,9 +18606,7 @@ ${formatInstruction}`;
     }
 
     function isNanoBananaModel(model) {
-      const id = String(model || "");
-      // Keep existing preview aliases and recognize the verified stable image IDs.
-      return /^gemini-.*image-preview$/i.test(id) || /^gemini-(?:3\.1-flash(?:-lite)?|3-pro)-image$/i.test(id);
+      return window.WandouImageCapabilities.resolve(model).kind === "gemini";
     }
 
     function isGrokImageModel(model) {
@@ -18564,29 +18639,13 @@ ${formatInstruction}`;
     }
 
     function nanoBananaImageSettings(node, targetSize) {
-      const selected = String(node.resolution || "1K").toUpperCase();
-      const liteModel = /^gemini-3\.1-flash-lite-image(?:-preview)?$/i.test(String(modelToApiModel(node.model) || ""));
-      const imageSize = !liteModel && imageResolutionOptions.includes(selected) ? selected : "1K";
-      const { width, height } = parseSize(targetSize);
-      const requestedRatio = ratioLabelFromSize(width, height);
-      // Native Gemini image tiers use model pixels, not video long-edge sizes.
-      // https://ai.google.dev/gemini-api/docs/generate-content/image-generation
-      const oneK = {
-        "1:1": [1024, 1024], "2:3": [848, 1264], "3:2": [1264, 848],
-        "3:4": [896, 1200], "4:3": [1200, 896], "4:5": [928, 1152],
-        "5:4": [1152, 928], "9:16": [768, 1376], "16:9": [1376, 768],
-        "21:9": [1584, 672]
-      };
-      const aspectRatio = oneK[requestedRatio] ? requestedRatio : Object.keys(oneK).find(key => {
-        const [w, h] = oneK[key];
-        return Math.abs(width / height - w / h) < .00001;
-      });
-      const base = oneK[aspectRatio];
-      const imageConfig = { imageSize };
-      if (base) imageConfig.aspectRatio = aspectRatio;
-      const keepExactSize = node.type === "outpaint" || node.type === "png" || ratioKey(node.ratio) === "自定义尺寸";
-      const scale = { "1K": 1, "2K": 2, "4K": 4 }[imageSize];
-      return { imageConfig, size: base && !keepExactSize ? base.map(value => value * scale).join("x") : targetSize };
+      const model = modelToApiModel(node.model);
+      const capability = window.WandouImageCapabilities.resolve(model);
+      const selected = imageNativeResolutionForModel(node.model,node.resolution);
+      const imageConfig = capability.omitImageSize ? {} : { imageSize:selected };
+      const aspectRatio = window.WandouImageCapabilities.closestRatio(targetSize, capability.ratios || ["1:1"]);
+      imageConfig.aspectRatio = aspectRatio;
+      return {imageConfig,size:window.WandouImageCapabilities.nativeSize(model,selected,targetSize)};
     }
 
     async function callNanoBananaApi(node, references, configuredUrl, headers, signal) {
@@ -18601,7 +18660,7 @@ ${formatInstruction}`;
         text: [
           node.prompt || "",
           targetSize ? `输出比例和尺寸参考：${targetSize}` : "",
-          `分辨率：${imageConfig.imageSize}`
+          imageConfig.imageSize ? `分辨率：${imageConfig.imageSize}` : ""
         ].filter(Boolean).join("\n")
       }];
       for (let index = 0; index < inputReferences.length; index += 1) {
@@ -18651,7 +18710,13 @@ ${formatInstruction}`;
       const editModelError = imageEditModelError(node, references);
       if (editModelError) throw new Error(editModelError);
       references = globalThis.WandouMediaUrls ? await globalThis.WandouMediaUrls.materializeReferences(references) : references;
-      const targetSize = node._apiTargetSize || node._targetSize || (node.type === "png" ? transparentTargetSize(references, node.resolution) : sizeFromRatio(node.ratio, node.resolution, references));
+      let targetSize = node._apiTargetSize || node._targetSize || (node.type === "png" ? transparentTargetSize(references, node.resolution) : sizeFromRatio(node.ratio, node.resolution, references));
+      if (!["keyword", "video"].includes(node.type)) {
+        const capability = window.WandouImageCapabilities.resolve(imageGenerationApiModel(node.model));
+        if (["openai-flex", "gateway-1k"].includes(capability.kind)) targetSize = ratioKey(node.ratio) === "自定义尺寸" && capability.kind === "openai-flex"
+          ? window.WandouImageCapabilities.gptSize(targetSize)
+          : window.WandouImageCapabilities.nativeSize(imageGenerationApiModel(node.model), imageNativeResolutionForModel(node.model,node.resolution), targetSize);
+      }
       if (node.type === "keyword") {
         const formatInstruction = node.promptFormat === "sentence"
           ? "提示词请写成一整句，用逗号自然连接，不要分行排列。"
@@ -18751,7 +18816,7 @@ ${formatInstruction}`;
         "输出透明背景 PNG，主体必须与上传图片保持一致，只把背景变成完全透明；边缘干净自然，不要白底、灰底、纯色底、阴影底或棋盘格底。"
       ].filter(Boolean).join("\n\n");
       const selectedResolution = String(node.resolution || "1K").toUpperCase();
-      const requestResolution = node._forceBaseGeneration || isOneKOnlyImageModel(node.model) ? "1K" : selectedResolution;
+      const requestResolution = node._forceBaseGeneration ? "1K" : imageNativeResolutionForModel(node.model, selectedResolution);
       const maskedReference = node.type === "outpaint" ? null : references.find((item) => item?.maskUrl && item?.url) || null;
       const selectedImageModel = imageGenerationApiModel(node.model, requestResolution);
       // Unsupported masked edits are rejected before request construction.
@@ -18793,7 +18858,12 @@ ${formatInstruction}`;
         imagePayload.resolution = requestResolution.toLowerCase();
         if (!grokImageModel) imagePayload.output_format = "png";
       }
-      if (grokImageModel) imagePayload.aspect_ratio = imagePayload.size;
+      if (grokImageModel) {
+        const capability = window.WandouImageCapabilities.resolve(imageModel);
+        imagePayload.aspect_ratio = capability.ratios ? window.WandouImageCapabilities.closestRatio(targetSize, capability.ratios) : imagePayload.size;
+        // xAI uses aspect_ratio, not the OpenAI pixel size field.
+        if (nativeImageApiHost(node.model) === "api.x.ai") delete imagePayload.size;
+      }
       if (transparentPngRequested && isGptImageModel(imageModel)) {
         imagePayload.output_format = "png";
         imagePayload.background = "transparent";
@@ -18801,6 +18871,21 @@ ${formatInstruction}`;
       if (node.type === "png") imagePayload.n = 1;
       // 强制基础图时只发送兼容性最高的标准参数；接口可自行返回 URL 或 base64。
       if (requestResolution === "1K" && !node._forceBaseGeneration) imagePayload.response_format = "b64_json";
+      // Gateway extensions remain available. The native OpenAI endpoint does not accept them.
+      if (nativeImageApiHost(node.model) === "api.openai.com" && isGptImageModel(imageModel)) {
+        delete imagePayload.resolution;
+        delete imagePayload.response_format;
+      }
+
+      const requestCapability = window.WandouImageCapabilities.resolve(imageModel);
+      if (requestCapability.kind === "unknown") {
+        // Unknown gateway models retain their names and output options, but do not
+        // receive speculative 4K/quality/output-format extensions.
+        delete imagePayload.resolution;
+        delete imagePayload.quality;
+        delete imagePayload.output_format;
+        imagePayload.size = /^dall-e-[23]$/i.test(imageModel) ? "1024x1024" : apiSizeFromTarget(targetSize);
+      }
 
       if (node.type === "outpaint" && references[0]?.url) {
         const guide = await createOutpaintGuide(references[0], targetSize, node.outpaintDirection, node.outpaintAmount, node.outpaintCustomInsets);

@@ -1,147 +1,45 @@
-name: Build portable folder release
+name: Verify published Windows release
 
+# Tags never rebuild or overwrite locally accepted binaries.
 on:
-  push:
-    tags:
-      - "v*.*.*"
   workflow_dispatch:
     inputs:
-      version:
-        description: "Release version, for example 1.1.0"
+      tag:
+        description: Published version tag, for example v2.0.22
         required: true
+        default: v2.0.22
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  verify:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Resolve version
-        shell: pwsh
-        run: |
-          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
-            $version = "${{ inputs.version }}".TrimStart("v")
-          } else {
-            $version = "${{ github.ref_name }}".TrimStart("v")
-          }
-          if ($version -notmatch '^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$') {
-            throw "Invalid version: $version"
-          }
-          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10
-
-      - name: Install desktop dependencies
-        working-directory: desktop-client
-        run: pnpm install --frozen-lockfile
-
-      - name: Validate desktop scripts
-        shell: pwsh
-        run: |
-          pnpm --dir tools/canvas-ui-test install --frozen-lockfile
-          if ($LASTEXITCODE -ne 0) { throw 'DOM test dependencies failed' }
-          choco install blender --yes --no-progress
-          if ($LASTEXITCODE -ne 0) { throw 'Blender test dependency failed' }
-
-      - name: Check desktop syntax
-        shell: pwsh
-        run: |
-          Get-ChildItem -LiteralPath "desktop-client" -Filter "*.js" | ForEach-Object {
-            node --check $_.FullName
-            if ($LASTEXITCODE -ne 0) { throw "Desktop script syntax check failed: $($_.Name)" }
-          }
-
-      - name: Validate release regressions
-        shell: pwsh
-        run: |
-          $env:NODE_PATH = (Resolve-Path "desktop-client\node_modules").Path
-          $tests = Get-ChildItem -LiteralPath "tests" -Filter "*.test.cjs" |
-            Where-Object { $_.Name -notin @("real-api-image-ratios.test.cjs", "grok-live-api.test.cjs") }
-          $failedTests = @()
-          foreach ($test in $tests) {
-            node $test.FullName
-            if ($LASTEXITCODE -ne 0) { $failedTests += $test.Name }
-          }
-          if ($failedTests.Count) { throw "Regression tests failed: $($failedTests -join ', ')" }
-
-      - name: Compile and validate portable updater
-        shell: pwsh
-        run: |
-          $compiler = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-          & $compiler /nologo /target:winexe /optimize+ /out:desktop-client\portable-updater.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll desktop-client\portable-updater.cs
-          if ($LASTEXITCODE -ne 0) { throw 'Portable updater compilation failed' }
-          node tests\portable-updater-regression.test.cjs
-          if ($LASTEXITCODE -ne 0) { throw 'Portable updater regression test failed' }
-          & pwsh -NoProfile -File tests\portable-updater-live-e2e.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'Portable updater live upgrade test failed' }
-          & pwsh -NoProfile -File tests\portable-updater-live-e2e.ps1 -LockInstallDirectory
-          if ($LASTEXITCODE -ne 0) { throw 'Locked-directory upgrade test failed' }
-
-      - name: Build portable folder
-        shell: pwsh
-        run: |
-          Set-Location desktop-client
-          node -e "const fs=require('fs'); const p=require('./package.json'); p.version=process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p,null,2)+'\n')"
-          $versionFile = "..\app\VERSION.txt"
-          $versionLines = @(Get-Content -LiteralPath $versionFile)
-          if ($versionLines.Count -eq 0) { $versionLines = @("v$env:VERSION") } else { $versionLines[0] = "v$env:VERSION" }
-          $versionLines | Set-Content -LiteralPath $versionFile -Encoding UTF8
-          pnpm exec electron-builder --win dir --x64 --publish never
-          if ($LASTEXITCODE -ne 0) { throw "Electron build failed" }
-          Set-Location ..
-          & pwsh -NoProfile -File scripts\build-portable-package.ps1 -Version $env:VERSION
-          if ($LASTEXITCODE -ne 0) { throw "Portable package layout build failed" }
-          $zip = Join-Path $PWD "dist\wandou-ai-tools-windows-x64.zip"
-          & pwsh -NoProfile -File tests\portable-package-smoke.ps1 -Package $zip
-          if ($LASTEXITCODE -ne 0) { throw "Packaged launcher/save/close smoke test failed" }
-          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash *wandou-ai-tools-windows-x64.zip" | Set-Content -LiteralPath "$zip.sha256" -Encoding ASCII
-          $manifest = @{
-            version = $env:VERSION
-            downloadUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip"
-            checksumUrl = "https://github.com/${{ github.repository }}/releases/download/v$env:VERSION/wandou-ai-tools-windows-x64.zip.sha256"
-            notes = (Get-Content -LiteralPath "app\VERSION.txt" | Where-Object { $_ -match '^v.* 更新：' } | Select-Object -First 1)
-          } | ConvertTo-Json
-          $manifest | Set-Content -LiteralPath "dist\update-manifest.json" -Encoding UTF8
-
-      - name: Create or update GitHub Release
+      - name: Download and verify published assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          $notesFile = "docs\release-v$env:VERSION.md"
-          gh release view $env:TAG *> $null
-          if ($LASTEXITCODE -eq 0) {
-            gh release edit $env:TAG --title "豌豆AI工具 v$env:VERSION"
-            if (Test-Path -LiteralPath $notesFile) { gh release edit $env:TAG --notes-file $notesFile }
-            gh release upload $env:TAG `
-              "dist\wandou-ai-tools-windows-x64.zip" `
-              "dist\wandou-ai-tools-windows-x64.zip.sha256" `
-              "dist\update-manifest.json" `
-              --clobber
-          } else {
-            $releaseArgs = @(
-              $env:TAG,
-              "dist\wandou-ai-tools-windows-x64.zip",
-              "dist\wandou-ai-tools-windows-x64.zip.sha256",
-              "dist\update-manifest.json",
-              "--title", "豌豆AI工具 v$env:VERSION"
-            )
-            if (Test-Path -LiteralPath $notesFile) { $releaseArgs += @("--notes-file", $notesFile) }
-            else { $releaseArgs += "--generate-notes" }
-            gh release create @releaseArgs
+          $tag = $env:RELEASE_TAG
+          if ($tag -notmatch '^v\d+\.\d+\.\d+$') { throw 'Invalid release tag' }
+          $version = $tag.Substring(1)
+          $zip = 'wandou-ai-tools-windows-x64.zip'
+          $setup = "wandou-ai-tools-setup-$version.exe"
+          gh release download $tag --repo $env:GH_REPO --dir verified-assets --pattern $zip --pattern "$zip.sha256" --pattern $setup --pattern "$setup.sha256" --pattern update-manifest.json
+          if ($LASTEXITCODE -ne 0) { throw 'Release download failed' }
+          foreach ($name in @($zip, $setup)) {
+            $line = (Get-Content -LiteralPath "verified-assets/$name.sha256" -Raw).Trim()
+            if ($line -notmatch '^([a-fA-F0-9]{64})\s+\*?(.+)$') { throw "Invalid checksum file: $name" }
+            $expected = $Matches[1].ToLowerInvariant()
+            if ($Matches[2] -ne $name) { throw "Checksum filename differs: $name" }
+            $actual = (Get-FileHash -LiteralPath "verified-assets/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $expected) { throw "Checksum mismatch: $name" }
           }
-          if ($LASTEXITCODE -ne 0) { throw "GitHub Release publication failed: $env:TAG" }
+          $manifest = Get-Content -LiteralPath verified-assets/update-manifest.json -Raw | ConvertFrom-Json
+          $base = "https://github.com/$env:GH_REPO/releases/download/$tag"
+          if ($manifest.version -ne $version -or $manifest.downloadUrl -ne "$base/$zip" -or $manifest.checksumUrl -ne "$base/$zip.sha256") { throw 'Update manifest mismatch' }
+          Write-Host "Verified published ZIP, installer and update manifest for $tag. No binaries were rebuilt or uploaded."

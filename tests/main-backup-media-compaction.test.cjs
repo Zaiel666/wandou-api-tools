@@ -22,6 +22,7 @@ function extractFunction(name) {
 
 const writes = [];
 const context = vm.createContext({
+  crypto: require('node:crypto'),
   writeCanvasMedia: async ({ id, value }) => {
     writes.push({ id, length: value.length });
     return { success: true };

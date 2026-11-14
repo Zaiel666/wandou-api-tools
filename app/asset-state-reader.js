@@ -3,7 +3,7 @@
   'use strict';
   const prefix = 'aiCanvasStateV1';
   const databaseName = 'ai-node-canvas-media-v1';
-  const nodeFields = ['id', 'type', 'title', 'mediaType', 'previewUrl', 'mediaUrl', 'fullUrl', 'createdAt', 'width', 'height', 'pending', 'transparent'];
+  const nodeFields = ['id', 'type', 'title', 'mediaType', 'previewUrl', 'mediaUrl', 'fullUrl', 'sourceUrl', 'createdAt', 'width', 'height', 'pending', 'transparent', 'resolutionProcessing', 'originalWidth', 'originalHeight', 'requestedResolution', 'imageOutputFormat', 'outputFormat', 'mimeType', 'animationFrameCount', 'animationFrameDurationsMs', 'animationDurationMs', 'animationLoopCount'];
   const isStateKey = key => (key === prefix || key.startsWith(prefix + ':'))
     && !/:(?:project-collection|active-project-collection|session-[^:]*|download-seq|deleted-results)(?::|$)/.test(key);
 

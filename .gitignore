@@ -14,3 +14,5 @@ v*-update-e2e*/
 *.log
 .DS_Store
 Thumbs.db
+artifacts/director-format-test/*.blend
+artifacts/director-format-test/*.fbx

@@ -1,6 +1,6 @@
 {
   "name": "wandou-ai-desktop",
-  "version": "2.0.16",
+  "version": "2.0.22",
   "description": "豌豆AI Windows 客户端",
   "main": "main.js",
   "author": "PeaFour",
@@ -11,7 +11,7 @@
     "pack:portable-folder": "electron-builder --win dir --x64"
   },
   "devDependencies": {
-    "electron": "^37.2.6",
+    "electron": "45.1.0",
     "electron-builder": "^26.0.12",
     "playwright": "^1.62.1",
     "sharp": "^0.35.3"
@@ -27,7 +27,13 @@
     "files": [
       "main.js",
       "preload.js",
+      "save-file-as.cjs",
       "canvas-media-writer.cjs",
+      "canvas-media-protocol.cjs",
+      "canvas-media-location.cjs",
+      "project-storage.cjs",
+      "storage-maintenance.cjs",
+      "canvas-backup-guard.cjs",
       "director-ipc.cjs",
       "director-converter.cjs",
       "shell.html",
@@ -35,11 +41,8 @@
       "shell.js",
       "client-config.json",
       "package.json",
-      "canvas-backup-guard.cjs",
-      "canvas-media-location.cjs",
-      "canvas-media-protocol.cjs",
-      "project-storage.cjs",
-      "save-file-as.cjs"
+      "ipc-policy.cjs",
+      "update-policy.cjs"
     ],
     "extraResources": [
       {

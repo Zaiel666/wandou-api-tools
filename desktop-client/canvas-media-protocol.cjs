@@ -8,11 +8,13 @@ const validId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.t
 const workerCode = String.raw`
 const { parentPort } = require('node:worker_threads');
 const fs = require('node:fs/promises');
-parentPort.on('message', async ({id, file}) => {
+const crypto = require('node:crypto');
+parentPort.on('message', async ({id, file, mediaId}) => {
   try {
     const stat = await fs.lstat(file);
     if (!stat.isFile() || stat.isSymbolicLink()) throw Error('Invalid media file');
     const value = await fs.readFile(file, 'utf8');
+    if (mediaId.startsWith('sha256-') && mediaId !== 'sha256-' + crypto.createHash('sha256').update(value, 'utf8').digest('hex')) throw Error('Image content checksum mismatch');
     const comma = value.indexOf(',');
     const header = value.slice(0, comma);
     const mime = /^data:(image\/[a-z0-9.+-]+)(?:;[^,]*)?$/i.exec(header)?.[1];
@@ -49,31 +51,73 @@ module.exports = function createCanvasMediaProtocol({ directory }) {
       return { success: false, missing: error.code === 'ENOENT', error: error.message };
     } finally { await handle?.close().catch(() => {}); }
   }
-  function decode(id) {
-    if (inflight.has(id)) return inflight.get(id);
-    const task = queue.catch(() => {}).then(() => new Promise((resolve, reject) => {
-      if (disposed) { reject(new Error('Application closing')); return; }
-      if (!worker) {
-        worker = new Worker(workerCode, { eval: true });
-        const decoder = worker;
-        worker.unref();
-        worker.on('message', message => {
-          if (current?.id !== message.id) return;
-          const active = current; current = null;
-          if (message.error) active.reject(new Error(message.error)); else active.resolve(message);
-        });
-        worker.on('error', error => { if (worker !== decoder) return; const active = current; current = null; worker = null; active?.reject(error); });
-        worker.on('exit', () => { if (worker !== decoder) return; const active = current; current = null; worker = null; active?.reject(new Error('Image decoder stopped')); });
-      }
-      current = { id: ++sequence, resolve, reject };
-      worker.postMessage({ id: sequence, file: fileFor(id) });
-    }));
-    queue = task.catch(() => {});
-    inflight.set(id, task);
-    task.finally(() => inflight.delete(id)).catch(() => {});
-    return task;
+  const aborted = () => new DOMException('Image request cancelled', 'AbortError');
+  function ensureWorker() {
+    if (worker) return;
+    const decoder = new Worker(workerCode, { eval: true });
+    worker = decoder;
+    decoder.unref();
+    // These long-lived listeners must not close over a decode entry or its
+    // fulfilled promise; that would retain the first full image until shutdown.
+    decoder.on('message', message => {
+      if (worker !== decoder || current?.id !== message.id) return;
+      const active = current; current = null;
+      if (message.error) active.reject(new Error(message.error)); else active.resolve(message);
+    });
+    decoder.on('error', error => { if (worker !== decoder) return; const active = current; current = null; worker = null; active?.reject(error); });
+    decoder.on('exit', () => { if (worker !== decoder) return; const active = current; current = null; worker = null; active?.reject(new Error('Image decoder stopped')); });
+  }
+  function decode(id, signal) {
+    if (disposed || signal?.aborted) return Promise.reject(aborted());
+    let entry = inflight.get(id);
+    if (!entry) {
+      entry = { consumers: new Set(), cancelled: false };
+      const task = queue.then(() => new Promise((resolve, reject) => {
+        if (disposed || entry.cancelled || !entry.consumers.size) { reject(aborted()); return; }
+        try {
+          ensureWorker();
+          current = { id: ++sequence, entry, resolve, reject };
+          worker.postMessage({ id: sequence, file: fileFor(id), mediaId: id });
+        } catch (error) { if (current?.entry === entry) current = null; reject(error); }
+      }));
+      entry.task = task;
+      // Keep ordering only. A fulfilled promise otherwise retains the last full
+      // decoded original for the entire application session.
+      queue = task.then(() => undefined, () => undefined);
+      inflight.set(id, entry);
+      task.finally(() => { if (inflight.get(id) === entry) inflight.delete(id); }).catch(() => {});
+    }
+    return new Promise((resolve, reject) => {
+      const consumer = {};
+      entry.consumers.add(consumer);
+      let settled = false;
+      const finish = () => {
+        settled = true;
+        entry.consumers.delete(consumer);
+        signal?.removeEventListener('abort', cancel);
+      };
+      const cancel = () => {
+        if (settled) return;
+        finish(); reject(aborted());
+        // A shared read remains alive while another image/export needs it.
+        if (!entry.consumers.size) {
+          entry.cancelled = true;
+          if (inflight.get(id) === entry) inflight.delete(id);
+          if (current?.entry === entry) {
+            const active = current, decoder = worker;
+            current = null; worker = null;
+            active.reject(aborted());
+            void decoder?.terminate();
+          }
+        }
+      };
+      signal?.addEventListener('abort', cancel, { once: true });
+      entry.task.then(value => { if (!settled) { finish(); resolve(value); } }, error => { if (!settled) { finish(); reject(error); } });
+      if (signal?.aborted) cancel();
+    });
   }
   async function handle(request) {
+    if (disposed || request.signal?.aborted) return new Response(null, { status: 499 });
     let url;
     try { url = new URL(request.url); } catch (_) { return new Response(null, { status: 400 }); }
     const id = url.pathname.slice(1);
@@ -83,13 +127,13 @@ module.exports = function createCanvasMediaProtocol({ directory }) {
     const info = await getUrl(id);
     if (!info.success) return new Response(null, { status: 404 });
     try {
-      const decoded = await decode(id);
+      const decoded = await decode(id, request.signal);
       return new Response(request.method === 'HEAD' ? null : decoded.bytes, { headers: {
         'Content-Type': decoded.mime, 'Content-Length': String(decoded.bytes.length),
         'Access-Control-Allow-Origin': '*', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store'
       } });
-    } catch (_) { return new Response(null, { status: 404 }); }
+    } catch (error) { return new Response(null, { status: error.name === 'AbortError' ? 499 : 404 }); }
   }
-  return { getUrl, handle, dispose() { disposed = true; const active = current; current = null; active?.reject(new Error('Application closing')); void worker?.terminate(); worker = null; } };
+  return { getUrl, handle, dispose() { disposed = true; const active = current, decoder = worker; current = null; worker = null; active?.reject(aborted()); void decoder?.terminate(); } };
 };
 module.exports.scheme = scheme;

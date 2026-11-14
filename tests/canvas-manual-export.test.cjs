@@ -15,11 +15,12 @@ async function openCanvas(filename = 'ai-node-canvas-test.html') {
   await page.goto(pathToFileURL(path.join(app, filename)).href);
   await page.waitForFunction(() => document.body.dataset.canvasReady === 'true');
   await page.evaluate(() => {
-    window.exportCalls = { choose: 0, writes: [], folders: 0, api: 0 };
+    window.exportCalls = { choose: 0, writes: [], saveAs: [], folders: 0, api: 0 };
     window.wandouShell = {
       getSaveDirectory: async () => null,
       chooseSaveDirectory: async () => { exportCalls.choose++; return { name: 'manual-downloads', directory: 'X:/isolated-manual-downloads' }; },
       createSaveDirectory: async () => { exportCalls.folders++; return { success: true }; },
+      saveFileAs: async (filename, bytes, mimeType) => { exportCalls.saveAs.push({ filename, length: bytes.length, signature: Array.from(bytes.slice(0, 8)), mimeType }); return { success: true, filename }; },
       writeSaveFile: async (filename, bytes, folderName) => { exportCalls.writes.push({ filename, length: bytes.length, signature: Array.from(bytes.slice(0, 8)), folderName }); return { success: true, filename }; }
     };
     nativeAutoSaveDirectory = autoSaveDirectoryHandle = null;
@@ -46,21 +47,30 @@ for (const filename of ['ai-node-canvas-test.html', 'ai-node-canvas.html']) {
         return { saved, calls: exportCalls, id: generated?.id, width: generated?.width, projectId: activeProjectId };
       });
       assert.equal(result.calls.api, 1); assert.equal(result.calls.choose, 0);
+      assert.deepEqual(result.calls.saveAs, []);
       assert.deepEqual(result.calls.writes, []); assert.equal(result.calls.folders, 0);
       assert.equal(result.saved, true); assert.equal(result.width, 32); assert.ok(result.id);
       assert.equal(await page.locator('#autoSaveDirectoryButton').count(), 0, 'The canvas does not show a download directory control');
       await page.reload(); await page.waitForFunction(() => document.body.dataset.canvasReady === 'true');
       const restored = await page.evaluate(id => { const node = nodes.find(item => item.id === id); return { projectId: activeProjectId, type: node?.mediaType, width: node?.width, hasMedia: Boolean(node?.fullUrl || node?.mediaUrl) }; }, result.id);
       assert.deepEqual(restored, { projectId: result.projectId, type: 'image', width: 32, hasMedia: true });
-      const downloaded = page.waitForEvent('download');
+      await page.evaluate(() => {
+        window.restoredExports = [];
+        window.wandouShell = { saveFileAs: async (filename, bytes, mimeType) => {
+          restoredExports.push({ filename, signature: Array.from(bytes.slice(0, 8)), mimeType });
+          return { success: true, filename };
+        } };
+      });
       await page.evaluate(id => downloadNodeMedia(nodes.find(item => item.id === id)), result.id);
-      const download = await downloaded;
-      assert.match(download.suggestedFilename(), /\.png$/); assert.equal(await download.failure(), null);
+      const downloads = await page.evaluate(() => restoredExports);
+      assert.equal(downloads.length, 1); assert.match(downloads[0].filename, /\.png$/);
+      assert.deepEqual(downloads[0].signature, [137, 80, 78, 71, 13, 10, 26, 10]);
+      assert.equal(downloads[0].mimeType, 'image/png');
     } finally { await browser.close(); }
   });
 }
 
-test('selected directory does not trigger exports or backfill; only explicit download writes a PNG', async () => {
+test('selected directory does not trigger exports or backfill; explicit download always uses Save As', async () => {
   const { browser, page } = await openCanvas();
   try {
     const result = await page.evaluate(async () => {
@@ -81,31 +91,31 @@ test('selected directory does not trigger exports or backfill; only explicit dow
     assert.equal(result.calls.api, 2); assert.equal(result.results, 2);
     assert.equal(result.replacementBatch, 'original-batch');
     assert.equal(result.beforeChoice, 0); assert.equal(result.afterChoice, 0);
-    assert.equal(result.calls.choose, 1); assert.equal(result.calls.writes.length, 1);
-    assert.match(result.calls.writes[0].filename, /\.png$/);
-    assert.deepEqual(result.calls.writes[0].signature, [137, 80, 78, 71, 13, 10, 26, 10]);
-    assert.equal(result.calls.writes[0].folderName, '');
+    assert.equal(result.calls.choose, 1); assert.deepEqual(result.calls.writes, []);
+    assert.equal(result.calls.saveAs.length, 1);
+    assert.match(result.calls.saveAs[0].filename, /\.png$/);
+    assert.deepEqual(result.calls.saveAs[0].signature, [137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.equal(result.calls.saveAs[0].mimeType, 'image/png');
   } finally { await browser.close(); }
 });
 
-test('directory fetch and write failures preserve remote video/audio browser fallback', async () => {
+test('browser-only remote video/audio fallback works without accessing a saved directory', async () => {
   for (const filename of ['ai-node-canvas.html', 'ai-node-canvas-test.html']) {
     const source = fs.readFileSync(path.join(app, filename), 'utf8');
     const start = source.indexOf('    async function triggerDownload(');
     const end = source.indexOf('    async function downloadNodeMedia(', start);
     assert.ok(start >= 0 && end > start);
-    for (const failure of ['directory-read', 'media-fetch', 'file-write']) {
+    for (const mediaType of ['video', 'audio']) {
       let fallbackReads = 0, opened = 0;
       const c = vm.createContext({
-        nativeAutoSaveDirectory: failure === 'directory-read' ? null : { directory: 'X:/isolated' }, autoSaveDirectoryHandle: null,
-        loadAutoSaveDirectoryHandle: async () => { throw new Error('isolated directory read failure'); },
-        sourceToBlob: async () => { if (failure === 'media-fetch') throw new Error('isolated CORS failure'); return {}; },
-        writeBlobToAutoSaveDirectory: async () => false,
+        window: {},
+        loadAutoSaveDirectoryHandle: async () => { assert.fail('Browser fallback must not read a remembered directory'); },
         sourceToBlobUrl: async () => { fallbackReads++; return ''; },
         openNamedTab: () => opened++, showToast: () => {}, console: { warn: () => {} }
       });
       vm.runInContext(source.slice(start, end), c);
-      assert.equal(await c.triggerDownload('https://example.invalid/generated.mp4', 'generated.mp4', 'video/mp4'), true, `${filename}: ${failure}`);
+      const extension = mediaType === 'video' ? 'mp4' : 'mp3';
+      assert.equal(await c.triggerDownload(`https://example.invalid/generated.${extension}`, `generated.${extension}`, mediaType === 'video' ? 'video/mp4' : 'audio/mpeg'), true, `${filename}: ${mediaType}`);
       assert.equal(fallbackReads, 1); assert.equal(opened, 1);
     }
   }
@@ -121,6 +131,7 @@ test('automatic split creates an internal batch without creating an export folde
       return { batch: node.autoSplitBatchFolder, plan: node.autoSplitPlan.length, calls: exportCalls };
     });
     assert.equal(result.plan, 2); assert.ok(result.batch);
+    assert.deepEqual(result.calls.saveAs, []);
     assert.equal(result.calls.choose, 0); assert.equal(result.calls.folders, 0); assert.deepEqual(result.calls.writes, []);
   } finally { await browser.close(); }
 });
@@ -137,6 +148,7 @@ test('transparent PNG generation also stays in the project until downloaded', as
       return { generated: Boolean(generated), transparent: generated?.transparent, saved: await saveCanvasState(), calls: exportCalls };
     });
     assert.equal(result.generated, true); assert.equal(result.transparent, true); assert.equal(result.saved, true);
+    assert.deepEqual(result.calls.saveAs, []);
     assert.equal(result.calls.api, 1); assert.equal(result.calls.choose, 0); assert.deepEqual(result.calls.writes, []);
   } finally { await browser.close(); }
 });
@@ -153,6 +165,7 @@ test('batch image generation works without selecting an export directory', async
     await page.locator('#batchImageDialog [data-run]').click();
     await page.waitForFunction(() => /本批处理结束：成功 1\/1/.test(document.querySelector('.batch-progress').textContent), { timeout: 30000 });
     const calls = await page.evaluate(() => exportCalls);
+    assert.deepEqual(calls.saveAs, []);
     assert.equal(calls.api, 1); assert.equal(calls.choose, 0); assert.equal(calls.folders, 0); assert.deepEqual(calls.writes, []);
   } finally { await browser.close(); }
 });

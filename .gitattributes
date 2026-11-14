@@ -1,0 +1,5 @@
+# Preserve accepted runtime/source bytes across Windows and Unix checkouts.
+app/** -text
+desktop-client/** -text
+scripts/** -text
+tests/** -text

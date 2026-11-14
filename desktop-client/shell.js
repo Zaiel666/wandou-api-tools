@@ -100,7 +100,14 @@ function scheduleTabSuspend(tab) {
 }
 
 function normalizedUrl(url) {
-  try { return new URL(url, homeUrl).href; } catch (_error) { return url; }
+  try {
+    const parsed = new URL(url, homeUrl);
+    if (parsed.protocol === 'file:' && /\/ai-node-canvas(?:-v2)?\.html$/i.test(parsed.pathname)) {
+      parsed.pathname = parsed.pathname.replace(/ai-node-canvas(?:-v2)?\.html$/i, 'ai-node-canvas-test.html');
+      parsed.searchParams.set('workspace', 'production');
+    }
+    return parsed.href;
+  } catch (_error) { return url; }
 }
 
 function tabIdentity(url) {
@@ -196,7 +203,7 @@ function openTab({ url, title = "新标签页", pinned = false }) {
   const view = document.createElement("webview");
   view.className = "view";
   view.dataset.tabId = id;
-  view.setAttribute("preload", preloadUrl);
+  if (new URL(url, location.href).protocol === 'file:') view.setAttribute("preload", preloadUrl);
   view.setAttribute("webpreferences", "contextIsolation=yes, sandbox=yes");
   view.src = targetUrl;
 

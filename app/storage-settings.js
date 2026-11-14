@@ -1,7 +1,8 @@
 (function (global) {
   'use strict';
   let dialog, currentPath, currentMeta, defaultSection, defaultPath, targetSection, targetPath, targetMeta, previousSection, previousPath;
-  let status, chooseButton, defaultButton, migrateButton, closeButton;
+  let status, chooseButton, defaultButton, migrateButton, closeButton, usageButton, clearCacheButton, usageList, usageStatus, profilePath;
+  let usageBusy = false;
   let info = null, selection = null, busy = '', revision = 0, stopProgress = null;
   const shell = () => global.wandouShell;
   const supported = () => ['getProjectStorageInfo', 'chooseProjectStorageDirectory', 'requestProjectStorageMigration']
@@ -29,6 +30,8 @@
       || normalize(info?.currentDirectory) === normalize(info?.defaultDirectory);
     migrateButton.disabled = Boolean(busy) || blocked || !selection;
     closeButton.disabled = busy === 'choosing' || busy === 'migrating' || busy === 'restarting';
+    usageButton.disabled = Boolean(busy) || usageBusy || typeof shell()?.getStorageUsage !== 'function';
+    clearCacheButton.disabled = Boolean(busy) || usageBusy || typeof shell()?.clearNetworkCache !== 'function';
     dialog.setAttribute('aria-busy', busy ? 'true' : 'false');
   }
 
@@ -56,6 +59,8 @@
     previousSection.hidden = !value?.previousDirectory;
     previousPath.value = value?.previousDirectory || '';
     previousPath.title = previousPath.value;
+    profilePath.value = value?.profileDirectory || '';
+    profilePath.title = profilePath.value;
     updateControls();
   }
 
@@ -71,6 +76,8 @@
       <section class="storage-settings-section"><label for="projectStorageCurrent">当前项目目录</label><input id="projectStorageCurrent" readonly spellcheck="false" placeholder="正在读取…"><p id="projectStorageCurrentMeta" class="storage-settings-meta"></p></section>
       <section id="projectStorageDefaultSection" class="storage-settings-section" hidden><label for="projectStorageDefault">程序内默认目录</label><input id="projectStorageDefault" readonly spellcheck="false"><p class="storage-settings-meta">项目和原图默认自动保存在程序文件夹内的“豌豆AI数据”。移动软件时，请一并保留这个数据文件夹；也可以选择独立位置。</p></section>
       <p id="projectStorageScope" class="storage-settings-scope">这里管理节点画布项目、原图等项目文件。API 密钥、软件配置和 AI 绘图工作台的浏览器存储仍保留在原位置，独立于项目目录；下载图片时另行选择保存位置。</p>
+      <section class="storage-settings-section"><label for="projectStorageProfile">工作台与软件配置目录</label><input id="projectStorageProfile" readonly spellcheck="false" placeholder="旧版桌面未提供此路径"><p class="storage-settings-meta">此目录包含 API 设置、工作台项目和浏览器存储，可能仍位于系统盘。迁移上方画布目录不会移动此目录。网页版的数据保存在你使用的浏览器中，与桌面版独立；更换浏览器、清除网站数据或移动网页版文件可能使旧项目无法访问。</p></section>
+      <section class="storage-settings-section" aria-labelledby="storageUsageTitle"><h3 id="storageUsageTitle">存储占用</h3><div class="storage-usage-actions"><button type="button" id="storageUsageRefresh">统计占用</button><button type="button" id="storageCacheClear">清理网络缓存…</button></div><dl id="storageUsageList" class="storage-usage-list" hidden></dl><p id="storageUsageStatus" class="storage-settings-meta" role="status">按需统计文件大小，不读取原图内容。原图、项目、备份和写入临时文件均不会在这里删除。</p></section>
       <section id="projectStorageTargetSection" class="storage-settings-section" hidden><label for="projectStorageTarget">迁移后的项目目录</label><input id="projectStorageTarget" readonly spellcheck="false"><p id="projectStorageTargetMeta" class="storage-settings-meta"></p></section>
       <section id="projectStoragePreviousSection" class="storage-settings-section" hidden><label for="projectStoragePrevious">保留的上一目录</label><input id="projectStoragePrevious" readonly spellcheck="false"></section>
       <p class="storage-settings-retention"><strong>旧目录会保留用于回退，不会自动删除。</strong>旧副本仍占空间，迁移完成不会立即释放这部分空间。复制并校验成功后才切换；失败继续使用原目录。</p>
@@ -92,6 +99,10 @@
     defaultButton = dialog.querySelector('#projectStorageDefaultChoose');
     migrateButton = dialog.querySelector('#projectStorageMigrate');
     closeButton = dialog.querySelector('#projectStorageClose');
+    profilePath = dialog.querySelector('#projectStorageProfile');
+    usageButton = dialog.querySelector('#storageUsageRefresh'); clearCacheButton = dialog.querySelector('#storageCacheClear');
+    usageList = dialog.querySelector('#storageUsageList'); usageStatus = dialog.querySelector('#storageUsageStatus');
+    usageButton.onclick = loadUsage; clearCacheButton.onclick = clearNetworkCache;
     closeButton.onclick = () => dialog.close();
     dialog.addEventListener('cancel', event => { if (closeButton.disabled) event.preventDefault(); });
     dialog.addEventListener('close', () => {
@@ -108,13 +119,13 @@
     ensureDialog();
     if (dialog.open) return;
     const request = ++revision;
-    info = null; busy = 'loading'; clearSelection(); renderInfo(null);
+    info = null; busy = 'loading'; usageBusy = false; usageList.hidden = true; clearSelection(); renderInfo(null);
     notify('正在读取当前项目存储位置…');
     dialog.showModal();
     if (!supported()) {
       busy = ''; updateControls();
       currentPath.placeholder = '仅桌面版可查看和迁移项目目录';
-      notify('请在豌豆 AI 桌面版中打开存储设置。浏览器页面不会修改本机项目目录。');
+      notify('这是独立的网页版：项目保存在当前浏览器中，不共享桌面版项目。浏览器页面不会修改本机项目目录。请在桌面版中查看和迁移其存储位置。');
       return;
     }
     if (typeof shell().onProjectStorageProgress === 'function') {
@@ -140,6 +151,37 @@
       if (request !== revision || !dialog.open) return;
       busy = ''; updateControls(); notify('无法读取项目存储信息，请稍后重新打开设置。', 'error');
     }
+  }
+
+  async function loadUsage() {
+    if (usageButton.disabled) return;
+    const request = revision; usageBusy = true; updateControls(); usageStatus.textContent = '正在统计文件大小…';
+    try {
+      const result = await shell().getStorageUsage();
+      if(request!==revision || !dialog.open)return;
+      if(!result?.success)throw Error(result?.error || '暂时无法统计存储占用');
+      usageList.replaceChildren();
+      for(const [label,value] of [
+        ['画布原图',result.sizes.originals],['项目备份',result.sizes.backups],['项目与索引',result.sizes.projects],
+        ['导出工程素材',result.sizes.exports],['写入临时文件（保留）',result.sizes.temporary],
+        ['工作台、配置与其他浏览器数据',result.sizes.profile],['可重建网络缓存',result.cacheBytes]
+      ]) { const name=document.createElement('dt'),size=document.createElement('dd');name.textContent=label;size.textContent=formatBytes(value);usageList.append(name,size); }
+      usageList.hidden=false;
+      usageStatus.textContent=result.partial?'部分文件暂不可读或扫描达到限制，以上为已统计占用；正在写入时数值也可能变化。':'以上为实际文件大小。保留的旧迁移目录、旧程序备份及用户手动下载不计入此表。';
+    } catch(error) { if(request===revision && dialog.open)usageStatus.textContent=error.message || '占用统计失败，请稍后重试。'; }
+    finally { if(request===revision){usageBusy=false;updateControls();} }
+  }
+
+  async function clearNetworkCache() {
+    if(clearCacheButton.disabled)return;
+    const request=revision;usageBusy=true;updateControls();usageStatus.textContent='请在系统提示中确认清理范围。';
+    try {
+      const result=await shell().clearNetworkCache();
+      if(request!==revision || !dialog.open)return;
+      usageStatus.textContent=result?.canceled?'已取消，缓存未清理。':result?.success?`网络缓存清理完成，释放 ${formatBytes(result.freedBytes)}。项目、原图和工作台数据均保留；可重新统计。`:result?.error || '清理未完成，请重试。';
+      if(result?.success)usageList.hidden=true;
+    }catch{if(request===revision && dialog.open)usageStatus.textContent='无法清理网络缓存，请稍后重试。';}
+    finally{if(request===revision){usageBusy=false;updateControls();}}
   }
 
   async function chooseDirectory(useDefault = false) {

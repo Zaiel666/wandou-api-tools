@@ -16,6 +16,7 @@
   let gl, program, texture, buffer, uniforms;
   let frame = 0, lastTime = null, elapsed = 0;
   let visible = true, ready = false, disposed = false, failed = false;
+  let stateGazeGain = 1, stateResponse = 0;
 
   const vertexSource = `
     attribute vec2 position;
@@ -94,9 +95,12 @@
   }
   function draw() {
     const t = elapsed % cycle, phase = t / cycle * Math.PI * 2;
-    const gaze = -look(t, .8, 3.15) + look(t, 4.55, 7.25);
+    const state = button.dataset.mascotState || 'idle';
+    stateGazeGain += ((state === 'thinking' ? .45 : 1) - stateGazeGain) * .1;
+    stateResponse += ((state === 'complete' ? .003 : state === 'error' ? -.002 : 0) - stateResponse) * .1;
+    const gaze = (-look(t, .8, 3.15) + look(t, 4.55, 7.25)) * stateGazeGain;
     gl.uniform4f(uniforms.pose, gaze, Math.sin(phase * 2) * .005,
-      Math.sin(phase) * .016, Math.sin(phase + .35) * .006);
+      Math.sin(phase) * .016 + stateResponse, Math.sin(phase + .35) * .006);
     gl.uniform1f(uniforms.blink, Math.max(eyelid(t, 3.65), eyelid(t, 7.65)));
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }

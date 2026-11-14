@@ -25,7 +25,7 @@ module.exports = function createCanvasMediaWriter({ directory, destination }) {
         const target = destination(payload.id);
         const temporary = path.join(directory(), `.media-${token}.tmp`);
         const handle = await fs.open(temporary, 'wx');
-        sessions.set(token, { owner, handle, temporary, target, length: payload.length, written: 0, bytes: 0, busy: false });
+        sessions.set(token, { owner, handle, temporary, target, id: payload.id, hash: crypto.createHash('sha256'), length: payload.length, written: 0, bytes: 0, busy: false });
         return { success: true, token };
       }
       const entry = sessions.get(token);
@@ -50,10 +50,19 @@ module.exports = function createCanvasMediaWriter({ directory, destination }) {
         }
         entry.written += chunk.length;
         entry.bytes += bytes.length;
+        entry.hash.update(bytes);
         entry.busy = false;
         return { success: true, written: entry.written, total: entry.length };
       }
       if (payload.action !== 'commit' || entry.written !== entry.length) throw Error('媒体尚未完整写入，未提交');
+      const actualId = `sha256-${entry.hash.digest('hex')}`;
+      if (entry.id.startsWith('sha256-') && entry.id !== actualId) throw Error('图片内容校验失败');
+      if (!entry.id.startsWith('sha256-')) {
+        try {
+          const existing = await fs.readFile(entry.target);
+          if (`sha256-${crypto.createHash('sha256').update(existing).digest('hex')}` !== actualId) throw Error('旧图片标识冲突，已保留原图');
+        } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      }
       await entry.handle.sync();
       const stat = await entry.handle.stat();
       if (stat.size !== entry.bytes) throw Error('媒体文件大小校验失败');

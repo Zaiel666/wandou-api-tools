@@ -16,7 +16,7 @@
     const value = history.get(id);
     if (value !== undefined) { historyBytes -= value.length * 2; history.delete(id); }
   }
-  const fields = ['url', 'maskUrl', 'maskSelectionUrl', 'doodleUrl'];
+  const fields = ['url', 'maskUrl', 'maskSelectionUrl', 'doodleUrl', 'markupUrl'];
   function storedReference(value) {
     const match = typeof value === 'string' && pattern.exec(value);
     return match ? `indexed-media:${match[1]}` : '';

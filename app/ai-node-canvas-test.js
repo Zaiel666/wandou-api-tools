@@ -507,18 +507,31 @@
     document.querySelector('.brand h1').innerHTML = '豌豆 AI<span class="brand-subtitle">绘图节点画布</span>';
     const badge = document.createElement('span');
     badge.className = 'test-version-badge';
-    badge.textContent = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '2.0.5 · 节点画布' : '测试版 · 独立数据';
-    badge.title = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix ? '当前正式版本：2.0.5' : '测试项目与正式版隔离；API 设置需要在测试页单独配置。';
+    const production = typeof canvasStoragePrefix !== 'undefined' && !canvasStoragePrefix;
+    badge.textContent = production ? '节点画布' : '测试版 · 独立数据';
+    badge.title = production ? '当前正式版本' : '测试项目与正式版隔离；API 设置需要在测试页单独配置。';
+    if (production) {
+      const version = window.wandouShell?.getClientConfig
+        ? window.wandouShell.getClientConfig().then(config => config.version)
+        : fetch('./VERSION.txt').then(response => response.ok ? response.text() : '');
+      Promise.resolve(version).then(value => {
+        const match = String(value || '').trim().match(/^v?(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)$/);
+        if (match) { badge.textContent = match[1] + ' · 节点画布'; badge.title = '当前正式版本：' + match[1]; }
+      }).catch(() => {});
+    }
     document.querySelector('.sidebar').append(badge);
     const creation = {
       image:['photo','参考图','blue'],sketch:['pencil','画板'],generator:['sparkles','AI 绘图','blue'],
       video:['video','AI 视频'],batch:['layout-grid','批量改图','blue'],keyword:['clipboard-text','提示词反推','blue'],png:['scissors','抠图 PNG','blue'],
       outpaint:['arrows-maximize','扩图','green'],style:['palette','风格迁移'],psd:['stack-2','分层 PSD','blue'],
-      vector:['vector-bezier','SVG / AI','blue'],audio:['music','AI 音频','blue']
+      svg:['vector-bezier','SVG 矢量','blue'],gif:['video','GIF 动图','blue'],
+      vector:['vector-bezier','矢量转换','blue'],audio:['music','AI 音频','blue']
     };
     document.querySelectorAll('[data-add-node]').forEach(button => {
       const [name, label, color] = creation[button.dataset.addNode];
+      const description = button.title;
       labelButton(button, label, name);
+      if (description) button.title = description;
       if (color) button.querySelector('.ui-icon').classList.add(color);
     });
     // Reuse real icons instead of absolutely positioned legacy glyphs, so long
@@ -584,6 +597,30 @@
       labelButton(button, button.getAttribute('aria-label') || button.textContent, name, tool !== 'arrange');
     }
     document.body.append(toolbar);
+    // Use the actual assistant geometry (it can be resized or floated), not a
+    // hard-coded chat width. Keep every action reachable by horizontal scroll.
+    const app = document.querySelector('.app');
+    let toolbarFrame = 0;
+    const positionToolbar = () => {
+      toolbarFrame = 0;
+      const wrap = canvasWrap.getBoundingClientRect();
+      const panel = assistantPanel.getBoundingClientRect();
+      const bottom = innerHeight - (innerWidth <= 900 ? 86 : 18);
+      const panelOverlaps = app.classList.contains('assistant-open') && panel.top < bottom && panel.bottom > bottom - 64;
+      const left = Math.max(8, wrap.left + 10);
+      const right = Math.max(left + 48, Math.min(innerWidth - 10, panelOverlaps ? panel.left - 10 : wrap.right - 10));
+      toolbar.style.left = `${(left + right) / 2}px`;
+      toolbar.style.maxWidth = `${right - left}px`;
+      toolbar.style.transform = 'translateX(-50%)';
+    };
+    const scheduleToolbar = () => { if (!toolbarFrame) toolbarFrame = requestAnimationFrame(positionToolbar); };
+    const toolbarLayout = new ResizeObserver(scheduleToolbar);
+    toolbarLayout.observe(canvasWrap); toolbarLayout.observe(assistantPanel);
+    new MutationObserver(scheduleToolbar).observe(app, {attributes:true, attributeFilter:['class']});
+    new MutationObserver(scheduleToolbar).observe(assistantPanel, {attributes:true, attributeFilter:['style']});
+    assistantPanel.addEventListener('transitionend', scheduleToolbar);
+    window.addEventListener('resize', scheduleToolbar);
+    scheduleToolbar();
     document.querySelectorAll('.sidebar [data-add-node],#newProjectButton,.project-transfer-actions button,.topbar-actions button,.assistant-launcher,.assistant-close,.assistant-starters button,.assistant-picker-trigger,.assistant-tool-button,#assistantSendButton,.test-canvas-toolbar button').forEach(button => button.classList.add('test-motion-button'));
     let mode = 'select';
     toolbar.addEventListener('click', event => {
@@ -632,4 +669,183 @@
     document.body.dataset.testReady = 'true';
   };
   if (!canvasStoragePrefix || (!window.wandouShell && !window.chrome?.webview)) boot();
+})();
+
+/* Window heavy node contents, retaining tiny geometry shells for the existing
+   marquee/connection/drag code. No project objects or saved fields are culled. */
+(() => {
+  const geometry = new WeakMap();
+  const fullRenderNode = renderNode, baseStabilize = stabilizeMountedNode;
+  let frame=0, measure=false, stopped=false, lastView=null, renderContext=null;
+  const FULL_CONTENT_BUDGET=96, OVERVIEW_IMAGE_BUDGET=96, MIN_CONTENT_WIDTH=112, MIN_CONTENT_HEIGHT=56;
+  const overviewPreviews=new WeakMap();
+  let totals={nodes:0,skipped:0,links:0,skippedLinks:0,mountedContents:0};
+  const intersects=(a,b)=>a.right>=b.left&&a.left<=b.right&&a.bottom>=b.top&&a.top<=b.bottom;
+  // v2 uses the base .node width for keyword editors; the legacy placement
+  // helper still reports 460px. Match the actual CSS before the first mount.
+  const layoutWidth=node=>Number(node.frameWidth)||(node.type==='keyword'?400:nodeWidth(node));
+  function context(withBudget=false){
+    const ctx={viewport:{left:-280,top:-280,right:canvasWrap.clientWidth+280,bottom:canvasWrap.clientHeight+280},active:document.activeElement?.closest('.node')?.dataset.id};
+    if(withBudget&&nodes.length>=80){
+      const centerX=(ctx.viewport.left+ctx.viewport.right)/2,centerY=(ctx.viewport.top+ctx.viewport.bottom)/2;
+      const candidates=[],visible=[];
+      for(const node of nodes){
+        if(pinned(node,ctx))continue;
+        const width=layoutWidth(node),size=geometry.get(node)||{width,height:node.type==='result'&&node.width>0&&node.height>0?width*node.height/node.width:360};
+        if(outside(node,size,ctx))continue;
+        const dx=(node.x+size.width/2)*view.zoom+view.x-centerX,dy=(node.y+size.height/2)*view.zoom+view.y-centerY;
+        const candidate={id:node.id,distance:dx*dx+dy*dy};visible.push(candidate);if(!tooSmall(size))candidates.push(candidate);
+      }
+      candidates.sort((a,b)=>a.distance-b.distance);ctx.fullContentIds=new Set(candidates.slice(0,FULL_CONTENT_BUDGET).map(item=>item.id));
+      visible.sort((a,b)=>a.distance-b.distance);ctx.previewIds=new Set(visible.filter(item=>!ctx.fullContentIds.has(item.id)).slice(0,OVERVIEW_IMAGE_BUDGET).map(item=>item.id));
+    }
+    return ctx;
+  }
+  function pinned(node,ctx){
+    return node.pending||node.regenerating||node.autoSplitAnalyzing||node.promptRefineOpen||node.promptRefineLoading||node.id===ctx.active||node.id===selectedNodeId||node.id===dragState?.id||node.id===resizeState?.id||node.id===activePromptLibraryNodeId
+      || imageGenerationJobs.has(node.id)||imageRegenerationJobs.has(node.id)||localResolutionJobs.has(node.id)
+      || !['image','result','generator','keyword'].includes(node.type);
+  }
+  function metrics(node,key){
+    const saved=geometry.get(node);
+    if(saved?.key===key)return saved;
+    // Successful still-image results have a CSS aspect-ratio and no status row.
+    // Their exact geometry is available without building/decoding their DOM.
+    if(node.type==='result'&&!node.pending&&!['video','audio','text'].includes(node.mediaType)&&node.mediaUrl&&node.width>0&&node.height>0&&!visibleResultStatus(node.status)&&!node.regenerating){
+      const width=layoutWidth(node);return {key,width,height:width*node.height/node.width};
+    }
+    // A newly loaded editor has no measured DOM yet. Keep its offscreen/overview
+    // shell lightweight instead of constructing hundreds of textareas merely
+    // to measure them. Visible, selected and focused editors mount normally;
+    // their real geometry replaces this runtime-only estimate before use.
+    if(['image','result','generator','keyword'].includes(node.type)){
+      const width=layoutWidth(node),prompt=Math.max(80,Math.min(600,Number(node.promptHeight)||140));
+      const estimate=node.type==='image'?width:node.type==='result'?260:node.type==='keyword'?prompt+300:prompt+510;
+      return {key,width,height:Math.max(Number(node.frameHeight)||0,estimate),estimated:true};
+    }
+    return null;
+  }
+  function outside(node,size,ctx){
+    const left=node.x*view.zoom+view.x,top=node.y*view.zoom+view.y;
+    return !intersects({left,top,right:left+size.width*view.zoom,bottom:top+size.height*view.zoom},ctx.viewport);
+  }
+  function tooSmall(size){return size.width*view.zoom<MIN_CONTENT_WIDTH||size.height*view.zoom<MIN_CONTENT_HEIGHT;}
+  function skipReason(node,size,ctx){
+    if(nodes.length<80||pinned(node,ctx))return '';
+    if(outside(node,size,ctx))return 'outside';
+    if(tooSmall(size))return 'detail';
+    return ctx.fullContentIds&&!ctx.fullContentIds.has(node.id)?'budget':'';
+  }
+  function visibleLinks(items,metricCache){
+    if(nodes.length<80)return items;
+    const viewport=context().viewport;
+    return items.filter(link=>{
+      const a=metricCache.get(link.from),b=metricCache.get(link.to);if(!a||!b)return true;
+      const x1=(a.x+a.width)*view.zoom+view.x,x2=b.x*view.zoom+view.x;
+      const y1=(a.y+a.height/2)*view.zoom+view.y,y2=(b.y+b.height/2)*view.zoom+view.y,pad=240*view.zoom;
+      return intersects({left:Math.min(x1,x2)-pad,right:Math.max(x1,x2)+pad,top:Math.min(y1,y2),bottom:Math.max(y1,y2)},viewport);
+    });
+  }
+  function shell(node,key,size,reason='outside',previewRequested=false){
+    const element=document.createElement('section');
+    element.className=`node ${node.type} viewport-placeholder${selectedNodeId===node.id?' selected':''}${selectionFrameMode==='marquee'&&boxSelectedIds.includes(node.id)?' box-selected':''}`;
+    element.dataset.id=node.id;element.dataset.renderKey=key;element.dataset.viewportSkipped='true';element.dataset.viewportReason=reason;
+    element.dataset.viewportPreviewRequested=String(previewRequested);
+    element.setAttribute('aria-label',(node.title||'画布节点')+(reason==='outside'?'，移入视口后显示':'，简化预览，单击显示完整控件'));
+    Object.assign(element.style,{left:`${node.x}px`,top:`${node.y}px`,width:`${size.width}px`,height:`${size.height}px`});
+    element.innerHTML='<div class="port in" data-port="in"></div><div class="port out" data-port="out"></div>';
+    // Only an existing small static preview is eligible. Never decode an original
+    // 4K image or start a GIF merely to decorate an overview placeholder.
+    let preview='';
+    if(previewRequested){let cached=overviewPreviews.get(node);if(!cached||cached.source!==node.previewUrl){cached={source:node.previewUrl,value:window.WandouCanvasPreview?.smallStaticPreview(node.previewUrl)||''};overviewPreviews.set(node,cached);}preview=cached.value;}
+    if(preview){
+      const image=document.createElement('img');image.className='viewport-node-preview';image.alt='';image.loading='lazy';image.decoding='async';image.src=preview;element.prepend(image);
+    }else if(reason!=='outside'){
+      const symbol=document.createElement('span');symbol.className='viewport-node-symbol';symbol.setAttribute('aria-hidden','true');symbol.textContent=['image','result'].includes(node.type)?'▧':'✦';element.prepend(symbol);
+    }
+    // A fast jump can expose a shell for a few frames. Clicking it synchronously
+    // restores its real controls and begins ordinary selection/dragging.
+    element.addEventListener('pointerdown',event=>{
+      if(event.button!==0)return;
+      restore(element,node);activePasteNodeId=node.id;
+      if(event.target.dataset.port)beginPortDrag(event,node.id,event.target.dataset.port);
+      else startDrag(event,node.id);
+    });
+    geometry.set(node,size);return element;
+  }
+  function restore(element,node){
+    const replacement=fullRenderNode(node,nodeRenderKey(node));
+    window.WandouCanvasPreview?.prepare(replacement);releaseMountedNode(element);
+    element.replaceWith(replacement);geometry.delete(node);baseStabilize(replacement,node);return replacement;
+  }
+  renderNode=function(node,key=nodeRenderKey(node)){
+    const ctx=renderContext||context(true),size=metrics(node,key),reason=size?skipReason(node,size,ctx):'';
+    if(reason)return shell(node,key,size,reason,Boolean(ctx.previewIds?.has(node.id)));
+    return fullRenderNode(node,key);
+  };
+  stabilizeMountedNode=function(element,node){if(element.dataset.viewportSkipped!=='true')baseStabilize(element,node);};
+  function flush(){
+    frame=0;if(stopped||!canvas.isConnected)return;
+    const readSizes=measure,viewChanged=!lastView||view.x!==lastView.x||view.y!==lastView.y||view.zoom!==lastView.zoom;
+    measure=false;lastView={...view};
+    const ctx=context(true),byId=new Map(nodes.map(node=>[node.id,node]));
+    const changes=[],mounted=new Map(),lineChanges=[];
+    // One batched read phase. Offscreen shells have no images/listeners to keep.
+    for(const element of canvas.querySelectorAll('.node')){
+      const node=byId.get(element.dataset.id);if(!node)continue;
+      const key=element.dataset.renderKey,isShell=element.dataset.viewportSkipped==='true';
+      let size=geometry.get(node);
+      if(!isShell&&(readSizes||!size||size.key!==key)){
+        size={key,width:element.offsetWidth,height:element.offsetHeight};geometry.set(node,size);
+      }
+      if(!size)size={key,width:element.offsetWidth,height:element.offsetHeight};
+      mounted.set(node.id,size);
+      const reason=skipReason(node,size,ctx),hide=Boolean(reason);
+      const previewRequested=Boolean(ctx.previewIds?.has(node.id));
+      if(hide!==isShell||(hide&&(element.dataset.viewportReason!==reason||element.dataset.viewportPreviewRequested!==String(previewRequested))))changes.push({element,node,size,hide,reason,previewRequested});
+    }
+    for(const path of lines.querySelectorAll('.line-path:not(.temp-line)')){
+      const from=byId.get(path.dataset.from),to=byId.get(path.dataset.to),a=mounted.get(path.dataset.from),b=mounted.get(path.dataset.to);
+      let hide=false;
+      if(nodes.length>=80&&from&&to&&a&&b){
+        const x1=(from.x+a.width)*view.zoom+view.x,x2=to.x*view.zoom+view.x,y1=(from.y+a.height/2)*view.zoom+view.y,y2=(to.y+b.height/2)*view.zoom+view.y,pad=240*view.zoom;
+        hide=!intersects({left:Math.min(x1,x2)-pad,right:Math.max(x1,x2)+pad,top:Math.min(y1,y2),bottom:Math.max(y1,y2)},ctx.viewport);
+      }
+      lineChanges.push({path,cut:path.nextElementSibling?.matches('.line-cut')?path.nextElementSibling:null,hide});
+    }
+    let restored=0,remaining=false,changed=false;
+    for(const {element,node,size,hide,reason,previewRequested} of changes){
+      if(hide){
+        const replacement=shell(node,element.dataset.renderKey,size,reason,previewRequested);
+        releaseMountedNode(element);element.replaceWith(replacement);changed=true;
+      }else if(restored<12||pinned(node,ctx)){
+        restore(element,node);restored++;changed=true;
+      }else remaining=true;
+    }
+    for(const {path,cut,hide}of lineChanges){const visibility=hide?'hidden':'';if(path.style.visibility!==visibility)path.style.visibility=visibility;if(cut&&cut.style.visibility!==visibility)cut.style.visibility=visibility;}
+    if(changed){updatePendingPort();scheduleGroupSelectionFrame();}
+    if(changed||viewChanged)scheduleDrawLinks();
+    const skipped=canvas.querySelectorAll('.viewport-placeholder').length;
+    totals={nodes:mounted.size,skipped,mountedContents:mounted.size-skipped,fullContentBudget:FULL_CONTENT_BUDGET,overviewImageBudget:OVERVIEW_IMAGE_BUDGET,overviewImages:canvas.querySelectorAll('.viewport-node-preview').length,detailShells:canvas.querySelectorAll('[data-viewport-reason="detail"]').length,budgetShells:canvas.querySelectorAll('[data-viewport-reason="budget"]').length,links:links.length,mountedLinks:lineChanges.length,skippedLinks:links.length-lineChanges.filter(x=>!x.hide).length};
+    if(remaining)schedule(false,true);
+  }
+  function schedule(readSizes=false,force=false){
+    if(!readSizes&&!force&&lastView&&Math.abs(view.x-lastView.x)<80&&Math.abs(view.y-lastView.y)<80&&Math.abs(view.zoom-lastView.zoom)<.04)return;
+    measure=measure||readSizes;if(!frame&&!stopped)frame=requestAnimationFrame(flush);
+  }
+  const originalRender=render;
+  render=function(...args){const previous=renderContext;renderContext=context(true);try{return originalRender.apply(this,args);}finally{renderContext=previous;schedule(true);}};
+  const originalRefresh=refreshRenderedNode;
+  refreshRenderedNode=function(...args){const result=originalRefresh.apply(this,args);schedule(true);return result;};
+  const originalTransform=applyCanvasTransform;
+  applyCanvasTransform=function(...args){const result=originalTransform.apply(this,args);schedule();return result;};
+  const originalSelection=updateSelection;
+  updateSelection=function(...args){const result=originalSelection.apply(this,args);schedule(false,true);return result;};
+  const originalLinks=drawLinks;
+  drawLinks=function(...args){const result=originalLinks.apply(this,args);schedule(false,true);return result;};
+  new ResizeObserver(()=>schedule(true)).observe(canvasWrap);
+  canvas.addEventListener('focusin',()=>schedule(false,true));canvas.addEventListener('focusout',()=>schedule(false,true));
+  canvas.addEventListener('load',()=>schedule(true),true);window.addEventListener('pointerup',()=>schedule(true),true);
+  window.addEventListener('pagehide',()=>{stopped=true;cancelAnimationFrame(frame);});
+  window.WandouCanvasViewport=Object.freeze({stats:()=>({...totals}),visibleLinks,refresh:()=>schedule(true)});schedule(true);
 })();

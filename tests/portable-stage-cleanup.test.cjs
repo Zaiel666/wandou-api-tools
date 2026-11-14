@@ -39,7 +39,10 @@ const unrelated = path.join(root, 'wandou-ai-stage-not-an-updater-guid');
       portableInstallContext: () => ({ installDirectory: install }),
       console,
     });
-    vm.runInContext(source.slice(start, end), context);
+    const protectedStart = source.indexOf('async function hasProtectedPortableData(');
+    const protectedEnd = source.indexOf('async function cleanupStalePortableInstallBackups(', protectedStart);
+    assert.ok(protectedStart >= 0 && protectedEnd > protectedStart);
+    vm.runInContext(source.slice(protectedStart, protectedEnd) + '\n' + source.slice(start, end), context);
     await vm.runInContext('cleanupStalePortableUpdateStages()', context);
 
     assert.equal(fs.existsSync(stale), false, 'stale updater stage is removed');

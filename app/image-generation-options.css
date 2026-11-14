@@ -1,0 +1,31 @@
+.wd-generation-options { color: inherit; min-width: 0; --text-primary: var(--text, #ededed); --text-secondary: var(--muted, #a3a3a3); --border-color: var(--border, #404040); --bg-secondary: var(--surface, #252525); --bg-tertiary: var(--soft, #383838); }
+.wd-generation-options .wd-generation-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 9px 0; min-width: 0; }
+.wd-generation-row > label { color: var(--text-secondary, #a3a3a3); font-size: 12px; line-height: 1.5; flex-shrink: 0; }
+.wd-generation-options .wd-generation-formats { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.wd-generation-options .choice-option, .wd-generation-select, .wd-generation-input { border: 1px solid var(--border-color, #404040); border-radius: 7px; background: var(--bg-secondary, #252525); color: var(--text-primary, #ededed); padding: 7px 9px; font: inherit; font-size: 12px; min-height: 32px; }
+.wd-generation-options .choice-option { cursor: pointer; }
+.wd-generation-options .choice-option.active { background: var(--bg-tertiary, #383838); border-color: var(--text-secondary, #aaa); color: var(--text-primary, #fff); }
+.wd-generation-options :is(button, input, select):focus-visible { outline: 2px solid var(--text-primary, #eee); outline-offset: 2px; }
+.wd-generation-options :disabled { cursor: not-allowed; opacity: .45; }
+.wd-generation-select { min-width: 84px; }
+.wd-generation-input { width: 88px; max-width: 100%; font-variant-numeric: tabular-nums; }
+.wd-generation-help, .wd-generation-error { color: var(--text-secondary, #a3a3a3); font-size: 11px; line-height: 1.65; margin: 7px 0 10px; overflow-wrap: anywhere; }
+.wd-generation-error { color: var(--text-primary, #eee); }
+.wd-generation-error[hidden] { display: none; }
+.wd-generation-animation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
+.wd-workbench-generation { grid-column: 1 / -1; flex-basis: 100%; width: 100%; padding: 10px 12px; border: 1px solid var(--border-color, #404040); border-radius: 10px; margin-top: 8px; }
+.wd-workbench-generation .wd-generation-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.wd-workbench-generation .wd-generation-options > :is(.wd-generation-help,.wd-generation-error,.wd-generation-animation) { grid-column: 1 / -1; }
+.wd-workbench-generation .wd-generation-options > .wd-generation-row:first-child { grid-column: 1 / -1; }
+.wd-workbench-generation .wd-generation-row { margin: 5px 0; }
+.wd-workbench-generation button.choice-option.active { background: var(--text-primary); color: var(--bg-secondary); border-color: var(--text-primary); }
+.wd-nonpixel-hidden { display: none !important; }
+html:not(.dark) .wd-workbench-generation, html:not(.dark) .wd-workbench-generation .wd-generation-options { --text-primary: #202020; --text-secondary: #606060; --bg-secondary: #fff; --bg-tertiary: #ececec; --border-color: #d4d4d4; }
+.dark .wd-workbench-generation, .dark .wd-workbench-generation .wd-generation-options { --text-primary: #ededed; --text-secondary: #aaa; --bg-secondary: #252525; --bg-tertiary: #383838; --border-color: #404040; }
+/* The legacy workbench uses !important for every toolbar input. Keep these new
+   controls neutral in both themes without changing its unrelated controls. */
+html[data-wd-theme] body .fixed[class*="bottom"] .wd-workbench-generation :is(button.choice-option,input.wd-generation-input,select.wd-generation-select) { background: var(--bg-secondary) !important; color: var(--text-primary) !important; border-color: var(--border-color) !important; }
+html[data-wd-theme] body .fixed[class*="bottom"] .wd-workbench-generation button.choice-option.active { background: var(--text-primary) !important; color: var(--bg-secondary) !important; border-color: var(--text-primary) !important; }
+.wd-animation-toggle { display: inline-flex; align-items: center; min-height: 30px; margin: 6px; padding: 5px 10px; border: 1px solid currentColor; border-radius: 7px; font-size: 12px; }
+@media (max-width: 1100px) { .wd-generation-animation { grid-template-columns: 1fr; } .wd-workbench-generation .wd-generation-options { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .wd-generation-options * { transition: none !important; animation: none !important; } }

@@ -3,7 +3,8 @@
     'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif',
     'image/svg+xml': 'svg', 'image/bmp': 'bmp', 'image/tiff': 'tiff', 'image/avif': 'avif',
     'video/mp4': 'mp4', 'video/webm': 'webm', 'audio/mpeg': 'mp3', 'audio/wav': 'wav',
-    'audio/x-wav': 'wav', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'text/plain': 'txt'
+    'audio/x-wav': 'wav', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'text/plain': 'txt',
+    'image/vnd.adobe.photoshop': 'psd'
   };
 
   async function readSource(source) {
@@ -41,7 +42,13 @@
     if (head.startsWith('BM')) return 'image/bmp';
     if (/^(?:II\*\x00|MM\x00\*)/.test(head)) return 'image/tiff';
     if (head.slice(4, 8) === 'ftyp' && /avif|avis/.test(head.slice(8))) return 'image/avif';
+    if (head.startsWith('8BPS')) return 'image/vnd.adobe.photoshop';
+    // A provider may return SVG bytes with a generic (or incorrect PNG) MIME.
+    // Detect the document prefix without rewriting it; original export is byte-for-byte.
+    const xmlHead = (await blob.slice(0, 4096).text()).replace(/^\uFEFF/, '').trimStart();
+    if (/^(?:<\?xml[\s\S]*?\?>\s*)?(?:<!--[\s\S]*?-->\s*)*<svg(?:\s|>)/i.test(xmlHead)) return 'image/svg+xml';
     const type = String(blob.type || '').split(';')[0].toLowerCase();
+    if(type==='image/gif'||fallback==='image/gif')throw new Error('原文件内容与 GIF 格式不符，不能以 GIF 格式导出');
     if (/^(?:text\/html|application\/json)/.test(type)) throw new Error('服务器没有返回图片文件，请重试');
     return extensions[type] ? type : fallback || type || 'application/octet-stream';
   }
@@ -49,7 +56,7 @@
   function outputName(filename, type) {
     let name = String(filename || '豌豆图片').split(/[\\/]/).pop().replace(/[<>:"|?*\x00-\x1f]/g, '_').replace(/[. ]+$/, '').slice(0, 160) || '豌豆图片';
     const ext = extensions[type];
-    if (ext) name = name.replace(/\.(?:png|jpe?g|webp|gif|svg|bmp|tiff?|avif|data|mp4|webm|mp3|wav|ogg|m4a|txt)$/i, '') + '.' + ext;
+    if (ext) name = name.replace(/\.(?:png|jpe?g|webp|gif|svg|bmp|tiff?|avif|psd|data|mp4|webm|mp3|wav|ogg|m4a|txt)$/i, '') + '.' + ext;
     return name;
   }
 

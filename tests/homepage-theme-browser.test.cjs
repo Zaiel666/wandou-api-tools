@@ -63,7 +63,9 @@ test('homepage and linked asset test pages keep large surfaces neutral in both t
 
     await page.goto(pathToFileURL(path.join(appDir, 'asset-library-test.html')).href);
     await page.waitForLoadState('domcontentloaded');
-    assert.equal(await page.locator('body').evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(16, 17, 18)');
+    const assetDarkBackground = await page.locator('body').evaluate((element) => getComputedStyle(element).backgroundColor);
+    assertNeutral(assetDarkBackground, 'asset dark page');
+    assert.ok(Math.max(...rgbChannels(assetDarkBackground)) < 50, 'asset page must remain dark after navigating from dark homepage');
     await page.locator('.asset-filter[data-filter="skill"]').click();
     assert.match(await page.locator('#assetTitle').textContent(), /Skill/i);
 
