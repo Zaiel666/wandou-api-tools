@@ -7,7 +7,7 @@ const {spawnSync}=require('node:child_process');
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'wandou-installer-'));
 const harness=path.join(temp,'installer-tests.exe');
 test.before(()=>{
- const compile=spawnSync('C:/Windows/Microsoft.NET/Framework64/v4.0.30319/csc.exe',['/nologo','/target:exe','/main:InstallerBehaviorTests','/reference:System.Windows.Forms.dll','/reference:System.Drawing.dll','/reference:System.Web.Extensions.dll','/reference:System.IO.Compression.dll','/reference:System.IO.Compression.FileSystem.dll',`/out:${harness}`,path.resolve(__dirname,'../desktop-client/local-installer.cs'),path.join(__dirname,'installer-behavior-harness.cs')],{encoding:'utf8',windowsHide:true});
+ const compile=spawnSync('C:/Windows/Microsoft.NET/Framework64/v4.0.30319/csc.exe',['/nologo','/target:exe','/main:InstallerBehaviorTests','/reference:System.Windows.Forms.dll','/reference:System.Drawing.dll','/reference:System.Web.Extensions.dll','/reference:System.IO.Compression.dll','/reference:System.IO.Compression.FileSystem.dll',`/out:${harness}`,path.resolve(__dirname,'../desktop-client/local-installer.cs'),path.resolve(__dirname,'../desktop-client/managed-update-core.cs'),path.join(__dirname,'installer-behavior-harness.cs')],{encoding:'utf8',windowsHide:true});
  assert.equal(compile.status,0,compile.stdout+compile.stderr);
 });
 test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));

@@ -13,14 +13,14 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Web.Script.Serialization;
 
-// Installation changes only the five package-owned entries. It never moves,
-// deletes or overwrites project data, browser profiles or user-selected files.
+// Installation replaces only hash-identified program files. Unknown files in
+// both the root and nested program directories stay in place.
 public static class LocalInstallerCore
 {
     [DllImport("kernel32.dll",SetLastError=true)] static extern IntPtr OpenProcess(uint access,bool inherit,int processId);
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool QueryFullProcessImageName(IntPtr process,uint flags,StringBuilder name,ref uint length);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
-    public static readonly string[] Managed = { "豌豆AI工具.exe", "程序文件", "resources", "网页版.html", "使用说明.txt" };
+    public static readonly string[] Managed = { "豌豆AI工具.exe", "程序文件", "resources", "网页版.html", "使用说明.txt", ManagedUpdateCore.ManifestName };
     static readonly StringComparer Names = StringComparer.OrdinalIgnoreCase;
     public static string Extended(string value) { return value.StartsWith(@"\\?\") ? value : @"\\?\" + Path.GetFullPath(value); }
     public static void EnableLongPaths() { AppContext.SetSwitch("Switch.System.IO.UseLegacyPathHandling", false); AppContext.SetSwitch("Switch.System.IO.BlockLongPaths", false); }
@@ -102,6 +102,7 @@ public static class LocalInstallerCore
     }
     public static List<ZipArchiveEntry> ValidateArchive(ZipArchive zip, string target, out long bytes)
     {
+        ManagedUpdateCore.ValidateArchive(zip);
         bytes = 0;
         var entries = new List<ZipArchiveEntry>(); var unique = new HashSet<string>(Names);
         foreach (var entry in zip.Entries)
@@ -124,8 +125,8 @@ public static class LocalInstallerCore
         foreach(var entry in entries)
         {
             var relative=entry.FullName.Replace('/','\\').TrimEnd('\\');
-            var updateStage=Path.Combine(Path.GetDirectoryName(target),"wandou-ai-stage-"+new String('a',32),relative);
-            var rollback=Path.Combine(target+".previous-20991231-235959",relative);
+            var updateStage=Path.Combine(Path.GetDirectoryName(target),".wandou-program-stage-"+new String('a',32),relative);
+            var rollback=Path.Combine(Path.GetDirectoryName(target),ManagedUpdateCore.BackupPrefix(target)+new String('a',32),"files",relative);
             if(Path.Combine(target,relative).Length>240||updateStage.Length>240||rollback.Length>240)
                 throw new IOException("目标路径太深，当前安装包无法为后续更新和回退保留足够路径长度。请缩短上级目录，例如选择磁盘根目录下的“豌豆AI工具”。尚未写入安装文件。");
         }
@@ -147,6 +148,8 @@ public static class LocalInstallerCore
     static string InstallLocked(Stream package, string directory, string expectedVersion, Action<int> progress, Action<string> shortcuts, Func<long> freeSpace, Action<string> fault)
     {
         EnableLongPaths();
+        CheckRunning(Path.GetFullPath(directory));
+        ManagedUpdateCore.Recover(Path.GetFullPath(directory));
         var target = ValidateTarget(directory); var parent = Path.GetDirectoryName(target);
         string stage = Path.Combine(parent, ".wandou-install-stage-" + Guid.NewGuid().ToString("N"));
         string backup = Path.Combine(parent, ".wandou-install-backup-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-") + Guid.NewGuid().ToString("N").Substring(0,8));
@@ -174,16 +177,12 @@ public static class LocalInstallerCore
                 if (fault != null) fault("extracted");
                 ValidateTarget(target); // Recheck before changing any installed entry.
                 madeTarget = !Directory.Exists(Extended(target)); Directory.CreateDirectory(Extended(target));
-                Directory.CreateDirectory(Extended(backup));
-                foreach (var name in Managed) if (Exists(Path.Combine(target,name))) { Move(Path.Combine(target,name),Path.Combine(backup,name)); old.Add(name); }
-                if (fault != null) fault("backed-up");
-                foreach (var name in Managed) { Move(Path.Combine(stage,name),Path.Combine(target,name)); installed.Add(name); if (fault != null) fault("installed:"+name); }
-                if (shortcuts != null) shortcuts(target);
+                backup = ManagedUpdateCore.Apply(stage,target,expectedVersion,fault,()=>{if(shortcuts!=null)shortcuts(target);});
                 committed = true;
                 try { foreach (var name in new[] { "程序文件", "resources" }) File.SetAttributes(Extended(Path.Combine(target,name)), File.GetAttributes(Extended(Path.Combine(target,name))) | FileAttributes.Hidden); } catch { }
                 try { if (old.Count > 0) File.SetAttributes(Extended(backup), File.GetAttributes(Extended(backup)) | FileAttributes.Hidden); } catch { }
                 if (progress != null) progress(100);
-                return old.Count > 0 ? backup : "";
+                return backup;
             }
             catch (Exception original)
             {

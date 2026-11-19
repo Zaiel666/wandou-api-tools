@@ -13,7 +13,7 @@ async function fixture(count,fn){
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route(/^https?:/,r=>r.abort());
   await page.goto(pathToFileURL(source).href);
-  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   await page.evaluate(count=>{
    apiKeyInput.value='synthetic-key-never-sent';nodes=[];links=[];nodeId=1;
    window.calls=[];window.tasks=[];

@@ -442,11 +442,15 @@ async function openAnnouncement() {
 }
 
 function showUpdateDialog() {
-  if (!updateInfo?.available || updateStarted) return;
-  dialogVersion.textContent = `当前 ${updateInfo.currentVersion} · 最新 ${updateInfo.latestVersion}`;
-  const location = canvasBackupDirectory ? `\n\n工作流备份位置：\n${canvasBackupDirectory}` : "";
-  dialogNotes.textContent = `${updateInfo.notes || "新版本已经准备好。"}\n\n更新前会强制保存并校验当前工作流，保存失败时不会更新。${location}`;
-  dialogOverlay.hidden = false;
+  if ((!updateInfo?.available && !updateInfo?.manualRequired) || updateStarted) return;
+  const manual=Boolean(updateInfo.manualRequired);
+  $('dialogTitle').textContent=manual?'安装更新说明':'发现新版本';
+  dialogVersion.textContent=updateInfo.latestVersion?`当前 ${updateInfo.currentVersion} · 目标 ${updateInfo.latestVersion}`:`当前 ${updateInfo.currentVersion}`;
+  dialogDownload.textContent=manual?'打开官方下载页':'立即更新';
+  dialogDownload.disabled=false;dialogCancel.disabled=false;
+  const location=canvasBackupDirectory?`\n\n工作流备份位置：\n${canvasBackupDirectory}`:'';
+  dialogNotes.textContent=manual?`${updateInfo.manualReason||'请通过官方安装器更新。'}\n\n打开下载页不会退出软件。安装前请保存并退出，并选择原软件目录。`:`${updateInfo.notes||'新版本已经准备好。'}\n\n更新前会保存并校验当前工作流，保存失败时不会更新。${location}`;
+  dialogOverlay.hidden=false;
 }
 
 function wait(milliseconds) {
@@ -461,11 +465,13 @@ async function refreshUpdateInfo({ retries = 0 } = {}) {
     } catch (error) {
       result = { available: false, error: error.message || "检查更新失败" };
     }
-    if (!result?.error || attempt === retries) break;
+    if (!result?.error || result?.retryable === false || attempt === retries) break;
     await wait(1500 * (attempt + 1));
   }
   updateInfo = result;
-  updateBadge.hidden = !updateInfo?.available;
+  updateBadge.hidden = !(updateInfo?.available || updateInfo?.manualRequired);
+  const badgeLabel=updateBadge.querySelector('span:last-child');
+  if(badgeLabel)badgeLabel.textContent=updateInfo?.available?'发现新版本':'更新说明';
   return updateInfo;
 }
 
@@ -475,7 +481,7 @@ async function checkForUpdatesManually() {
   showToast("正在检查更新…");
   try {
     await refreshUpdateInfo({ retries: 2 });
-    if (updateInfo?.available) showUpdateDialog();
+    if (updateInfo?.available || updateInfo?.manualRequired) showUpdateDialog();
     else if (updateInfo?.error) showToast(`暂时无法检查更新：${updateInfo.error}`, true);
     else showToast(`当前 v${version || updateInfo?.currentVersion || ""} 已是最新版本`);
   } finally {
@@ -489,7 +495,7 @@ async function openFreshUpdateDialog() {
   showToast("正在检查更新…");
   try {
     await refreshUpdateInfo({ retries: 2 });
-    if (updateInfo?.available) showUpdateDialog();
+    if (updateInfo?.available || updateInfo?.manualRequired) showUpdateDialog();
     else if (updateInfo?.error) showToast(`暂时无法检查更新：${updateInfo.error}`, true);
     else showToast(`当前 v${version || updateInfo?.currentVersion || ""} 已是最新版本`);
   } finally {
@@ -590,7 +596,17 @@ updateBadge.addEventListener("click", openFreshUpdateDialog);
 versionText.addEventListener("click", checkForUpdatesManually);
 dialogCancel.addEventListener("click", () => { dialogOverlay.hidden = true; });
 dialogDownload.addEventListener("click", async () => {
-  if (!updateInfo?.available || updateStarted) return;
+  if (updateStarted) return;
+  if (updateInfo?.manualRequired) {
+    dialogDownload.disabled = true;
+    try {
+      const result = await window.wandouShell?.openUpdateDownloads();
+      if (!result?.success) showToast('无法打开官方下载页，请稍后重试', true);
+    } catch { showToast('无法打开官方下载页，请稍后重试', true); }
+    finally { dialogDownload.disabled = false; }
+    return;
+  }
+  if (!updateInfo?.available) return;
   updateStarted = true;
   document.body.classList.add("update-in-progress");
   dialogCancel.disabled = true;

@@ -2,8 +2,9 @@
   'use strict';
   let dialog, currentPath, currentMeta, defaultSection, defaultPath, targetSection, targetPath, targetMeta, previousSection, previousPath;
   let status, chooseButton, defaultButton, migrateButton, closeButton, usageButton, clearCacheButton, usageList, usageStatus, profilePath;
-  let usageBusy = false;
+  let usageBusy = false, originalPath, originalStatus, browserSessionPath, browserLegacyPath, browserSessionStatus;
   let info = null, selection = null, busy = '', revision = 0, stopProgress = null;
+  const usageScope = '按需统计文件大小，不读取原图内容。原图、项目、备份和写入临时文件均不会在这里删除。';
   const shell = () => global.wandouShell;
   const supported = () => ['getProjectStorageInfo', 'chooseProjectStorageDirectory', 'requestProjectStorageMigration']
     .every(name => typeof shell()?.[name] === 'function');
@@ -32,7 +33,7 @@
     closeButton.disabled = busy === 'choosing' || busy === 'migrating' || busy === 'restarting';
     usageButton.disabled = Boolean(busy) || usageBusy || typeof shell()?.getStorageUsage !== 'function';
     clearCacheButton.disabled = Boolean(busy) || usageBusy || typeof shell()?.clearNetworkCache !== 'function';
-    dialog.setAttribute('aria-busy', busy ? 'true' : 'false');
+    dialog.setAttribute('aria-busy', busy || usageBusy ? 'true' : 'false');
   }
 
   function clearSelection() {
@@ -61,6 +62,18 @@
     previousPath.title = previousPath.value;
     profilePath.value = value?.profileDirectory || '';
     profilePath.title = profilePath.value;
+    browserSessionPath.value=value?.browserSessionDirectory || '';
+    browserSessionPath.title=browserSessionPath.value;
+    browserLegacyPath.value=value?.browserSessionLegacyDirectory || value?.profileDirectory || '';
+    browserLegacyPath.title=browserLegacyPath.value;
+    browserSessionStatus.textContent=browserSessionPath.value
+      ? '工作台原图、本地副本、历史记录及浏览器中的 API 设置保存在此目录；随后生成的内容继续写入这里。浏览器数据库不等于可直接双击的图片，下载时仍可自行选择位置。'
+      : '当前桌面版本尚未提供独立工作台目录；请勿把空路径视为已完成迁移。';
+    originalPath.value = value?.originalFiles?.originalDirectory || '';
+    originalPath.title = originalPath.value;
+    const originals = value?.originalFiles;
+    originalStatus.textContent = !originals ? '当前桌面版本未提供标准原图状态。'
+      : `${originals.running ? '后台正在逐张整理，保存和查看仍可使用。' : '支持的图片会按原始格式保存；旧件会在后台逐张整理。'}本次后台已新增 ${originals.converted || 0} 张（${formatBytes(originals.addedBytes || 0)}），保留兼容格式 ${originals.skipped || 0} 张。${originals.lastError ? ' 最近未完成原因：' + originals.lastError : ''}`;
     updateControls();
   }
 
@@ -75,9 +88,12 @@
       <header class="storage-settings-head"><h2 id="projectStorageTitle">项目存储设置</h2><button type="button" id="projectStorageClose" aria-label="关闭项目存储设置">关闭</button></header>
       <section class="storage-settings-section"><label for="projectStorageCurrent">当前项目目录</label><input id="projectStorageCurrent" readonly spellcheck="false" placeholder="正在读取…"><p id="projectStorageCurrentMeta" class="storage-settings-meta"></p></section>
       <section id="projectStorageDefaultSection" class="storage-settings-section" hidden><label for="projectStorageDefault">程序内默认目录</label><input id="projectStorageDefault" readonly spellcheck="false"><p class="storage-settings-meta">项目和原图默认自动保存在程序文件夹内的“豌豆AI数据”。移动软件时，请一并保留这个数据文件夹；也可以选择独立位置。</p></section>
-      <p id="projectStorageScope" class="storage-settings-scope">这里管理节点画布项目、原图等项目文件。API 密钥、软件配置和 AI 绘图工作台的浏览器存储仍保留在原位置，独立于项目目录；下载图片时另行选择保存位置。</p>
-      <section class="storage-settings-section"><label for="projectStorageProfile">工作台与软件配置目录</label><input id="projectStorageProfile" readonly spellcheck="false" placeholder="旧版桌面未提供此路径"><p class="storage-settings-meta">此目录包含 API 设置、工作台项目和浏览器存储，可能仍位于系统盘。迁移上方画布目录不会移动此目录。网页版的数据保存在你使用的浏览器中，与桌面版独立；更换浏览器、清除网站数据或移动网页版文件可能使旧项目无法访问。</p></section>
-      <section class="storage-settings-section" aria-labelledby="storageUsageTitle"><h3 id="storageUsageTitle">存储占用</h3><div class="storage-usage-actions"><button type="button" id="storageUsageRefresh">统计占用</button><button type="button" id="storageCacheClear">清理网络缓存…</button></div><dl id="storageUsageList" class="storage-usage-list" hidden></dl><p id="storageUsageStatus" class="storage-settings-meta" role="status">按需统计文件大小，不读取原图内容。原图、项目、备份和写入临时文件均不会在这里删除。</p></section>
+      <p id="projectStorageScope" class="storage-settings-scope">这里管理节点画布、原图及 AI 绘图工作台的浏览器作品。工作台历史、原图、本地副本和浏览器内的 API 设置随项目目录保存；软件主配置仍单独保留。下载图片时另行选择保存位置。</p>
+      <section class="storage-settings-section"><label for="projectStorageOriginals">可直接查看的画布原图目录</label><input id="projectStorageOriginals" readonly spellcheck="false"><p id="projectStorageOriginalStatus" class="storage-settings-meta" role="status"></p><p class="storage-settings-meta">PNG、JPEG、WebP、GIF 等受支持原图保持原始字节，不会再次生成或压缩。旧 .data 和新写入的兼容副本均保留用于旧版回退，因此会额外占用约一份原图空间。空间不足、格式不支持或校验失败时继续使用兼容原件；不会删除原件，也不会更换项目引用。单张位置可在“资产 → 所有图片 → 原文件位置”查看。</p></section>
+      <section class="storage-settings-section"><label for="projectStorageBrowserSession">工作台与浏览器作品目录</label><input id="projectStorageBrowserSession" readonly spellcheck="false" placeholder="当前桌面尚未提供此路径"><p id="projectStorageBrowserStatus" class="storage-settings-meta"></p></section>
+      <section class="storage-settings-section"><label for="projectStorageBrowserLegacy">保留的旧浏览器存储位置</label><input id="projectStorageBrowserLegacy" readonly spellcheck="false"><p class="storage-settings-meta">旧版数据副本保留供恢复，可能仍占系统盘空间，不会自动删除。它不是新作品的实时副本；回退旧版前需先还原最新浏览器数据，不能只替换程序。</p></section>
+      <section class="storage-settings-section"><label for="projectStorageProfile">软件主配置目录</label><input id="projectStorageProfile" readonly spellcheck="false" placeholder="旧版桌面未提供此路径"><p class="storage-settings-meta">主题、目录选择等主配置仍保留在此位置。独立网页版继续保存在你使用的浏览器中，不与桌面版共享；清除网站数据或更换浏览器可能使旧项目无法访问。</p></section>
+      <section class="storage-settings-section" aria-labelledby="storageUsageTitle"><h3 id="storageUsageTitle">存储占用</h3><div class="storage-usage-actions"><button type="button" id="storageUsageRefresh">统计占用</button><button type="button" id="storageCacheClear">清理网络缓存…</button></div><dl id="storageUsageList" class="storage-usage-list" hidden></dl><p id="storageUsageStatus" class="storage-settings-meta" role="status">${usageScope}</p></section>
       <section id="projectStorageTargetSection" class="storage-settings-section" hidden><label for="projectStorageTarget">迁移后的项目目录</label><input id="projectStorageTarget" readonly spellcheck="false"><p id="projectStorageTargetMeta" class="storage-settings-meta"></p></section>
       <section id="projectStoragePreviousSection" class="storage-settings-section" hidden><label for="projectStoragePrevious">保留的上一目录</label><input id="projectStoragePrevious" readonly spellcheck="false"></section>
       <p class="storage-settings-retention"><strong>旧目录会保留用于回退，不会自动删除。</strong>旧副本仍占空间，迁移完成不会立即释放这部分空间。复制并校验成功后才切换；失败继续使用原目录。</p>
@@ -100,6 +116,10 @@
     migrateButton = dialog.querySelector('#projectStorageMigrate');
     closeButton = dialog.querySelector('#projectStorageClose');
     profilePath = dialog.querySelector('#projectStorageProfile');
+    browserSessionPath=dialog.querySelector('#projectStorageBrowserSession');
+    browserLegacyPath=dialog.querySelector('#projectStorageBrowserLegacy');
+    browserSessionStatus=dialog.querySelector('#projectStorageBrowserStatus');
+    originalPath = dialog.querySelector('#projectStorageOriginals'); originalStatus = dialog.querySelector('#projectStorageOriginalStatus');
     usageButton = dialog.querySelector('#storageUsageRefresh'); clearCacheButton = dialog.querySelector('#storageCacheClear');
     usageList = dialog.querySelector('#storageUsageList'); usageStatus = dialog.querySelector('#storageUsageStatus');
     usageButton.onclick = loadUsage; clearCacheButton.onclick = clearNetworkCache;
@@ -120,6 +140,7 @@
     if (dialog.open) return;
     const request = ++revision;
     info = null; busy = 'loading'; usageBusy = false; usageList.hidden = true; clearSelection(); renderInfo(null);
+    usageStatus.textContent = usageScope;
     notify('正在读取当前项目存储位置…');
     dialog.showModal();
     if (!supported()) {
@@ -155,19 +176,37 @@
 
   async function loadUsage() {
     if (usageButton.disabled) return;
-    const request = revision; usageBusy = true; updateControls(); usageStatus.textContent = '正在统计文件大小…';
+    const request = revision; usageBusy = true; usageList.hidden=true; updateControls(); usageStatus.textContent = '正在统计文件大小…';
     try {
       const result = await shell().getStorageUsage();
       if(request!==revision || !dialog.open)return;
       if(!result?.success)throw Error(result?.error || '暂时无法统计存储占用');
       usageList.replaceChildren();
-      for(const [label,value] of [
-        ['画布原图',result.sizes.originals],['项目备份',result.sizes.backups],['项目与索引',result.sizes.projects],
-        ['导出工程素材',result.sizes.exports],['写入临时文件（保留）',result.sizes.temporary],
-        ['工作台、配置与其他浏览器数据',result.sizes.profile],['可重建网络缓存',result.cacheBytes]
-      ]) { const name=document.createElement('dt'),size=document.createElement('dd');name.textContent=label;size.textContent=formatBytes(value);usageList.append(name,size); }
+      const details=result.originalBreakdown, keys=['standard','compatibility','metadata','recovery','other'];
+      const hasDetails=details && keys.every(key=>Number.isFinite(details[key]) && details[key]>=0)
+        && keys.reduce((sum,key)=>sum+details[key],0)===result.sizes.originals;
+      const rows=[['画布媒体合计',result.sizes.originals,hasDetails?'以下五项已包含在合计中，不重复相加。':'含原图及兼容文件；当前桌面版本未提供分类明细。']];
+      if(hasDetails)rows.push(
+        ['标准原图文件',details.standard,'可直接查看的格式文件；本次未校验图片内容。',true],
+        ['.data 兼容原件',details.compatibility,'新旧保存均会使用，也可能是唯一原件，需保留。',true],
+        ['校验与发布记录',details.metadata,'用于校验和中断恢复，需与原件一并保留。',true],
+        ['恢复保留件',details.recovery,'中断写入或修复前保留的字节，未判断是否可删除。',true],
+        ['其他媒体文件',details.other,'未归入上述类别的文件，保持原样。',true]
+      );
+      rows.push(['项目备份',result.sizes.backups,'用于恢复历史项目，统计不会删除备份。'],['项目与索引',result.sizes.projects],
+        ['导出工程素材',result.sizes.exports],['写入临时文件（保留）',result.sizes.temporary,'可能仍在使用或用于恢复，不按文件名判断可清理。'],
+        ['工作台与浏览器作品',result.sizes.browserSession ?? 0],['主配置与旧浏览器兼容副本',result.sizes.profile],['可重建网络缓存',result.cacheBytes]);
+      for(const [label,value,note,detail] of rows) {
+        const name=document.createElement('dt'),size=document.createElement('dd');name.textContent=label;size.textContent=formatBytes(value);
+        if(note){const help=document.createElement('span');help.className='storage-usage-note';help.textContent=note;name.append(help);}
+        if(detail){name.className='storage-usage-detail';size.className='storage-usage-detail';}
+        usageList.append(name,size);
+      }
       usageList.hidden=false;
-      usageStatus.textContent=result.partial?'部分文件暂不可读或扫描达到限制，以上为已统计占用；正在写入时数值也可能变化。':'以上为实际文件大小。保留的旧迁移目录、旧程序备份及用户手动下载不计入此表。';
+      const reasons={'entry-limit':'达到文件数量限制','time-limit':'达到扫描时间限制','redirected-path':'已跳过链接或重定向目录','unreadable-entry':'部分文件无法读取','missing-directory':'部分目录不存在','changed-during-scan':'扫描期间文件发生变化','cache-unavailable':'网络缓存大小暂不可用','location-changed':'存储位置已变化，请重新统计'};
+      const reasonText=[...new Set((Array.isArray(result.partialReasons)?result.partialReasons:[]).map(code=>reasons[code]).filter(Boolean))].join('；');
+      usageStatus.textContent=(result.partial?`部分统计：${reasonText || '部分文件暂不可读或扫描达到限制'}。以上仅为已统计的文件大小。`:'已完成本次统计。')
+        +'按目录和文件名分类，未校验内容或项目引用；不代表可释放空间。文件大小不等于磁盘实际分配空间，写入期间数值可能变化。旧迁移目录、旧程序备份及用户手动下载不计入此表。';
     } catch(error) { if(request===revision && dialog.open)usageStatus.textContent=error.message || '占用统计失败，请稍后重试。'; }
     finally { if(request===revision){usageBusy=false;updateControls();} }
   }

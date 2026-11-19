@@ -34,8 +34,8 @@
         <a href="./gridform.html" target="_blank" data-tab-title="网格海报工作台"><span class="home-test-side-icon" aria-hidden="true">▥</span><span>网格海报</span></a>
         <a href="https://wandou-video-workbench.netlify.app/" target="_blank" rel="noopener noreferrer" data-tab-title="录音转文字"><span class="home-test-side-icon" aria-hidden="true">◉</span><span>录音转文字</span></a>
         <a href="./type-motion.html" data-tab-title="文字动态海报"><span class="home-test-side-icon" aria-hidden="true">✦</span><span>文字动态海报</span></a>
-        <a href="#image-tools"><span class="home-test-side-icon" aria-hidden="true">▧</span><span>图片工具</span></a>
-        <a href="#copy-tools"><span class="home-test-side-icon" aria-hidden="true">≡</span><span>提示词工具</span></a>
+        <a href="#image-tools" data-home-nav="home" data-home-anchor="image-tools"><span class="home-test-side-icon" aria-hidden="true">▧</span><span>图片工具</span></a>
+        <a href="#copy-tools" data-home-nav="home" data-home-anchor="copy-tools"><span class="home-test-side-icon" aria-hidden="true">≡</span><span>提示词工具</span></a>
       </nav>
       <div class="home-test-side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5C9 3 5 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15"/></svg>内容与帮助</div>
       <nav class="home-test-side-nav home-test-side-nav-nested" aria-label="内容与帮助">
@@ -101,18 +101,7 @@
           </svg>
         </button>
         <button class="theme-toggle" type="button" aria-label="切换白天和暗色模式" data-theme-toggle>
-          <svg class="toolbar-icon theme-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="4"/>
-            <path d="M12 2v2"/>
-            <path d="M12 20v2"/>
-            <path d="m4.93 4.93 1.41 1.41"/>
-            <path d="m17.66 17.66 1.41 1.41"/>
-            <path d="M2 12h2"/>
-            <path d="M20 12h2"/>
-            <path d="m4.93 19.07 1.41-1.41"/>
-            <path d="m17.66 6.34 1.41-1.41"/>
-          </svg>
-          <span data-theme-icon hidden>☾</span>
+          <span class="toolbar-icon theme-icon-live" data-theme-icon aria-hidden="true"></span>
           <span data-theme-label>暗色</span>
         </button>
       </div>
@@ -1135,8 +1124,8 @@
 
         <article class="info-card">
           <span class="info-kicker">数据说明</span>
-          <h3>配置保存在本机浏览器</h3>
-          <p>API 密钥和主题配置保存在本地浏览器中；客户可以自行清理缓存，功能页面仍保持独立打开。</p>
+          <h3>设置保存在本机</h3>
+          <p>API 密钥和主题设置由软件保存在本机。存储设置可查看项目和原图的位置；清理前请先确认需要保留的数据。</p>
         </article>
         <article class="info-card guide-card" role="button" tabindex="0" data-guide-open aria-label="打开使用教程">
           <span class="info-kicker">使用教程</span>
@@ -1191,13 +1180,13 @@
     </form>
   </div>
 
-  <div class="guide-modal" data-guide-modal hidden>
-    <section class="guide-dialog" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+  <dialog class="guide-modal" data-guide-modal aria-labelledby="guide-title" hidden>
+    <section class="guide-dialog">
       <div class="guide-dialog-header">
         <div>
           <p class="eyebrow">使用教程</p>
           <h2 id="guide-title">豌豆AI 使用流程</h2>
-          <p>按顺序完成 API 注册、密钥保存和图片生成。密钥只保存在本机浏览器里。</p>
+          <p>按顺序完成 API 注册、密钥保存和图片生成。密钥设置保存在本机。</p>
         </div>
         <button class="icon-button" type="button" aria-label="关闭使用教程" data-guide-close>×</button>
       </div>
@@ -1235,12 +1224,12 @@
           <span class="guide-step-number">5</span>
           <div>
             <h3>查看和下载结果</h3>
-            <p>生成完成后，点击图片卡片可以查看详情；点击下载按钮即可保存生成结果。若浏览器要求选择保存位置，按提示选择本地文件夹。</p>
+            <p>生成完成后，点击图片卡片可以查看详情。桌面版点击下载后，可在“另存为”中选择保存位置。</p>
           </div>
         </article>
       </div>
     </section>
-  </div>
+  </dialog>
 
   <script>
     document.querySelectorAll("[data-home-nav]").forEach((button) => {
@@ -1249,9 +1238,13 @@
         if (!target) return;
         event.preventDefault();
         document.querySelectorAll("[data-home-nav]").forEach((item) => {
-          const active = item.dataset.homeNav === target;
+          const active = item.dataset.homeAnchor ? item === button : item.dataset.homeNav === target;
           item.classList.toggle("active", active);
           if (item.tagName === "BUTTON") item.setAttribute("aria-pressed", active ? "true" : "false");
+          if (item.dataset.homeAnchor) {
+            if (active) item.setAttribute("aria-current", "location");
+            else item.removeAttribute("aria-current");
+          }
         });
         const isHome = target === "home";
         document.querySelectorAll("[data-home-section]").forEach((section) => {
@@ -1267,21 +1260,26 @@
           notice: "announcement",
           about: "about"
         };
-        const anchor = document.getElementById(anchorMap[target]);
-        if (anchor) anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+        const anchor = document.getElementById(button.dataset.homeAnchor || anchorMap[target]);
+        // Compact tool groups use display:contents, so scroll their first visible card.
+        const scrollTarget = anchor?.getClientRects().length ? anchor : anchor?.querySelector(".module-card");
+        scrollTarget?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
       });
     });
 
     const guideModal = document.querySelector("[data-guide-modal]");
+    let guideReturnFocus = null;
     const openGuide = () => {
-      if (!guideModal) return;
+      if (!guideModal || guideModal.open) return;
+      guideReturnFocus = document.activeElement;
       guideModal.hidden = false;
+      guideModal.showModal();
       const closeButton = guideModal.querySelector("[data-guide-close]");
       if (closeButton) closeButton.focus();
     };
     const closeGuide = () => {
-      if (!guideModal) return;
-      guideModal.hidden = true;
+      if (!guideModal?.open) return;
+      guideModal.close();
     };
     document.querySelectorAll("[data-guide-open]").forEach((trigger) => {
       trigger.addEventListener("click", openGuide);
@@ -1298,8 +1296,11 @@
     guideModal?.addEventListener("click", (event) => {
       if (event.target === guideModal) closeGuide();
     });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && guideModal && !guideModal.hidden) closeGuide();
+    guideModal?.addEventListener("close", () => {
+      if (guideModal.open) return;
+      guideModal.hidden = true;
+      if (guideReturnFocus?.isConnected) guideReturnFocus.focus({ preventScroll: true });
+      guideReturnFocus = null;
     });
 
     const noticeDialog = document.querySelector("[data-notice-dialog]");

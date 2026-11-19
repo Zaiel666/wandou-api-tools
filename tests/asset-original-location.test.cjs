@@ -5,31 +5,45 @@ const screenshots=path.resolve(__dirname,'../artifacts/asset-location-20261025/v
 let browser,server,origin;
 test.before(async()=>{fs.mkdirSync(screenshots,{recursive:true});server=http.createServer((req,res)=>{const file=path.resolve(app,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!file.startsWith(app+path.sep)){res.writeHead(403);return res.end();}fs.readFile(file,(error,data)=>{if(error){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(data)});});await new Promise(r=>server.listen(0,'127.0.0.1',r));origin='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});});
 test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r));});
-async function open({entry='asset-library.html',theme='light',mode='desktop',count=2,special=false}={}){
- const context=await browser.newContext({viewport:{width:1280,height:900}});await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
+async function open({entry='asset-library.html',theme='light',mode='desktop',count=2,special=false,width=1280}={}){
+ const context=await browser.newContext({viewport:{width,height:800}});await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
  await context.addInitScript(({theme,mode,count,special})=>{
   localStorage.setItem('ai-tools-theme',theme);localStorage.setItem('wd-theme',theme);
   const preview='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="60"><rect width="80" height="60" fill="#7ca866"/></svg>');
   const nodes=Array.from({length:count},(_,i)=>({id:'node-'+i,type:'result',mediaType:'image',title:'图片'+i,previewUrl:preview,mediaUrl:'indexed-media:media-'+i,fullUrl:'indexed-media:full-'+i,width:4096,height:4096,createdAt:1000+i}));
   if(special)nodes.push({id:'remote',type:'result',mediaType:'image',title:'远程原图',previewUrl:preview,mediaUrl:'indexed-media:preview-only',fullUrl:'https://invalid.example/original.png',createdAt:5},{id:'preview',type:'result',mediaType:'image',title:'仅预览',previewUrl:preview,createdAt:4},{id:'fallback',type:'result',mediaType:'image',title:'媒体原图',previewUrl:preview,mediaUrl:'indexed-media:fallback-original',createdAt:3},{id:'runtime',type:'result',mediaType:'image',title:'运行时原图',previewUrl:preview,fullUrl:'wandou-media://'+'a'.repeat(64)+'/runtime-original',createdAt:2});
   localStorage.setItem('aiCanvasProjectsV1',JSON.stringify([{id:'folder',name:'项目目录'}]));localStorage.setItem('aiCanvasStateV1:project-collection:folder',JSON.stringify([{id:'project',name:'测试项目'}]));localStorage.setItem('aiCanvasStateV1:folder:project',JSON.stringify({folderId:'folder',projectId:'project',savedAt:5000,nodes,links:[]}));
-  window.locationCalls=[];window.folderCalls=[];window.mediaReads=[];window.locationResolvers={};
+  window.locationCalls=[];window.folderCalls=[];window.mediaReads=[];window.locationResolvers={};window.standardDownloads=[];
+  window.standardOriginal='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
   if(mode!=='browser')window.wandouShell={
-   readCanvasMedia:async data=>{mediaReads.push(data);return {success:false}},
-   getCanvasMediaLocation:async ref=>{locationCalls.push(ref);if(mode==='missing')return{success:false,missing:true,error:'missing'};if(mode==='race'&&ref==='indexed-media:full-1')return await new Promise(resolve=>locationResolvers[ref]=resolve);return{success:true,path:'C:\\SyntheticApp\\canvas-media\\'+ref.split(':').pop().split('/').pop()+'.data',storageFormat:'data-url'};},
+   readCanvasMedia:async data=>{mediaReads.push(data);return mode==='standard'?{success:true,value:standardOriginal}:{success:false}},
+   saveFileAs:async(name,bytes,type)=>{standardDownloads.push({name,bytes:Array.from(bytes),type});return{success:true,path:'D:/SyntheticChosen/'+name};},
+   getCanvasMediaLocation:async ref=>{locationCalls.push(ref);if(mode==='missing')return{success:false,missing:true,error:'missing'};if(mode==='race'&&ref==='indexed-media:full-1')return await new Promise(resolve=>locationResolvers[ref]=resolve);if(mode==='standard')return{success:true,path:'D:\\SyntheticApp\\canvas-media\\originals\\'+ref.split(':').pop()+'.png',storageFormat:'image-file'};return{success:true,path:'C:\\SyntheticApp\\canvas-media\\'+ref.split(':').pop().split('/').pop()+'.data',storageFormat:'data-url'};},
    showCanvasMediaInFolder:async ref=>{folderCalls.push(ref);return mode==='moved'?{success:false,missing:true,error:'文件已移走'}:{success:true,shown:true};}
   };
  },{theme,mode,count,special});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.goto(origin+'/'+entry);await page.locator('[data-filter="image"]').click();await page.waitForFunction(()=>document.querySelectorAll('[data-asset-location]').length>0);return{page,context,errors};
 }
 function card(page,name){return page.locator('.media-card').filter({has:page.locator('.asset-card-title',{hasText:new RegExp('^'+name+'$')})});}
+for(const entry of ['asset-library.html','asset-library-test.html'])for(const theme of ['light','dark'])for(const width of [1024,1440])test(`v225 standard original path and retention explanation ${entry} ${theme} ${width}`,async()=>{
+ const {page,context,errors}=await open({entry,theme,width,mode:'standard'});try{
+  await page.waitForFunction(()=>[...document.querySelectorAll('.media-preview img')].some(image=>image.complete&&image.naturalWidth===80));
+  await card(page,'图片1').locator('[data-asset-location]').click();await page.waitForFunction(()=>document.querySelector('#assetLocationPath').value.endsWith('.png'));
+  assert.match(await page.locator('#assetLocationPath').inputValue(),/originals\\full-1\.png$/);assert.match(await page.locator('#assetLocationStatus').innerText(),/可直接查看的标准原图/);assert.match(await page.locator('#assetLocationStatus').innerText(),/旧 \.data.*额外占用空间/);
+  const box=await page.locator('#assetLocationDialog').boundingBox();assert.ok(box.x>=0 && box.y>=0 && box.x+box.width<=width+1 && box.y+box.height<=801);
+  await page.locator('#assetLocationOpenFolder').click();assert.deepEqual(await page.evaluate(()=>folderCalls),['indexed-media:full-1']);assert.deepEqual(errors,[]);
+  await page.locator('#assetLocationDownload').click();await page.waitForFunction(()=>standardDownloads.length===1&&!document.querySelector('#assetLocationDownload').disabled);
+  const downloaded=await page.evaluate(()=>standardDownloads[0]),expected=await page.evaluate(()=>Array.from(Uint8Array.from(atob(standardOriginal.split(',')[1]),c=>c.charCodeAt(0))));assert.deepEqual(downloaded.bytes,expected);assert.match(downloaded.name,/\.png$/);assert.equal(downloaded.type,'image/png');
+  const qa=path.resolve(__dirname,'../../qa/standard-original-ui');fs.mkdirSync(qa,{recursive:true});await page.screenshot({path:path.join(qa,`${entry.replace('.html','')}-${theme}-${width}.png`)});
+ }finally{await context.close();}
+});
 for(const entry of ['asset-library.html','asset-library-test.html'])for(const theme of ['light','dark'])test(entry+' '+theme+' locates only the original and opens its folder without opening the image',async()=>{
  const{page,context,errors}=await open({entry,theme});try{
   assert.equal(await page.locator('#assetTitle').innerText(),'所有图片');assert.equal(await page.locator('.media-card').count(),2,'different originals sharing a preview must both remain');
   assert.deepEqual(await page.evaluate(()=>locationCalls),[],'listing must not query file locations');assert.deepEqual(await page.evaluate(()=>mediaReads),[],'listing thumbnails must not fetch full originals');
   await card(page,'图片1').locator('[data-asset-location]').click();await page.waitForFunction(()=>document.querySelector('#assetLocationPath').value.endsWith('full-1.data'));
   assert.equal(await page.locator('#assetLightbox').evaluate(e=>e.classList.contains('open')),false);assert.deepEqual(await page.evaluate(()=>locationCalls),['indexed-media:full-1']);assert.deepEqual(await page.evaluate(()=>mediaReads),[]);
-  assert.match(await page.locator('#assetLocationStatus').innerText(),/项目原图存储文件（\.data）/);assert.equal(await page.locator('#assetLocationPath').inputValue(),'C:\\SyntheticApp\\canvas-media\\full-1.data');
+  assert.match(await page.locator('#assetLocationStatus').innerText(),/兼容原件（\.data）/);assert.equal(await page.locator('#assetLocationPath').inputValue(),'C:\\SyntheticApp\\canvas-media\\full-1.data');
   await page.locator('#assetLocationOpenFolder').click();assert.deepEqual(await page.evaluate(()=>folderCalls),['indexed-media:full-1']);
   const styles=await page.locator('#assetLocationDialog').evaluate(e=>({background:getComputedStyle(e).backgroundColor,color:getComputedStyle(e).color,theme:document.documentElement.dataset.theme}));assert.equal(styles.theme,theme);assert.notEqual(styles.background,'rgba(0, 0, 0, 0)');assert.notEqual(styles.background,styles.color);
   await page.screenshot({path:path.join(screenshots,entry.replace('.html','')+'-'+theme+'.png')});assert.deepEqual(errors,[]);

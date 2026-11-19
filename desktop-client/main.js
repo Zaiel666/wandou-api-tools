@@ -7,7 +7,7 @@ const { spawn } = require("child_process");
 const { pathToFileURL, fileURLToPath } = require("url");
 const canvasMediaProtocol = require('./canvas-media-protocol.cjs')({ directory: canvasMediaRootDirectory });
 protocol.registerSchemesAsPrivileged([{ scheme: 'wandou-media', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
-app.on('will-quit', () => canvasMediaProtocol.dispose());
+app.on('will-quit', () => { canvasMediaProtocol.dispose(); canvasStandardMedia.dispose(); });
 require('./director-ipc.cjs')({app, ipcMain, getAppRoot});
 
 const APP_NAME = "豌豆AI工具";
@@ -30,13 +30,21 @@ let closePromptPending = false;
 let shellReady = false;
 let downloadListenerReady = false;
 let updateInProgress = false;
+let applicationSession = null;
+let browserSessionInfo = null;
+let applicationStorageReady = false;
+let applicationStorageStarting = true;
+function getApplicationSession() {
+  if (!applicationSession) throw new Error('项目浏览器存储尚未准备好，请等待初始化完成');
+  return applicationSession;
+}
 let installedSkillsCache = { savedAt: 0, items: [] };
 const ipcPolicy = require('./ipc-policy.cjs')({ appRoot: getAppRoot, shellFile: path.join(__dirname, 'shell.html'), shellContents: () => mainWindow?.webContents });
 const handleDesktop = (channel, handler) => ipcPolicy.handle(ipcMain, channel, handler);
 const onDesktop = (channel, handler) => ipcPolicy.on(ipcMain, channel, handler);
 
-// Keep credentials/preferences in the existing profile. Project media follows
-// the portable program directory, with verified migration of legacy projects.
+// Keep small main-process preferences in the existing profile. Browser-stored
+// API settings and workbench data use the verified project browser-session.
 app.setPath("userData", process.env.WANDOU_TEST_USER_DATA_DIR || path.join(app.getPath("appData"), "豌豆AI"));
 const primaryInstance = app.requestSingleInstanceLock();
 if (!primaryInstance) app.exit(0);
@@ -60,10 +68,27 @@ const projectInstallRoot = process.env.WANDOU_TEST_USER_DATA_DIR
 if (process.env.WANDOU_TEST_USER_DATA_DIR) fs.mkdirSync(projectInstallRoot, { recursive: true });
 const projectStorage = require('./project-storage.cjs')({
   legacyRoot: app.getPath('userData'), installRoot: projectInstallRoot,
-  onProgress: reportProjectStorageProgress
+  onProgress: reportProjectStorageProgress,
+  isBrowserSessionActive: () => Boolean(applicationSession)
+});
+const browserSessionStorage = require('./browser-session-storage.cjs')({
+  legacyProfileRoot: app.getPath('userData'),
+  projectRoot: () => projectStorage.root(),
+  assertInactive: async () => {
+    if (!primaryInstance || !app.hasSingleInstanceLock() || applicationSession || mainWindow) throw new Error('浏览器存储正在使用，不能迁移或覆盖');
+    return true;
+  },
+  onProgress: state => reportProjectStorageProgress({ phase: 'browser-session', message: '正在核对工作台与浏览器作品存储…', ...state })
+});
+const canvasMediaFiles = require('./canvas-media-files.cjs');
+const canvasStandardMedia = require('./canvas-media-standard-store.cjs')({
+  directory: canvasMediaRootDirectory,
+  guardWrite: task => withProjectStorage('write', task),
+  isBusy: () => Boolean(activeCanvasApiCount || storageMediaTokens.size || storageMigrationPreparing || updateInProgress)
 });
 const storageMaintenance = require('./storage-maintenance.cjs')({
-  projectRoot: () => projectStorage.root(), profileRoot: () => app.getPath('userData'), session: () => session.defaultSession,
+  projectRoot: () => projectStorage.root(), profileRoot: () => app.getPath('userData'),
+  sessionRoot: () => getApplicationSession().storagePath, session: getApplicationSession,
   isBusy: () => Boolean(activeCanvasApiCount || storageMediaTokens.size || storageMigrationPreparing || updateInProgress),
   confirmClear: async directory => {
     const result = await dialog.showMessageBox(mainWindow, { type:'question', title:'清理网络缓存', message:'仅清理可重新下载的浏览器网络缓存？', detail:`位置：${directory}\n项目、原图、备份、API 设置和工作台浏览器存储都会保留。缓存可由重新打开页面恢复。`, buttons:['取消','清理网络缓存'], defaultId:0, cancelId:0, noLink:true });
@@ -170,60 +195,13 @@ async function hasProtectedPortableData(directory) {
 }
 
 async function cleanupStalePortableInstallBackups() {
-  if (!app.isPackaged) return;
-  const { installDirectory } = portableInstallContext();
-  const installName = path.basename(installDirectory);
-  if (!installName || installName.includes(".previous-")) return;
-  const installParent = path.dirname(installDirectory);
-  const backupPrefix = `${installName}.previous-`;
-  try {
-    const entries = await fs.promises.readdir(installParent, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.isSymbolicLink() || !entry.name.startsWith(backupPrefix)) continue;
-      const backupDirectory = path.resolve(installParent, entry.name);
-      if (path.dirname(backupDirectory) !== path.resolve(installParent)) continue;
-      try {
-        if (await hasProtectedPortableData(backupDirectory)) continue;
-        await fs.promises.rm(backupDirectory, { recursive: true, force: true, maxRetries: 12, retryDelay: 500 });
-      } catch (error) {
-        console.warn("Unable to remove stale portable update backup:", backupDirectory, error.message);
-      }
-    }
-  } catch (error) {
-    console.warn("Unable to inspect portable update backups:", error.message);
-  }
+  // Historical backups can contain user files. Preserve them until a separate,
+  // reviewed cleanup operation can establish ownership and a recovery path.
 }
 
 async function cleanupStalePortableUpdateStages() {
-  if (!app.isPackaged) return;
-  const { installDirectory } = portableInstallContext();
-  const installParent = path.resolve(path.dirname(installDirectory));
-  try {
-    const entries = await fs.promises.readdir(installParent, { withFileTypes: true });
-    for (const entry of entries) {
-      // A stage can belong to an update still running in another portable copy.
-      // Only remove an exact updater GUID after completion or a full day of age.
-      if (!/^wandou-ai-stage-[a-f0-9]{32}$/i.test(entry.name) || !entry.isDirectory() || entry.isSymbolicLink()) continue;
-      const stageDirectory = path.resolve(installParent, entry.name);
-      if (path.dirname(stageDirectory) !== installParent) continue;
-      try {
-        const stats = await fs.promises.lstat(stageDirectory);
-        if (!stats.isDirectory() || stats.isSymbolicLink()) continue;
-        if (await hasProtectedPortableData(stageDirectory)) continue;
-        let completedStage = false;
-        try {
-          const marker = await fs.promises.lstat(path.join(stageDirectory, ".wandou-stage-cleanup-ready"));
-          completedStage = marker.isFile() && !marker.isSymbolicLink() && Date.now() - marker.mtimeMs >= 30 * 1000;
-        } catch (_error) { /* Older updater versions did not write this marker. */ }
-        if (!completedStage && Date.now() - stats.mtimeMs < 24 * 60 * 60 * 1000) continue;
-        await fs.promises.rm(stageDirectory, { recursive: true, force: true, maxRetries: 12, retryDelay: 500 });
-      } catch (error) {
-        console.warn("Unable to remove stale portable update stage:", stageDirectory, error.message);
-      }
-    }
-  } catch (error) {
-    console.warn("Unable to inspect portable update stages:", error.message);
-  }
+  // Never guess ownership from an old directory name, age, or marker file.
+  // Protocol 2 cleans only the private stage created by that updater process.
 }
 
 function readClientConfig() {
@@ -686,53 +664,32 @@ async function openPersonalSkillDirectory() {
 }
 
 async function hasCanvasMedia(payload = {}) {
-  const id = safeCanvasBackupId(payload.id, "");
-  if (!id) return { success: false, exists: false, error: "Invalid media id" };
-  try {
-    if (!fs.existsSync(canvasMediaPath(id))) return { success: true, exists: false };
-    if (/^sha256-[a-f0-9]{64}$/.test(id)) {
-      const value = await fs.promises.readFile(canvasMediaPath(id), 'utf8');
-      return { success: true, exists: canvasMediaStorageId(value) === id && value.startsWith('data:') };
-    }
-    return { success: true, exists: true };
-  } catch (error) { return { success: false, exists: false, error: error.message }; }
+  if (!canvasMediaFiles.validId(payload.id)) return { success: false, exists: false, error: 'Invalid media id' };
+  const result = await canvasStandardMedia.read(payload.id);
+  return { success: result.success || Boolean(result.missing), exists: Boolean(result.success), error: result.error };
 }
 
 async function writeCanvasMedia(payload = {}) {
-  const id = safeCanvasBackupId(payload.id, "");
+  const id = payload.id;
   const value = typeof payload.value === "string" ? payload.value : "";
-  if (!id || !value.startsWith("data:")) return { success: false, error: "Invalid canvas media" };
+  if (!canvasMediaFiles.validId(id) || !value.startsWith("data:")) return { success: false, error: "Invalid canvas media" };
   if (id.startsWith('sha256-') && canvasMediaStorageId(value) !== id) return { success: false, error: '图片内容校验失败' };
   try {
     const destination = canvasMediaPath(id);
-    if (fs.existsSync(destination) && (await fs.promises.readFile(destination, 'utf8')) === value) return { success: true, path: destination, deduplicated: true };
-    if (fs.existsSync(destination) && !id.startsWith('sha256-')) return { success: false, error: '旧图片标识冲突，已保留原图' };
     await fs.promises.mkdir(canvasMediaRootDirectory(), { recursive: true });
-    const temporary = `${destination}.${process.pid}-${crypto.randomBytes(4).toString("hex")}.tmp`;
-    await fs.promises.writeFile(temporary, value, "utf8");
-    try {
-      await fs.promises.rename(temporary, destination);
-    } catch (error) {
-      if (!fs.existsSync(destination) || await fs.promises.readFile(destination, 'utf8') !== value) throw error;
-      await fs.promises.unlink(temporary).catch(() => {});
-    }
-    return { success: true, path: destination };
+    await canvasMediaFiles.realDirectory(canvasMediaRootDirectory());
+    const published = await canvasMediaFiles.writeLegacy(canvasMediaRootDirectory(), id, value);
+    const standardization = await canvasStandardMedia.ensure(id);
+    // The exact compatibility copy is durable before acknowledging the reference.
+    // A secondary format/space failure must never discard a generated result.
+    return { success: true, path: standardization.success ? standardization.path : destination, deduplicated: !published.created, repaired: Boolean(published.repaired), storageFormat: standardization.success ? 'image-file' : 'data-url', standardization };
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
 
 async function readCanvasMedia(payload = {}) {
-  const id = safeCanvasBackupId(payload.id, "");
-  if (!id) return { success: false, value: "", error: "Invalid media id" };
-  try {
-    const value = await fs.promises.readFile(canvasMediaPath(id), "utf8");
-    if (id.startsWith('sha256-') && canvasMediaStorageId(value) !== id) return { success: false, value: '', corrupt: true, error: '原图内容校验失败' };
-    return { success: value.startsWith("data:"), value: value.startsWith("data:") ? value : "" };
-  } catch (error) {
-    if (error.code === "ENOENT") return { success: false, value: "", missing: true };
-    return { success: false, value: "", error: error.message };
-  }
+  return canvasStandardMedia.read(payload.id);
 }
 
 function canvasBackupDirectory(folderId, projectId) {
@@ -806,6 +763,15 @@ async function compactEmbeddedCanvasMedia(value, currentPath = "state", writes =
 async function writeCanvasBackup(payload = {}) {
   let state = payload.state;
   if (!state || !Array.isArray(state.nodes)) return { success: false, error: "Invalid canvas state" };
+  const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
+  const projectId = safeCanvasBackupId(payload.projectId, "default-project");
+  try {
+    require('./canvas-backup-reader.cjs').validateEnvelope(
+      { format: 'wandou-canvas-backup', version: 1, folderId, projectId, state },
+      { folderId, projectId }, '1-00000000.json');
+  } catch (error) {
+    return { success: false, error: error.message, code: error.code };
+  }
   try {
     state = await compactEmbeddedCanvasMedia(state);
   } catch (error) {
@@ -815,8 +781,6 @@ async function writeCanvasBackup(payload = {}) {
     const field = embeddedCanvasMediaPath(state);
     return { success: false, error: `图片仍未完成独立存储${field ? `：${field}` : ""}` };
   }
-  const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
-  const projectId = safeCanvasBackupId(payload.projectId, "default-project");
   try {
     const directory = canvasBackupDirectory(folderId, projectId);
     await fs.promises.mkdir(directory, { recursive: true });
@@ -852,9 +816,11 @@ async function writeCanvasBackup(payload = {}) {
         .filter((entry) => entry.isFile() && /^\d+-[0-9a-f]+\.json$/i.test(entry.name))
         .map((entry) => entry.name)
         .sort((left, right) => Number(right.split("-")[0]) - Number(left.split("-")[0]));
-      await Promise.all(snapshots.slice(12).map((name) =>
-        fs.promises.unlink(path.join(directory, name)).catch(() => {})
-      ));
+      for (const name of snapshots.slice(12)) {
+        if (await require('./canvas-backup-reader.cjs').canPrune(directory, name)) {
+          await fs.promises.unlink(path.join(directory, name)).catch(() => {});
+        }
+      }
     } catch (_error) { /* Keep older snapshots when cleanup is unavailable. */ }
     return { success: true, path: destination, savedAt, fingerprint };
   } catch (error) {
@@ -863,45 +829,31 @@ async function writeCanvasBackup(payload = {}) {
 }
 
 async function readCanvasBackupDirectory(directory, stateLimit = 3) {
-  const states = [];
-  let skippedLarge = 0;
-  try {
-    const snapshots = (await fs.promises.readdir(directory, { withFileTypes: true }))
-      .filter((entry) => entry.isFile() && /^\d+-[0-9a-f]+\.json$/i.test(entry.name))
-      .map((entry) => entry.name)
-      .sort((left, right) => Number(right.split("-")[0]) - Number(left.split("-")[0]))
-      .slice(0, 12);
-    for (const name of snapshots) {
-      if (states.length >= stateLimit) break;
-      try {
-        const backupPath = path.join(directory, name);
-        const backup = JSON.parse(await fs.promises.readFile(backupPath, "utf8"));
-        if (backup?.format === "wandou-canvas-backup" && Array.isArray(backup.state?.nodes)) {
-          states.push(backup.state);
-        }
-      } catch (_error) {
-        // A damaged snapshot must not prevent older snapshots from being read.
-      }
-    }
-    return { states, skippedLarge };
-  } catch (error) {
-    if (error.code === "ENOENT") return { states: [], skippedLarge };
-    throw error;
-  }
+  return require('./canvas-backup-reader.cjs').readDirectory(directory, stateLimit);
 }
 
 async function readCanvasBackups(payload = {}) {
   const folderId = safeCanvasBackupId(payload.folderId, "default-folder");
   try {
+    if (payload.allProjects && payload.metadataOnly === true) {
+      const catalog = await require('./canvas-backup-reader.cjs').readCatalog(path.join(canvasBackupRootDirectory(), folderId));
+      return { success: !catalog.blocked, metadataOnly: true, ...catalog, states: [], projectStates: [], skippedLarge: 0,
+        ...(catalog.blocked ? { code: 'BACKUP_EXISTING_UNREADABLE', error: '项目目录无法安全读取，已保留原文件，请检查存储后重试。' } : {}) };
+    }
     if (payload.allProjects) {
       const folderDirectory = path.join(canvasBackupRootDirectory(), folderId);
       const projectDirectories = (await fs.promises.readdir(folderDirectory, { withFileTypes: true }))
         .filter((entry) => entry.isDirectory());
       const states = [];
       const projectStates = [];
+      const issues = [];
       let skippedLarge = 0;
       for (const entry of projectDirectories) {
-        const result = await readCanvasBackupDirectory(path.join(folderDirectory, entry.name), 1);
+        let result;
+        try { result = await readCanvasBackupDirectory(path.join(folderDirectory, entry.name), 1); }
+        catch (error) { result = { states: [], skippedLarge: 0, blocked: true,
+          issues: [{ code: error.code || 'BACKUP_READ_FAILED' }] }; }
+        if (result.issues.length) issues.push({ projectId: entry.name, blocked: result.blocked, snapshots: result.issues });
         states.push(...result.states);
         if (result.states.length) {
           projectStates.push({ projectId: entry.name, states: result.states });
@@ -912,35 +864,29 @@ async function readCanvasBackups(payload = {}) {
       projectStates.sort((left, right) =>
         Number(right.states[0]?.savedAt || 0) - Number(left.states[0]?.savedAt || 0)
       );
-      return { success: true, states, projectStates, skippedLarge };
+      const blocked = !states.length && issues.some(issue => issue.blocked);
+      return { success: !blocked, states, projectStates, skippedLarge, issues,
+        partial: issues.length > 0,
+        ...(blocked ? { code: 'BACKUP_EXISTING_UNREADABLE', error: '项目备份无法安全读取，已保留原文件，请检查存储或从备份副本恢复。' } : {}) };
     }
     const projectId = safeCanvasBackupId(payload.projectId, "default-project");
     const result = await readCanvasBackupDirectory(canvasBackupDirectory(folderId, projectId), 3);
-    return { success: true, ...result };
+    return { success: !result.blocked, ...result,
+      ...(result.blocked ? { code: 'BACKUP_EXISTING_UNREADABLE', error: '项目备份无法安全读取，已保留原文件，请检查存储或从备份副本恢复。' } : {}) };
   } catch (error) {
+    if (payload.allProjects && payload.metadataOnly === true) {
+      return { success: error.code === 'ENOENT', metadataOnly: true, projects: [], states: [], projectStates: [], skippedLarge: 0,
+        issues: error.code === 'ENOENT' ? [] : [{ code: error.code || 'BACKUP_READ_FAILED' }],
+        ...(error.code === 'ENOENT' ? {} : { error: error.message, code: error.code || 'BACKUP_READ_FAILED' }) };
+    }
     if (error.code === "ENOENT") return { success: true, states: [], skippedLarge: 0 };
     return { success: false, states: [], skippedLarge: 0, error: error.message };
   }
 }
 
 async function latestCanvasBackupForGuard(payload) {
-  const directory = canvasBackupDirectory(payload.folderId, payload.projectId);
-  let files;
-  try { files = await fs.promises.readdir(directory); }
-  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
-  files = files.filter(name => /^\d+-[0-9a-f]+\.json$/i.test(name))
-    .sort((a,b) => Number(b.split('-')[0]) - Number(a.split('-')[0])).slice(0,12);
-  for (const name of files) {
-    try {
-      const backupPath = path.join(directory, name);
-      const envelope = JSON.parse(await fs.promises.readFile(backupPath, 'utf8'));
-      if (envelope.format === 'wandou-canvas-backup' && Array.isArray(envelope.state?.nodes)) {
-        const savedAt = Math.max(Number(name.split('-')[0]) || 0, Number(envelope.savedAt) || 0, Number(envelope.state.savedAt) || 0);
-        return { path:backupPath, savedAt, fingerprint:canvasBackupFingerprint(envelope.state) };
-      }
-    } catch (_error) { /* Match recovery: a damaged newest file may have an older valid backup. */ }
-  }
-  return null;
+  const record = await require('./canvas-backup-reader.cjs').latest(canvasBackupDirectory(payload.folderId, payload.projectId));
+  return record ? { path: record.path, savedAt: record.savedAt, fingerprint: canvasBackupFingerprint(record.state) } : null;
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
@@ -951,7 +897,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
     policy.initial(url);
     let target = url;
     for (let count = 0; count < 6; count += 1) {
-      const response = await net.fetch(target, { ...options, redirect: 'manual', signal: controller.signal });
+      const response = await getApplicationSession().fetch(target, { ...options, redirect: 'manual', signal: controller.signal });
       if (![301, 302, 303, 307, 308].includes(response.status)) return response;
       const location = response.headers.get('location');
       if (!location) throw Error('更新服务器重定向无目标');
@@ -990,50 +936,15 @@ function normalizeUpdateInfo(release, currentVersion, assetName, checksumAssetNa
 }
 
 async function checkForUpdates() {
-  const currentVersion = app.getVersion();
-  const config = readClientConfig();
-  const owner = String(config.githubOwner || "").trim();
-  const repository = String(config.githubRepository || "").trim();
-  const assetName = String(config.assetName || "").trim();
-  const checksumAssetName = String(config.checksumAssetName || `${assetName}.sha256`).trim();
-  if (!owner || !repository || !assetName) return { available: false, configured: false, currentVersion };
-  const encodedOwner = encodeURIComponent(owner);
-  const encodedRepository = encodeURIComponent(repository);
-  const headers = { "User-Agent": "WandouAI-Desktop-Updater", Accept: "application/vnd.github+json" };
-  const checks = [
-    async () => {
-      const response = await fetchWithTimeout(`https://api.github.com/repos/${encodedOwner}/${encodedRepository}/releases/latest?timestamp=${Date.now()}`, { cache: "no-store", headers: { ...headers, "X-GitHub-Api-Version": "2022-11-28" } });
-      if (!response.ok) throw new Error(`GitHub API HTTP ${response.status}`);
-      return normalizeUpdateInfo(await response.json(), currentVersion, assetName, checksumAssetName);
-    },
-    async () => {
-      const response = await fetchWithTimeout(`https://github.com/${encodedOwner}/${encodedRepository}/releases/latest/download/update-manifest.json?timestamp=${Date.now()}`, { cache: "no-store", redirect: "follow", headers });
-      if (!response.ok) throw new Error(`版本清单 HTTP ${response.status}`);
-      return normalizeUpdateInfo(await response.json(), currentVersion, assetName, checksumAssetName);
-    },
-    async () => {
-      const response = await fetchWithTimeout(`https://github.com/${encodedOwner}/${encodedRepository}/releases/latest`, { cache: "no-store", redirect: "follow", headers });
-      if (!response.ok) throw new Error(`发布页 HTTP ${response.status}`);
-      const match = response.url.match(/\/releases\/tag\/v?([^/?#]+)/i);
-      if (!match) throw new Error("发布页没有返回版本号");
-      const latestVersion = decodeURIComponent(match[1]);
-      const base = `https://github.com/${encodedOwner}/${encodedRepository}/releases/download/v${latestVersion}`;
-      return normalizeUpdateInfo({ version: latestVersion, downloadUrl: `${base}/${encodeURIComponent(assetName)}`, checksumUrl: `${base}/${encodeURIComponent(checksumAssetName)}` }, currentVersion, assetName, checksumAssetName);
-    }
-  ];
-  const errors = [];
-  for (const check of checks) {
-    try {
-      return require('./update-policy.cjs')(config).metadata(await check());
-    } catch (error) {
-      errors.push(error?.message || String(error));
-    }
-  }
-  return { available: false, configured: true, currentVersion, error: `三路更新检测均失败：${errors.join("；")}` };
+  const channel = require('./safe-update-channel.cjs');
+  return channel.check({config:readClientConfig(),currentVersion:app.getVersion(),fetchJson:async(url,options={})=>{
+    const response=await fetchWithTimeout(url,{cache:'no-store',headers:{'User-Agent':'WandouAI-Desktop-Updater','X-GitHub-Api-Version':'2022-11-28',Accept:options.asset?'application/octet-stream':'application/vnd.github+json'}});
+    return channel.readJson(response);
+  }});
 }
 
 async function downloadFile(url, destination) {
-  const response = await net.fetch(url, {
+  const response = await getApplicationSession().fetch(url, {
     cache: "no-store",
     headers: { "User-Agent": "WandouAI-Desktop-Updater" }
   });
@@ -1042,33 +953,15 @@ async function downloadFile(url, destination) {
   await fs.promises.writeFile(destination, buffer);
 }
 
-async function downloadFileWithFallback(url, destination, fallbackUrl = "") {
-  const sources = [...new Set([url, fallbackUrl].filter(isSafeHttpsUrl))];
-  let lastError = new Error("Update download failed");
-  for (const source of sources) {
+async function downloadFileWithFallback(url, destination, fallbackUrl = '') {
+  const sources = [...new Set([url,fallbackUrl].filter(isSafeHttpsUrl))];
+  let lastError = Error('更新下载地址无效');
+  for(const source of sources) {
     try {
-      const response = await fetchWithTimeout(source, {
-        cache: "no-store",
-        redirect: "follow",
-        headers: {
-          Accept: "application/octet-stream, application/vnd.github+json;q=0.9, */*;q=0.8",
-          "User-Agent": "WandouAI-Desktop-Updater"
-        }
-      }, 120000);
-      if (!response.ok) {
-        lastError = new Error(`Update download failed: HTTP ${response.status}`);
-        continue;
-      }
-      const buffer = Buffer.from(await response.arrayBuffer());
-      if (!buffer.length) {
-        lastError = new Error("Update download failed: empty file");
-        continue;
-      }
-      await fs.promises.writeFile(destination, buffer);
-      return;
-    } catch (error) {
-      lastError = error;
-    }
+      return await require('./update-download.cjs').download({url:source,destination,
+        maxBytes:destination.endsWith('.sha256')?65536:1024*1024*1024,
+        fetchResponse:target=>fetchWithTimeout(target,{cache:'no-store',headers:{Accept:'application/octet-stream','User-Agent':'WandouAI-Desktop-Updater'}},120000)});
+    } catch(error) {lastError=error;}
   }
   throw lastError;
 }
@@ -1082,12 +975,13 @@ async function startPortableUpdate(updateInfo) {
   if (updateInProgress) return { started: false, error: "更新正在进行中" };
   if (!app.isPackaged) return { started: false, error: "开发模式不执行覆盖更新" };
   updateInProgress = true;
+  let handoffReadyPath = '';
   try {
     // The renderer may request a version, but can never supply install URLs or
     // manufacture a save receipt. Both are obtained again inside this process.
     const requestedVersion = updateInfo?.latestVersion;
     updateInfo = await checkForUpdates();
-    if (!updateInfo.available || (requestedVersion && requestedVersion !== updateInfo.latestVersion)) throw Error('版本信息已变化或没有新版本，请重新检查更新');
+    if (!updateInfo.available || updateInfo.manualRequired || updateInfo.updaterProtocol !== 2 || (requestedVersion && requestedVersion !== updateInfo.latestVersion)) throw Error('版本信息已变化或没有新版本，请重新检查更新');
     updateInfo = require('./update-policy.cjs')(readClientConfig()).metadata(updateInfo);
     await verifyWorkflowsForUpdate();
     const workDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "wandou-ai-update-"));
@@ -1099,8 +993,8 @@ async function startPortableUpdate(updateInfo) {
     await downloadFileWithFallback(updateInfo.checksumUrl, checksumPath, updateInfo.checksumApiUrl);
 
     const checksumText = await fs.promises.readFile(checksumPath, "utf8");
-    const expected = checksumText.match(/[a-fA-F0-9]{64}/)?.[0]?.toLowerCase();
-    const actual = crypto.createHash("sha256").update(await fs.promises.readFile(packagePath)).digest("hex");
+    const expected = require('./update-download.cjs').checksum(checksumText,updateInfo.assetName);
+    const actual = await require('./update-download.cjs').sha256(packagePath);
     if (!expected || actual !== expected) throw new Error("更新文件校验失败，已停止安装");
     // Downloads can take minutes; a new job may have started meanwhile.
     await verifyWorkflowsForUpdate();
@@ -1108,6 +1002,7 @@ async function startPortableUpdate(updateInfo) {
     const sourceUpdater = path.join(process.resourcesPath, "portable-updater.exe");
     const updaterPath = path.join(workDir, "portable-updater.exe");
     const readyPath = path.join(workDir, "updater-ready.txt");
+    handoffReadyPath = readyPath;
     await fs.promises.copyFile(sourceUpdater, updaterPath);
     sendUpdateStatus("下载完成，正在启动安装程序…", "ready");
 
@@ -1118,7 +1013,9 @@ async function startPortableUpdate(updateInfo) {
       "--parent", String(process.pid),
       "--exe", portableInstall.executable,
       "--ready", readyPath,
-      "--target", String(updateInfo.latestVersion || "")
+      "--target", String(updateInfo.latestVersion || ""),
+      "--protocol", "2",
+      "--sha256", expected
     ];
     const child = spawn(updaterPath, args, {
       detached: true,
@@ -1146,19 +1043,37 @@ async function startPortableUpdate(updateInfo) {
       };
       child.once("error", (error) => finish(new Error(`无法启动更新程序：${error.message}`)));
       child.once("exit", (code) => {
-        if (!fs.existsSync(readyPath)) finish(new Error(`更新程序提前退出（代码 ${code ?? "未知"}），软件不会关闭`));
+        let detail = '';
+        try {
+          const receiptFile = readyPath + '.error.json';
+          const stat = fs.lstatSync(receiptFile);
+          if (stat.isFile() && !stat.isSymbolicLink() && stat.size <= 4096) {
+            const receipt = JSON.parse(fs.readFileSync(receiptFile, 'utf8').replace(/^\uFEFF/, ''));
+            if (typeof receipt.message === 'string') detail = receipt.message.slice(0, 300);
+          }
+        } catch { /* A diagnostic receipt cannot authorize or block validation. */ }
+        finish(new Error(detail || `更新程序提前退出（代码 ${code ?? "未知"}），软件不会关闭`));
       });
       timer = setInterval(() => {
         if (fs.existsSync(readyPath)) return finish();
-        if (Date.now() - startedAt > 15000) finish(new Error("更新程序 15 秒内没有成功接管，软件不会关闭，请重试"));
+        if (Date.now() - startedAt > 120000) finish(new Error("更新程序 120 秒内没有完成文件检查，软件不会关闭，请查看更新日志"));
       }, 120);
     });
 
+    // Preflight can take time. Require fresh durability before authorizing the
+    // waiting updater; simply closing this parent must never count as consent.
+    await verifyWorkflowsForUpdate();
+    if (child.exitCode != null) throw Error('更新程序已退出，软件不会关闭');
+    const commitPending = readyPath + '.commit.pending';
+    await fs.promises.writeFile(commitPending, 'commit', {flag:'wx'});
+    await fs.promises.link(commitPending, readyPath + '.commit');
+    await fs.promises.unlink(commitPending);
     child.unref();
     allowWindowClose = true;
-    setTimeout(() => app.quit(), 4000);
+    setTimeout(() => app.quit(), 0);
     return { started: true };
   } catch (error) {
+    if (handoffReadyPath) await fs.promises.writeFile(handoffReadyPath+'.cancel','cancel',{flag:'wx'}).catch(()=>{});
     updateInProgress = false;
     sendUpdateStatus(error.message || "更新失败", "error");
     return { started: false, error: error.message || "更新失败" };
@@ -1257,7 +1172,7 @@ function configureWebContents(contents) {
 function configureDownloads() {
   if (downloadListenerReady) return;
   downloadListenerReady = true;
-  session.defaultSession.on("will-download", (_event, item) => {
+  getApplicationSession().on("will-download", (_event, item) => {
     item.once("done", (_doneEvent, state) => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       mainWindow.webContents.send("desktop:download-result", {
@@ -1269,6 +1184,7 @@ function configureDownloads() {
 }
 
 function createWindow() {
+  if (!applicationStorageReady || !applicationSession) return false;
   allowWindowClose = false;
   closePromptPending = false;
   shellReady = false;
@@ -1286,6 +1202,7 @@ function createWindow() {
     titleBarStyle: "hidden",
     titleBarOverlay: { color: initialDarkTheme ? "#0c0e0d" : "#ffffff", symbolColor: initialDarkTheme ? "#eef6f0" : "#203128", height: 48 },
     webPreferences: {
+      session: getApplicationSession(),
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
@@ -1303,6 +1220,8 @@ function createWindow() {
     if (isLocalAppPage(params.src)) preferences.preload = path.join(__dirname, 'preload.js');
     else delete preferences.preload;
     preferences.nodeIntegration = false;
+    preferences.session = getApplicationSession();
+    preferences.sandbox = true;
     preferences.contextIsolation = true;
     preferences.webviewTag = false;
   });
@@ -1382,7 +1301,7 @@ handleDesktop("desktop:api-fetch", async (event, payload = {}) => {
   if (requestKey) activeCanvasApiRequests.set(requestKey, controller);
   activeCanvasApiCount += 1;
   try {
-    const response = await net.fetch(url, {
+    const response = await getApplicationSession().fetch(url, {
       method,
       headers: apiRequestHeaders(request.headers),
       body: apiRequestBody(request),
@@ -1429,6 +1348,10 @@ handleDesktop("desktop:confirm-close", (_event, verification = {}) => {
 handleDesktop("desktop:get-client-config", () => ({ ...readClientConfig(), version: app.getVersion(), name: APP_NAME }));
 handleDesktop("desktop:check-for-updates", () => checkForUpdates());
 handleDesktop("desktop:start-update", (_event, updateInfo) => startPortableUpdate(updateInfo));
+handleDesktop("desktop:open-update-downloads", async () => {
+  const url=require('./safe-update-channel.cjs').urls(readClientConfig()).manual;
+  await shell.openExternal(url);return {success:true};
+});
 handleDesktop("desktop:open-external", (_event, url) => {
   if (!isSafeHttpsUrl(url)) return false;
   shell.openExternal(url);
@@ -1529,7 +1452,7 @@ handleDesktop("desktop:read-canvas-backups", async (event, payload = {}) => {
 });
 handleDesktop("desktop:has-canvas-media", (_event, payload = {}) => withProjectStorage('read', () => hasCanvasMedia(payload)));
 handleDesktop("desktop:write-canvas-media", (_event, payload = {}) => withProjectStorage('write', () => writeCanvasMedia(payload)));
-const canvasMediaWriter = require('./canvas-media-writer.cjs')({ directory: canvasMediaRootDirectory, destination: canvasMediaPath });
+const canvasMediaWriter = require('./canvas-media-writer.cjs')({ directory: canvasMediaRootDirectory, destination: canvasMediaPath, onCommitted: id => canvasStandardMedia.ensure(id) });
 const mediaWriterOwners = new Set();
 handleDesktop("desktop:write-canvas-media-chunk", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) return { success: false, error: "仅本地画布可以保存媒体" };
@@ -1537,14 +1460,23 @@ handleDesktop("desktop:write-canvas-media-chunk", (event, payload = {}) => {
   if (!mediaWriterOwners.has(owner)) {
     mediaWriterOwners.add(owner);
     event.sender.once('destroyed', () => {
-      mediaWriterOwners.delete(owner); void canvasMediaWriter.disposeOwner(owner);
-      for (const [token, tokenOwner] of storageMediaTokens) if (tokenOwner === owner) storageMediaTokens.delete(token);
+      mediaWriterOwners.delete(owner);
+      // Keep the storage gate until pending file operations and handles drain.
+      void canvasMediaWriter.disposeOwner(owner).then(() => {
+        for (const [token, tokenOwner] of storageMediaTokens) if (tokenOwner === owner) storageMediaTokens.delete(token);
+      }).catch(() => { /* Retain the gate if disposal cannot be confirmed. */ });
     });
   }
   return withProjectStorage('write', async () => {
     const result = await canvasMediaWriter.write(owner, payload);
-    if (payload.action === 'begin' && result.success) storageMediaTokens.set(result.token,owner);
-    if (payload.token && (payload.action === 'commit' || payload.action === 'abort' || !result.success)) storageMediaTokens.delete(payload.token);
+    if (payload.action === 'begin' && result.success) {
+      if (event.sender.isDestroyed()) { await canvasMediaWriter.disposeOwner(owner); return {success:false,error:'媒体所属页面已关闭',code:'MEDIA_OWNER_DISPOSED'}; }
+      storageMediaTokens.set(result.token,owner);
+    }
+    // A rejected overlapping request does not end the in-flight owner session.
+    // Another renderer must not be able to clear its migration/save gate either.
+    if (payload.token && storageMediaTokens.get(payload.token) === owner && !result.sessionRetained
+      && (payload.action === 'commit' || payload.action === 'abort' || !result.success)) storageMediaTokens.delete(payload.token);
     return result;
   });
 });
@@ -1556,6 +1488,8 @@ handleDesktop("desktop:get-canvas-media-url", (event, payload = {}) => {
 const canvasMediaLocation = require('./canvas-media-location.cjs')({
   directory: canvasMediaRootDirectory,
   getUrl: id => canvasMediaProtocol.getUrl(id),
+  standardize: id => canvasStandardMedia.ensure(id),
+  openPath: directory => shell.openPath(directory),
   showItemInFolder: file => shell.showItemInFolder(file)
 });
 function isCanvasMediaLocationCaller(event) {
@@ -1658,16 +1592,18 @@ async function requestProjectStorageMigration(payload) {
     if (!report?.success) throw Error('画布保存未通过：'+(report?.failures||[]).map(item=>item.tabTitle+' '+(item.error||'')).join('；'));
     await inspectStorageMigrationTabs();
     if (storageMediaTokens.size) throw Error('原图仍在写入，请等待保存完成后再迁移');
+    canvasStandardMedia.pause();
     await projectStorage.freeze();
     if (activeCanvasApiCount || storageMediaTokens.size) throw Error('仍有后台任务，请完成后重试');
     await projectStorage.prepare(payload);
+    getApplicationSession().flushStorageData();
     reportProjectStorageProgress({phase:'restarting',message:'已保存，软件将重启并迁移。旧目录会完整保留。'});
     // After this point all project writers are frozen. Startup performs the copy
     // before any editing page exists; pagehide cannot race with the source copy.
     setTimeout(()=>{allowWindowClose=true;app.relaunch();app.quit();},250);
     return {success:true,restarting:true};
   } catch(error) {
-    projectStorage.unfreeze();storageMigrationPreparing=false;
+    projectStorage.unfreeze();storageMigrationPreparing=false;canvasStandardMedia.resume();
     if(mainWindow&&!mainWindow.isDestroyed())mainWindow.setEnabled(true);
     reportProjectStorageProgress({phase:'error',message:error.message});
     return {success:false,error:error.message};
@@ -1675,7 +1611,11 @@ async function requestProjectStorageMigration(payload) {
 }
 handleDesktop('desktop:get-project-storage-info',async(event)=>{
   if(!isProjectStorageSettingsCaller(event))return{success:false,error:'仅本地存储设置可以查看项目目录'};
-  return {...await projectStorage.info(),profileDirectory:app.getPath('userData')};
+  return {...await projectStorage.info(),profileDirectory:app.getPath('userData'),
+    browserSessionDirectory:applicationSession?.storagePath || '',
+    browserSessionLegacyDirectory:app.getPath('userData'),
+    browserSessionMigration:browserSessionInfo ? {migrated:Boolean(browserSessionInfo.migrated),resumed:Boolean(browserSessionInfo.resumed),files:browserSessionInfo.files,bytes:browserSessionInfo.bytes} : null,
+    originalFiles:canvasStandardMedia.info()};
 });
 handleDesktop('desktop:get-storage-usage',(event)=>{
   if(!isProjectStorageSettingsCaller(event))return {success:false,error:'仅本地存储设置可以查看存储占用'};
@@ -1705,17 +1645,35 @@ app.whenReady().then(async () => {
     try{await projectStorage.prepareStartup();await projectStorage.available();break;}
     catch(error){const choice=await dialog.showMessageBox({type:'error',title:'项目存储目录不可用',message:error.message,buttons:['重试','退出'],defaultId:0,cancelId:1,noLink:true});if(choice.response!==0){app.quit();return;}}
   }
-  if(projectStorage.hasPending()){
-    const storageDark=readDesktopTheme().theme==='dark',storageBackground=storageDark?'#171717':'#ffffff',storageText=storageDark?'#dddddd':'#343434';
-    storageProgressWindow=new BrowserWindow({width:520,height:210,show:true,resizable:false,minimizable:false,maximizable:false,closable:false,autoHideMenuBar:true,backgroundColor:storageBackground,title:'正在迁移项目数据',webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
-    await storageProgressWindow.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(`<!doctype html><meta charset="utf-8"><body style="font:16px Microsoft YaHei,sans-serif;padding:28px;color:${storageText};background:${storageBackground}"><h3>正在迁移项目数据</h3><p style="white-space:pre-line">正在准备，请勿断开目标磁盘。原目录数据会保留。</p>`));
-  }
+  // Even an in-memory BrowserWindow initializes Chromium's default storage on
+  // Windows. Keep all webContents closed until the old browser library has been
+  // copied and verified; otherwise its LevelDB LOCK files cannot be read.
   let migration;
   try{migration=await projectStorage.initialize();}
   catch(error){await dialog.showMessageBox({type:'error',title:'项目存储初始化失败',message:error.message,buttons:['退出']});app.quit();return;}
   if(migration?.success===false)await dialog.showMessageBox({type:'warning',title:'项目迁移未完成',message:'仍使用原目录，原数据没有删除。',detail:migration.error,buttons:['继续使用原目录']});
-  protocol.handle('wandou-media', request => canvasMediaProtocol.handle(request));
+  while (true) {
+    try {
+      await projectStorage.available();
+      browserSessionInfo = await browserSessionStorage.prepare();
+      if (path.resolve(browserSessionInfo.sessionPath).toLowerCase() !== path.join(projectStorage.root(),'browser-session').toLowerCase()) throw new Error('浏览器存储不在已选择的受管项目目录');
+      applicationSession = session.fromPath(browserSessionInfo.sessionPath);
+      if (path.resolve(applicationSession.storagePath) !== path.resolve(browserSessionInfo.sessionPath)) throw new Error('浏览器存储路径核验失败');
+      break;
+    } catch (error) {
+      // A missing or unverified target is never replaced by a fresh defaultSession.
+      // Once a session exists, restarting is required; do not re-import over it.
+      const buttons=applicationSession ? ['退出'] : ['重试','退出'];
+      const choice=await dialog.showMessageBox({type:'error',title:'工作台存储初始化失败',message:error.message,detail:'旧数据会保留，不会打开空白工作台。请恢复目标磁盘或写入权限后重试。',buttons,defaultId:0,cancelId:buttons.length-1,noLink:true});
+      if(applicationSession || choice.response!==0){app.quit();return;}
+    }
+  }
+  applicationSession.protocol.handle('wandou-media', request => canvasMediaProtocol.handle(request));
+  applicationStorageReady=true;
+  applicationStorageStarting=false;
   createWindow();
+  const originalFilesTimer = setTimeout(() => { void canvasStandardMedia.start(); }, 4000);
+  originalFilesTimer.unref?.();
   if(storageProgressWindow&&!storageProgressWindow.isDestroyed())storageProgressWindow.destroy();storageProgressWindow=null;
   const testCloseDelay = Number(process.env.WANDOU_TEST_CLOSE_AFTER_MS || 0);
   if (Number.isInteger(testCloseDelay) && testCloseDelay >= 1000 && testCloseDelay <= 60000) {
@@ -1741,5 +1699,6 @@ app.whenReady().then(async () => {
   const stageCleanupTimer = setInterval(() => { cleanupStalePortableUpdateStages(); }, 10 * 60 * 1000);
   stageCleanupTimer.unref?.();
 });
-app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
-app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+app.on('before-quit', () => { try { applicationSession?.flushStorageData(); } catch (_) {} });
+app.on("window-all-closed", () => { if (!applicationStorageStarting && process.platform !== "darwin") app.quit(); });
+app.on("activate", () => { if (applicationStorageReady && applicationSession && !storageMigrationPreparing && !storageOutageHandling && BrowserWindow.getAllWindows().length === 0) createWindow(); });

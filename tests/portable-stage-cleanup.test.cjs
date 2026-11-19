@@ -45,8 +45,8 @@ const unrelated = path.join(root, 'wandou-ai-stage-not-an-updater-guid');
     vm.runInContext(source.slice(protectedStart, protectedEnd) + '\n' + source.slice(start, end), context);
     await vm.runInContext('cleanupStalePortableUpdateStages()', context);
 
-    assert.equal(fs.existsSync(stale), false, 'stale updater stage is removed');
-    assert.equal(fs.existsSync(legacy), false, 'old unmarked stage from prior versions is removed');
+    assert.equal(fs.readFileSync(path.join(stale,'marker.txt'),'utf8'),stale,'stale stage contents are retained without proven ownership');
+    assert.equal(fs.readFileSync(path.join(legacy,'marker.txt'),'utf8'),legacy,'old unmarked stage is retained');
     assert.equal(fs.existsSync(active), true, 'unmarked stage may still be active and is preserved');
     assert.equal(fs.existsSync(recent), true, 'newly completed stage is left for the updater to clean first');
     assert.equal(fs.existsSync(unrelated), true, 'lookalike folder is preserved');

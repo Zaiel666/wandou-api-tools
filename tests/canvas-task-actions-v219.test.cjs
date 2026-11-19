@@ -1,4 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
+const crypto=require('node:crypto');
 const {pathToFileURL}=require('node:url');
 const {chromium}=require(path.join(path.resolve(__dirname,'../../../..'),'desktop-client/node_modules/playwright'));
 async function fixture(fn,{theme='dark',width=1440}={}){
@@ -8,7 +9,7 @@ async function fixture(fn,{theme='dark',width=1440}={}){
   page.setDefaultTimeout(10000);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);
-  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   await page.evaluate(theme=>{
    document.documentElement.dataset.theme=theme;document.body.dataset.theme=theme;
    apiKeyInput.value='synthetic-key-never-sent';nodes=[];links=[];nodeId=1;
@@ -60,7 +61,7 @@ test('local output retry makes zero further paid calls and preserves alpha, orig
   await saveCanvasState();return{calls:requests.length,width:result.width,height:result.height,alpha,processing:result.resolutionProcessing,original:original===testPng,id:result.id};
  });
  assert.deepEqual({...result,id:undefined},{calls:1,width:2048,height:1024,alpha:0,processing:'local-upscale',original:true,id:undefined});
- await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+ await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
  assert.deepEqual(await page.evaluate(id=>{const n=nodes.find(n=>n.id===id);return[n.width,n.height,n.resolutionProcessing,!!n.sourceUrl]},result.id),[2048,1024,'local-upscale',true]);
 }));
 
@@ -76,6 +77,23 @@ for(const action of ['cancel','delete'])test(`local resize ${action} blocks clos
   else cancelLocalResolutionForNode(result.id);
   finishLocal({url:testPng,width:4096,height:2048,processing:'local-upscale'});
  },action);await page.evaluate(()=>Promise.all(tasks));
+ if(action==='delete'){
+  // Resolution cancellation and durable deleted-result archiving are separate
+  // jobs. Waiting for the former does not imply that the original is archived.
+  await page.waitForFunction(()=>deletedResultArchiveJobs.size===0);
+  const archived=await page.evaluate(async()=>{
+   const matches=deletedResults.filter(n=>n.originalId===result.id),entry=matches[0];
+   return{count:matches.length,version:entry?.archiveVersion,originalPresent:nodes.includes(result),
+    replacementIdentity:nodes.find(n=>n.id===result.id)===replacement,replacementStatus:replacement.status,
+    full:await getLocalMedia(entry?.fullUrl),source:await getLocalMedia(entry?.sourceUrl),original:testPng,
+    width:entry?.width,height:entry?.height,calls:requests.length};
+  });
+  const digest=data=>crypto.createHash('sha256').update(Buffer.from(data.split(',')[1],'base64')).digest('hex');
+  assert.equal(archived.count,1);assert.equal(archived.version,2);assert.equal(archived.originalPresent,false);
+  assert.equal(archived.replacementIdentity,true);assert.equal(archived.replacementStatus,'replacement');
+  assert.equal(digest(archived.full),digest(archived.original));assert.equal(digest(archived.source),digest(archived.original));
+  assert.equal(archived.width,128);assert.equal(archived.height,64);assert.equal(archived.calls,0);
+ }
  const state=await page.evaluate(()=>({calls:requests.length,busy:wandouHasActiveTasks(),width:window.replacement?.width||result.width}));
  assert.deepEqual(state,{calls:0,busy:false,width:action==='delete'?1:128});
 }));

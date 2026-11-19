@@ -3791,6 +3791,10 @@ body.home-page {
   display: block;
 }
 
+body.home-page .theme-toggle [data-theme-icon].theme-icon-live {
+  display: block;
+}
+
 body.home-page .home-nav-item.active {
   color: #4f9a24;
   background: rgba(121, 184, 58, 0.16);

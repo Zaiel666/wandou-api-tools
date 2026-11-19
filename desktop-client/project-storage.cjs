@@ -3,13 +3,13 @@ const fsp = fs.promises;
 const path = require('node:path');
 const crypto = require('node:crypto');
 
-const entries = ['canvas-media', 'canvas-backups', 'local-data', 'export-artifacts', 'project-hub-state.json'];
+const entries = ['canvas-media', 'canvas-backups', 'local-data', 'export-artifacts', 'project-hub-state.json', 'browser-session'];
 const markerName = '.wandou-project-storage.json';
 const manifestName = '.wandou-migration-manifest.json';
 const normalized = value => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
 const within = (candidate, root) => normalized(candidate) === normalized(root) || normalized(candidate).startsWith(normalized(root) + path.sep);
 
-module.exports = function createProjectStorage({ legacyRoot, installRoot, onProgress = () => {}, fault = async () => {} }) {
+module.exports = function createProjectStorage({ legacyRoot, installRoot, onProgress = () => {}, fault = async () => {}, isBrowserSessionActive = () => false }) {
   legacyRoot = path.resolve(legacyRoot); installRoot = path.resolve(installRoot);
   const portableRoot = path.join(installRoot, '豌豆AI数据');
   const configPath = path.join(legacyRoot, 'project-storage.json');
@@ -78,7 +78,7 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
         for (const name of (await fsp.readdir(file)).sort()) await visit(path.join(relative, name));
       } else if (stat.isFile()) {
         // Incomplete writes are never project data. Do not transport abandoned temp files.
-        if (relative.endsWith('.tmp')) return;
+        if (!relative.startsWith('browser-session'+path.sep) && relative.endsWith('.tmp')) return;
         list.push({ path: relative.split(path.sep).join('/'), bytes: stat.size, sha256: await hash(file) });
       } else throw Error('项目数据包含非普通文件，已停止迁移');
     }
@@ -92,7 +92,7 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
       let stat;try { stat = await fsp.lstat(file); } catch (error) { if (error.code === 'ENOENT') return; throw error; }
       if (stat.isSymbolicLink()) throw Error('项目目录包含链接');
       if (stat.isDirectory()) { for (const name of await fsp.readdir(file)) await visit(path.join(file,name)); }
-      else if (stat.isFile() && !file.endsWith('.tmp')) { sizeBytes += stat.size; fileCount++; }
+      else if (stat.isFile() && (!file.endsWith('.tmp') || within(file,path.join(root(),'browser-session')))) { sizeBytes += stat.size; fileCount++; }
     }
     for (const entry of entries) await visit(path.join(root(),entry));
     return { sizeBytes, fileCount };
@@ -127,6 +127,9 @@ module.exports = function createProjectStorage({ legacyRoot, installRoot, onProg
     return { availableBytes, requiredBytes };
   }
   async function reusableCopy(target, sourceFiles) {
+    // Chromium may be changing LevelDB/WAL files even while tool tasks are idle.
+    // Only the next startup, before its session exists, may hash and reuse them.
+    if (!sourceFiles && isBrowserSessionActive()) return null;
     const pending=config.pending;
     if(!pending||normalized(pending.target)!==normalized(target)||pending.source!==root())return null;
     let destination='',published=false;

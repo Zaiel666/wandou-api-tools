@@ -2,7 +2,7 @@ const path = require('node:path');
 const { fileURLToPath } = require('node:url');
 
 module.exports = function createIpcPolicy({ appRoot, shellFile, shellContents }) {
-  const shellOnly = new Set(['desktop:shell-ready', 'desktop:cancel-close', 'desktop:confirm-close', 'desktop:start-update']);
+  const shellOnly = new Set(['desktop:shell-ready', 'desktop:cancel-close', 'desktop:confirm-close', 'desktop:start-update', 'desktop:open-update-downloads']);
   function isShell(event) {
     if (!event?.senderFrame || event.senderFrame !== event.sender?.mainFrame || event.sender !== shellContents()) return false;
     try { return path.resolve(fileURLToPath(event.senderFrame.url)).toLowerCase() === path.resolve(shellFile).toLowerCase(); }

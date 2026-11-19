@@ -6,7 +6,7 @@ before(async()=>{browser=await chromium.launch({headless:true,executablePath:'C:
 async function fixture(t,{width=1440,theme='light'}={}){
  const context=await browser.newContext({viewport:{width,height:800}});t.after(()=>context.close());const page=await context.newPage(),calls=[],errors=[];page.setDefaultTimeout(15000);page.on('pageerror',error=>errors.push(error.message));
  await context.route(/^https?:/,route=>{if(route.request().url()==='https://www.zayapi.top/v1/images/generations'){calls.push(route.request().postDataJSON());return route.fulfill({contentType:'application/json',body:JSON.stringify({output_format:'gif',data:[{b64_json:gif.toString('base64')}]})})}return route.abort()});
- await page.goto(pathToFileURL(path.join(app,'ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+ await page.goto(pathToFileURL(path.join(app,'ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
  await page.evaluate(theme=>{WandouTheme.set(theme);nodes=[];links=[];nodeId=1;apiKeyInput.value='synthetic-never-paid';window.qaGenerator=createNode('generator',0,0,{model:'gpt-image-2.6-flare',prompt:'合成测试：循环动作',ratio:'16:9',resolution:'4K',count:4,_deferRender:true});render({skipSave:true});centerOnNode(qaGenerator.id);},theme);
  return{context,page,calls,errors};
 }
@@ -24,7 +24,7 @@ for(const width of [1024,1440])for(const theme of ['light','dark'])test(`main sh
  assert.deepEqual(state.node,{quality:'low',complexity:'medium',frames:12,time:300,count:1});assert.equal(state.body.quality,'low');assert.equal(state.body.complexity,'medium');assert.equal(state.body.frame_count,12);assert.equal(state.body.frame_duration_ms,300);assert.equal(state.body.size,'auto');assert.equal(state.body.resolution,undefined);assert.equal(state.body.n,1);assert.ok(state.saved);
  await fitNode(page);fs.mkdirSync(qa,{recursive:true});await page.screenshot({path:path.join(qa,`canvas-options-${width}-${theme}.png`)});
  const layout=await page.locator('.node.generator .wd-generation-options').evaluate(el=>{const r=el.getBoundingClientRect(),inputs=[...el.querySelectorAll('button,select,input')];return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:innerWidth,height:innerHeight,overflow:inputs.some(x=>x.getBoundingClientRect().right>r.right+1)}});assert.ok(layout.left>=0&&layout.right<=width&&layout.top>=0&&layout.bottom<=800);assert.equal(layout.overflow,false);
- await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&nodes.some(n=>n.type==='generator'));
+ await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady&&nodes.some(n=>n.type==='generator'));
  assert.deepEqual(await page.evaluate(()=>{const n=nodes.find(n=>n.type==='generator');return[n.imageOutputFormat,n.imageQuality,n.imageComplexity,n.gifFrameCount,n.gifFrameDurationMs]}),['gif','low','medium',12,300]);assert.deepEqual(errors,[]);
 });
 test('main generation and regeneration preserve original quality complexity frames and original bytes',async t=>{

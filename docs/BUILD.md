@@ -1,4 +1,4 @@
-# 从源码构建 Windows v2.0.22
+# 从源码构建 Windows v2.0.30
 
 本目录说明如何从当前标签的源码生成便携 ZIP 和本地安装器。官方 Release 中的包经过独立验收；自行重新构建会受到工具链、时间戳和依赖下载环境影响，不保证与官方包逐字节相同。不要用重新构建的文件覆盖已验收的 Release 资产。
 
@@ -38,25 +38,25 @@ pnpm install --frozen-lockfile --lockfile-only --ignore-scripts --offline
 
 ## 构建便携包和安装器
 
-先确认 `desktop-client/package.json` 为 2.0.22、`app/VERSION.txt` 首行为 v2.0.22。构建命令不会替你把其它版本源码改成当前版本。
+先确认 `desktop-client/package.json` 为 2.0.30、`app/VERSION.txt` 首行为 v2.0.30。构建命令不会替你把其它版本源码改成当前版本。
 
 ```powershell
 $compiler = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path -LiteralPath $compiler)) { throw 'C# compiler not found' }
-& $compiler /nologo /target:winexe /optimize+ /out:desktop-client\portable-updater.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll desktop-client\portable-updater.cs
+& $compiler /nologo /target:winexe /optimize+ /out:desktop-client\portable-updater.exe /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll desktop-client\portable-updater.cs desktop-client\managed-update-core.cs
 if ($LASTEXITCODE -ne 0) { throw 'Portable updater compilation failed' }
 
 pnpm --dir desktop-client exec electron-builder --win dir --x64 --publish never
 if ($LASTEXITCODE -ne 0) { throw 'Electron package build failed' }
 
-pwsh -NoProfile -File scripts/build-portable-package.ps1 -Version 2.0.22
+pwsh -NoProfile -File scripts/build-portable-package.ps1 -Version 2.0.30
 if ($LASTEXITCODE -ne 0) { throw 'Portable package/installer build failed' }
 ```
 
 输出文件：
 
 - `dist/wandou-ai-tools-windows-x64.zip`：含外层启动器及 `程序文件` 目录，供便携使用和应用内更新。
-- `dist/wandou-ai-tools-setup-2.0.22.exe`：包含同一个 ZIP 的 Windows 本地安装器。
+- `dist/wandou-ai-tools-setup-2.0.30.exe`：包含同一个 ZIP 的 Windows 本地安装器。
 - `dist/installer.manifest`、`dist/installer-build-metadata.cs`：安装器构建中间文件。
 
 打包脚本会重新编译当前源码中的更新器，校验运行目录版本，并默认调用 `scripts/build-local-installer.ps1`。`-SkipInstaller` 仅生成 ZIP。输出限制在仓库目录内；不要将输出目录指向正在使用的软件或数据目录。安装器未做 Authenticode 签名，构建成功不等于获得代码签名。
@@ -96,7 +96,7 @@ foreach ($extension in @('blend','fbx')) {
 }
 ```
 
-`tools/director-blender/convert-blend.py` 是 `package.json` 明确列出的额外资源，打包后位于 `程序文件/resources/director/convert-blend.py`，不可漏掉。它在 Blender 内运行，禁用工程自动脚本、不保存原工程、不覆盖已有输出，把 `.blend` 导出为 GLB。当前 v2.0.22 源码文件与官方包内该资源的 SHA256 一致：
+`tools/director-blender/convert-blend.py` 是 `package.json` 明确列出的额外资源，打包后位于 `程序文件/resources/director/convert-blend.py`，不可漏掉。它在 Blender 内运行，禁用工程自动脚本、不保存原工程、不覆盖已有输出，把 `.blend` 导出为 GLB。当前 v2.0.30 源码文件与官方包内该资源的 SHA256 一致：
 
 ```text
 9fa7c7387760c2a9f73cbb36fce48148d38a0fd3f701aa1cc6072ead62afa7f0

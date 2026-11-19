@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),fsp=require('node:fs/promises'),path=require('node:path'),vm=require('node:vm');
 const {pathToFileURL,fileURLToPath}=require('node:url');
-const desktop=process.env.WANDOU_TEST_DESKTOP_ROOT||path.resolve(__dirname,'../artifacts/asset-location-20261025/desktop');
+const desktop=process.env.WANDOU_TEST_DESKTOP_ROOT||path.resolve(__dirname,'../desktop-client');
 const createLocation=require(path.join(desktop,'canvas-media-location.cjs'));
 const createProtocol=require(path.join(desktop,'canvas-media-protocol.cjs'));
 const parent=path.resolve(__dirname,'../artifacts/asset-location-20261025/test-fixtures');
@@ -11,7 +11,7 @@ function fixture(){
  fs.writeFileSync(path.join(root,'preview-1.data'),'data:image/png;base64,AA==');
  fs.writeFileSync(path.join(root,'video.data'),'data:video/mp4;base64,AA==');
  const protocol=createProtocol({directory:()=>root}),shown=[];
- const api=createLocation({directory:()=>root,getUrl:protocol.getUrl,showItemInFolder:file=>shown.push(file)});
+ const api=createLocation({directory:()=>root,getUrl:protocol.getUrl,openPath:folder=>{shown.push(folder);return ''},showItemInFolder:file=>shown.push(file)});
  return{base,root,api,protocol,shown};
 }
 test('stored and current runtime refs locate the actual managed original without full image reads or exposing tokens',async()=>{
@@ -36,7 +36,7 @@ test('missing/unsupported media is explicit; show rechecks existence and reveals
  try{
   assert.equal((await f.api.get('indexed-media:missing')).missing,true);
   assert.equal((await f.api.get('indexed-media:video')).unsupported,true);
-  const result=await f.api.show('indexed-media:original-1');assert.equal(result.shown,true);assert.deepEqual(f.shown,[path.join(f.root,'original-1.data')]);
+  const result=await f.api.show('indexed-media:original-1');assert.equal(result.shown,true);assert.deepEqual(f.shown,[process.platform==='win32'?f.root:path.join(f.root,'original-1.data')]);
   await f.api.get('indexed-media:preview-1');fs.renameSync(path.join(f.root,'preview-1.data'),path.join(f.root,'preview-1.retired'));
   assert.equal((await f.api.show('indexed-media:preview-1')).missing,true);assert.equal(f.shown.length,1);
  }finally{f.protocol.dispose()}

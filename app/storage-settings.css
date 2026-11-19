@@ -20,6 +20,9 @@ html[data-theme="dark"] .storage-settings-dialog { --storage-bg:#1b1b1d; --stora
 .storage-usage-list { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 16px; padding:12px; border:1px solid var(--storage-line); border-radius:8px; font-size:12px; }
 .storage-usage-list dt,.storage-usage-list dd { margin:0; }
 .storage-usage-list dd { font-variant-numeric:tabular-nums; text-align:right; }
+.storage-usage-list .storage-usage-note { display:block; margin-top:2px; color:var(--storage-muted); font-size:12px; overflow-wrap:anywhere; }
+.storage-usage-list dt.storage-usage-detail { padding-left:12px; border-left:2px solid var(--storage-line); }
+.storage-usage-list dd.storage-usage-detail { color:var(--storage-muted); }
 .storage-settings-section > label { display:block; margin-bottom:6px; font-size:13px; color:var(--storage-text); font-weight:600; }
 .storage-settings-dialog input[readonly] { display:block; width:100%; min-height:40px; margin:0; padding:9px 11px; border:1px solid var(--storage-line); border-radius:8px; color:var(--storage-text); background:var(--storage-soft); font:12px/1.6 Consolas,monospace; box-shadow:none; }
 .storage-settings-meta { margin:7px 0 0; color:var(--storage-muted); font-size:12px; }

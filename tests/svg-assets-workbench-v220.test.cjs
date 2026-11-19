@@ -101,7 +101,7 @@ test('workbench structured channels never copy the official key to the gateway, 
  for(const gatewayKey of ['synthetic-gateway-key','']){
   const data=new Map([['ai-tools-api-config',JSON.stringify({key:'must-not-use-top-level',channels:{channel1:{provider:'openai',gateway:{key:gatewayKey},openai:{key:'synthetic-official-key'}}}})],['gpt-image-playground',JSON.stringify({state:{settings:{apiKey:'stale-credential',profiles:[{apiKey:'stale-credential'}]}}})]]);
   const context={localStorage:{getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)},API_URL:'https://synthetic-gateway.invalid/v1',normalizeModelName:v=>v,modelToApiModel:v=>v,defaultModel:()=> 'gpt-image-2.6-flare'};
-  vm.createContext(context);vm.runInContext(extract('readGlobalApiKey')+'\n'+extract('syncWorkbenchApiConfig'),context);context.syncWorkbenchApiConfig();
+  vm.createContext(context);vm.runInContext(extract('readSharedWorkbenchApiConfig')+'\n'+extract('readGlobalApiKey')+'\n'+extract('syncWorkbenchApiConfig'),context);context.syncWorkbenchApiConfig();
   const settings=JSON.parse(data.get('gpt-image-playground')).state.settings;assert.equal(settings.apiKey,gatewayKey);assert.ok(settings.profiles.every(p=>p.apiKey===gatewayKey));assert.equal(settings.baseUrl,'https://synthetic-gateway.invalid/v1');
  }
 });

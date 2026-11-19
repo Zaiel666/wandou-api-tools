@@ -5,7 +5,7 @@ const { pathToFileURL } = require('node:url');
 const { chromium } = require('../desktop-client/node_modules/playwright');
 const pageUrl = pathToFileURL(path.resolve(__dirname, '../app/ai-node-canvas-test.html')).href + '?workspace=production';
 async function fixture(run) {
-  const browser = await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+  const browser = await chromium.launch({headless:true,chromiumSandbox:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
   try {
     const page = await browser.newPage({viewport:{width:1024,height:800}}), errors=[];
     const state={requests:[],modelsStatus:200,imageStatus:403,holdModels:false,release:null};
@@ -20,15 +20,16 @@ async function fixture(run) {
       }
       return route.fulfill({status:state.imageStatus,contentType:'application/json',body:JSON.stringify({error:{message:'Synthetic unavailable'}})});
     });
-    await page.goto(pageUrl);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+    await page.goto(pageUrl);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
     await page.evaluate(()=>{nodes=[];links=[];render({skipSave:true});setSettingsOpen(true);});
     await run(page,state);
     assert.deepEqual(errors,[]);
   } finally {await browser.close();}
 }
-async function selectOfficial(page) {
+async function selectOfficial(page, {persist=false} = {}) {
   await page.locator('#imageProvider-channel1').selectOption('openai');
   await page.locator('#apiKey').fill('synthetic-official');
+  if(persist) await page.evaluate(()=>persistApiConfig(apiKeyInput.value.trim(),apiKey2Input.value.trim()));
 }
 
 test('official-only config saves through real UI and survives project page reload without gateway-key leakage',async()=>fixture(async(page,state)=>{
@@ -39,7 +40,7 @@ test('official-only config saves through real UI and survives project page reloa
   assert.equal(saved.profile.provider,'openai');assert.equal(saved.profile.url,'https://api.openai.com/v1');
   assert.equal(saved.local.channels.channel1.openai.key,'synthetic-official');
   assert.equal(saved.local.key,'');assert.equal(saved.shared.key,'');
-  await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   const profile=await page.evaluate(()=>apiProfileForModel());
   assert.equal(profile.provider,'openai');assert.equal(profile.key,'synthetic-official');
   assert.ok(state.requests.every(request=>request.host==='api.openai.com'));
@@ -72,7 +73,7 @@ test('late model-list response from previous provider cannot replace current pro
 }));
 
 test('third-party model aliases in existing nodes are rejected before official request',async()=>fixture(async(page,state)=>{
-  await selectOfficial(page);state.requests.length=0;
+  await selectOfficial(page,{persist:true});state.requests.length=0;
   const result=await page.evaluate(async()=>{
     const node=createNode('generator',0,0,{model:'gpt-image-2.5-1k',prompt:'Synthetic prompt',resolution:'1K',ratio:'1:1',_deferRender:true});
     try{await callApi(node);return '';}catch(error){return error.message;}
@@ -81,7 +82,7 @@ test('third-party model aliases in existing nodes are rejected before official r
 }));
 
 test('official HTTP failures each make one request and never fall back to third-party or another endpoint',async()=>fixture(async(page,state)=>{
-  await selectOfficial(page);
+  await selectOfficial(page,{persist:true});
   for(const status of [401,403,429,500]){
     state.imageStatus=status;state.requests.length=0;
     const error=await page.evaluate(async()=>{const node=createNode('generator',0,0,{model:'gpt-image-2.6-flare',prompt:'Synthetic prompt',resolution:'1K',ratio:'1:1',_deferRender:true});try{await callApi(node);return '';}catch(error){return error.message;}});
@@ -98,7 +99,7 @@ test('official config with unavailable model endpoint cannot revive stale third-
     canvasTestStorage.setItem('aiCanvasImageModels',JSON.stringify(['gpt-image-2.5-1k','gemini-3-pro-image-preview']));
   });
   state.modelsStatus=503;
-  await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   const snapshot=await page.evaluate(()=>({models:[...imageModelOptions],assistant:[...assistantModelOptions],profile:apiProfileForModel()}));
   assert.equal(snapshot.profile.provider,'openai');
   assert.ok(!snapshot.models.some(model=>/2\.5-1k|gemini/.test(model)),JSON.stringify(snapshot.models));
@@ -115,26 +116,26 @@ test('channel 2 official-only configuration can save, sync and reopen without a 
   assert.equal(snapshot.local.channels.channel2.openai.key,'synthetic-official-channel2');
   assert.equal(snapshot.local.key,'');assert.equal(snapshot.local.key2,'');
   assert.ok(state.requests.some(request=>request.host==='api.openai.com'&&request.path==='/v1/models'));
-  await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   const restored=await page.evaluate(()=>({models:[...imageModelOptions],profile:apiProfileForModel('gpt-image-2.6-flare · 渠道 2')}));
   assert.equal(restored.profile.provider,'openai');assert.equal(restored.profile.key,'synthetic-official-channel2');
   assert.ok(restored.models.includes('gpt-image-2.6-flare · 渠道 2'));
 }));
 
 test('existing audio node refuses image-only official channel before any API request',async()=>fixture(async(page,state)=>{
-  await selectOfficial(page);state.requests.length=0;
+  await selectOfficial(page,{persist:true});state.requests.length=0;
   const error=await page.evaluate(async()=>{const node=createNode('audio',0,0,{model:'tts-1',prompt:'Synthetic speech',audioVoice:'alloy',audioFormat:'mp3',_deferRender:true});try{await callAudioApi(node);return '';}catch(error){return error.message;}});
   assert.match(error,/仅.*绘图|只.*绘图/);assert.equal(state.requests.length,0);
 }));
 
 test('chat assistant refuses image-only official channel before any API request',async()=>fixture(async(page,state)=>{
-  await selectOfficial(page);state.requests.length=0;
+  await selectOfficial(page,{persist:true});state.requests.length=0;
   await page.evaluate(()=>sendAssistantMessage('Synthetic text, no network permitted'));
   assert.equal(state.requests.length,0,'Image-only official channel must not call chat endpoint');
 }));
 
 test('shared browser request boundary blocks direct non-image helpers and invalid official URLs',async()=>fixture(async(page,state)=>{
-  await selectOfficial(page);state.requests.length=0;
+  await selectOfficial(page,{persist:true});state.requests.length=0;
   const failures=await page.evaluate(async()=>{
     const attempts=[
       ['https://api.openai.com/v1/chat/completions','POST'],

@@ -81,30 +81,36 @@
   let autoSaveStatusTimer = null;
   let workbenchDownloadPending = false;
 
-  function readGlobalApiKey() {
-    try {
-      const globalConfig = JSON.parse(localStorage.getItem("ai-tools-api-config") || "{}");
-      if (globalConfig.channels) return String(globalConfig.channels.channel1?.gateway?.key || "");
-      if (globalConfig.key) return String(globalConfig.key);
-    } catch {}
-    try {
-      const canvasConfig = JSON.parse(localStorage.getItem("aiCanvasApi") || "{}");
-      if (canvasConfig.key) return String(canvasConfig.key);
-    } catch {}
-    return "";
+  function readSharedWorkbenchApiConfig() {
+    const candidates = [];
+    for (const name of ["aiCanvasApi", "ai-tools-api-config"]) {
+      try {
+        const config = JSON.parse(localStorage.getItem(name) || "null");
+        if (!config || typeof config !== "object" || Array.isArray(config)) continue;
+        if (!Object.hasOwn(config, "key") && !Object.hasOwn(config, "key2") && !config.channels) continue;
+        // A versioned empty shared value is an intentional clear. Official
+        // credentials stay separate from this gateway-only workbench.
+        const key = config.channels ? config.channels.channel1?.gateway?.key : config.key;
+        candidates.push({ key: String(key || "").trim(), savedAt: String(config.savedAt || "") });
+      } catch {}
+    }
+    return candidates.sort((left, right) => right.savedAt.localeCompare(left.savedAt))[0] || null;
   }
 
-  function syncWorkbenchApiConfig() {
+  function readGlobalApiKey() {
+    return readSharedWorkbenchApiConfig()?.key || "";
+  }
+
+  function syncWorkbenchApiConfig(shared = readSharedWorkbenchApiConfig()) {
     try {
-      const key = readGlobalApiKey();
-      const structuredChannels = Boolean(JSON.parse(localStorage.getItem('ai-tools-api-config') || '{}').channels);
+      const key = shared?.key || "";
       const raw = localStorage.getItem("gpt-image-playground");
       const store = raw ? JSON.parse(raw) : { state: {}, version: 0 };
       store.state = store.state || {};
       store.state.settings = store.state.settings || {};
       const settings = store.state.settings;
       settings.baseUrl = API_URL;
-      if (key || structuredChannels) settings.apiKey = key;
+      if (shared) settings.apiKey = key;
       settings.model = modelToApiModel(normalizeModelName(settings.model || defaultModel()));
       settings.timeout = 999;
       settings.apiMode = settings.apiMode || "images";
@@ -121,7 +127,7 @@
         name: index === 0 ? "默认" : profile.name,
         provider: profile.provider || "openai",
         baseUrl: API_URL,
-        apiKey: structuredChannels ? key : key || profile.apiKey || "",
+        apiKey: shared ? key : profile.apiKey || "",
         model: modelToApiModel(normalizeModelName(profile.model || settings.model || defaultModel())),
         timeout: 999,
         apiMode: profile.apiMode || settings.apiMode || "images"
@@ -131,6 +137,50 @@
     } catch {}
   }
 
+  function bindSharedWorkbenchImageRequest(input, init) {
+    const requestUrl = typeof input === "string" ? input : input?.url;
+    try {
+      if (new URL(requestUrl, location.href).origin !== new URL(API_URL).origin) return { init };
+    } catch { return { init }; }
+    const shared = readSharedWorkbenchApiConfig();
+    if (!shared) return { init }; // Preserve independently configured workbenches.
+    syncWorkbenchApiConfig(shared);
+    if (!shared.key) return { response: new Response(JSON.stringify({ error: {
+      message: "共享 API 密钥已清除，请在首页或画布设置中填写渠道 1 密钥后再生成。", type: "local_configuration_error"
+    } }), { status: 401, headers: { "content-type": "application/json" } }) };
+    // React may still hold a previously imported credential. Read the shared
+    // state at this request boundary, without retries or mutating caller headers.
+    const headers = new Headers(init?.headers || input?.headers || {});
+    headers.set("Authorization", `Bearer ${shared.key}`);
+    return { init: { ...init, headers } };
+  }
+
+  function bindSharedWorkbenchStorageWrites() {
+    if (typeof Storage === "undefined") return;
+    const nativeSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (name, value) {
+      if (this === localStorage && name === "gpt-image-playground") {
+        const shared = readSharedWorkbenchApiConfig();
+        if (shared) {
+          try {
+            const store = JSON.parse(value);
+            const settings = store?.state?.settings;
+            if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+              // React persists its complete in-memory store when a task changes.
+              // Keep that write from restoring a stale imported credential.
+              settings.apiKey = shared.key;
+              if (Array.isArray(settings.profiles)) settings.profiles = settings.profiles.map(profile =>
+                profile && typeof profile === "object" && !Array.isArray(profile) ? { ...profile, apiKey: shared.key } : profile);
+              value = JSON.stringify(store);
+            }
+          } catch {}
+        }
+      }
+      return nativeSetItem.call(this, name, value);
+    };
+  }
+
+  bindSharedWorkbenchStorageWrites();
   syncWorkbenchApiConfig();
 
   function closeForeignMenus() {
@@ -837,6 +887,9 @@
       let body = null;
       try { body = JSON.parse(init.body); } catch {}
       if (body && isImageRequest(body)) {
+        const sharedRequest = bindSharedWorkbenchImageRequest(input, init);
+        if (sharedRequest.response) return sharedRequest.response;
+        init = sharedRequest.init;
         if (window.WandouImageOptions) {
           const references=[body.image,body.images,body.reference_images,body.image_urls,body.input_images].flat(Infinity).filter(Boolean);
           const invalid=window.WandouImageOptions.validate({...readGenerationOptions(),mask:body.mask,markupImage:body.markup},references);
@@ -857,8 +910,9 @@
             const nativeBody=JSON.parse(init.body);delete nativeBody.resolution;delete nativeBody.response_format;
             init.body=JSON.stringify(nativeBody);
           }
+          const outputRequest=window.WandouImageOutputContract.capture(init.body);
           const response=await nativeFetch(input,init);
-          return window.WandouWorkbenchOutput.processResponse(response,{plan:outputPlan,outputFormat:normalized.output_format,signal:init.signal,fetch:nativeFetch});
+          return window.WandouWorkbenchOutput.processResponse(response,{plan:outputPlan,outputFormat:normalized.output_format,outputRequest,signal:init.signal,fetch:nativeFetch});
         }
       }
     }
@@ -973,19 +1027,6 @@
     themeButton.insertAdjacentElement("afterend", button);
   }
 
-  function deleteCacheDb(name) {
-    return new Promise((resolve) => {
-      if (!window.indexedDB) {
-        resolve(false);
-        return;
-      }
-      const request = indexedDB.deleteDatabase(name);
-      request.onsuccess = () => resolve(true);
-      request.onerror = () => resolve(false);
-      request.onblocked = () => resolve(false);
-    });
-  }
-
   async function clearWorkbenchCache() {
     if (window.WandouLocalCache?.clearHeavyCache) return window.WandouLocalCache.clearHeavyCache();
     let clearedRecords = 0;
@@ -1000,47 +1041,42 @@
     } catch { return { ok: false, clearedRecords, clearedDatabases: 0 }; }
   }
 
-  const WORKBENCH_IMAGE_DB = "gpt-image-playground";
-  const WORKBENCH_IMAGE_DB_STORES = ["tasks", "images", "thumbnails"];
-  const WORKBENCH_DB_REPAIR_KEY = "wd-image-db-repairing";
-
-  function ensureWorkbenchDbStores(db) {
-    WORKBENCH_IMAGE_DB_STORES.forEach((name) => {
-      if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: "id" });
-    });
-  }
-
-  function hasWorkbenchDbStores(db) {
-    return WORKBENCH_IMAGE_DB_STORES.every((name) => db.objectStoreNames.contains(name));
-  }
-
-  function repairWorkbenchImageDb() {
-    if (!window.indexedDB) return;
-    const request = indexedDB.open(WORKBENCH_IMAGE_DB, 2);
-    request.onupgradeneeded = () => {
-      ensureWorkbenchDbStores(request.result);
-    };
-    request.onerror = () => {};
-    request.onsuccess = async () => {
-      const db = request.result;
-      if (hasWorkbenchDbStores(db)) {
+  function showWorkbenchStorageStatus(value) {
+    if (!value?.message) return;
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', () => showWorkbenchStorageStatus(value), { once: true });
+      return;
+    }
+    let notice = document.querySelector('.wd-storage-notice');
+    if (!notice) {
+      notice = document.createElement('aside'); notice.className = 'wd-storage-notice';
+      notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
+      const message = document.createElement('p'), retry = document.createElement('button'), close = document.createElement('button');
+      message.dataset.storageMessage = '';
+      retry.type = close.type = 'button'; retry.dataset.storageRetry = ''; retry.textContent = '重新读取';
+      close.textContent = '关闭提示'; close.setAttribute('aria-label', '关闭工作台存储提示');
+      retry.addEventListener('click', async () => {
+        if (retry.disabled) return;
+        retry.disabled = true;
         try {
-          sessionStorage.removeItem(WORKBENCH_DB_REPAIR_KEY);
-        } catch {}
-        db.close();
-        return;
-      }
-      db.close();
-      try {
-        if (sessionStorage.getItem(WORKBENCH_DB_REPAIR_KEY) === "1") return;
-        sessionStorage.setItem(WORKBENCH_DB_REPAIR_KEY, "1");
-      } catch {}
-      const deleted = await deleteCacheDb(WORKBENCH_IMAGE_DB);
-      if (deleted) window.location.reload();
-    };
+          const gate = await window.wandouSaveBeforeClose?.();
+          if (gate?.success === false || gate?.busy || window.WandouWorkbenchImageDb?.hasActiveTasks()) {
+            message.textContent = '有图片正在生成、处理或保存，请等待完成后再重新读取。已有记录和原图未删除。';
+            return;
+          }
+          window.location.reload();
+        } catch (_) { message.textContent = '暂时无法确认任务已保存，请完成当前操作后再重新读取。'; }
+        finally { retry.disabled = false; }
+      });
+      close.addEventListener('click', () => notice.remove());
+      notice.append(message, retry, close);
+      (document.querySelector('[data-home-main]') || document.body).prepend(notice);
+    }
+    notice.querySelector('[data-storage-message]').textContent = value.message;
+    notice.querySelector('[data-storage-retry]').hidden = value.kind !== 'error';
   }
-
-  repairWorkbenchImageDb();
+  window.addEventListener('wandou-workbench-storage-status', event => showWorkbenchStorageStatus(event.detail));
+  showWorkbenchStorageStatus(window.WandouWorkbenchImageDb?.getState());
 
   function hideInstallButton() {
     const installButton = document.querySelector('button[aria-label="安装为应用"]');
@@ -1971,10 +2007,7 @@ function rewriteQualityOptions() {
   function readFullImageRecord(imageId) {
     if (!imageId || !window.indexedDB) return Promise.resolve(null);
     return new Promise((resolve) => {
-      const request = indexedDB.open("gpt-image-playground", 2);
-      request.onerror = () => resolve(null);
-      request.onsuccess = () => {
-        const db = request.result;
+      window.WandouWorkbenchImageDb.open().then(db => {
         try {
           const tx = db.transaction("images", "readonly");
           const getRequest = tx.objectStore("images").get(imageId);
@@ -1989,7 +2022,7 @@ function rewriteQualityOptions() {
           db.close();
           resolve(null);
         }
-      };
+      }, () => resolve(null));
     });
   }
 
@@ -2012,7 +2045,7 @@ function rewriteQualityOptions() {
 
   function sizeTextElements(scope) {
     return Array.from(scope.querySelectorAll("span, div"))
-      .filter((item) => !item.closest?.('.wd-output-processing'))
+      .filter((item) => !item.closest?.('.wd-output-processing, .wd-local-copy-actions'))
       .filter((item) => item.children.length === 0)
       .map((item) => ({ item, text: normalizeText(item) }))
       .filter(({ text }) => SIZE_TEXT_PATTERN.test(text));
@@ -2024,6 +2057,7 @@ function rewriteQualityOptions() {
     const safeMatch = safeText?.match(SIZE_TEXT_PATTERN);
     if (safeMatch) return { width: Number(safeMatch[1]), height: Number(safeMatch[2]) };
     const text = Array.from(scope.querySelectorAll("span, div"))
+      .filter((item) => !item.closest?.('.wd-output-processing, .wd-local-copy-actions') && !item.querySelector?.('.wd-output-processing, .wd-local-copy-actions'))
       .map((item) => normalizeText(item))
       .find((value) => /(\d{3,5})\s*[x×脳]\s*(\d{3,5})/.test(value));
     const match = text?.match(/(\d{3,5})\s*[x×脳]\s*(\d{3,5})/);
@@ -2123,6 +2157,54 @@ function rewriteQualityOptions() {
   }
 
   const displayedImageDimensions = new WeakMap();
+  window.addEventListener('wandou-workbench-output-metadata',event=>{
+    for(const image of document.querySelectorAll('.task-card-wrapper img,.fixed.inset-0 img'))if(displayedImageDimensions.get(image)?.recordId===event.detail?.id)displayedImageDimensions.delete(image);
+    updateDisplayedImageSizes();
+  });
+  const workbenchLocalControls = new WeakMap();
+  const workbenchLocalJobs = new Set();
+  const previousWorkbenchSave = window.wandouSaveBeforeClose;
+  window.wandouSaveBeforeClose = async (...args) => {
+    if (workbenchLocalJobs.size || window.WandouWorkbenchOutput?.hasActiveLocalCopies() || workbenchDownloadPending) return {success:false,busy:true,error:'图片正在处理或另存为，请完成或取消后再关闭。'};
+    return typeof previousWorkbenchSave === 'function' ? previousWorkbenchSave(...args) : {success:true};
+  };
+  window.addEventListener('pagehide',()=>{for(const controller of workbenchLocalJobs)controller.abort();});
+  function attachLocalCopyAction(scope,image,metadata,original) {
+    if (!window.WandouImageOutputAdjustment || !['native-vector','native-animation'].includes(metadata?.processing)) {scope.querySelector('.wd-local-copy-actions')?.remove();return;}
+    const choice=window.WandouImageOutputAdjustment.plan(metadata.outputRequest,metadata);
+    if (!metadata.outputComparison?.mismatch && !metadata.requestAmbiguous) {scope.querySelector('.wd-local-copy-actions')?.remove();return;}
+    let state=workbenchLocalControls.get(scope);
+    if (!state || !state.element.isConnected) {
+      const element=document.createElement('div');element.className='wd-local-copy-actions';
+      const button=document.createElement('button');button.type='button';button.className='wd-local-copy-button';button.dataset.localOutputCopy='true';
+      const cancel=document.createElement('button');cancel.type='button';cancel.className='wd-local-copy-button';cancel.dataset.cancelLocalOutputCopy='true';cancel.textContent='取消';cancel.hidden=true;
+      const note=document.createElement('span');note.className='wd-local-copy-note';
+      const status=document.createElement('span');status.className='wd-local-copy-status';status.setAttribute('role','status');
+      element.append(button,cancel,note,status);scope.append(element);state={element,button,cancel,note,status,image,original,metadata,busy:false,controller:null};workbenchLocalControls.set(scope,state);cancel.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();state.controller?.abort();});
+      button.addEventListener('click',async event=>{
+        event.preventDefault();event.stopPropagation();if(state.busy || workbenchDownloadPending || button.disabled)return;
+        const controller=new AbortController(),targetImage=state.image,source=state.original,imageId=targetImage.getAttribute('data-image-id'),visibleSource=targetImage.dataset.wdAnimationOriginal||targetImage.src;
+        const current=()=>scope.isConnected && targetImage.isConnected && targetImage.getAttribute('data-image-id')===imageId && (targetImage.dataset.wdAnimationOriginal||targetImage.src)===visibleSource;
+        const ensureCurrent=()=>{if(!current()||controller.signal.aborted)throw new DOMException('原结果已关闭或移除，已取消本地副本下载。','AbortError');};
+        state.busy=true;state.controller=controller;cancel.hidden=false;workbenchDownloadPending=true;workbenchLocalJobs.add(controller);button.disabled=true;button.setAttribute('aria-busy','true');state.status.textContent='正在本地创建副本，不会重新请求生图…';
+        const observer=new MutationObserver(()=>{if(!current())controller.abort();});observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src','data-image-id']});
+        try{
+          ensureCurrent();const output=await window.WandouWorkbenchOutput.createLocalCopy(source,{signal:controller.signal,fetch:nativeFetch});ensureCurrent();
+          if(!window.WandouImageExport?.save)throw Error('下载组件尚未就绪。');
+          const saved=await window.WandouImageExport.save({blob:output.blob,filename:output.filename});ensureCurrent();
+          if(!saved?.success&&!saved?.canceled)throw Error(saved?.error||'调整副本保存失败。');
+          state.status.textContent=saved?.canceled?'已取消另存为；软件中保留原件和调整副本。':'调整副本已保存；渠道原件未更改。';
+          displayedImageDimensions.delete(targetImage);updateDisplayedImageSizes();
+        }catch(error){if(scope.isConnected)state.status.textContent=error?.name==='AbortError'?'已取消本地副本处理，原件未更改。':`本地副本未完成：${error?.message||'处理失败'} 原件已保留，未再次请求生图。`;}
+        finally{observer.disconnect();state.busy=false;state.controller=null;cancel.hidden=true;workbenchLocalJobs.delete(controller);workbenchDownloadPending=false;button.removeAttribute('aria-busy');button.disabled=!window.WandouImageOutputAdjustment.plan(state.metadata.outputRequest,state.metadata).eligible;}
+      });
+    }
+    state.image=image;state.original=original;state.metadata=metadata;
+    if(!state.busy){const label=metadata.localCopy?'调整副本另存为':'本地调整并下载';if(state.button.textContent!==label)state.button.textContent=label;if(state.button.disabled===choice.eligible)state.button.disabled=!choice.eligible;}
+    if(state.button.title!==choice.reason)state.button.title=choice.reason;
+    const note=(metadata.localCopy?.label||choice.reason)+' 默认下载仍为渠道原件。';if(state.note.textContent!==note)state.note.textContent=note;
+    for(const button of scope.querySelectorAll('.wd-card-download,.wd-detail-download')){if(button.title!=='下载渠道原件')button.title='下载渠道原件';if(button.getAttribute('aria-label')!=='下载渠道原件')button.setAttribute('aria-label','下载渠道原件');const label=button.classList.contains('wd-detail-download')&&button.querySelector('span');if(label&&label.textContent!=='下载渠道原件')label.textContent='下载渠道原件';}
+  }
   const workbenchAnimations = new Map();
   const animationVisibility = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
     entries.forEach(entry => { if (!entry.isIntersecting) workbenchAnimations.get(entry.target)?.stop(); });
@@ -2147,6 +2229,7 @@ function rewriteQualityOptions() {
     const source = image.src || "";
     const cached = displayedImageDimensions.get(image);
     if (cached?.imageId === imageId && cached?.source === source) return cached.promise;
+    const cacheEntry={imageId,source,promise:null,recordId:null};
     const promise = readFullImageRecord(imageId).then(async record => {
       const width = Number(record?.width) || image.naturalWidth;
       const height = Number(record?.height) || image.naturalHeight;
@@ -2155,9 +2238,10 @@ function rewriteQualityOptions() {
         return null;
       }
       const processing = typeof window !== 'undefined' && window.WandouWorkbenchOutput ? await window.WandouWorkbenchOutput.metadata(record?.dataUrl || image.dataset.wdAnimationOriginal || source).catch(()=>null) : null;
+      cacheEntry.recordId=processing?.id||null;
       return { width, height, processing, originalSource:record?.dataUrl || image.dataset.wdAnimationOriginal || source };
     });
-    displayedImageDimensions.set(image, { imageId, source, promise });
+    cacheEntry.promise=promise;displayedImageDimensions.set(image,cacheEntry);
     return promise;
   }
 
@@ -2174,9 +2258,11 @@ function rewriteQualityOptions() {
         if(['local-upscale','original-animation-preserved','native-vector','native-animation'].includes(actual.processing?.processing)) {
           let badge=scope.querySelector('.wd-output-processing');
           if(!badge){badge=document.createElement('div');badge.className='wd-output-processing';scope.appendChild(badge);}
-          const label=actual.processing.processing==='native-animation' ? `GIF 动图 · ${actual.processing.animationFrameCount} 帧 · ${actual.width}×${actual.height} · 下载保留原始动画` : actual.processing.processing==='native-vector' ? 'SVG 矢量原件 · 可无损缩放' : actual.processing.processing==='local-upscale' ? `本地放大 · 非原生生成（原图 ${actual.processing.originalWidth}×${actual.processing.originalHeight}）` : '保留动图原格式和尺寸，未进行静态放大';
+          const baseLabel=actual.processing.processing==='native-animation' ? `GIF 动图 · ${actual.processing.animationFrameCount} 帧 · ${actual.width}×${actual.height} · 下载保留原始动画` : actual.processing.processing==='native-vector' ? 'SVG 矢量原件 · 可无损缩放' : actual.processing.processing==='local-upscale' ? `本地放大 · 非原生生成（原图 ${actual.processing.originalWidth}×${actual.processing.originalHeight}）` : '保留动图原格式和尺寸，未进行静态放大';
+          const label=baseLabel+(actual.processing.outputComparison?.message ? ' · '+actual.processing.outputComparison.message : '');
           if(badge.textContent!==label)badge.textContent=label;
           if(actual.processing.processing==='native-animation') attachAnimationPreview(scope,image,actual.processing,actual.originalSource);
+          attachLocalCopyAction(scope,image,actual.processing,actual.originalSource);
         } else { scope.querySelector?.('.wd-output-processing')?.remove(); }
         sizeTextElements(scope).forEach(({ item }) => {
           const separator = normalizeText(item).includes("\u00d7") ? "\u00d7" : "x";
@@ -2223,6 +2309,25 @@ function rewriteQualityOptions() {
     window.setInterval(runDownloadEnhancements, 1500);
   }
 
+  let composerSpaceTarget=null,composerSpaceObserver=null,composerSpaceFrame=0;
+  function reserveComposerSpace(){
+    const composer=document.querySelector('.wd-workbench-generation')?.closest('.fixed[class*="bottom"]');
+    if(composer!==composerSpaceTarget){
+      composerSpaceObserver?.disconnect();composerSpaceTarget=composer;
+      if(composer&&typeof ResizeObserver==='function'){
+        composerSpaceObserver=new ResizeObserver(scheduleComposerSpace);
+        composerSpaceObserver.observe(composer);
+      }
+    }
+    const main=document.querySelector('main');if(!main)return;
+    const rect=composer?.getBoundingClientRect();
+    const padding=rect&&rect.height>0?Math.ceil(rect.height+Math.max(0,innerHeight-rect.bottom)+24)+'px':'';
+    if(main.style.paddingBottom!==padding)main.style.paddingBottom=padding;
+  }
+  function scheduleComposerSpace(){if(composerSpaceFrame)return;composerSpaceFrame=requestAnimationFrame(()=>{composerSpaceFrame=0;reserveComposerSpace();});}
+  window.addEventListener('resize',scheduleComposerSpace);
+  window.addEventListener('pagehide',()=>{composerSpaceObserver?.disconnect();cancelAnimationFrame(composerSpaceFrame);composerSpaceFrame=0;});
+
   function applyAll() {
     if (applying) return;
     applying = true;
@@ -2252,6 +2357,7 @@ function rewriteQualityOptions() {
       hideModerationAndCompression();
       enhanceQuantity();
       ensureGenerationOptions();
+      scheduleComposerSpace();
       bindSeparateQuantitySubmit();
       bindDownloadEnhancements();
       closeCountMenusWhenForeignMenuOpens();

@@ -252,6 +252,27 @@ body.home-test-page .notice-history-entry.is-latest, body.home-test-page .notice
 body.home-test-page .notice-history-entry.is-selected:not(.is-latest) { border-left-width: 1px; padding-left: 18px; }
 body.home-test-page .guide-step { border-color: var(--test-line); background: var(--test-surface-raised); }
 
+/* Homepage dialogs share the workspace palette; generated artwork keeps its colors. */
+body.home-test-page .api-dialog { color: var(--test-ink); background: var(--test-surface); border-color: var(--test-line); max-height: calc(100dvh - 48px); overflow: auto; }
+body.home-test-page .api-field input { color: var(--test-ink); background: var(--test-surface-raised); border-color: var(--test-line); }
+body.home-test-page .api-field input:focus { border-color: var(--test-ink) !important; box-shadow: none !important; }
+body.home-test-page .api-dialog :is(.eyebrow, .api-note, .api-dialog-header p, .project-storage-entry p),
+body.home-test-page .guide-dialog :is(.eyebrow, .guide-dialog-header p, .guide-step p) { color: var(--test-muted) !important; }
+body.home-test-page .guide-dialog :is(h2, h3), body.home-test-page .api-dialog h2 { color: var(--test-ink); }
+body.home-test-page .api-dialog .primary { color: var(--test-surface); background: var(--test-ink); border-color: var(--test-ink); box-shadow: none; }
+body.home-test-page .api-dialog :is(.secondary, .icon-button),
+body.home-test-page .guide-dialog .icon-button { color: var(--test-ink); background: var(--test-surface-raised); border-color: var(--test-line); box-shadow: none; }
+body.home-test-page :is(.api-dialog, .guide-dialog) .icon-button:hover { color: var(--test-ink) !important; background: var(--test-surface-raised) !important; border-color: var(--test-line) !important; }
+body.home-test-page .api-feedback { margin: 0; padding: 10px 12px; border: 1px solid var(--test-line); border-left: 3px solid currentColor; border-radius: 8px; color: #a23434; background: var(--test-surface-raised); }
+[data-theme="dark"] body.home-test-page .api-feedback { color: #f0a3a3; }
+body.home-test-page .api-secret-toggle { color: var(--test-muted); border-color: var(--test-line); }
+body.home-test-page .api-secret-toggle:is(:hover, :focus-visible) { color: var(--test-ink); background: var(--test-surface-raised); }
+body.home-test-page .guide-step-number { color: var(--test-ink); background: var(--test-surface); border: 1px solid var(--test-line); }
+body.home-test-page dialog.guide-modal { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; color: var(--test-ink); }
+body.home-test-page dialog.guide-modal:not([open]), body.home-test-page dialog.guide-modal[hidden] { display: none; }
+body.home-test-page dialog.guide-modal::backdrop { background: transparent; }
+body.home-test-page .home-test-tool-groups .module-card { scroll-margin-top: 80px; }
+
 [data-theme="dark"] body.home-test-page #home-tools .module-transcribe .module-art::before { border-color: #4b4d50; background: #dfe1e3; box-shadow: -10px 8px 0 #777b80; }
 [data-theme="dark"] body.home-test-page #home-tools .module-transcribe .module-art::after { color: #41454a; }
 

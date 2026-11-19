@@ -7,7 +7,7 @@ async function fixture(run){
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[],external=[];page.setDefaultTimeout(15000);
   page.on('pageerror',error=>errors.push(error.message));await page.route(/^https?:/,route=>{external.push(route.request().url());return route.abort();});
-  await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   await page.evaluate(async svgUrl=>{
    nodes=[];links=[];nodeId=1;apiKeyInput.value='synthetic-isolated';window.requestCount=0;window.saved=[];
    callApi=async()=>{requestCount++;return{url:svgUrl,mediaType:'image',fromApi:true};};

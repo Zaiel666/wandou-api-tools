@@ -88,7 +88,7 @@ test('durable save releases generated originals and references without replacing
   const snapshot=structuredClone(node), saved={id:'1',mediaUrl:'indexed-media:image-1',fullUrl:'indexed-media:image-1',references:[{url:'indexed-media:image-1',maskUrl:'indexed-media:image-1'}]};
   let refreshed=0,released=0;
   const env=helperEnvironment({wandouShell:{getCanvasMediaUrl:async () => ({success:true,url:runtime})}});
-  Object.assign(env,{nodes:[node],activeProjectId:'p1',currentFolderId:'f1',intentionalResetAt:0,localMediaPrefix:'indexed-media:',WandouSavePipeline:require(path.join(app,'canvas-save-pipeline.js')),WandouCanvasPreview:{releaseSource:()=>released++},refreshRenderedNode:()=>refreshed++});
+  Object.assign(env,{nodes:[node],activeProjectId:'p1',currentFolderId:'f1',intentionalResetAt:0,localMediaPrefix:'indexed-media:',WandouSavePipeline:require(path.join(app,'canvas-save-pipeline.js')),WandouCanvasPreview:{releaseSource:()=>released++},refreshRenderedNode:()=>assert.fail('Release must batch its DOM reconciliation'),render:options=>{assert.equal(options.skipSave,true);assert.equal(options.preserveInteraction,true);refreshed++}});
   run(['releaseSavedCanvasMedia'],env);
   const ctx={liveNodes:env.nodes,liveIdentities:new Map([['1',node]]),projectId:'p1',state:{folderId:'f1',intentionalResetAt:0}};
   node.fullUrl='edited';
@@ -112,6 +112,12 @@ test('save failure never replaces live originals; successful committed snapshot 
 
 test('keyword, video first/last, native Banana and masked-edit requests materialize local references before the remote boundary', async () => {
   const env=helperEnvironment();
+  env.imageGenerationOptionsError=()=>'';
+  env.nativeSvgRequestError=()=>'';env.apiProfileForModel=()=>({provider:'custom'});
+  env.nativeGifRequested=env.nativeSvgRequested=env.specialImageRequested=()=>false;
+  env.nativeImageApiHost=()=>'';env.imageNativeResolutionForModel=(_model,resolution)=>resolution;
+  vm.runInNewContext(fs.readFileSync(path.join(app,'image-model-capabilities.js'),'utf8'),env);
+  vm.runInNewContext(fs.readFileSync(path.join(app,'image-generation-options.js'),'utf8'),env);
   Object.assign(env,{FormData,File,promptWithSize:p=>p,modelToApiModel:m=>m,imageGenerationApiModel:m=>m,isOneKOnlyImageModel:()=>false,isGptImageModel:()=>true,isGrokImageModel:()=>false,promptRequestsTransparentPng:()=>false,apiSafeGenerationSize:()=> '1024x1024',apiSizeFromTarget:()=> '1024x1024',videoModeForNode:n=>n.videoMode,videoCapabilitiesForModel:()=>({}),fixedVideoAspectRatio:()=>'',ratioKey:r=>r,videoDefaultDurationForModel:()=>8,keywordModelForNode:n=>n.model});
   run(['buildApiRequest','messageContentFor'],env);
   env.modelToPromptModel = m => m;
@@ -132,7 +138,7 @@ test('keyword, video first/last, native Banana and masked-edit requests material
 test('portable project export contains original bytes for all image fields and no session token', async () => {
   const env=helperEnvironment();Object.assign(env,{getLocalMedia:async x=>x});
   run(['portableProjectMedia','serializeNodeForProjectExport'],env);
-  const result=await env.serializeNodeForProjectExport({mediaUrl:runtime,fullUrl:runtime,previewUrl:runtime,sourceUrl:runtime,outpaintSourceUrl:runtime,references:[{url:runtime,maskUrl:runtime,maskSelectionUrl:runtime,doodleUrl:runtime}]});
+  const result=await env.serializeNodeForProjectExport({mediaUrl:runtime,fullUrl:runtime,previewUrl:runtime,sourceUrl:runtime,outpaintSourceUrl:runtime,references:[{url:runtime,maskUrl:runtime,maskSelectionUrl:runtime,markupUrl:runtime,doodleUrl:runtime}]});
   assert.ok(!JSON.stringify(result).includes('wandou-media:'));
   for(const value of Object.values(result).filter(x=>typeof x==='string')) assert.equal(value,data);
   for(const value of Object.values(result.references[0]))assert.equal(value,data);

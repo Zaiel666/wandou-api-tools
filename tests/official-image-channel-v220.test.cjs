@@ -15,10 +15,11 @@ function createBridge(fetch) {
   const local = { senderFrame: localFrame, sender: { id: 7, mainFrame: localFrame } };
   const policy = createPolicy({ appRoot: () => path.join(root, 'app'), shellFile: path.join(root, 'desktop-client/shell.html'), shellContents: () => null });
   const ipc = { handle: (key, handler) => handlers.set(key, handler), on: (key, handler) => events.set(key, handler) };
+  const selectedSession={fetch:async function(...args){assert.equal(this,selectedSession);return fetch(...args);}};
   const context = vm.createContext({ URL, Buffer, AbortController, MAX_DESKTOP_API_RESPONSE_BYTES: 32 * 1024 * 1024,
     updateInProgress: false, storageMigrationPreparing: false,
     isLocalAppPage: url => url === localFrame.url, apiRequestHeaders: value => value, apiRequestBody: value => value.body?.value,
-    net: { fetch }, handleDesktop: (key, handler) => policy.handle(ipc, key, handler), onDesktop: (key, handler) => policy.on(ipc, key, handler) });
+    getApplicationSession:()=>selectedSession,net: { fetch:()=>{throw Error('Legacy/default transport must not be used');} }, handleDesktop: (key, handler) => policy.handle(ipc, key, handler), onDesktop: (key, handler) => policy.on(ipc, key, handler) });
   vm.runInContext(fragment('const CANVAS_API_HOSTS =', 'const MAX_DESKTOP_API_RESPONSE_BYTES') + fragment('function isAllowedCanvasApiUrl(', 'function isLocalAppPage(') + fragment('const activeCanvasApiRequests =', 'handleDesktop("desktop:get-theme"'), context);
   return { context, local, call: (payload, event = local) => handlers.get('desktop:api-fetch')(event, payload), cancel: payload => events.get('desktop:api-fetch-cancel')(local, payload) };
 }

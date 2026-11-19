@@ -8,7 +8,7 @@ async function fixture(fn,{theme='dark',width=1440}={}){
   page.setDefaultTimeout(10000);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);
-  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   await page.evaluate(theme=>{
    document.documentElement.dataset.theme=theme;document.body.dataset.theme=theme;
    apiKeyInput.value='synthetic-key-never-sent';nodes=[];links=[];nodeId=1;
@@ -35,7 +35,7 @@ test('regeneration local-size failure retains original 4K tier for free local re
  const actual=await page.evaluate(()=>({calls:requests.length,target:targets[0],width:retryNode.width,height:retryNode.height,requested:retryNode.requestedResolution}));
  assert.equal(actual.calls,1);assert.equal(actual.target,'4096x4096',JSON.stringify(actual));assert.equal(actual.width,4096);assert.equal(actual.height,2048);
  const saved=await page.evaluate(async()=>{await saveCanvasState();return{id:retryNode.id,original:testPng};});
- await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+ await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
  const reopened=await page.evaluate(async id=>{const n=nodes.find(n=>n.id===id);return{source:await getLocalMedia(n.sourceUrl),width:n.width,height:n.height,requested:n.requestedResolution,processing:n.resolutionProcessing};},saved.id);
  assert.deepEqual(reopened,{source:saved.original,width:4096,height:2048,requested:'4K',processing:'local-upscale'});
 }));

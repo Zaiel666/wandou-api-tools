@@ -26,7 +26,7 @@ async function fixture(fn,respond){
    return route.abort();
   });
   await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);
-  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   await page.evaluate(()=>{
    nodes=[];links=[];nodeId=1;apiKeyInput.value='synthetic-not-a-real-key';
    window.syntheticGenerator=createNode('generator',0,0,{model:'gpt-image-2.6-flare',prompt:'synthetic vector',imageOutputFormat:'svg',count:1,_deferRender:true});

@@ -26,7 +26,22 @@
   }); }
   async function save(record) {
     const db=await database();
-    try { await new Promise((resolve,reject)=>{const tx=db.transaction('outputs','readwrite');tx.objectStore('outputs').put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('图片标记保存失败'));});hasRecords=true; }
+    try { await new Promise((resolve,reject)=>{
+      const tx=db.transaction('outputs','readwrite'),store=tx.objectStore('outputs');
+      // Records are keyed by original bytes, not by task ID. Never attribute the last
+      // request to every older task when several requests produced the same file.
+      const read=store.get(record.id);
+      read.onsuccess=()=>{
+        const previous=read.result;
+        if(record.outputComparison && previous && (previous.requestAmbiguous || JSON.stringify(root.WandouImageOutputContract.requestSnapshot(previous.outputRequest))!==JSON.stringify(record.outputRequest||null))) {
+          record.requestAmbiguous=true;record.outputRequest=null;
+          record.outputComparison={...record.outputComparison,hasRequest:false,mismatch:false,ratioMismatch:false,differences:[],requestSummary:'',
+            message:'同一原文件对应不同请求，无法唯一对应请求参数；实际：'+record.outputComparison.actualSummary+'。原件已保留。'};
+        }
+        store.put(record);
+      };
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('图片标记保存失败'));
+    });hasRecords=true;root.dispatchEvent(new CustomEvent('wandou-workbench-output-metadata',{detail:{id:record.id}})); }
     finally {db.close();}
   }
   async function metadata(source) {
@@ -38,13 +53,57 @@
       const id=await root.WandouMediaHash.idAsync(source);
       const record=await new Promise((resolve,reject)=>{const r=db.transaction('outputs').objectStore('outputs').get(id);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);});
       if(!record)return null;
-      const {originalBlob,...info}=record;return info;
+      const {originalBlob,localCopyBlob,...info}=record;return info;
     } finally {db.close();}
+  }
+  const localCopyJobs=new Map();
+  async function createLocalCopy(source,options={}) {
+    if(!root.WandouImageOutputAdjustment)throw Error('本地副本组件尚未就绪。');
+    if(typeof source!=='string'||! /^(?:data:image\/|blob:|wandou-media:)/i.test(source))throw Error('请先读取软件中保留的原件，不能使用远程地址调整。');
+    // Register before the first await; duplicate UI events never start extra work.
+    if(localCopyJobs.has(source))throw Error('这份原件正在创建本地副本，请稍候。');
+    const token={};localCopyJobs.set(source,token);
+    try {
+      abort(options.signal);const id=await root.WandouMediaHash.idAsync(source);abort(options.signal);
+      let db=await database(),record;
+      try{record=await new Promise((resolve,reject)=>{const r=db.transaction('outputs').objectStore('outputs').get(id);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}finally{db.close();}
+      abort(options.signal);const snapshot=root.WandouImageOutputContract.requestSnapshot(record?.outputRequest);
+      if(!record||record.requestAmbiguous||!snapshot)throw Error('此原件没有唯一对应的请求参数，不能根据当前设置调整。');
+      const choice=root.WandouImageOutputAdjustment.plan(snapshot,record);if(!choice.eligible)throw Error(choice.reason);
+      const requestKey=JSON.stringify(snapshot);let blob,info;
+      if(record.localCopyBlob instanceof Blob&&record.localCopy?.requestKey===requestKey){
+        const bytes=await record.localCopyBlob.arrayBuffer();abort(options.signal);const digest=await root.crypto.subtle.digest('SHA-256',bytes);abort(options.signal);
+        const hash=Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('');
+        if(hash!==record.localCopy.sha256)throw Error('已保存的本地副本校验失败，原件仍保留。');
+        blob=record.localCopyBlob;info=record.localCopy;
+      }else{
+        let input=source;if(!source.startsWith('data:')){const response=await(options.fetch||root.fetch)(source,{signal:options.signal});if(!response.ok)throw Error('原件读取失败。');input=await response.blob();}
+        abort(options.signal);const copy=await root.WandouImageOutputAdjustment.create(input,{request:snapshot,signal:options.signal,previewMaxEdge:640});abort(options.signal);
+        blob=copy.blob;info={version:1,requestKey,sha256:copy.sha256,sourceSha256:copy.source.sha256,width:copy.width,height:copy.height,format:copy.format,mimeType:copy.mimeType,processing:copy.processing,nonNative:true,label:copy.label,outputComparison:copy.outputComparison,remainingDifferences:copy.remainingDifferences,frameCount:copy.frameCount,frameDurationsMs:copy.frameDurationsMs,durationMs:copy.durationMs,loopCount:copy.loopCount};
+      }
+      // Re-read in the write transaction: another response may have made this
+      // original's request ambiguous while local processing was in flight.
+      db=await database();
+      try{await new Promise((resolve,reject)=>{
+        const tx=db.transaction('outputs','readwrite'),store=tx.objectStore('outputs');let failure;
+        const cancel=()=>{failure=options.signal?.reason||new DOMException('已取消本地副本处理','AbortError');try{tx.abort();}catch{}};
+        options.signal?.addEventListener('abort',cancel,{once:true});
+        const finish=fn=>{options.signal?.removeEventListener('abort',cancel);fn();};
+        tx.oncomplete=()=>finish(resolve);tx.onerror=()=>finish(()=>reject(failure||tx.error));tx.onabort=()=>finish(()=>reject(failure||tx.error||Error('本地副本保存未完成。')));
+        const read=store.get(id);read.onsuccess=()=>{try{abort(options.signal);const fresh=read.result;
+          if(!fresh||fresh.requestAmbiguous||JSON.stringify(root.WandouImageOutputContract.requestSnapshot(fresh.outputRequest))!==requestKey)throw Error('原件的请求归属已变化，未保存或下载调整副本。');
+          store.put({...fresh,localCopy:info,localCopyBlob:blob});
+        }catch(error){failure=error;tx.abort();}};
+        if(options.signal?.aborted)cancel();
+      });}finally{db.close();}
+      abort(options.signal);root.dispatchEvent(new CustomEvent('wandou-workbench-output-metadata',{detail:{id}}));return{blob,...info,filename:`wandou-local-${info.width}x${info.height}${info.format==='gif'?'-'+info.frameDurationsMs[0]+'ms':''}.${info.format}`};
+    }finally{if(localCopyJobs.get(source)===token)localCopyJobs.delete(source);}
   }
   async function processResponse(response, options) {
     if(!response.ok)return response;
     let payload;try{payload=await response.clone().json();}catch{return response;}
     if(!Array.isArray(payload.data))return response;
+    const outputRequest=root.WandouImageOutputContract.requestSnapshot(options.outputRequest);
     const work=async()=>{
       abort(options.signal);
       for(const entry of payload.data) {
@@ -70,9 +129,10 @@
               return new Response(JSON.stringify({error:{message,type:'local_output_error',code:'invalid_gif_output'}}),{status:422,headers:{'content-type':'application/json'}});
             }
             originalUrl=animation.dataUrl;entry.url=originalUrl;entry.mime_type='image/gif';entry.output_format='gif';delete entry.b64_json;
-            entry.revised_prompt=[entry.revised_prompt,`GIF 动图 · ${animation.frameCount} 帧；已保留原始动画，未进行像素放大。`].filter(Boolean).join('\n');
+            const outputComparison=root.WandouImageOutputContract.compare(outputRequest,{format:'gif',width:animation.width,height:animation.height,frameCount:animation.frameCount,frameDurationsMs:animation.frameDurationsMs});
+            entry.revised_prompt=[entry.revised_prompt,`GIF 动图 · ${animation.frameCount} 帧；已保留原始动画，未进行像素放大。`,outputComparison.message].filter(Boolean).join('\n');
             try {
-              await save({id:await root.WandouMediaHash.idAsync(originalUrl),processing:'native-animation',width:animation.width,height:animation.height,tier:'GIF',format:'gif',previewUrl:animation.previewUrl,previewFallback:animation.previewFallback,animationFrameCount:animation.frameCount,animationFrameDurationsMs:animation.frameDurationsMs,animationDurationMs:animation.durationMs,animationLoopCount:animation.loopCount,hasTransparency:animation.hasTransparency});abort(options.signal);
+              await save({id:await root.WandouMediaHash.idAsync(originalUrl),processing:'native-animation',width:animation.width,height:animation.height,tier:'GIF',format:'gif',previewUrl:animation.previewUrl,previewFallback:animation.previewFallback,animationFrameCount:animation.frameCount,animationFrameDurationsMs:animation.frameDurationsMs,animationDurationMs:animation.durationMs,animationLoopCount:animation.loopCount,hasTransparency:animation.hasTransparency,outputRequest,outputComparison});abort(options.signal);
             } catch(error) {
               abort(options.signal);
               entry.revised_prompt+='\nGIF 信息标记保存失败，动画原文件已保留；未再次请求生图。';
@@ -94,9 +154,10 @@
               return new Response(JSON.stringify({error:{message,type:'local_output_error',code:'invalid_svg_output'}}),{status:422,headers:{'content-type':'application/json'}});
             }
             originalUrl=vector.dataUrl;entry.url=originalUrl;entry.mime_type='image/svg+xml';entry.output_format='svg';delete entry.b64_json;
-            entry.revised_prompt=[entry.revised_prompt,'已保留 SVG 矢量原文件，未进行位图放大。'].filter(Boolean).join('\n');
+            const outputComparison=root.WandouImageOutputContract.compare(outputRequest,{format:'svg',width:vector.width,height:vector.height});
+            entry.revised_prompt=[entry.revised_prompt,'已保留 SVG 矢量原文件，未进行位图放大。',outputComparison.message].filter(Boolean).join('\n');
             try {
-              await save({id:await root.WandouMediaHash.idAsync(originalUrl),processing:'native-vector',width:vector.width,height:vector.height,tier:'SVG',format:'svg'});abort(options.signal);
+              await save({id:await root.WandouMediaHash.idAsync(originalUrl),processing:'native-vector',width:vector.width,height:vector.height,tier:'SVG',format:'svg',outputRequest,outputComparison});abort(options.signal);
             } catch(error) {
               abort(options.signal);
               entry.revised_prompt+='\nSVG 信息标记保存失败，原文件已保留；未再次请求生图。';
@@ -136,7 +197,7 @@
       result.then(value=>{cleanup();resolve(value);},error=>{cleanup();reject(error);});
     });
   }
-  root.WandouWorkbenchOutput=Object.freeze({plan,processResponse,metadata});
+  root.WandouWorkbenchOutput=Object.freeze({plan,processResponse,metadata,createLocalCopy,hasActiveLocalCopies:()=>localCopyJobs.size>0});
   root.addEventListener('wandou-output-processing-warning',event=>{
     if(!document.body)return;
     let notice=document.getElementById('wd-output-processing-warning');

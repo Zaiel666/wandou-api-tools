@@ -1,9 +1,9 @@
 const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
-const root = process.env.WANDOU_TEST_APP_ROOT || path.resolve(__dirname, '../artifacts/theme-fix-20261025/app');
+const root = process.env.WANDOU_TEST_APP_ROOT || path.resolve(__dirname, '../app');
 for (const [file, start, end, name] of [
   ['local-cache.js', '  async function clearHeavyCache()', '\n  window.WandouLocalCache', 'clearHeavyCache'],
   ['ai-node-canvas-test-cache.js', '  async function clearHeavyCache()', '\n  window.WandouLocalCache', 'clearHeavyCache'],
-  ['image-workbench/customize.js', '  async function clearWorkbenchCache()', '\n  const WORKBENCH_IMAGE_DB', 'clearWorkbenchCache'],
+  ['image-workbench/customize.js', '  async function clearWorkbenchCache()', '\n  function showWorkbenchStorageStatus(value)', 'clearWorkbenchCache'],
   ['workflow.js', 'async function clearHeavyCacheSafe()', '\ndocument.querySelector("[data-cache-clear]")', 'clearHeavyCacheSafe']
 ]) {
   test(`${file}: cleanup removes only discarded history and never databases/project/API settings`, async () => {

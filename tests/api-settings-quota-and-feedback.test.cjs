@@ -9,13 +9,20 @@ const canvasPath = path.join(__dirname, "..", "app", "ai-node-canvas.html");
 test("API 设置在 localStorage 满时仍保存、识别并在重载后恢复", async (t) => {
   const browser = await chromium.launch({
     headless: true,
+    chromiumSandbox: true,
     executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   });
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1100, height: 760 } });
   const pageErrors = [];
   const modelAuthorizations = [];
+  const blockedMutations = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.route("**/*", (route) => {
+    if (/^(file:|data:|blob:|about:)/.test(route.request().url())) return route.continue();
+    if (route.request().method() !== "GET") blockedMutations.push(route.request().method());
+    return route.abort();
+  });
   await page.addInitScript(() => {
     const originalSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function setItemWithQuotaFailure(key, value) {
@@ -68,4 +75,5 @@ test("API 设置在 localStorage 满时仍保存、识别并在重载后恢复",
   assert.equal(await page.locator("#apiKey").inputValue(), "quota-channel-one");
   assert.equal(await page.locator("#apiKey2").inputValue(), "quota-channel-two");
   assert.deepEqual(pageErrors, []);
+  assert.deepEqual(blockedMutations, [], "No paid or outgoing mutation requests");
 });

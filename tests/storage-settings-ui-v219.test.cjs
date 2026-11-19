@@ -13,6 +13,7 @@ async function open(theme,width,mode='normal'){
 for(const theme of ['light','dark'])for(const width of [1360,1024])test(`storage controls ${theme} ${width}x800: paths, on-demand measurement and confirmed cleanup`,async()=>{
  const {context,page}=await open(theme,width);try{
   await page.waitForFunction(()=>document.querySelector('#projectStorageProfile').value);assert.match(await page.locator('#projectStorageProfile').inputValue(),/SyntheticProfile/);assert.deepEqual(await page.evaluate(()=>calls),[]);
+  assert.match(await page.locator('#projectStorageOriginalStatus').innerText(),/未提供标准原图状态/);
   await page.locator('#storageUsageRefresh').click();await page.locator('#storageUsageList').waitFor({state:'visible'});assert.match(await page.locator('#storageUsageList').innerText(),/1\.00 MB/);
   const bounds=await page.locator('#projectStorageDialog').boundingBox();assert.ok(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=width+1&&bounds.y+bounds.height<=801);
   const style=await page.locator('#projectStorageDialog').evaluate(e=>({background:getComputedStyle(e).backgroundColor,text:getComputedStyle(e).color,scroll:e.scrollHeight>e.clientHeight}));assert.notEqual(style.background,style.text);assert.equal(style.background,theme==='dark'?'rgb(27, 27, 29)':'rgb(255, 255, 255)');
@@ -27,5 +28,14 @@ test('cancel is visible and browser-only mode explains independent storage with 
 test('closing and reopening during measurement does not render late old results or duplicate calls',async()=>{
  const {page,context}=await open('light',1024,'delayed');try{
   await page.locator('#storageUsageRefresh').click();assert.equal(await page.locator('#storageUsageRefresh').isDisabled(),true);await page.locator('#projectStorageClose').click();await page.locator('[data-storage-settings-open]').click();await page.evaluate(()=>finishUsage({success:true,sizes:{originals:999,backups:0,projects:0,exports:0,temporary:0,profile:0},cacheBytes:0}));await page.waitForTimeout(40);assert.equal(await page.locator('#storageUsageList').isHidden(),true);assert.deepEqual(await page.evaluate(()=>calls),['usage']);
+ }finally{await context.close();}
+});
+for(const theme of ['light','dark'])for(const width of [1024,1440])test(`v225 original-file directory and retained-space status ${theme} ${width}`,async()=>{
+ const{page,context}=await open(theme,width);try{
+ await page.locator('#projectStorageClose').click();await page.evaluate(()=>{const old=wandouShell.getProjectStorageInfo;wandouShell.getProjectStorageInfo=async()=>({...await old(),originalFiles:{originalDirectory:'D:\\Tools\\豌豆AI数据\\canvas-media\\originals',running:true,converted:7,addedBytes:1048576,skipped:2,lastError:'合成测试：某张格式暂不支持'}});});
+ await page.locator('[data-storage-settings-open]').click();await page.waitForFunction(()=>document.querySelector('#projectStorageOriginals').value.endsWith('originals'));
+ assert.match(await page.locator('#projectStorageOriginalStatus').innerText(),/后台.*7 张（1\.00 MB）.*2 张/);assert.match(await page.locator('#projectStorageOriginalStatus').innerText(),/某张格式暂不支持/);
+ await page.locator('#projectStorageOriginals').scrollIntoViewIfNeeded();const output=path.resolve(__dirname,'../../qa/standard-original-ui');fs.mkdirSync(output,{recursive:true});await page.screenshot({path:path.join(output,`storage-${theme}-${width}.png`)});
+ const bounds=await page.locator('#projectStorageDialog').boundingBox();assert.ok(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=width+1&&bounds.y+bounds.height<=801);await page.locator('#projectStorageChoose').click();await page.waitForFunction(()=>document.querySelector('#projectStorageStatus').textContent.includes('已取消'));assert.equal(await page.locator('#projectStorageOriginals').inputValue(),'D:\\Tools\\豌豆AI数据\\canvas-media\\originals');
  }finally{await context.close();}
 });

@@ -8615,6 +8615,7 @@
     }
 
     function apiProfileForModel(model = "") {
+      if (apiSharedRefreshPending && !apiConfigBusy && apiDraftRevision === apiCommittedDraftRevision) refreshSharedApiConfig();
       const channelTwo = isChannelTwoModel(model);
       return {
         id: channelTwo ? "channel2" : "channel1",
@@ -8711,14 +8712,54 @@
 
     const durableApiConfigKey = "api-config-v1";
     let modelSyncSummary = { channel1: false, channel2: null };
+    let apiConfigBusy = false, apiConfigRevision = 0, apiDraftRevision = 0, apiSettingsRevision = 0;
+    let apiCommittedDraftRevision = 0, apiLoadedSavedAt = "", apiSharedRefreshPending = false;
+    let apiDisplayedConfig = null, apiInitialConfigReady = false, apiInitialConfigError = false;
+    const apiEditedCredentials = new Set();
+    let apiBusyControls = [];
+
+    function apiRequestBlockReason() {
+      if (apiConfigBusy) return "API 设置正在保存并确认，请完成后再点击操作。当前未发送请求。";
+      if (apiDraftRevision !== apiCommittedDraftRevision) return "API 设置有未保存的修改，请先保存设置，再点击操作。当前未发送请求。";
+      if (!apiInitialConfigReady) return apiInitialConfigError
+        ? "API 设置读取失败，请保存设置或重新打开画布后重试。当前未发送请求。"
+        : "API 设置尚未读取完成，请稍后重新点击操作。当前未发送请求。";
+      return "";
+    }
+
+    function requireApiRequestReady() {
+      const message = apiRequestBlockReason();
+      if (!message) return true;
+      setApiSettingsFeedback(message);
+      showToast(message, "error", 5000);
+      return false;
+    }
+
+    function assertApiRequestReady() {
+      const message = apiRequestBlockReason();
+      if (!message) return;
+      const error = new Error(message);
+      error.code = "API_CONFIG_NOT_READY";
+      throw error;
+    }
+    for (const [index, input] of [apiKeyInput, apiKey2Input].entries()) input.addEventListener("input", () => {
+      apiDraftRevision++;
+      apiEditedCredentials.add(index ? "key2" : "key");
+    });
 
     function normalizedApiConfig(config = {}) {
-      return {
+      const gatewayKey = (id, legacy) => {
+        const channel = config.channels?.[id];
+        return channel && typeof channel === "object" && !Array.isArray(channel) ? channel.gateway?.key || "" : config[legacy] || "";
+      };
+      const normalized = {
         url: defaultApiBaseUrl(),
-        key: String(config.key || "").trim(),
-        key2: String(config.key2 || "").trim(),
+        key: String(gatewayKey("channel1", "key")).trim(),
+        key2: String(gatewayKey("channel2", "key2")).trim(),
         savedAt: String(config.savedAt || "")
       };
+      if (config.channels && typeof config.channels === "object" && !Array.isArray(config.channels)) normalized.channels = JSON.parse(JSON.stringify(config.channels));
+      return normalized;
     }
 
     function localApiConfig() {
@@ -8726,7 +8767,7 @@
       for (const storageKey of ["aiCanvasApi", "ai-tools-api-config"]) {
         try {
           const value = JSON.parse(localStorage.getItem(storageKey) || "{}");
-          if (value && (value.key || value.key2)) candidates.push(normalizedApiConfig(value));
+          if (value && (value.key || value.key2 || value.channels || value.savedAt)) candidates.push(normalizedApiConfig(value));
         } catch (_error) {}
       }
       return candidates.sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)))[0] || null;
@@ -8740,26 +8781,157 @@
       }
     }
 
-    async function persistApiConfig(key, key2) {
+    async function readApiMetadataStrict() {
+      let stored;
+      if (typeof window.wandouShell?.readLocalData === "function") {
+        const result = await window.wandouShell.readLocalData({ path: "json/api-config-v1.json" });
+        if (result?.success !== true) throw new Error("Configuration disk read failed", { cause: result });
+        if (result.missing === true && result.value == null) return null;
+        if (typeof result.value !== "string") throw new Error("Invalid configuration disk response");
+        stored = JSON.parse(result.value);
+      } else {
+        if (typeof window.WandouLocalCache?.readJson !== "function") throw new Error("Configuration reader is unavailable");
+        stored = await window.WandouLocalCache.readJson(durableApiConfigKey);
+      }
+      if (stored !== null && stored !== undefined && (typeof stored !== "object" || Array.isArray(stored))) throw new Error("Invalid stored configuration");
+      return stored;
+    }
+
+    async function persistApiConfig(key, key2, options = {}) {
+      apiConfigRevision++;
+      const draft = { key, key2 }, displayed = normalizedApiConfig(apiDisplayedConfig || {}), editedCredentials = new Set(apiEditedCredentials);
+      let durableBase;
+      try {
+        const stored = await readApiMetadataStrict();
+        durableBase = normalizedApiConfig(stored || {});
+      } catch (cause) { throw new Error("读取现有 API 配置失败，尚未保存，请重试", { cause }); }
+      const candidates = [localApiConfig(), durableBase, apiDisplayedConfig].filter(Boolean);
+      const latest = candidates.sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)))[0] || {};
       const savedAt = new Date().toISOString();
-      const config = normalizedApiConfig({ key, key2, savedAt });
-      let localSaved = true;
-      try {
-        localStorage.setItem("aiCanvasApi", JSON.stringify(config));
-        localStorage.setItem("ai-tools-api-config", JSON.stringify({ key: config.key, key2: config.key2, savedAt }));
-      } catch (error) {
-        localSaved = false;
-        console.warn("API config localStorage write failed; using durable cache", error);
+      const config = normalizedApiConfig({ ...latest, savedAt });
+      for (const [name, id] of [["key", "channel1"], ["key2", "channel2"]]) {
+        if (editedCredentials.has(name) || draft[name] !== displayed[name] || options.clearChannel === id) config[name] = String(draft[name] || "").trim();
       }
-      let durableSaved = false;
-      try {
-        const result = await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, config);
-        durableSaved = result?.ok === true;
-      } catch (error) {
-        console.warn("API config durable cache write failed", error);
+      // This compatibility page edits gateway credentials only. Preserve the
+      // official provider selection and keys saved by the current canvas.
+      if (config.channels) {
+        for (const [id, value] of [["channel1", config.key], ["channel2", config.key2]]) {
+          const channel = config.channels[id] || {};
+          config.channels[id] = { ...channel, gateway: { ...(channel.gateway || {}), key: value } };
+        }
       }
-      if (!localSaved && !durableSaved) throw new Error("本机存储空间不足，API 配置未能保存");
+      const aliases = ["aiCanvasApi", "ai-tools-api-config"];
+      const previous = new Map();
+      let localSaved = true, durableSaved = false, localError = null, durableError = null;
+      try {
+        if (options.requireEveryStore) for (const alias of aliases) previous.set(alias, localStorage.getItem(alias));
+        for (const alias of aliases) localStorage.setItem(alias, JSON.stringify(config));
+      } catch (cause) { localSaved = false; localError = cause; }
+      // A channel clear needs both copies committed. Do not proceed to the disk
+      // after an alias failure; restore only values changed by this operation.
+      if (localSaved || !options.requireEveryStore) {
+        try {
+          const result = await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, config);
+          if (result?.ok !== true) throw new Error("Configuration write was not committed", { cause: result });
+          const stored = await readApiMetadataStrict();
+          if (!stored || JSON.stringify(normalizedApiConfig(stored)) !== JSON.stringify(config)) throw new Error("Configuration readback did not match");
+          durableSaved = true;
+        } catch (cause) { durableError = cause; }
+      }
+      if ((options.requireEveryStore && (!localSaved || !durableSaved)) || (!localSaved && !durableSaved)) {
+        let rollbackError = null;
+        if (options.requireEveryStore) {
+          for (const [alias, value] of previous) {
+            try {
+              if (localStorage.getItem(alias) === value) continue;
+              if (value === null) localStorage.removeItem(alias); else localStorage.setItem(alias, value);
+            } catch (cause) { rollbackError ||= cause; }
+          }
+        }
+        throw new Error(options.requireEveryStore
+          ? (rollbackError ? "清除未完成，浏览器副本也未能恢复，请重试" : "未能确认所有配置副本已清除，本页原设置已恢复，请重试")
+          : "API 配置未能完整保存，请重试", { cause: new AggregateError([localError, durableError, rollbackError].filter(Boolean)) });
+      }
+      applyLoadedApiConfig(config);
+      apiInitialConfigReady = true;
+      apiInitialConfigError = false;
       return { localSaved, durableSaved };
+    }
+
+    function setApiConfigBusy(busy) {
+      apiConfigBusy = busy;
+      settingsPopover.setAttribute("aria-busy", String(busy));
+      if (busy) {
+        apiBusyControls = [...settingsPopover.querySelectorAll('input, select, #saveApiButton, #clearApiKeyButton, #clearApiKey2Button')].map(control => [control, control.disabled]);
+        for (const [control] of apiBusyControls) control.disabled = true;
+      } else {
+        for (const [control, disabled] of apiBusyControls) control.disabled = disabled;
+        apiBusyControls = [];
+        if (apiSharedRefreshPending) refreshSharedApiConfig();
+      }
+    }
+
+    function refreshSharedApiConfig() {
+      if (apiConfigBusy || apiDraftRevision !== apiCommittedDraftRevision) return;
+      const config = localApiConfig();
+      if (config && String(config.savedAt) > apiLoadedSavedAt) applyLoadedApiConfig(config);
+      apiSharedRefreshPending = false;
+    }
+    window.addEventListener("storage", (event) => {
+      if (!["aiCanvasApi", "ai-tools-api-config"].includes(event.key)) return;
+      apiSharedRefreshPending = true;
+      refreshSharedApiConfig();
+    });
+
+    function setApiSettingsFeedback(message = "") {
+      let feedback = document.getElementById("apiSettingsFeedback");
+      if (!feedback) {
+        feedback = document.createElement("p");
+        feedback.id = "apiSettingsFeedback";
+        feedback.setAttribute("role", "alert");
+        feedback.setAttribute("aria-live", "polite");
+        feedback.style.cssText = "margin:10px 0;font-size:13px;line-height:1.6;overflow-wrap:anywhere;color:inherit;";
+        const saveButton = document.getElementById("saveApiButton");
+        saveButton.parentElement.insertBefore(feedback, saveButton);
+      }
+      feedback.textContent = message;
+      feedback.hidden = !message;
+      if (message && settingsPopover.classList.contains("open")) feedback.scrollIntoView({ block: "nearest" });
+    }
+
+    async function clearApiChannel(channel) {
+      if (apiConfigBusy) return;
+      if (!apiInitialConfigReady) {
+        const message = "API 设置尚未完整读取，未执行清除。请先保存设置或重新打开画布后重试。";
+        setApiSettingsFeedback(message); showToast(message, "error"); return;
+      }
+      const previousKeys = [apiKeyInput.value, apiKey2Input.value];
+      const previousDraftRevision = apiDraftRevision;
+      
+      const input = channel === 2 ? apiKey2Input : apiKeyInput;
+      apiDraftRevision++;
+      input.value = "";
+      setApiConfigBusy(true);
+      try {
+        await persistApiConfig(apiKeyInput.value.trim(), apiKey2Input.value.trim(), { requireEveryStore: true, clearChannel: channel === 2 ? "channel2" : "channel1" });
+        // Model cache deletion is optional and must not turn a committed key
+        // update into a misleading failure or restore a cleared credential.
+        for (const prefix of ["aiCanvasAllModels", "aiCanvasImageModels"]) {
+          try { localStorage.removeItem(prefix + (channel === 2 ? "Channel2" : "")); } catch (_) {}
+        }
+        setApiSettingsFeedback();
+        showToast("渠道 " + channel + " API 密钥已清除");
+      } catch (error) {
+        
+        [apiKeyInput.value, apiKey2Input.value] = previousKeys;
+        apiDraftRevision = previousDraftRevision;
+        const message = "清除未完成：" + (error?.message || "请重试");
+        setApiSettingsFeedback(message);
+        showToast(message, "error");
+      } finally {
+        setApiConfigBusy(false);
+        input.focus();
+      }
     }
 
     async function syncImageModelsFromApi(options = {}) {
@@ -8815,6 +8987,7 @@
     }
 
     async function saveApiConfig() {
+      if (apiConfigBusy) return;
       const key = apiKeyInput.value.trim();
       const key2 = apiKey2Input.value.trim();
       const saveButton = document.getElementById("saveApiButton");
@@ -8823,7 +8996,9 @@
         showToast("请先填写渠道 1 API 密钥");
         return;
       }
+      const modalRevision = apiSettingsRevision;
       const originalLabel = saveButton?.textContent || "保存并识别两个渠道";
+      setApiConfigBusy(true);
       if (saveButton) {
         saveButton.disabled = true;
         saveButton.setAttribute("aria-busy", "true");
@@ -8847,12 +9022,15 @@
           : key2
           ? `两个 API 渠道已保存并分别识别模型${storageNote}`
           : `默认渠道已保存并识别模型${storageNote}`;
+        setApiSettingsFeedback();
         showToast(message);
-        setSettingsOpen(false);
+        if (modalRevision === apiSettingsRevision) setSettingsOpen(false);
       } catch (error) {
-        console.error("API config save failed", error);
-        showToast(`保存失败：${error?.message || "请稍后重试"}`);
+        const message = `保存失败：${error?.message || "请稍后重试"}`;
+        setApiSettingsFeedback(message);
+        showToast(message, "error");
       } finally {
+        setApiConfigBusy(false);
         if (saveButton) {
           saveButton.disabled = false;
           saveButton.removeAttribute("aria-busy");
@@ -8874,6 +9052,7 @@
     }
 
     function setSettingsOpen(open) {
+      apiSettingsRevision++;
       if (settingsBackdrop.parentElement !== document.body) document.body.appendChild(settingsBackdrop);
       if (settingsPopover.parentElement !== document.body) document.body.appendChild(settingsPopover);
       settingsPopover.classList.toggle("open", open);
@@ -8888,16 +9067,38 @@
       }
     }
 
-    async function loadApiConfig() {
-      const localConfig = localApiConfig();
-      const fallbackConfig = await durableApiConfig();
-      const config = fallbackConfig.key && (!localConfig?.key || String(fallbackConfig.savedAt) > String(localConfig.savedAt || ""))
-        ? fallbackConfig
-        : localConfig || fallbackConfig;
+    function applyLoadedApiConfig(config) {
       apiUrlInput.value = defaultApiBaseUrl();
       apiUrl2Input.value = defaultApiBaseUrl();
       apiKeyInput.value = config.key || "";
       apiKey2Input.value = config.key2 || "";
+      apiLoadedSavedAt = String(config.savedAt || "");
+      apiCommittedDraftRevision = apiDraftRevision;
+      apiDisplayedConfig = normalizedApiConfig(config);
+      apiEditedCredentials.clear();
+    }
+
+    async function loadApiConfig() {
+      apiInitialConfigReady = false;
+      apiInitialConfigError = false;
+      applyLoadedApiConfig(localApiConfig() || normalizedApiConfig());
+      const revision = apiConfigRevision, draftRevision = apiDraftRevision;
+      let fallbackConfig;
+      try {
+        const stored = await readApiMetadataStrict();
+        fallbackConfig = normalizedApiConfig(stored || {});
+      } catch (_) {
+        if (revision === apiConfigRevision) {
+          apiInitialConfigError = true;
+          setApiSettingsFeedback("读取 API 设置失败，原设置未修改。请保存重试或重新打开画布。");
+        }
+        return;
+      }
+      if (apiConfigBusy || revision !== apiConfigRevision || draftRevision !== apiDraftRevision) return;
+      const localConfig = localApiConfig();
+      const config = !localConfig || String(fallbackConfig.savedAt) > String(localConfig.savedAt || "") ? fallbackConfig : localConfig;
+      applyLoadedApiConfig(config);
+      apiInitialConfigReady = true;
     }
 
     function updateThemeLabel() {
@@ -9025,7 +9226,21 @@
       );
     }
 
-    function migrateLegacyFolderCanvasState() {
+    function localProjectRecoveryStates(projectId) {
+      if (!projectId) return [];
+      const states = [parseProjectCanvasState(projectId)];
+      if (projectId === projects[0]?.id) {
+        const folderState = parseStoredCanvasState(localStorage.getItem(folderCanvasStorageKey()), "Folder");
+        if (legacyCanvasStateMatchesProject(folderState, projectId)) states.push(folderState);
+        if (isPrimaryHomeFolder()) {
+          const globalState = parseStoredCanvasState(localStorage.getItem(canvasStorageKey), "Global");
+          if (legacyCanvasStateMatchesProject(globalState, projectId)) states.push(globalState);
+        }
+      }
+      return states;
+    }
+
+    function migrateLegacyFolderCanvasState(selectedRecoveryState = null) {
       if (!projects.length) return false;
       let legacyRaw = "";
       let legacyState = null;
@@ -9041,8 +9256,8 @@
       if (nestedStates.some(({ state }) => sameCanvasState(state, legacyState))) return false;
       const first = nestedStates[0];
       if (!first?.project || isMeaningfulCanvasState(first.state) || Number(first.state?.intentionalResetAt) > 0) return false;
-      const activeState = parseProjectCanvasState(activeProjectId);
-      if (!isMeaningfulCanvasState(activeState) && Number(activeState?.intentionalResetAt) <= 0) {
+      const activeState = chooseCanvasRecoveryState([parseProjectCanvasState(activeProjectId), selectedRecoveryState]);
+      if (!isMeaningfulCanvasState(activeState) && !(Number(activeState?.intentionalResetAt) > 0)) {
         activeProjectId = first.project.id;
         startupRecoveredProjectName = first.project.name || "原项目";
       }
@@ -9054,9 +9269,9 @@
       return true;
     }
 
-    function recoverStaleActiveProjectSelection() {
+    function recoverStaleActiveProjectSelection(selectedRecoveryState = null) {
       const activeProject = projects.find((project) => project.id === activeProjectId);
-      const activeState = parseProjectCanvasState(activeProjectId);
+      const activeState = chooseCanvasRecoveryState([parseProjectCanvasState(activeProjectId), selectedRecoveryState]);
       if (!activeProject || !isSeedCanvasState(activeState) || Number(activeState?.intentionalResetAt) > 0) return false;
       const activeSavedAt = Number(activeState.savedAt || activeProject.updatedAt || activeProject.createdAt || 0);
       const candidates = projects
@@ -9077,20 +9292,66 @@
     }
 
     async function readDesktopProjectCatalog() {
-      if (!window.wandouShell?.readCanvasBackups) return [];
-      try {
-        const result = await window.wandouShell.readCanvasBackups({
-          folderId: currentFolderId,
-          allProjects: true
-        });
-        if (!result?.success || !Array.isArray(result.projectStates)) return [];
-        return result.projectStates.filter((entry) =>
-          entry?.projectId && Array.isArray(entry.states) && entry.states.some((state) => Array.isArray(state?.nodes) && state.nodes.length)
-        );
-      } catch (error) {
-        console.warn("Desktop project catalog could not be read", error);
-        return [];
+      readDesktopProjectCatalog.pending = new Map();
+      readDesktopProjectCatalog.catalogError = null;
+      const selected = localStorage.getItem(activeProjectStorageKey) || projects[0]?.id;
+      const recovery = { folderId: currentFolderId, projectId: selected || "", browserState: null, desktopStates: [], browserError: null, desktopError: null, catalogError: null };
+      readDesktopProjectCatalog.selectedRecovery = recovery;
+      const bridge = window.wandouShell?.readCanvasBackups;
+      const cache = readDesktopProjectCatalog.pending;
+      const read = async projectId => {
+        if (!cache.has(projectId)) {
+          try { cache.set(projectId, await window.wandouShell.readCanvasBackups({ folderId: currentFolderId, projectId })); }
+          catch (error) { cache.set(projectId, { success: false, error: error?.message || String(error) }); }
+        }
+        const value = cache.get(projectId);
+        return value?.success !== false && Array.isArray(value?.states) ? value.states : [];
+      };
+      let result = null;
+      if (bridge) {
+        try {
+          result = await window.wandouShell.readCanvasBackups({ folderId: currentFolderId, allProjects: true, metadataOnly: true });
+          if (result?.success === false) throw new Error(result.error || "磁盘项目目录读取失败");
+        } catch (error) {
+          recovery.catalogError = error;
+          readDesktopProjectCatalog.catalogError = error;
+        }
       }
+      if (selected) {
+        // Every selection path must see independent state, including old seeds,
+        // browsers without a desktop bridge, and unavailable/legacy catalogs.
+        await Promise.all([
+          (async () => {
+            try { recovery.browserState = await readCanvasStateBackup(selected); }
+            catch (error) { recovery.browserError = error; }
+          })(),
+          (async () => {
+            if (!bridge) return;
+            recovery.desktopStates = await read(selected);
+            const value = cache.get(selected);
+            if (value?.success === false) recovery.desktopError = new Error(value.error || "磁盘项目备份读取失败");
+          })()
+        ]);
+      }
+      const legacyCatalog = !result?.metadataOnly && Array.isArray(result?.projectStates) ? result.projectStates : [];
+      const legacySelected = legacyCatalog.find(entry => entry?.projectId === selected);
+      if (Array.isArray(legacySelected?.states)) recovery.desktopStates.push(...legacySelected.states);
+      const selectedStates = [...recovery.desktopStates, recovery.browserState].filter(Boolean);
+      const catalog = selectedStates.length ? [{ projectId: selected, states: selectedStates }] : [];
+      if (!bridge || recovery.catalogError) return catalog;
+      if (!result?.metadataOnly) return [...catalog, ...legacyCatalog.filter(entry => entry?.projectId !== selected)];
+      const activeState = chooseCanvasRecoveryState([...localProjectRecoveryStates(selected), ...selectedStates]);
+      const needsRecovery = !isMeaningfulCanvasState(activeState) && !(Number(activeState?.intentionalResetAt) > 0);
+      const known = new Set(projects.map(project => project.id));
+      const entries = Array.isArray(result.projects) ? result.projects : [];
+      for (const entry of entries) {
+        if (!entry?.projectId || entry.projectId === selected) continue;
+        // Unknown entries require validated state for their real project names.
+        if (known.has(entry.projectId) && !needsRecovery) continue;
+        const states = await read(entry.projectId);
+        if (states.length) catalog.push({ projectId: entry.projectId, states });
+      }
+      return catalog;
     }
 
     function mergeDesktopProjectCatalog(catalog) {
@@ -9116,7 +9377,7 @@
       }
     }
 
-    function recoverDesktopProjectSelection(catalog) {
+    function recoverDesktopProjectSelection(catalog, selectedRecoveryState = null) {
       const stateFor = (projectId) => {
         const entry = catalog.find((item) => item.projectId === projectId);
         return chooseCanvasRecoveryState([
@@ -9124,7 +9385,7 @@
           ...(entry?.states || [])
         ]);
       };
-      const activeState = stateFor(activeProjectId);
+      const activeState = chooseCanvasRecoveryState([stateFor(activeProjectId), selectedRecoveryState]);
       if (isMeaningfulCanvasState(activeState) || Number(activeState?.intentionalResetAt) > 0) return false;
       const candidates = projects
         .map((project) => ({ project, state: stateFor(project.id) }))
@@ -9137,6 +9398,7 @@
     }
 
     async function loadProjects() {
+      loadProjects.recovery = null;
       try {
         projects = JSON.parse(localStorage.getItem(projectListStorageKey) || "[]");
       } catch (error) {
@@ -9156,9 +9418,25 @@
       });
       activeProjectId = localStorage.getItem(activeProjectStorageKey) || projects[0].id;
       if (!projects.some((project) => project.id === activeProjectId)) activeProjectId = projects[0].id;
-      migrateLegacyFolderCanvasState();
-      recoverStaleActiveProjectSelection();
-      recoverDesktopProjectSelection(desktopCatalog);
+      const selectedProjectId = activeProjectId;
+      const recovery = readDesktopProjectCatalog.selectedRecovery;
+      readDesktopProjectCatalog.selectedRecovery = null;
+      const selectedEntry = desktopCatalog.find(entry => entry.projectId === selectedProjectId);
+      const selectedState = chooseCanvasRecoveryState([...localProjectRecoveryStates(selectedProjectId), ...(selectedEntry?.states || [])]);
+      const selectedError = recovery?.projectId === selectedProjectId
+        ? recovery.browserError || recovery.desktopError || recovery.catalogError
+        : readDesktopProjectCatalog.catalogError;
+      if (!isMeaningfulCanvasState(selectedState) && !(Number(selectedState?.intentionalResetAt) > 0) && selectedError) {
+        readDesktopProjectCatalog.pending = null;
+        readDesktopProjectCatalog.catalogError = null;
+        throw selectedError;
+      }
+      migrateLegacyFolderCanvasState(selectedState);
+      recoverStaleActiveProjectSelection(activeProjectId === selectedProjectId ? selectedState : null);
+      recoverDesktopProjectSelection(desktopCatalog, activeProjectId === selectedProjectId ? selectedState : null);
+      // This one-use snapshot belongs only to the project that was actually read.
+      // Later switches/saves must perform fresh transactions for their own state.
+      loadProjects.recovery = recovery?.folderId === currentFolderId && recovery.projectId === activeProjectId ? recovery : null;
       try { saveProjects(); } catch (error) { warnCanvasStorageSkipped(error); }
       renderProjects();
     }
@@ -9976,6 +10254,7 @@
     }
 
     async function sendAssistantMessage(textValue = assistantInput?.value) {
+      if (!requireApiRequestReady()) return;
       const text = String(textValue || "").trim();
       if ((!text && !assistantAttachments.length) || assistantSending) return;
       let selectedModel = assistantModelSelect?.value || "";
@@ -10760,6 +11039,7 @@
     }
 
     async function optimizeKeywordOutput(node) {
+      if (!requireApiRequestReady()) return;
       const source = String(node.text || "").trim();
       if (!source) return;
       node.promptOptimizeChoice = "yes";
@@ -11391,6 +11671,7 @@
     }
 
     async function confirmAutoSplitGeneration(node) {
+      if (!requireApiRequestReady()) return;
       stopAutoSplitCountdown(node);
       const plan = normalizeAutoSplitPlan(node.autoSplitPlan);
       if (!plan.length) {
@@ -11493,11 +11774,13 @@
     }
 
     function shouldStopPromptModelFallback(error) {
+      if (error?.code === "API_CONFIG_NOT_READY") return true;
       const message = String(error?.message || error || "").toLowerCase();
       return /http\s*(401|403)|invalid\s*token|unauthorized|forbidden|余额不足|insufficient[_\s-]*(quota|balance|credit)/i.test(message);
     }
 
     async function postPromptModelWithFallback(configuredUrl, headers, body, signal, candidates = null) {
+      assertApiRequestReady();
       let lastError = null;
       for (const model of candidates || promptModelCandidates(configuredUrl)) {
         if (signal?.aborted) throw signal.reason || new DOMException("请求已取消", "AbortError");
@@ -11601,6 +11884,7 @@
     }
 
     async function applySelectedSkillForGeneration(node) {
+      assertApiRequestReady();
       if (node.type !== "generator" || !node.skillId) return;
       const source = String(node.prompt || "").trim();
       if (!source || source === node.skillLastAppliedPrompt) return;
@@ -11636,6 +11920,7 @@
     }
 
     async function analyzeAutoSplitPlan(node, references, targetSize, signal) {
+      assertApiRequestReady();
       const configuredUrl = apiUrlInput.value.trim() || defaultApiBaseUrl();
       const headers = { "Content-Type": "application/json", Authorization: `Bearer ${apiKeyInput.value.trim()}` };
       const frameRule = node.autoSplitConsistency === "frame"
@@ -11658,6 +11943,7 @@
           seriesSpec: String(parsed?.seriesSpec || parsed?.styleGuide || "").trim()
         };
       } catch (error) {
+        if (error?.code === "API_CONFIG_NOT_READY") throw error;
         const fallback = localAutoSplitFallback(node.prompt);
         if (!fallback.length) throw error;
         node.status = `在线分析不可用，已使用本地规则拆分：${friendlyErrorMessage(error)}`;
@@ -12705,6 +12991,7 @@
         });
       });
       wrap.querySelector("[data-skill-preview]")?.addEventListener("click", async () => {
+        if (!requireApiRequestReady()) return;
         if (!apiKeyInput.value.trim()) {
           setSettingsOpen(true);
           apiKeyInput.focus();
@@ -13927,6 +14214,7 @@
     const psdVisionStageTimeoutMs = 590000;
 
     async function psdAnalyzeLayers(original, signal, onAttempt) {
+      assertApiRequestReady();
       const scale = Math.min(1, 2048 / Math.max(original.width, original.height));
       const preview = psdCanvas(Math.max(1, Math.round(original.width * scale)), Math.max(1, Math.round(original.height * scale)));
       const context = preview.getContext("2d");
@@ -13966,6 +14254,7 @@
           }, requestBody, attemptController.signal);
           return psdLayerPlan(vision.text || extractText(vision.data));
         } catch (error) {
+          if (error?.code === "API_CONFIG_NOT_READY") throw error;
           if (signal?.aborted) throw signal.reason || error;
           if (/超过当前 16 层上限/.test(String(error?.message || ""))) throw error;
           const detail = attemptController.signal.aborted
@@ -14119,6 +14408,7 @@
     }
 
     async function analyzePsdFromNode(id) {
+      if (!requireApiRequestReady()) return;
       const node = nodes.find((item) => item.id === id && item.type === "psd");
       if (!node || psdJobs.has(id)) return;
       const source = psdSourceReference(node);
@@ -14182,6 +14472,7 @@
     }
 
     async function generatePsdFromNode(id) {
+      if (!requireApiRequestReady()) return;
       const node = nodes.find((item) => item.id === id && item.type === "psd");
       if (!node || psdJobs.has(id)) return;
       const source = psdSourceReference(node);
@@ -16807,6 +17098,7 @@
     }
 
     async function regenerateResultNode(resultId) {
+      if (!requireApiRequestReady()) return;
       const original = nodes.find((item) => item.id === resultId);
       if (!canRegenerateResult(original)) {
         showToast(original?.regenerating ? "这张图片正在重新生成" : "当前图片暂时不能重新生成");
@@ -16930,6 +17222,7 @@
     }
 
     async function generateAudioFromNode(id) {
+      if (!requireApiRequestReady()) return;
       const node = nodes.find((item) => item.id === id && item.type === "audio");
       if (!node || node.audioGenerating) return;
       const prompt = String(node.prompt || "").trim();
@@ -17020,6 +17313,7 @@
     }
 
     async function generateFromNode(id, options = {}) {
+      if (!requireApiRequestReady()) return;
       const node = nodes.find((item) => item.id === id);
       if (!node) return;
       const generationProfile = apiProfileForModel(node.model);
@@ -17474,6 +17768,7 @@
     }
 
     function isRetryableGenerationError(error) {
+      if (error?.code === "API_CONFIG_NOT_READY") return false;
       const message = String(error?.message || error || "");
       return !/HTTP 4(?:00|01|03|04)|额度不足|spending limit|credits|model.not.found|No available channel|invalid api|API 密钥/i.test(message);
     }
@@ -17504,6 +17799,7 @@
             setNodeStatus(pending.id, pending.status);
             maskUrl = apiResult.urls?.[0] || apiResult.url || "";
           } catch (maskError) {
+            if (maskError?.code === "API_CONFIG_NOT_READY") throw maskError;
             console.warn("PNG mask model fallback", maskError);
           }
           let url = maskUrl
@@ -17737,6 +18033,7 @@
     }
 
     async function refineNodePrompt(node) {
+      if (!requireApiRequestReady()) return;
       const source = String(node.prompt || "").trim();
       if (!source) {
         showToast("请先输入需要修改的提示词");
@@ -17950,6 +18247,7 @@
       try {
         response = await fetchMaybeProxied(url, { method:"POST", headers, body, signal });
       } catch (error) {
+        if (error?.code === "API_CONFIG_NOT_READY") throw error;
         if (signal?.aborted) throw signal.reason || error;
         throw new Error("音频接口无法访问，请检查当前渠道、网络和接口转发配置。");
       }
@@ -18062,6 +18360,7 @@
           }
         }
       } catch (error) {
+        if (error?.code === "API_CONFIG_NOT_READY") throw error;
         if (signal?.aborted) throw signal.reason || error;
         if (window.wandouDesktopApi?.fetch && isDesktopApiEndpoint(url)) {
           const reason = String(error?.message || error || "未知网络错误").replace(/^Error invoking remote method 'desktop:api-fetch':\s*/i, "");
@@ -19187,6 +19486,8 @@ ${formatInstruction}`;
     }
 
     async function fetchMaybeProxied(url, options = {}) {
+      // Reject immediately; a click during hydration must never queue a paid request.
+      if (String(options.method || "GET").toUpperCase() === "POST") assertApiRequestReady();
       const targetUrl = proxiedUrl(url);
       if (window.wandouDesktopApi?.fetch && isDesktopApiEndpoint(targetUrl)) {
         const headers = Object.fromEntries(new Headers(options.headers || {}).entries());
@@ -21868,24 +22169,42 @@ ${formatInstruction}`;
       });
     }
 
-    async function readCanvasStateBackup() {
+    async function readCanvasStateBackup(projectId = activeProjectId) {
       const db = await openLocalMediaDb();
-      if (!db) return null;
-      const projectPrefix = projectCanvasStorageKey();
+      if (!db) throw new Error("画布数据库暂时无法读取");
+      const projectPrefix = projectCanvasStorageKey(projectId);
       const folderPrefix = folderCanvasStorageKey();
-      const records = await new Promise((resolve) => {
+      const records = await new Promise((resolve, reject) => {
         const tx = db.transaction(canvasStateStoreName, "readonly");
-        const request = tx.objectStore(canvasStateStoreName).getAll();
-        request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
-        request.onerror = () => resolve([]);
+        const store = tx.objectStore(canvasStateStoreName);
+        const collected = new Map();
+        // Only this project's exact record and session history can belong here.
+        // Do not materialize every unrelated project's original-heavy snapshots.
+        const prefixes = [projectPrefix];
+        if (projectId === projects[0]?.id) prefixes.push(folderPrefix);
+        for (const prefix of new Set(prefixes)) {
+          const exact = store.get(prefix);
+          exact.onsuccess = () => { if (exact.result) collected.set(exact.result.id, exact.result); };
+          const start = prefix + ":session-";
+          const cursor = store.openCursor(IDBKeyRange.bound(start, start + "\uffff"));
+          cursor.onsuccess = () => {
+            const entry = cursor.result;
+            if (!entry) return;
+            collected.set(entry.value.id, entry.value);
+            entry.continue();
+          };
+        }
+        tx.oncomplete = () => resolve([...collected.values()]);
+        tx.onabort = () => reject(tx.error || new Error("画布数据库读取中断"));
+        tx.onerror = () => reject(tx.error || new Error("画布数据库读取失败"));
       });
       const projectRecords = records.filter((record) =>
         record?.state && (record.id === projectPrefix || record.id.startsWith(`${projectPrefix}:session-`))
       );
-      const legacyFolderRecords = activeProjectId === projects[0]?.id
+      const legacyFolderRecords = projectId === projects[0]?.id
         ? records.filter((record) =>
           record?.state
-          && legacyCanvasStateMatchesProject(record.state)
+          && legacyCanvasStateMatchesProject(record.state, projectId)
           && (record.id === folderPrefix || record.id.startsWith(`${folderPrefix}:session-`))
         )
         : [];
@@ -21947,6 +22266,7 @@ ${formatInstruction}`;
 
     async function saveCanvasStateNow(context, options = {}) {
       if (canvasRecoveryBlocked) return false;
+      saveCanvasStateNow.started = (saveCanvasStateNow.started || 0) + 1;
       try {
         clearTimeout(saveTimer);
         const storedNodes = await Promise.all(context.state.nodes.map(serializeNodeForStorage));
@@ -22012,6 +22332,11 @@ ${formatInstruction}`;
     }
 
     window.wandouSaveBeforeClose = async () => {
+      if (apiConfigBusy) return { success: false, supported: true, busy: true, error: "正在保存 API 设置，请完成后再关闭或更新。" };
+      if (typeof window.wandouCanCloseReadOnlyStartup === "function" && document.body.dataset.canvasReady !== "true") {
+        if (window.wandouCanCloseReadOnlyStartup()) return { success: true, supported: true, skipped: true, readOnly: true, reason: "startup-failed-before-editing", savedAt: 0 };
+        return { success: false, supported: true, error: "画布尚未初始化完成，未写入任何项目数据。请等待加载完成后重试。" };
+      }
       clearTimeout(saveTimer);
       saveTimer = null;
       const project = projects.find((item) => item.id === activeProjectId);
@@ -22038,13 +22363,13 @@ ${formatInstruction}`;
         ? await writeDesktopCanvasBackup(context, true)
         : null;
       const localVerified = verifyCanvasStateSaved(context);
-      const success = Boolean(
+      const success = !apiConfigBusy && Boolean(
         durableSaved
         && (desktopBackupRequired
           ? desktopBackup?.success
           : localVerified)
       );
-      const error = success
+      const error = apiConfigBusy ? "正在保存 API 设置，请完成后再关闭或更新。" : success
         ? ""
         : !durableSaved
         ? `图片或画布状态未能写入本地存储${context.saveError ? `：${context.saveError}` : ""}`
@@ -22056,6 +22381,7 @@ ${formatInstruction}`;
       return {
         success,
         supported: true,
+        busy: apiConfigBusy,
         projectId: context.projectId,
         projectName: project?.name || "当前项目",
         nodeCount: context.state.nodes.length,
@@ -22218,7 +22544,9 @@ ${formatInstruction}`;
         }
       };
       const workerCount = Math.min(3, list.length);
-      await Promise.all(Array.from({ length: workerCount }, worker));
+      const workers = await Promise.allSettled(Array.from({ length: workerCount }, worker));
+      const failed = workers.find(result => result.status === "rejected");
+      if (failed) throw failed.reason;
     }
 
     function mergeCanvasRecoveryState(compactState, backupState) {
@@ -22266,14 +22594,21 @@ ${formatInstruction}`;
     async function readDesktopCanvasBackups(projectId = activeProjectId) {
       if (!window.wandouShell?.readCanvasBackups) return [];
       try {
-        const result = await window.wandouShell.readCanvasBackups({
-          folderId: currentFolderId,
-          projectId
-        });
-        return result?.success && Array.isArray(result.states) ? result.states : [];
+        const startupCache = typeof readDesktopProjectCatalog === "function" ? readDesktopProjectCatalog.pending : null;
+        const catalogError = typeof readDesktopProjectCatalog === "function" ? readDesktopProjectCatalog.catalogError : null;
+        if (typeof readDesktopProjectCatalog === "function") {
+          readDesktopProjectCatalog.pending = null;
+          readDesktopProjectCatalog.catalogError = null;
+        }
+        const result = startupCache?.has(projectId) ? startupCache.get(projectId)
+          : await window.wandouShell.readCanvasBackups({ folderId: currentFolderId, projectId });
+        if (result?.success === false) throw new Error(result.error || "磁盘项目备份读取失败");
+        const states = Array.isArray(result?.states) ? result.states : [];
+        if (!states.length && catalogError) throw catalogError;
+        return states;
       } catch (error) {
         console.warn("Desktop canvas backups could not be read", error);
-        return [];
+        throw error;
       }
     }
 
@@ -22345,7 +22680,7 @@ ${formatInstruction}`;
     };
 
     window.wandouPrepareTabSuspend = async () => {
-      if (nodes.some((node) => node.pending)) {
+      if (apiConfigBusy || nodes.some((node) => node.pending)) {
         return { safe: false, reason: "generation-in-progress" };
       }
       const result = await window.wandouSaveBeforeClose();
@@ -22359,6 +22694,7 @@ ${formatInstruction}`;
 
     async function loadCanvasState() {
       isRestoring = true;
+      canvasRecoveryBlocked = true;
       try {
         const compactState = parseStoredCanvasState(localStorage.getItem(projectCanvasStorageKey()), "Project");
         const legacyFolderState = activeProjectId === projects[0]?.id
@@ -22369,11 +22705,25 @@ ${formatInstruction}`;
           : null;
         const compatibleFolderState = legacyCanvasStateMatchesProject(legacyFolderState) ? legacyFolderState : null;
         const compatibleGlobalState = legacyCanvasStateMatchesProject(legacyGlobalState) ? legacyGlobalState : null;
-        // Browser database failures must not prevent reading independent disk backups.
-        let backupState = null;
-        try { backupState = await readCanvasStateBackup(); }
-        catch (error) { console.warn("Browser backup unavailable; trying desktop backup", error); }
-        const desktopStates = await readDesktopCanvasBackups();
+        // Consume only an identity-matching startup read. Subsequent restores
+        // always read new transactions; a different project cannot borrow it.
+        const startupRecovery = typeof loadProjects === "function" ? loadProjects.recovery : null;
+        if (typeof loadProjects === "function") loadProjects.recovery = null;
+        const cached = startupRecovery?.folderId === currentFolderId && startupRecovery.projectId === activeProjectId ? startupRecovery : null;
+        let backupState = null, backupReadError = null, desktopStates = [];
+        if (cached) {
+          backupState = cached.browserState;
+          desktopStates = cached.desktopStates;
+          backupReadError = cached.browserError || cached.desktopError || cached.catalogError;
+          readDesktopProjectCatalog.pending = null;
+          readDesktopProjectCatalog.catalogError = null;
+          readDesktopProjectCatalog.selectedRecovery = null;
+        } else {
+          try { backupState = await readCanvasStateBackup(); }
+          catch (error) { backupReadError = error; console.warn("Browser backup unavailable; trying desktop backup", error); }
+          try { desktopStates = await readDesktopCanvasBackups(); }
+          catch (error) { backupReadError = error; console.warn("Desktop backup unavailable; retaining independent local recovery", error); }
+        }
         const localState = mergeCanvasRecoveryState(compactState, backupState);
         const state = chooseCanvasRecoveryState([
           localState,
@@ -22383,8 +22733,11 @@ ${formatInstruction}`;
           backupState,
           ...desktopStates
         ]);
+        if (backupReadError && !isMeaningfulCanvasState(state) && !(Number(state?.intentionalResetAt) > 0)) throw backupReadError;
         if (!state || !Array.isArray(state.nodes) || (!state.nodes.length && !(Number(state.intentionalResetAt) > 0))) {
+          if (backupReadError) throw backupReadError;
           isRestoring = false;
+          canvasRecoveryBlocked = false;
           return false;
         }
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
@@ -22430,7 +22783,7 @@ ${formatInstruction}`;
       canvasRecoveryBlocked = false;
       const hadStoredCanvas = projectHasStoredCanvasEvidence();
       if (await loadCanvasState()) return true;
-      if (hadStoredCanvas) {
+      if (hadStoredCanvas || canvasRecoveryBlocked) {
         canvasRecoveryBlocked = true;
         nodes = [];
         links = [];
@@ -22804,32 +23157,8 @@ ${formatInstruction}`;
       input.focus({ preventScroll: true });
       try { input.setSelectionRange(input.value.length, input.value.length); } catch (_error) {}
     }, true);
-    document.getElementById("clearApiKeyButton").addEventListener("click", async () => {
-      apiKeyInput.value = "";
-      const channelTwoKey = apiKey2Input.value.trim();
-      try {
-        await persistApiConfig("", channelTwoKey);
-        localStorage.removeItem("aiCanvasAllModels");
-        localStorage.removeItem("aiCanvasImageModels");
-      } catch (error) {
-        console.error("Channel 1 API key clear failed", error);
-      }
-      apiKeyInput.focus();
-      showToast("渠道 1 API 密钥已清除");
-    });
-    document.getElementById("clearApiKey2Button").addEventListener("click", async () => {
-      apiKey2Input.value = "";
-      const channelOneKey = apiKeyInput.value.trim();
-      try {
-        localStorage.removeItem("aiCanvasAllModelsChannel2");
-        localStorage.removeItem("aiCanvasImageModelsChannel2");
-        await persistApiConfig(channelOneKey, "");
-      } catch (error) {
-        console.error("Channel 2 API key clear failed", error);
-      }
-      apiKey2Input.focus();
-      showToast("渠道 2 API 密钥已清除");
-    });
+    document.getElementById("clearApiKeyButton").addEventListener("click", () => clearApiChannel(1));
+    document.getElementById("clearApiKey2Button").addEventListener("click", () => clearApiChannel(2));
     document.getElementById("settingsButton").addEventListener("click", (event) => {
       event.stopPropagation();
       setSettingsOpen(!settingsPopover.classList.contains("open"));
@@ -23527,21 +23856,64 @@ ${formatInstruction}`;
     });
 
     (async function initApp() {
-      await loadApiConfig();
-      await syncImageModelsFromApi({ render: false });
+      const appRoot = document.querySelector(".app");
+      const previousFocus = document.activeElement;
+      const startupStatus = document.createElement("div");
+      startupStatus.id = "canvasStartupStatus";
+      startupStatus.setAttribute("role", "status");
+      startupStatus.tabIndex = -1;
+      const dark = readGlobalTheme() === "dark";
+      startupStatus.style.cssText = "position:fixed;inset:0;z-index:100;display:grid;place-content:center;gap:16px;padding:24px;text-align:center;background:" + (dark ? "#161616;color:#f5f5f5" : "#f5f5f5;color:#202020");
+      startupStatus.textContent = "正在读取项目…";
+      document.body.appendChild(startupStatus);
+      appRoot.inert = true;
+      const writesBeforeStartup = saveCanvasStateNow.started || 0;
+      let openedForEditing = false;
+      const startupInputEvents = ["paste", "drop", "keydown", "pointerdown", "click"];
+      const protectStartupInput = event => {
+        if (!startupStatus.isConnected || startupStatus.contains(event.target)) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+      };
+      startupInputEvents.forEach(type => window.addEventListener(type, protectStartupInput, true));
+      window.wandouCanCloseReadOnlyStartup = () => !openedForEditing && appRoot.inert
+        && document.body.dataset.canvasReady === "error" && startupStatus.isConnected
+        && canvasRecoveryBlocked && (saveCanvasStateNow.started || 0) === writesBeforeStartup
+        && !apiConfigBusy && !assistantSending && audioJobs.size === 0 && psdJobs.size === 0 && vectorJobs.size === 0
+        && !nodes.some(node => node.pending || node.regenerating || node.audioGenerating || Number(node.autoSplitProgress) > 0)
+        && pendingLocalMediaWrites.size === 0;
+      document.body.dataset.canvasReady = "loading";
+      isRestoring = true;
+      canvasRecoveryBlocked = true;
+      // Local credentials/model caches are applied synchronously, while disk
+      // configuration and provider availability may settle independently.
+      const startupApi = loadApiConfig().catch(error => console.warn("API startup read failed", error));
+      try {
       await loadProjects();
-      await refreshInstalledDrawingSkills({ render: false });
       projectHubPinned = false;
       updateProjectHubPinState();
       updateCurrentFolderName();
       applyGlobalTheme(readGlobalTheme());
       await restoreOrSeedCanvas();
+      if (canvasRecoveryBlocked) throw new Error("历史记录暂时无法读取，未覆盖项目数据。");
       renderProjects();
       loadAssistantConversation();
       renderAssistantCreativeSkillOptions();
       restoreAssistantPanelGeometry();
       setAssistantOpen(localStorage.getItem("aiCanvasAssistantOpenV1") !== "0", false);
       document.body.dataset.canvasReady = "true";
+      openedForEditing = true;
+      appRoot.inert = false;
+      startupInputEvents.forEach(type => window.removeEventListener(type, protectStartupInput, true));
+      startupStatus.remove();
+      if (previousFocus && previousFocus !== document.body && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+      void startupApi.then(async () => {
+        if (apiInitialConfigReady && !apiConfigBusy && apiConfigRevision === 0 && apiDraftRevision === apiCommittedDraftRevision) {
+          await syncImageModelsFromApi({ render: false });
+          render({ skipSave: true, preserveInteraction: true });
+        }
+      }).catch(error => console.warn("Optional model refresh failed", error));
+      void refreshInstalledDrawingSkills({ render: false }).then(() => render({ skipSave: true, preserveInteraction: true }))
+        .catch(error => console.warn("Optional skill refresh failed", error));
       // Upgrade legacy full localStorage snapshots in the background. The old
       // value is only replaced after IndexedDB or the desktop backup confirms
       // that the restored canvas has been saved durably.
@@ -23553,6 +23925,23 @@ ${formatInstruction}`;
       }, 800);
       if (startupRecoveredProjectName) {
         showToast(`已恢复到 ${startupRecoveredProjectName}`);
+      }
+      } catch (error) {
+        isRestoring = false;
+        canvasRecoveryBlocked = true;
+        document.body.dataset.canvasReady = "error";
+        startupStatus.setAttribute("role", "alert");
+        startupStatus.replaceChildren();
+        const message = document.createElement("p");
+        message.textContent = "项目读取未完成，未覆盖原数据。请检查存储位置后重新读取。";
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.textContent = "重新读取项目";
+        retry.style.cssText = "padding:10px 18px;border:1px solid currentColor;border-radius:8px;color:inherit;background:transparent;font:inherit;cursor:pointer";
+        retry.addEventListener("click", () => location.reload());
+        startupStatus.append(message, retry);
+        retry.focus();
+        console.warn("Canvas startup failed; existing data was not overwritten", error);
       }
 
     })();

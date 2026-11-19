@@ -31,7 +31,7 @@ async function fixture(t,{width=1440,theme='dark',invalid=false}={}){
   external.push(url.origin+url.pathname);return route.abort();
  });
  await context.addInitScript(theme=>{localStorage.setItem('ai-tools-theme',theme);localStorage.setItem('wd-theme',theme);},theme);
- await page.goto(pathToFileURL(path.join(app,'ai-node-canvas-test.html')).href+'?workspace=production');await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+ await page.goto(pathToFileURL(path.join(app,'ai-node-canvas-test.html')).href+'?workspace=production');await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
  await page.evaluate(theme=>{apiKeyInput.value='synthetic-never-paid';nodes=[];links=[];nodeId=1;selectedNodeId=null;boxSelectedIds=[];view={x:0,y:0,zoom:1};document.body.classList.toggle('dark-theme',theme==='dark');document.documentElement.dataset.theme=theme;render({skipSave:true});applyCanvasTransform();},theme);
  return{page,calls,errors,downloads,external};
 }
@@ -65,7 +65,7 @@ for(const width of [1440,1024])for(const theme of ['light','dark'])for(const for
  await snapshot(page,`sidebar-${format}-controls-${width}-${theme}.png`);
  await page.locator('.node.generator [data-generate]').click();await result(page,format);assert.equal(calls.length,1);const payload=calls[0];assert.equal(payload.output_format,format);assert.equal(payload.n,1);assert.equal(payload.quality,'medium');assert.equal(payload.complexity,'low');assert.equal(payload.background,undefined);for(const key of ['resolution','response_format','stream','partial_images','output_compression'])assert.equal(payload[key],undefined,key);
  if(format==='gif'){assert.equal(payload.frame_count,6);assert.equal(payload.frame_duration_ms,150);assert.equal(payload.size,'auto');assert.doesNotMatch(payload.prompt,/4096|4K/);}else{assert.equal(payload.frame_count,undefined);assert.equal(payload.frame_duration_ms,undefined);}
- await page.evaluate(()=>saveCanvasState());await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');await result(page,format);
+ await page.evaluate(()=>saveCanvasState());await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);await result(page,format);
  const restored=await page.evaluate(()=>{const n=nodes.find(n=>n.type==='generator');return{format:n.imageOutputFormat,quality:n.imageQuality,complexity:n.imageComplexity,frames:n.gifFrameCount,duration:n.gifFrameDurationMs};});assert.equal(restored.format,format);assert.equal(restored.quality,'medium');assert.equal(restored.complexity,'low');if(format==='gif'){assert.equal(restored.frames,6);assert.equal(restored.duration,150);}
  await installSaveAs(page);await page.locator('.node.result [data-download]').click();await page.waitForFunction(()=>saved.length===1);await page.evaluate(()=>saveMode='cancel');await page.locator('.node.result [data-download]').click();await page.waitForFunction(()=>saved.length===2);assert.match(await page.locator('#toast').textContent(),/取消/);
  const saved=await page.evaluate(()=>saved);for(const item of saved){assert.match(item.name,new RegExp('\\.'+format+'$'));assert.equal(item.mime,format==='svg'?'image/svg+xml':'image/gif');assert.equal(hash(Buffer.from(item.bytes)),hash(format==='svg'?svg:gif));}
@@ -142,5 +142,5 @@ check('retained vector sidebar accepts a real PNG upload and preserves local SVG
   if(format==='ai'){assert.equal(bytes.subarray(0,8).toString('ascii'),'%PDF-1.4');if(mode==='trace')assert.doesNotMatch(text,/\/Subtype \/Image/);else assert.match(text,/\/Subtype \/Image/);}
   if(format==='eps'){assert.match(text,/^%!PS-Adobe-3\.0 EPSF-3\.0/);assert.match(text,/%%BeginLayer:/);assert.doesNotMatch(text,/colorimage/);}lastBytes=bytes;
  }
- await page.evaluate(()=>saveCanvasState());await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');await page.evaluate(()=>centerOnNode(nodes.find(n=>n.type==='vector').id));const pending=page.waitForEvent('download');await page.locator('[data-vector-download]').click();assert.equal(hash(await downloadBytes(await pending)),hash(lastBytes));assert.equal(calls.length,0);assert.equal(downloads.length,6);assert.deepEqual(errors,[]);
+ await page.evaluate(()=>saveCanvasState());await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);await page.evaluate(()=>centerOnNode(nodes.find(n=>n.type==='vector').id));const pending=page.waitForEvent('download');await page.locator('[data-vector-download]').click();assert.equal(hash(await downloadBytes(await pending)),hash(lastBytes));assert.equal(calls.length,0);assert.equal(downloads.length,6);assert.deepEqual(errors,[]);
 });

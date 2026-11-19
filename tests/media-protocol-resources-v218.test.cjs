@@ -18,7 +18,7 @@ function fixture(mock=true,ResponseClass=Response){
   postMessage(request){requests.push({worker:this,...request})}
  }
  const module={exports:{}};
- vm.runInNewContext(fs.readFileSync(modulePath,'utf8'),{module,require:name=>name==='node:worker_threads'&&mock?{Worker:FakeWorker}:require(name),Buffer,URL,Response:ResponseClass,Promise,Map,Set,AbortController,DOMException,setTimeout,clearTimeout,console});
+ vm.runInNewContext(fs.readFileSync(modulePath,'utf8'),{module,__dirname:path.dirname(modulePath),require:name=>name==='node:worker_threads'&&mock?{Worker:FakeWorker}:require(name.startsWith('./')?path.join(path.dirname(modulePath),name):name),Buffer,URL,Response:ResponseClass,Promise,Map,Set,AbortController,DOMException,setTimeout,clearTimeout,console});
  const api=module.exports({directory:()=>directory});
  const write=(id,value=data)=>fs.writeFileSync(path.join(directory,id+'.data'),value);
  const ready=async count=>{for(let i=0;i<200&&requests.length<count;i++)await new Promise(resolve=>setTimeout(resolve,2));assert.equal(requests.length,count)};

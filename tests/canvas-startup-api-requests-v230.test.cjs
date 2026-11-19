@@ -1,0 +1,78 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('node:url');
+const {chromium}=require('../desktop-client/node_modules/playwright'),sharp=require('../desktop-client/node_modules/sharp');
+const app=path.resolve(__dirname,'../app'),files=['ai-node-canvas-test.html','ai-node-canvas.html'];let browser,image;
+test.before(async()=>{image='data:image/png;base64,'+(await sharp({create:{width:16,height:16,channels:4,background:{r:60,g:120,b:180,alpha:1}}}).png().toBuffer()).toString('base64');browser=await chromium.launch({headless:true,chromiumSandbox:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});});
+test.after(async()=>{await browser?.close();});
+async function fixture(t,file){
+ const context=await browser.newContext({viewport:{width:1440,height:1000}});t.after(()=>context.close());const page=await context.newPage(),attempts=[],errors=[];page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/*',route=>{const r=route.request(),url=r.url();if(/^(file:|data:|blob:|about:)/.test(url))return route.continue();const auth=r.headers().authorization||'';attempts.push({method:r.method(),old:auth==='Bearer synthetic-old-key',fresh:auth==='Bearer synthetic-new-key',draft:auth==='Bearer synthetic-draft-key',outside:false});return route.fulfill({status:r.method()==='GET'?200:403,contentType:'application/json',body:JSON.stringify(r.method()==='GET'?{data:[]}:{error:{code:'insufficient_quota',message:'Synthetic blocked quota'}})});});
+ await page.addInitScript(({image})=>{
+  const folder='qa-api-startup-folder',project='qa-api-startup-project',config={key:'synthetic-old-key',key2:'',url:'https://www.zayapi.top',savedAt:'2026-01-01T00:00:00.000Z'};
+  const generator={id:'qa-generator',type:'generator',title:'Synthetic generator',x:20,y:10,model:'gpt-image-2.5-1k',prompt:'Synthetic square',ratio:'1:1',resolution:'1K',count:1,references:[],autoSplit:false};
+  const result={id:'qa-result',type:'result',title:'Synthetic original',x:650,y:10,model:generator.model,prompt:generator.prompt,mediaType:'image',mediaUrl:image,fullUrl:image,sourceUrl:image,previewUrl:image,width:16,height:16,references:[],outputFormat:'png',pending:false};
+  window.qaApi={initialReads:0,release:null,reject:null,saveRelease:null,writes:0,started:0,completed:0,durable:{...config,key:'synthetic-new-key',savedAt:'2030-01-01T00:00:00.000Z'},holdWrites:false};
+  for(const key of['aiCanvasApi','ai-tools-api-config'])localStorage.setItem(key,JSON.stringify(config));localStorage.setItem('aiCanvasProjectsV1',JSON.stringify([{id:folder,name:'Synthetic folder'}]));localStorage.setItem('aiCanvasStateV1:project-collection:'+folder,JSON.stringify([{id:project,name:'Synthetic project',createdAt:1,updatedAt:5000,nodeCount:2}]));localStorage.setItem('aiCanvasStateV1:active-project-collection:'+folder,project);localStorage.setItem('aiCanvasStateV1:'+folder+':'+project,JSON.stringify({folderId:folder,projectId:project,projectName:'Synthetic project',savedAt:5000,nodes:[generator,result],links:[{from:generator.id,to:result.id}],nodeId:3,view:{x:10,y:10,zoom:1}}));
+ },{image});
+ await page.route(/\/(?:local-cache|ai-node-canvas-test-cache)\.js$/,route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync(path.join(app,path.basename(new URL(route.request().url()).pathname)),'utf8')+`
+(()=>{const actual=WandouLocalCache;window.WandouLocalCache={...actual,readJson:key=>{if(key!=='api-config-v1')return actual.readJson(key);qaApi.initialReads++;if(qaApi.initialReads===1)return new Promise((resolve,reject)=>{qaApi.release=()=>resolve(qaApi.durable);qaApi.reject=()=>reject(new Error('Synthetic authoritative configuration failure'));});return Promise.resolve(qaApi.durable);},writeJson:(key,value)=>{if(key!=='api-config-v1')return actual.writeJson(key,value);qaApi.writes++;const commit=()=>{qaApi.durable=structuredClone(value);return{ok:true};};return qaApi.holdWrites?new Promise(resolve=>qaApi.saveRelease=()=>resolve(commit())):Promise.resolve(commit());}};})();`}));
+ await page.goto(pathToFileURL(path.join(app,file)).href+'?workspace=production&project=qa-api-startup-folder',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&typeof qaApi.release==='function');
+ await page.evaluate(()=>{for(const name of['generateFromNode','regenerateResultNode']){const original=name==='generateFromNode'?generateFromNode:regenerateResultNode;const observe=(...args)=>{qaApi.started++;return Promise.resolve(original(...args)).finally(()=>qaApi.completed++);};if(name==='generateFromNode')generateFromNode=observe;else regenerateResultNode=observe;}});
+ assert.equal(await page.evaluate(()=>apiInitialConfigReady),false);assert.equal(await page.evaluate(()=>document.querySelector('.app').inert),false);
+ return{page,attempts,verify(){assert.deepEqual(errors,[]);assert.equal(attempts.some(r=>r.outside),false);}};
+}
+const posts=f=>f.attempts.filter(r=>r.method==='POST');
+async function clickAction(page,action){const count=await page.evaluate(()=>qaApi.completed);await page.locator(action==='generate'?'[data-id="qa-generator"] [data-generate]':'[data-id="qa-result"] [data-regenerate]').click();await page.waitForFunction(count=>qaApi.completed===count+1,count);}
+async function assertOriginalAndIdle(page){assert.deepEqual(await page.evaluate(()=>({ids:nodes.map(n=>n.id),source:nodes.find(n=>n.id==='qa-result')?.fullUrl,pending:nodes.filter(n=>n.pending||n.regenerating).length,assistantSending})),{ids:['qa-generator','qa-result'],source:image,pending:0,assistantSending:false});}
+async function saveDraft(page,{hold=false}={}){await page.locator('#settingsButton').click();await page.locator('#apiKey').fill('synthetic-draft-key');await page.evaluate(hold=>qaApi.holdWrites=hold,hold);await page.locator('#saveApiButton').click();if(hold)await page.waitForFunction(()=>typeof qaApi.saveRelease==='function');else await page.waitForFunction(()=>apiInitialConfigReady===true&&apiConfigBusy===false);}
+for(const file of files){
+ for(const action of['generate','regenerate'])for(const durable of['changed','cleared'])test(file+': pending '+action+' never queues or sends cached credentials; '+durable+' metadata requires an explicit retry',async t=>{
+  const f=await fixture(t,file);const {page}=f;if(durable==='cleared')await page.evaluate(()=>qaApi.durable.key='');await clickAction(page,action);await clickAction(page,action);assert.equal(posts(f).length,0);await assertOriginalAndIdle(page);assert.match(await page.locator('#apiSettingsFeedback').textContent(),/读取|尚未|未就绪|加载/);
+  await page.evaluate(()=>qaApi.release());await page.waitForFunction(()=>apiInitialConfigReady===true);assert.equal(posts(f).length,0);await assertOriginalAndIdle(page);await clickAction(page,action);assert.equal(posts(f).length,durable==='cleared'?0:1);assert.equal(posts(f).some(r=>r.old),false);if(durable==='changed')assert.equal(posts(f)[0].fresh,true);f.verify();
+ });
+ test(file+': failed authoritative read blocks generation through a pending save, then committed settings permit one deliberate request',async t=>{
+  const f=await fixture(t,file);const {page}=f;await page.evaluate(()=>qaApi.reject());await page.waitForFunction(()=>document.querySelector('#apiSettingsFeedback')?.textContent.includes('失败'));await clickAction(page,'generate');assert.equal(posts(f).length,0);await assertOriginalAndIdle(page);
+  await saveDraft(page,{hold:true});assert.equal(await page.evaluate(()=>apiConfigBusy),true);const reason=await page.evaluate(async()=>{try{await fetchMaybeProxied('https://www.zayapi.top/v1/images/generations',{method:'POST',body:'{}'});return'';}catch(e){return e.code;}});assert.equal(reason,'API_CONFIG_NOT_READY');assert.equal(posts(f).length,0);
+  await page.evaluate(()=>qaApi.saveRelease());await page.waitForFunction(()=>apiInitialConfigReady===true&&!apiConfigBusy);await clickAction(page,'generate');assert.equal(posts(f).length,1);assert.equal(posts(f)[0].draft,true);assert.equal(posts(f).some(r=>r.old),false);f.verify();
+ });
+ test(file+': editing during hydration preserves the draft, blocks requests, and requires a committed save',async t=>{
+  const f=await fixture(t,file);const {page}=f;await page.locator('#settingsButton').click();await page.locator('#apiKey').fill('synthetic-draft-key');await page.evaluate(()=>qaApi.release());await page.waitForFunction(()=>qaApi.initialReads>=1);assert.equal(await page.locator('#apiKey').inputValue(),'synthetic-draft-key');await page.locator('#closeSettingsButton').click();await clickAction(page,'generate');assert.equal(posts(f).length,0);await assertOriginalAndIdle(page);
+  await page.locator('#settingsButton').click();await page.locator('#saveApiButton').click();await page.waitForFunction(()=>apiInitialConfigReady===true&&!apiConfigBusy);await clickAction(page,'generate');assert.equal(posts(f).length,1);assert.equal(posts(f)[0].draft,true);f.verify();
+ });
+ test(file+': an unsaved edit after successful hydration cannot be used by a paid request',async t=>{
+  const f=await fixture(t,file);const {page}=f;await page.evaluate(()=>qaApi.release());await page.waitForFunction(()=>apiInitialConfigReady===true);await page.locator('#settingsButton').click();await page.locator('#apiKey').fill('synthetic-draft-key');await page.locator('#closeSettingsButton').click();await clickAction(page,'regenerate');assert.equal(posts(f).length,0);await assertOriginalAndIdle(page);f.verify();
+ });
+ test(file+': pending assistant, audio, prompt, Skill and split-confirm entries retain all drafts and task state',async t=>{
+  const f=await fixture(t,file);const {page}=f;const result=await page.evaluate(async()=>{
+   const generator=nodes.find(n=>n.id==='qa-generator');generator.autoSplitPlan=[{title:'Synthetic plan',prompt:'Synthetic planned image'}];generator.autoSplitEditing=true;generator.autoSplitPlanConfirmed=false;generator.autoSplitGenerating=false;generator.skillId='synthetic-skill';
+   nodes.push({...generator,id:'qa-audio',type:'audio',model:'tts-1',prompt:'Synthetic spoken text'},{...generator,id:'qa-keyword',type:'keyword',keywordOutput:'Synthetic prompt'},{...generator,id:'qa-psd',type:'psd',references:[{url:nodes.find(n=>n.id==='qa-result').fullUrl,width:16,height:16}]});
+   assistantInput.value='Synthetic assistant draft';assistantAttachments=[{url:nodes.find(n=>n.id==='qa-result').fullUrl,name:'Synthetic reference'}];const before=JSON.stringify({nodes,input:assistantInput.value,attachments:assistantAttachments,messages:assistantMessages});
+   const actions=[()=>sendAssistantMessage(),()=>generateAudioFromNode('qa-audio'),()=>refineNodePrompt(generator),()=>optimizeKeywordOutput(nodes.find(n=>n.id==='qa-keyword')),()=>confirmAutoSplitGeneration(generator),()=>analyzePsdFromNode('qa-psd'),()=>generatePsdFromNode('qa-psd')];for(const action of actions){await action();await action();}
+   return{unchanged:before===JSON.stringify({nodes,input:assistantInput.value,attachments:assistantAttachments,messages:assistantMessages}),assistantSending,nodePending:nodes.some(n=>n.pending||n.regenerating),imageJobs:typeof imageGenerationJobs==='undefined'?0:imageGenerationJobs.size,audioJobs:audioJobs.size,psdJobs:psdJobs.size};
+  });assert.deepEqual(result,{unchanged:true,assistantSending:false,nodePending:false,imageJobs:0,audioJobs:0,psdJobs:0});assert.equal(posts(f).length,0);f.verify();
+ });
+ test(file+': pending low-level POST routes reject before any network or desktop dispatch while canvas pan and zoom remain usable',async t=>{
+  const f=await fixture(t,file);const {page}=f;const results=await page.evaluate(async()=>{const generator=nodes.find(n=>n.id==='qa-generator'),headers={'Content-Type':'application/json',Authorization:'Bearer synthetic-old-key'},profile={key:'synthetic-old-key',url:'https://www.zayapi.top',provider:'gateway',id:'channel1',label:'Synthetic'};const calls=[()=>fetchMaybeProxied(profile.url+'/v1/images/generations',{method:'POST',headers,body:'{}'}),()=>postChatCompletion(profile.url,headers,{model:'synthetic-chat',messages:[]}),()=>callApi(generator),()=>callAudioApi({...generator,model:'tts-1'},undefined,profile),()=>callGeminiTtsApi({...generator,model:'gemini-tts'},undefined,profile),()=>callNanoBananaApi(generator,[],profile.url,headers),()=>postPromptModelWithFallback(profile.url,headers,{messages:[]}),()=>applySelectedSkillForGeneration(generator),()=>analyzeAutoSplitPlan(generator,[],'1024x1024'),()=>psdAnalyzeLayers(null)];const codes=[];for(const call of calls){try{await call();codes.push('not-rejected');}catch(e){codes.push(e.code);}}return codes;});assert.deepEqual(results,Array(10).fill('API_CONFIG_NOT_READY'));assert.equal(posts(f).length,0);
+  const before=await page.evaluate(()=>({...view}));const canvas=await page.locator('.canvas-wrap').boundingBox();assert.ok(canvas);await page.mouse.move(canvas.x+120,canvas.y+canvas.height-120);await page.mouse.down();await page.mouse.move(canvas.x+165,canvas.y+canvas.height-100,{steps:3});await page.mouse.up();assert.notEqual(await page.evaluate(()=>view.x),before.x);await page.mouse.wheel(0,-160);await page.waitForFunction(before=>view.zoom!==before.zoom,before);assert.equal(await page.evaluate(()=>document.body.dataset.canvasReady),'true');assert.equal(posts(f).length,0);f.verify();
+ });
+ for(const mode of['generate','regenerate','split','skill'])test(file+': '+mode+' stopped at the terminal API gate never retries after readiness returns; only a new click dispatches',async t=>{
+  const f=await fixture(t,file);const {page}=f;await page.evaluate(()=>qaApi.release());await page.waitForFunction(()=>apiInitialConfigReady===true);
+  await page.evaluate(mode=>{
+   const generator=nodes.find(n=>n.id==='qa-generator');
+   if(mode==='split'){generator.autoSplit=true;generator.autoSplitPlan=[];generator.autoSplitPlanConfirmed=false;}
+   if(mode==='skill'){generator.skillId='synthetic-verified-skill';generator.skillName='Synthetic skill';window.WandouSkills={...window.WandouSkills,read:async()=>({success:true,instructions:'Use a simple synthetic shape.',skill:{name:'Synthetic skill'}})};}
+   render({skipSave:true});qaApi.terminalCodes=[];qaApi.terminalEntries=0;const actual=fetchMaybeProxied;
+   fetchMaybeProxied=async(url,options={})=>{
+    if(String(options.method||'GET').toUpperCase()==='POST'&&qaApi.terminalEntries===0){
+     qaApi.terminalEntries++;apiConfigBusy=true;
+     try{return await actual(url,options);}catch(error){qaApi.terminalCodes.push(error.code);throw error;}finally{apiConfigBusy=false;}
+    }
+    return actual(url,options);
+   };
+  },mode);
+  const action=mode==='regenerate'?'regenerate':'generate';await clickAction(page,action);
+  assert.equal(posts(f).length,0,'A rejected action must not retry after readiness returns');assert.deepEqual(await page.evaluate(()=>qaApi.terminalCodes),['API_CONFIG_NOT_READY']);assert.equal(await page.evaluate(()=>apiConfigBusy),false);assert.equal(await page.evaluate(()=>apiInitialConfigReady),true);assert.equal(await page.evaluate(()=>nodes.some(n=>n.pending||n.regenerating)),false);assert.equal(await page.evaluate(()=>nodes.find(n=>n.id==='qa-result').fullUrl),image);
+  if(mode==='split')assert.equal(await page.evaluate(()=>nodes.find(n=>n.id==='qa-generator').autoSplitPlan.length),0);
+  await clickAction(page,action);assert.equal(posts(f).length,1,'Only the explicit new click may dispatch');assert.equal(posts(f)[0].fresh,true);assert.equal(posts(f).some(r=>r.old),false);f.verify();
+ });
+}

@@ -4,18 +4,25 @@ using System.IO.Compression;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
+using System.Web.Script.Serialization;
 internal static class InstallBuild { public const string Version="2.0.19"; public const string Sha256="synthetic"; }
 internal static class InstallerBehaviorTests
 {
     static void Assert(bool value,string message){if(!value)throw new Exception(message);}
+    static string HashText(string text){using(var h=SHA256.Create())return BitConverter.ToString(h.ComputeHash(Encoding.UTF8.GetBytes(text))).Replace("-","").ToLowerInvariant();}
     static MemoryStream Zip(string extra)
     {
         var stream=new MemoryStream();
         using(var archive=new ZipArchive(stream,ZipArchiveMode.Create,true))
         {
+            var files=new Dictionary<string,string>();
             foreach(var name in new[]{"豌豆AI工具.exe","程序文件/豌豆AI工具.exe","程序文件/resources/app/VERSION.txt","程序文件/resources/app/index.html","resources/app/VERSION.txt","网页版.html","使用说明.txt"})
-                using(var writer=new StreamWriter(archive.CreateEntry(name).Open()))writer.Write(name.EndsWith("VERSION.txt")?"v2.0.19":"new:"+name);
+            {var content=name.EndsWith("VERSION.txt")?"v2.0.19":"new:"+name;files[name]=HashText(content);using(var writer=new StreamWriter(archive.CreateEntry(name).Open()))writer.Write(content);}
             if(extra!=null){var item=archive.CreateEntry(extra=="SYMLINK"?"程序文件/linked-file":extra);if(extra=="SYMLINK")item.ExternalAttributes=unchecked((int)0xA1FF0000);using(var writer=new StreamWriter(item.Open()))writer.Write("extra");}
+            using(var writer=new StreamWriter(archive.CreateEntry(ManagedUpdateCore.ManifestName).Open()))writer.Write(new JavaScriptSerializer().Serialize(new{schemaVersion=1,version="2.0.19",files=files,baselines=new[]{new{version="2.0.18",files=new Dictionary<string,string>{{"豌豆AI工具.exe",HashText("old-launcher")},{"程序文件/old.txt",HashText("old-runtime")}}}}}));
         }
         stream.Position=0;return stream;
     }
@@ -26,6 +33,7 @@ internal static class InstallerBehaviorTests
     {
         Directory.CreateDirectory(target);Directory.CreateDirectory(Path.Combine(target,"程序文件"));
         File.WriteAllText(Path.Combine(target,"豌豆AI工具.exe"),"old-launcher");File.WriteAllText(Path.Combine(target,"程序文件","old.txt"),"old-runtime");
+        File.WriteAllText(Path.Combine(target,"程序文件","my-custom.txt"),"nested-personal");
         Directory.CreateDirectory(Path.Combine(target,"豌豆AI数据"));File.WriteAllText(Path.Combine(target,"豌豆AI数据","project.data"),"original-project");File.WriteAllText(Path.Combine(target,"my-notes.txt"),"personal");
     }
     public static int Main(string[] args)
@@ -40,9 +48,9 @@ internal static class InstallerBehaviorTests
             case "fresh":
                 Install(target);Assert(File.ReadAllText(Path.Combine(target,"resources","app","VERSION.txt"))=="v2.0.19","version");Assert(!Directory.Exists(Path.Combine(target,"豌豆AI数据")),"installer must not create/mutate data");break;
             case "preserve":
-                Seed(target);string backup=Install(target);Assert(File.ReadAllText(Path.Combine(target,"豌豆AI数据","project.data"))=="original-project","data lost");Assert(File.ReadAllText(Path.Combine(target,"my-notes.txt"))=="personal","unmanaged file changed");Assert(File.ReadAllText(Path.Combine(backup,"程序文件","old.txt"))=="old-runtime","rollback backup lost");break;
+                Seed(target);string backup=Install(target);Assert(File.ReadAllText(Path.Combine(target,"豌豆AI数据","project.data"))=="original-project","data lost");Assert(File.ReadAllText(Path.Combine(target,"my-notes.txt"))=="personal","unmanaged file changed");Assert(File.ReadAllText(Path.Combine(target,"程序文件","my-custom.txt"))=="nested-personal","nested unmanaged file changed");Assert(File.ReadAllText(Path.Combine(backup,"files","程序文件","old.txt"))=="old-runtime","rollback backup lost");break;
             case "rollback":
-                Seed(target);Rejected(()=>Install(target,step=>{if(step=="installed:程序文件")throw new IOException("simulated power/disk fault");}),"expected fault");Assert(File.ReadAllText(Path.Combine(target,"豌豆AI工具.exe"))=="old-launcher","old launcher not restored");Assert(File.ReadAllText(Path.Combine(target,"程序文件","old.txt"))=="old-runtime","old runtime not restored");Assert(File.ReadAllText(Path.Combine(target,"豌豆AI数据","project.data"))=="original-project","data touched");break;
+                Seed(target);Rejected(()=>Install(target,step=>{if(step.StartsWith("installed:程序文件/"))throw new IOException("simulated power/disk fault");}),"expected fault");Assert(File.ReadAllText(Path.Combine(target,"豌豆AI工具.exe"))=="old-launcher","old launcher not restored");Assert(File.ReadAllText(Path.Combine(target,"程序文件","old.txt"))=="old-runtime","old runtime not restored");Assert(File.ReadAllText(Path.Combine(target,"豌豆AI数据","project.data"))=="original-project","data touched");break;
             case "capacity":Rejected(()=>Install(target,null,0),"space check");Assert(!Directory.Exists(target),"no-space wrote target");break;
             case "malformed":
                 foreach(var extra in new[]{"../outside.txt","程序文件/../../outside.txt","豌豆AI数据/project.data","程序文件/canvas-media/original.data","程序文件/resources/app/VERSION.txt","SYMLINK"})Rejected(()=>Install(target,null,Int64.MaxValue,extra),"unsafe archive accepted: "+extra);Assert(!Directory.Exists(target),"unsafe archive wrote target");break;
@@ -51,7 +59,7 @@ internal static class InstallerBehaviorTests
                 target=Path.Combine(root,new String('中',60),new String('名',30),"豌豆AI工具");var relative="程序文件/resources/app/"+new String('a',70)+"/"+new String('b',70)+"/原图说明.txt";Rejected(()=>Install(target,null,Int64.MaxValue,relative),"path unsafe for updater accepted");Assert(!Directory.Exists(LocalInstallerCore.Extended(target)),"deep path wrote files before rejection");break;
             case "update-path-margin":
                 var syntheticRoot=@"C:\"+new String('中',127)+@"\豌豆AI工具";
-                using(var zip=Zip("程序文件/resources/app/"+new String('a',51)+".txt"))using(var archive=new ZipArchive(zip,ZipArchiveMode.Read,true)){long bytes;Assert(Path.Combine(syntheticRoot,archive.Entries[archive.Entries.Count-1].FullName).Length<240,"fixture must fit normal installation path");Rejected(()=>LocalInstallerCore.ValidateArchive(archive,syntheticRoot,out bytes),"updater stage suffix not reserved");}break;
+                using(var zip=Zip("程序文件/resources/app/"+new String('a',51)+".txt"))using(var archive=new ZipArchive(zip,ZipArchiveMode.Read,true)){long bytes;Assert(Path.Combine(syntheticRoot,archive.Entries[archive.Entries.Count-2].FullName).Length<240,"fixture must fit normal installation path");Rejected(()=>LocalInstallerCore.ValidateArchive(archive,syntheticRoot,out bytes),"updater stage suffix not reserved");}break;
             case "locked":Seed(target);using(var locked=new FileStream(Path.Combine(target,"豌豆AI工具.exe"),FileMode.Open,FileAccess.Read,FileShare.Read))Rejected(()=>Install(target),"locked executable accepted");Assert(File.ReadAllText(Path.Combine(target,"豌豆AI工具.exe"))=="old-launcher","locked update damaged original");break;
             case "shortcuts":
                 Install(target,null,Int64.MaxValue,null,p=>LocalInstallerCore.CreateShortcuts(p,Path.Combine(root,"fake-desktop"),Path.Combine(root,"fake-start-menu")));Assert(File.Exists(Path.Combine(root,"fake-desktop","豌豆AI工具.lnk")),"desktop link missing");Assert(File.Exists(Path.Combine(root,"fake-start-menu","豌豆AI工具.lnk")),"menu link missing");break;

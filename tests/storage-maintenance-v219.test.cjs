@@ -12,7 +12,7 @@ async function fixture(t,options={}) {
 }
 test('disk usage reports byte sizes by role, including legacy originals, without loading/changing image data',async t=>{
  const f=await fixture(t);const before=await fs.readFile(path.join(f.project,'canvas-media/old-id.data'));const r=await f.service.info();
- assert.deepEqual(r.sizes,{originals:24,backups:17,projects:19,exports:23,temporary:3,profile:60});assert.equal(r.cacheBytes,37);assert.equal(r.partial,false);assert.equal(r.profileDirectory,f.profile);assert.deepEqual(await fs.readFile(path.join(f.project,'canvas-media/old-id.data')),before);
+ assert.deepEqual(r.sizes,{originals:24,backups:17,projects:19,exports:23,temporary:3,profile:60,browserSession:0});assert.equal(r.cacheBytes,37);assert.equal(r.partial,false);assert.equal(r.profileDirectory,f.profile);assert.deepEqual(await fs.readFile(path.join(f.project,'canvas-media/old-id.data')),before);
 });
 test('only confirmed HTTP-cache API is cleared; originals, project files, IndexedDB, settings and temporary writes survive',async t=>{
  const f=await fixture(t);assert.equal((await f.service.clearCache()).success,true);assert.equal(f.cleared,1);assert.deepEqual(f.choices,[path.join(f.profile,'Cache')]);

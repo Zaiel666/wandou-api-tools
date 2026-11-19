@@ -711,7 +711,7 @@
     if(saved?.key===key)return saved;
     // Successful still-image results have a CSS aspect-ratio and no status row.
     // Their exact geometry is available without building/decoding their DOM.
-    if(node.type==='result'&&!node.pending&&!['video','audio','text'].includes(node.mediaType)&&node.mediaUrl&&node.width>0&&node.height>0&&!visibleResultStatus(node.status)&&!node.regenerating){
+    if(node.type==='result'&&!node.pending&&!['video','audio','text'].includes(node.mediaType)&&node.mediaUrl&&node.width>0&&node.height>0&&!visibleResultStatus(node.status,node)&&!node.regenerating){
       const width=layoutWidth(node);return {key,width,height:width*node.height/node.width};
     }
     // A newly loaded editor has no measured DOM yet. Keep its offscreen/overview

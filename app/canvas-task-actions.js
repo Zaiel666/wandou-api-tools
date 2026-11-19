@@ -27,14 +27,14 @@ function canvasTaskIndex() {
 }
 
 function canvasTaskRenderKey(node) {
-  if (node.type === "result") return [localResolutionJobs.has(node.id), Boolean(node.regenerating)];
+  if (node.type === "result") return [localResolutionJobs.has(node.id), localOutputAdjustmentJobs.has(node.id), localOutputAdjustmentJobs.get(node.id)?.phase || '', Boolean(node.regenerating), node.imageTask?.state, node.imageTask?.taskId, imageRecoveryJobs.has(node.id)];
   if (!["generator", "outpaint", "style", "png", "upscale", "video"].includes(node.type)) return null;
   const index = canvasTaskIndex();
   return [imageGenerationJobs.has(node.id), index.regenerating.has(node.id), index.failed.get(node.id)?.length || 0];
 }
 
 function failedImageResult(node) {
-  return node?.type === "result" && node.mediaType === "image" && !node.pending && !node.regenerating
+  return !imageTaskNeedsAttention(node) && node?.type === "result" && node.mediaType === "image" && !node.pending && !node.regenerating
     && !favoriteMediaUrl(node) && /失败|错误|超时|中断|取消|停止/.test(node.status || "");
 }
 
@@ -65,6 +65,7 @@ function resultTaskActionsHtml(node) {
 }
 
 function stopCanvasImageTask(sourceId) {
+  cancelTrackedImageTasksForNode(sourceId);
   const source = nodes.find(node => node.id === sourceId);
   if (!source) return;
   const jobs = [imageGenerationJobs.get(sourceId), ...imageRegenerationJobs.values()].filter(job => job && job.node.id === sourceId);

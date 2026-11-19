@@ -20,7 +20,7 @@ async function fixture(t,{width=1440,theme='dark',invalid=false}={}){
   return route.abort();
  });
  await context.addInitScript(theme=>{localStorage.setItem('ai-tools-theme',theme);localStorage.setItem('wd-theme',theme);},theme);
- await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+ await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
  await page.evaluate(({theme,gifUrl})=>{
   document.body.classList.toggle('dark-theme',theme==='dark');document.documentElement.dataset.theme=theme;apiKeyInput.value='synthetic-never-paid';nodes=[];links=[];nodeId=1;window.syntheticGif=gifUrl;
   window.generator=createNode('generator',0,0,{model:'gpt-image-2.6-flare',prompt:'测试主体平滑循环',ratio:'16:9',resolution:'4K',count:1,_deferRender:true});render({skipSave:true});centerOnNode(generator.id);
@@ -51,7 +51,7 @@ for(const width of [1440,1024])for(const theme of ['light','dark'])test(`canvas 
 });
 
 test('canvas GIF save/reopen, footer/fullscreen/right-click Save As preserve original bytes through cancel and failure',async t=>{
- const {page,calls,errors,downloads}=await fixture(t);await generated(page);await page.evaluate(()=>saveCanvasState());await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+ const {page,calls,errors,downloads}=await fixture(t);await generated(page);await page.evaluate(()=>saveCanvasState());await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
  const restored=await page.evaluate(async()=>{window.resultNode=nodes.find(n=>n.type==='result');centerOnNode(resultNode.id);window.saved=[];window.mode='success';window.legacyWrites=0;window.wandouShell={saveFileAs:async(name,bytes,mime)=>{saved.push({name,bytes:Array.from(bytes),mime});return mode==='cancel'?{success:false,canceled:true}:mode==='failure'?{success:false,error:'合成目录不可写'}:{success:true,path:'X:/synthetic/'+name};},writeSaveFile:async()=>{legacyWrites++;throw Error('must not fall back');}};return{frames:resultNode.animationFrameCount,durations:resultNode.animationFrameDurationsMs,loop:resultNode.animationLoopCount,processing:resultNode.resolutionProcessing,full:await getLocalMedia(resultNode.fullUrl)};});
  assert.deepEqual({frames:restored.frames,durations:restored.durations,loop:restored.loop,processing:restored.processing},{frames:2,durations:[80,120],loop:0,processing:'native-animation'});assert.equal(hash(Buffer.from(restored.full.split(',')[1],'base64')),hash(gif));
  await page.locator('.node.result [data-download]').click();await page.waitForFunction(()=>saved.length===1);
@@ -70,7 +70,7 @@ test('invalid GIF cannot become a visible result and never retries paid generati
 test('GIF static-preview failure retains original, can save/reopen and does not call generation again',async t=>{
  const {page,calls,errors}=await fixture(t);await page.evaluate(()=>{const prepare=WandouAnimatedImage.prepare;window.WandouAnimatedImage={prepare:async(input,options)=>({...await prepare(input,{...options,preview:false}),previewUrl:'',previewFallback:true})};});await generated(page);
  const value=await page.evaluate(async()=>({full:await getLocalMedia(resultNode.fullUrl),preview:await getLocalMedia(resultNode.previewUrl),status:resultNode.status,frames:resultNode.animationFrameCount}));assert.equal(calls.length,1);assert.equal(hash(Buffer.from(value.full.split(',')[1],'base64')),hash(gif));assert.match(value.preview,/^data:image\/png/);assert.match(value.status,/静态预览暂不可用/);assert.equal(value.frames,2);
- await page.evaluate(()=>saveCanvasState());await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');assert.equal(await page.evaluate(()=>nodes.find(n=>n.type==='result').animationFrameCount),2);assert.equal(calls.length,1);assert.deepEqual(errors,[]);
+ await page.evaluate(()=>saveCanvasState());await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);assert.equal(await page.evaluate(()=>nodes.find(n=>n.type==='result').animationFrameCount),2);assert.equal(calls.length,1);assert.deepEqual(errors,[]);
 });
 for(const action of ['cancel','delete'])test(`GIF duplicate click and ${action} during decode never publishes a late result`,async t=>{
  const {page,calls,errors}=await fixture(t);

@@ -47,5 +47,6 @@ test("local disk canvas backups have no artificial file-size restore limit", () 
   assert.doesNotMatch(main, /stats\.size > 12 \* 1024 \* 1024/);
   assert.doesNotMatch(main, /Canvas backup is larger than 160 MB/);
   assert.match(main, /readCanvasBackupDirectory\(directory, stateLimit = 3\)/);
-  assert.match(main, /if \(states\.length >= stateLimit\) break/);
+  const reader = fs.readFileSync(path.join(__dirname, '..', 'desktop-client', 'canvas-backup-reader.cjs'), 'utf8');
+  assert.match(reader, /if\s*\(states\.length\s*>=\s*stateLimit\)\s*break/);
 });

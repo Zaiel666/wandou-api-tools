@@ -22,7 +22,7 @@ test('old program backup cleanup retains every managed data layout and migration
   }
   const safe = path.join(directory, 'software.previous-program-only'); fs.mkdirSync(safe); fs.writeFileSync(path.join(safe, 'program.txt'), 'old program');
   await c.cleanupStalePortableInstallBackups();
-  assert.equal(fs.existsSync(safe), false);
+  assert.equal(fs.readFileSync(path.join(safe,'program.txt'),'utf8'),'old program','Filename alone cannot prove a historical backup is disposable');
   protectedNames.forEach((name, i) => assert.equal(fs.readFileSync(path.join(directory, `software.previous-${i}`, name, 'original.txt'), 'utf8'), 'keep'));
 });
 test('completed updater stages containing project media are not removed', async () => {
@@ -32,7 +32,7 @@ test('completed updater stages containing project media are not removed', async 
   for (const stage of [protectedStage, cleanStage]) { fs.mkdirSync(stage); fs.writeFileSync(path.join(stage, '.wandou-stage-cleanup-ready'), 'ready'); fs.utimesSync(path.join(stage, '.wandou-stage-cleanup-ready'), new Date(0), new Date(0)); }
   fs.mkdirSync(path.join(protectedStage, '豌豆AI数据')); fs.writeFileSync(path.join(protectedStage, '豌豆AI数据', 'original.data'), 'keep');
   await c.cleanupStalePortableUpdateStages();
-  assert.equal(fs.existsSync(cleanStage), false); assert.equal(fs.readFileSync(path.join(protectedStage, '豌豆AI数据', 'original.data'), 'utf8'), 'keep');
+  assert.equal(fs.existsSync(cleanStage), true); assert.equal(fs.readFileSync(path.join(protectedStage, '豌豆AI数据', 'original.data'), 'utf8'), 'keep');
 });
 test('unexpected directory and missing path cannot be treated as disposable', async () => {
   const { directory, c } = fixture();

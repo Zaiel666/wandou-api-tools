@@ -36,6 +36,7 @@ async function completeNativeGifResult({sourceNode,pending,rawUrl,signal,ensureC
   ensureCurrent();
   const animation = await window.WandouAnimatedImage.prepare(input,{signal,previewMaxEdge:640});
   ensureCurrent();
+  const comparison = window.WandouImageOutputContract.compare(pending.outputRequest, {format:'gif',width:animation.width,height:animation.height,frameCount:animation.frameCount,frameDurationsMs:animation.frameDurationsMs});
   // A decoder failure must not start many original animations as thumbnails.
   let previewUrl = animation.previewUrl;
   if (!previewUrl) { const canvas = document.createElement('canvas'); canvas.width=64; canvas.height=64; previewUrl=canvas.toDataURL('image/png'); }
@@ -46,9 +47,9 @@ async function completeNativeGifResult({sourceNode,pending,rawUrl,signal,ensureC
     width:animation.width,height:animation.height,originalWidth:animation.width,originalHeight:animation.height,
     animationFrameCount:animation.frameCount,animationFrameDurationsMs:animation.frameDurationsMs,
     animationDurationMs:animation.durationMs,animationLoopCount:animation.loopCount,
-    resolutionProcessing:'native-animation',outputResolutionReady:false,outputLongEdgeTarget:0,outputRatioMismatch:false,
+    resolutionProcessing:'native-animation',outputResolutionReady:false,outputLongEdgeTarget:0,outputRatioMismatch:comparison.ratioMismatch,outputComparison:comparison,
     resolutionError:'',errorDetails:'',transparent:animation.hasTransparency,
-    status:`GIF 已生成：${animation.frameCount} 帧，保留完整动画原件。` + (animation.previewFallback ? '静态预览暂不可用，可播放或下载原件。' : '')
+    status:'GIF 已生成。' + (comparison.message || `${comparison.actualSummary}，保留完整动画原件。`) + (animation.previewFallback ? '静态预览暂不可用，可播放或下载原件。' : '')
   });
   pending.references=[{url:animation.dataUrl,mediaType:'image',width:animation.width,height:animation.height,name:pending.title || 'GIF 动图'}];
   setNodeStatus(pending.id,pending.status);refreshRenderedNode(pending.id);

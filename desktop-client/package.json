@@ -1,6 +1,6 @@
 {
   "name": "wandou-ai-desktop",
-  "version": "2.0.22",
+  "version": "2.0.30",
   "description": "豌豆AI Windows 客户端",
   "main": "main.js",
   "author": "PeaFour",
@@ -31,9 +31,13 @@
       "canvas-media-writer.cjs",
       "canvas-media-protocol.cjs",
       "canvas-media-location.cjs",
+      "canvas-media-files.cjs",
+      "canvas-media-standard-store.cjs",
       "project-storage.cjs",
+      "browser-session-storage.cjs",
       "storage-maintenance.cjs",
       "canvas-backup-guard.cjs",
+      "canvas-backup-reader.cjs",
       "director-ipc.cjs",
       "director-converter.cjs",
       "shell.html",
@@ -42,7 +46,9 @@
       "client-config.json",
       "package.json",
       "ipc-policy.cjs",
-      "update-policy.cjs"
+      "update-policy.cjs",
+      "safe-update-channel.cjs",
+      "update-download.cjs"
     ],
     "extraResources": [
       {

@@ -15,7 +15,7 @@ test('capability table distinguishes official native tiers, channel alias and un
  assert.equal(caps.nativeSize('Nano Banana2','4K','1920x1080'),'5504x3072');
  assert.equal(caps.nativeSize('GPT-image-2','4K','4096x4096'),'2880x2880');
 });
-async function pageTest(run){const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});try{const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route(/^https?:/,r=>r.abort());await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');await run(page);assert.deepEqual(errors,[]);}finally{await browser.close();}}
+async function pageTest(run){const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});try{const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route(/^https?:/,r=>r.abort());await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);await run(page);assert.deepEqual(errors,[]);}finally{await browser.close();}}
 test('actual request bodies use native tiers, leave gateway extensions and keep all output options',()=>pageTest(async page=>{
  const requests=await page.evaluate(async()=>{
   const output=[];

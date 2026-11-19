@@ -7823,11 +7823,14 @@
   <script src="./ai-node-canvas-test-skills.js"></script>
   <script src="./media-content-hash.js"></script>
   <script src="./image-model-capabilities.js"></script>
+  <script src="./image-output-contract.js"></script>
   <script src="./native-svg-output.js"></script>
   <script src="./canvas-native-svg.js"></script>
   <script src="./animated-image-output.js"></script>
   <script src="./image-generation-options.js"></script>
   <script src="./canvas-animated-image.js"></script>
+  <script src="./image-output-adjustment.js"></script>
+  <script src="./canvas-output-adjustment.js"></script>
   <script src="./image-markup.js"></script>
   <link rel="stylesheet" href="./image-generation-options.css">
   <link rel="stylesheet" href="./image-markup.css">
@@ -7835,6 +7838,8 @@
   <script src="./image-api-channels.js"></script>
   <link rel="stylesheet" href="./image-api-channels.css">
   <script src="./image-output-resolution.js"></script>
+  <script src="./image-task-ledger.js"></script>
+  <script src="./canvas-task-recovery.js"></script>
   <script src="./canvas-task-actions.js"></script>
   <link rel="stylesheet" href="./canvas-task-actions.css">
   <script>
@@ -7971,9 +7976,10 @@
     const imageRegenerationJobs = new Map();
     const imageResultControllers = new Map();
     const promptEditJobs = new Map();
+    const deletedResultArchiveJobs = new Map();
     let canvasProjectTransition = false;
     function canvasHasActiveTasks() {
-      return localResolutionJobs.size > 0 || imageGenerationJobs.size > 0 || imageRegenerationJobs.size > 0 || imageResultControllers.size > 0 || promptEditJobs.size > 0
+      return apiConfigBusy || deletedResultArchiveJobs.size > 0 || localOutputAdjustmentJobs.size > 0 || imageRecoveryJobs.size > 0 || imageTaskRecordWrites.size > 0 || localResolutionJobs.size > 0 || imageGenerationJobs.size > 0 || imageRegenerationJobs.size > 0 || imageResultControllers.size > 0 || promptEditJobs.size > 0
         || audioJobs.size > 0 || psdJobs.size > 0 || vectorJobs.size > 0
         || assistantSending || nodes.some((node) => node.pending || node.regenerating || node.audioGenerating || Number(node.autoSplitProgress) > 0);
     }
@@ -7994,6 +8000,8 @@
         && (!job.original || nodes.includes(job.original));
     }
     function cancelImageJobsForNode(id) {
+      cancelOutputAdjustmentForNode(id);
+      cancelTrackedImageTasksForNode(id);
       cancelLocalResolutionForNode(id);
       promptEditJobs.get(id)?.abort();
       const job = imageGenerationJobs.get(id);
@@ -8725,6 +8733,7 @@
     }
 
     function apiProfileForModel(model = "") {
+      if (apiSharedRefreshPending && !apiConfigBusy && apiDraftRevision === apiCommittedDraftRevision) refreshSharedApiConfig();
       const channelTwo = isChannelTwoModel(model);
       if (imageChannelsController) return imageChannelsController.profile(channelTwo ? "channel2" : "channel1");
       return {
@@ -8822,6 +8831,41 @@
 
     const durableApiConfigKey = "api-config-v1";
     let modelSyncSummary = { channel1: false, channel2: null };
+    let apiConfigBusy = false, apiConfigRevision = 0, apiDraftRevision = 0, apiSettingsRevision = 0;
+    let apiCommittedDraftRevision = 0, apiLoadedSavedAt = "", apiSharedRefreshPending = false;
+    let apiDisplayedConfig = null, apiInitialConfigReady = false, apiInitialConfigError = false;
+    const apiEditedCredentials = new Set(), apiEditedProviders = new Set();
+    let apiBusyControls = [];
+
+    function apiRequestBlockReason() {
+      if (apiConfigBusy) return "API 设置正在保存并确认，请完成后再点击操作。当前未发送请求。";
+      if (apiDraftRevision !== apiCommittedDraftRevision) return "API 设置有未保存的修改，请先保存设置，再点击操作。当前未发送请求。";
+      if (!apiInitialConfigReady) return apiInitialConfigError
+        ? "API 设置读取失败，请保存设置或重新打开画布后重试。当前未发送请求。"
+        : "API 设置尚未读取完成，请稍后重新点击操作。当前未发送请求。";
+      return "";
+    }
+
+    function requireApiRequestReady() {
+      const message = apiRequestBlockReason();
+      if (!message) return true;
+      setApiSettingsFeedback(message);
+      showToast(message, "error", 5000);
+      return false;
+    }
+
+    function assertApiRequestReady() {
+      const message = apiRequestBlockReason();
+      if (!message) return;
+      const error = new Error(message);
+      error.code = "API_CONFIG_NOT_READY";
+      throw error;
+    }
+    for (const [index, input] of [apiKeyInput, apiKey2Input].entries()) input.addEventListener("input", () => {
+      apiDraftRevision++;
+      const id = index ? "channel2" : "channel1";
+      apiEditedCredentials.add(id + ":" + (imageChannelsController?.profile(id).provider || "gateway"));
+    });
 
     function normalizedApiConfig(config = {}) {
       return window.WandouImageChannels.normalize(config);
@@ -8832,7 +8876,7 @@
       for (const storageKey of ["aiCanvasApi", "ai-tools-api-config"]) {
         try {
           const value = JSON.parse(canvasTestStorage.getItem(storageKey) || "{}");
-          if (value && (value.key || value.key2 || value.channels)) candidates.push(normalizedApiConfig(value));
+          if (value && (value.key || value.key2 || value.channels || value.savedAt)) candidates.push(normalizedApiConfig(value));
         } catch (_error) {}
       }
       return candidates.sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)))[0] || null;
@@ -8846,26 +8890,159 @@
       }
     }
 
-    async function persistApiConfig(key, key2) {
+    async function readApiMetadataStrict() {
+      let stored;
+      if (typeof window.wandouShell?.readLocalData === "function") {
+        const result = await window.wandouShell.readLocalData({ path: "json/api-config-v1.json" });
+        if (result?.success !== true) throw new Error("Configuration disk read failed", { cause: result });
+        if (result.missing === true && result.value == null) return null;
+        if (typeof result.value !== "string") throw new Error("Invalid configuration disk response");
+        stored = JSON.parse(result.value);
+      } else {
+        if (typeof window.WandouLocalCache?.readJson !== "function") throw new Error("Configuration reader is unavailable");
+        stored = await window.WandouLocalCache.readJson(durableApiConfigKey);
+      }
+      if (stored !== null && stored !== undefined && (typeof stored !== "object" || Array.isArray(stored))) throw new Error("Invalid stored configuration");
+      return stored;
+    }
+
+    async function persistApiConfig(key, key2, options = {}) {
+      apiConfigRevision++;
+      const draft = normalizedApiConfig(imageChannelsController?.snapshot() || { key, key2 });
+      const displayed = normalizedApiConfig(apiDisplayedConfig || {});
+      const editedCredentials = new Set(apiEditedCredentials), editedProviders = new Set(apiEditedProviders);
+      let durableBase;
+      try {
+        const stored = await readApiMetadataStrict();
+        durableBase = normalizedApiConfig(stored || {});
+      } catch (cause) { throw new Error("读取现有 API 配置失败，尚未保存，请重试", { cause }); }
+      const bases = [localApiConfig(), durableBase, apiDisplayedConfig].filter(Boolean);
+      const latest = bases.sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)))[0] || {};
       const savedAt = new Date().toISOString();
-      const config = normalizedApiConfig({ ...(imageChannelsController?.snapshot() || {key,key2}), savedAt });
-      let localSaved = true;
-      try {
-        canvasTestStorage.setItem("aiCanvasApi", JSON.stringify(config));
-        canvasTestStorage.setItem("ai-tools-api-config", JSON.stringify(config));
-      } catch (error) {
-        localSaved = false;
-        console.warn("API config canvasTestStorage write failed; using durable cache", error);
+      const merged = normalizedApiConfig(latest);
+      for (const id of ["channel1", "channel2"]) {
+        if (editedProviders.has(id) || draft.channels[id].provider !== displayed.channels[id].provider) merged.channels[id].provider = draft.channels[id].provider;
+        for (const provider of ["gateway", "openai"]) {
+          if (editedCredentials.has(id + ":" + provider) || draft.channels[id][provider].key !== displayed.channels[id][provider].key
+            || (options.clearChannel === id && draft.channels[id].provider === provider)) merged.channels[id][provider].key = draft.channels[id][provider].key;
+        }
       }
-      let durableSaved = false;
+      const config = normalizedApiConfig({ ...merged, savedAt });
+      const aliases = ["aiCanvasApi", "ai-tools-api-config"];
+      const previous = new Map();
+      let localSaved = true, durableSaved = false, localError = null, durableError = null;
       try {
-        const result = await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, config);
-        durableSaved = result?.ok === true;
-      } catch (error) {
-        console.warn("API config durable cache write failed", error);
+        if (options.requireEveryStore) for (const alias of aliases) previous.set(alias, canvasTestStorage.getItem(alias));
+        for (const alias of aliases) canvasTestStorage.setItem(alias, JSON.stringify(config));
+      } catch (cause) { localSaved = false; localError = cause; }
+      // A channel clear needs both copies committed. Do not proceed to the disk
+      // after an alias failure; restore only values changed by this operation.
+      if (localSaved || !options.requireEveryStore) {
+        try {
+          const result = await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, config);
+          if (result?.ok !== true) throw new Error("Configuration write was not committed", { cause: result });
+          const stored = await readApiMetadataStrict();
+          if (!stored || JSON.stringify(normalizedApiConfig(stored)) !== JSON.stringify(config)) throw new Error("Configuration readback did not match");
+          durableSaved = true;
+        } catch (cause) { durableError = cause; }
       }
-      if (!localSaved && !durableSaved) throw new Error("本机存储空间不足，API 配置未能保存");
+      if ((options.requireEveryStore && (!localSaved || !durableSaved)) || (!localSaved && !durableSaved)) {
+        let rollbackError = null;
+        if (options.requireEveryStore) {
+          for (const [alias, value] of previous) {
+            try {
+              if (canvasTestStorage.getItem(alias) === value) continue;
+              if (value === null) canvasTestStorage.removeItem(alias); else canvasTestStorage.setItem(alias, value);
+            } catch (cause) { rollbackError ||= cause; }
+          }
+        }
+        throw new Error(options.requireEveryStore
+          ? (rollbackError ? "清除未完成，浏览器副本也未能恢复，请重试" : "未能确认所有配置副本已清除，本页原设置已恢复，请重试")
+          : "API 配置未能完整保存，请重试", { cause: new AggregateError([localError, durableError, rollbackError].filter(Boolean)) });
+      }
+      applyLoadedApiConfig(config);
+      apiInitialConfigReady = true;
+      apiInitialConfigError = false;
       return { localSaved, durableSaved };
+    }
+
+    function setApiConfigBusy(busy) {
+      apiConfigBusy = busy;
+      settingsPopover.setAttribute("aria-busy", String(busy));
+      if (busy) {
+        apiBusyControls = [...settingsPopover.querySelectorAll('input, select, #saveApiButton, #clearApiKeyButton, #clearApiKey2Button')].map(control => [control, control.disabled]);
+        for (const [control] of apiBusyControls) control.disabled = true;
+      } else {
+        for (const [control, disabled] of apiBusyControls) control.disabled = disabled;
+        apiBusyControls = [];
+        if (apiSharedRefreshPending) refreshSharedApiConfig();
+      }
+    }
+
+    function refreshSharedApiConfig() {
+      if (apiConfigBusy || apiDraftRevision !== apiCommittedDraftRevision) return;
+      const config = localApiConfig();
+      if (config && String(config.savedAt) > apiLoadedSavedAt) {
+        imageModelSyncGeneration++;
+        applyLoadedApiConfig(config);
+      }
+      apiSharedRefreshPending = false;
+    }
+    window.addEventListener("storage", (event) => {
+      if (![canvasStoragePrefix + "aiCanvasApi", canvasStoragePrefix + "ai-tools-api-config"].includes(event.key)) return;
+      apiSharedRefreshPending = true;
+      refreshSharedApiConfig();
+    });
+
+    function setApiSettingsFeedback(message = "") {
+      let feedback = document.getElementById("apiSettingsFeedback");
+      if (!feedback) {
+        feedback = document.createElement("p");
+        feedback.id = "apiSettingsFeedback";
+        feedback.setAttribute("role", "alert");
+        feedback.setAttribute("aria-live", "polite");
+        feedback.style.cssText = "margin:10px 0;font-size:13px;line-height:1.6;overflow-wrap:anywhere;color:inherit;";
+        const saveButton = document.getElementById("saveApiButton");
+        saveButton.parentElement.insertBefore(feedback, saveButton);
+      }
+      feedback.textContent = message;
+      feedback.hidden = !message;
+      if (message && settingsPopover.classList.contains("open")) feedback.scrollIntoView({ block: "nearest" });
+    }
+
+    async function clearApiChannel(channel) {
+      if (apiConfigBusy) return;
+      if (!apiInitialConfigReady) {
+        const message = "API 设置尚未完整读取，未执行清除。请先保存设置或重新打开画布后重试。";
+        setApiSettingsFeedback(message); showToast(message, "error"); return;
+      }
+      const previousKeys = [apiKeyInput.value, apiKey2Input.value];
+      const previousDraftRevision = apiDraftRevision;
+      const previousConfig = imageChannelsController?.snapshot();
+      const input = channel === 2 ? apiKey2Input : apiKeyInput;
+      apiDraftRevision++;
+      input.value = "";
+      setApiConfigBusy(true);
+      try {
+        await persistApiConfig(apiKeyInput.value.trim(), apiKey2Input.value.trim(), { requireEveryStore: true, clearChannel: channel === 2 ? "channel2" : "channel1" });
+        // Model cache deletion is optional and must not turn a committed key
+        // update into a misleading failure or restore a cleared credential.
+        for (const prefix of ["aiCanvasAllModels", "aiCanvasImageModels"]) {
+          try { canvasTestStorage.removeItem(prefix + (channel === 2 ? "Channel2" : "")); } catch (_) {}
+        }
+        setApiSettingsFeedback();
+        showToast("渠道 " + channel + " API 密钥已清除");
+      } catch (error) {
+        if (previousConfig) imageChannelsController.load(previousConfig);
+        [apiKeyInput.value, apiKey2Input.value] = previousKeys;
+        apiDraftRevision = previousDraftRevision;
+        const message = "清除未完成：" + (error?.message || "请重试");
+        setApiSettingsFeedback(message);
+        showToast(message, "error");
+      } finally {
+        setApiConfigBusy(false);
+        input.focus();
+      }
     }
 
     function channelModelCacheKey(profile, images = false) {
@@ -8909,6 +9086,7 @@
     }
 
     async function saveApiConfig() {
+      if (apiConfigBusy) return;
       const key = apiKeyInput.value.trim();
       const key2 = apiKey2Input.value.trim();
       const saveButton = document.getElementById("saveApiButton");
@@ -8917,7 +9095,9 @@
         showToast("请先填写至少一个渠道的 API 密钥");
         return;
       }
+      const modalRevision = apiSettingsRevision;
       const originalLabel = saveButton?.textContent || "保存并识别两个渠道";
+      setApiConfigBusy(true);
       if (saveButton) {
         saveButton.disabled = true;
         saveButton.setAttribute("aria-busy", "true");
@@ -8943,12 +9123,15 @@
           : key2
           ? `两个 API 渠道已保存并分别识别模型${storageNote}`
           : `默认渠道已保存并识别模型${storageNote}`;
+        setApiSettingsFeedback();
         showToast(message);
-        setSettingsOpen(false);
+        if (modalRevision === apiSettingsRevision) setSettingsOpen(false);
       } catch (error) {
-        console.error("API config save failed", error);
-        showToast(`保存失败：${error?.message || "请稍后重试"}`);
+        const message = `保存失败：${error?.message || "请稍后重试"}`;
+        setApiSettingsFeedback(message);
+        showToast(message, "error");
       } finally {
+        setApiConfigBusy(false);
         if (saveButton) {
           saveButton.disabled = false;
           saveButton.removeAttribute("aria-busy");
@@ -8970,6 +9153,7 @@
     }
 
     function setSettingsOpen(open) {
+      apiSettingsRevision++;
       if (settingsBackdrop.parentElement !== document.body) document.body.appendChild(settingsBackdrop);
       if (settingsPopover.parentElement !== document.body) document.body.appendChild(settingsPopover);
       settingsPopover.classList.toggle("open", open);
@@ -8984,11 +9168,10 @@
       }
     }
 
-    async function loadApiConfig() {
-      const localConfig = localApiConfig();
-      const fallbackConfig = await durableApiConfig();
-      const config = !localConfig || String(fallbackConfig.savedAt) > String(localConfig.savedAt || "") ? fallbackConfig : localConfig;
+    function applyLoadedApiConfig(config) {
       const onProviderChange = ({id}) => {
+        apiDraftRevision++;
+        apiEditedProviders.add(id);
         imageModelSyncGeneration++;
 
         const defaults = ['gpt-image-2.6-flare','gpt-image-2.6-sunburst'];
@@ -9005,6 +9188,33 @@
       else imageChannelsController = window.WandouImageChannels.mount({config,keyInputs:[apiKeyInput,apiKey2Input],urlInputs:[apiUrlInput,apiUrl2Input],
         isBusy:()=>window.wandouHasActiveTasks?.() || document.getElementById('saveApiButton')?.disabled,
         onBlocked:message=>showToast(message),onChange:onProviderChange});
+      apiLoadedSavedAt = String(config.savedAt || "");
+      apiCommittedDraftRevision = apiDraftRevision;
+      apiDisplayedConfig = normalizedApiConfig(config);
+      apiEditedCredentials.clear(); apiEditedProviders.clear();
+    }
+
+    async function loadApiConfig() {
+      apiInitialConfigReady = false;
+      apiInitialConfigError = false;
+      applyLoadedApiConfig(localApiConfig() || normalizedApiConfig());
+      const revision = apiConfigRevision, draftRevision = apiDraftRevision;
+      let fallbackConfig;
+      try {
+        const stored = await readApiMetadataStrict();
+        fallbackConfig = normalizedApiConfig(stored || {});
+      } catch (_) {
+        if (revision === apiConfigRevision) {
+          apiInitialConfigError = true;
+          setApiSettingsFeedback("读取 API 设置失败，原设置未修改。请保存重试或重新打开画布。");
+        }
+        return;
+      }
+      if (apiConfigBusy || revision !== apiConfigRevision || draftRevision !== apiDraftRevision) return;
+      const localConfig = localApiConfig();
+      const config = !localConfig || String(fallbackConfig.savedAt) > String(localConfig.savedAt || "") ? fallbackConfig : localConfig;
+      applyLoadedApiConfig(config);
+      apiInitialConfigReady = true;
     }
 
     function updateThemeLabel() {
@@ -9132,7 +9342,21 @@
       );
     }
 
-    function migrateLegacyFolderCanvasState() {
+    function localProjectRecoveryStates(projectId) {
+      if (!projectId) return [];
+      const states = [parseProjectCanvasState(projectId)];
+      if (projectId === projects[0]?.id) {
+        const folderState = parseStoredCanvasState(canvasTestStorage.getItem(folderCanvasStorageKey()), "Folder");
+        if (legacyCanvasStateMatchesProject(folderState, projectId)) states.push(folderState);
+        if (isPrimaryHomeFolder()) {
+          const globalState = parseStoredCanvasState(canvasTestStorage.getItem(canvasStorageKey), "Global");
+          if (legacyCanvasStateMatchesProject(globalState, projectId)) states.push(globalState);
+        }
+      }
+      return states;
+    }
+
+    function migrateLegacyFolderCanvasState(selectedRecoveryState = null) {
       if (!projects.length) return false;
       let legacyRaw = "";
       let legacyState = null;
@@ -9148,8 +9372,8 @@
       if (nestedStates.some(({ state }) => sameCanvasState(state, legacyState))) return false;
       const first = nestedStates[0];
       if (!first?.project || isMeaningfulCanvasState(first.state) || Number(first.state?.intentionalResetAt) > 0) return false;
-      const activeState = parseProjectCanvasState(activeProjectId);
-      if (!isMeaningfulCanvasState(activeState) && Number(activeState?.intentionalResetAt) <= 0) {
+      const activeState = chooseCanvasRecoveryState([parseProjectCanvasState(activeProjectId), selectedRecoveryState]);
+      if (!isMeaningfulCanvasState(activeState) && !(Number(activeState?.intentionalResetAt) > 0)) {
         activeProjectId = first.project.id;
         startupRecoveredProjectName = first.project.name || "原项目";
       }
@@ -9161,9 +9385,9 @@
       return true;
     }
 
-    function recoverStaleActiveProjectSelection() {
+    function recoverStaleActiveProjectSelection(selectedRecoveryState = null) {
       const activeProject = projects.find((project) => project.id === activeProjectId);
-      const activeState = parseProjectCanvasState(activeProjectId);
+      const activeState = chooseCanvasRecoveryState([parseProjectCanvasState(activeProjectId), selectedRecoveryState]);
       if (!activeProject || !isSeedCanvasState(activeState) || Number(activeState?.intentionalResetAt) > 0) return false;
       const activeSavedAt = Number(activeState.savedAt || activeProject.updatedAt || activeProject.createdAt || 0);
       const candidates = projects
@@ -9184,20 +9408,66 @@
     }
 
     async function readDesktopProjectCatalog() {
-      if (!window.wandouShell?.readCanvasBackups) return [];
-      try {
-        const result = await window.wandouShell.readCanvasBackups({
-          folderId: currentFolderId,
-          allProjects: true
-        });
-        if (!result?.success || !Array.isArray(result.projectStates)) return [];
-        return result.projectStates.filter((entry) =>
-          entry?.projectId && Array.isArray(entry.states) && entry.states.some((state) => Array.isArray(state?.nodes) && state.nodes.length)
-        );
-      } catch (error) {
-        console.warn("Desktop project catalog could not be read", error);
-        return [];
+      readDesktopProjectCatalog.pending = new Map();
+      readDesktopProjectCatalog.catalogError = null;
+      const selected = canvasTestStorage.getItem(activeProjectStorageKey) || projects[0]?.id;
+      const recovery = { folderId: currentFolderId, projectId: selected || "", browserState: null, desktopStates: [], browserError: null, desktopError: null, catalogError: null };
+      readDesktopProjectCatalog.selectedRecovery = recovery;
+      const bridge = window.wandouShell?.readCanvasBackups;
+      const cache = readDesktopProjectCatalog.pending;
+      const read = async projectId => {
+        if (!cache.has(projectId)) {
+          try { cache.set(projectId, await window.wandouShell.readCanvasBackups({ folderId: currentFolderId, projectId })); }
+          catch (error) { cache.set(projectId, { success: false, error: error?.message || String(error) }); }
+        }
+        const value = cache.get(projectId);
+        return value?.success !== false && Array.isArray(value?.states) ? value.states : [];
+      };
+      let result = null;
+      if (bridge) {
+        try {
+          result = await window.wandouShell.readCanvasBackups({ folderId: currentFolderId, allProjects: true, metadataOnly: true });
+          if (result?.success === false) throw new Error(result.error || "磁盘项目目录读取失败");
+        } catch (error) {
+          recovery.catalogError = error;
+          readDesktopProjectCatalog.catalogError = error;
+        }
       }
+      if (selected) {
+        // Every selection path must see independent state, including old seeds,
+        // browsers without a desktop bridge, and unavailable/legacy catalogs.
+        await Promise.all([
+          (async () => {
+            try { recovery.browserState = await readCanvasStateBackup(selected); }
+            catch (error) { recovery.browserError = error; }
+          })(),
+          (async () => {
+            if (!bridge) return;
+            recovery.desktopStates = await read(selected);
+            const value = cache.get(selected);
+            if (value?.success === false) recovery.desktopError = new Error(value.error || "磁盘项目备份读取失败");
+          })()
+        ]);
+      }
+      const legacyCatalog = !result?.metadataOnly && Array.isArray(result?.projectStates) ? result.projectStates : [];
+      const legacySelected = legacyCatalog.find(entry => entry?.projectId === selected);
+      if (Array.isArray(legacySelected?.states)) recovery.desktopStates.push(...legacySelected.states);
+      const selectedStates = [...recovery.desktopStates, recovery.browserState].filter(Boolean);
+      const catalog = selectedStates.length ? [{ projectId: selected, states: selectedStates }] : [];
+      if (!bridge || recovery.catalogError) return catalog;
+      if (!result?.metadataOnly) return [...catalog, ...legacyCatalog.filter(entry => entry?.projectId !== selected)];
+      const activeState = chooseCanvasRecoveryState([...localProjectRecoveryStates(selected), ...selectedStates]);
+      const needsRecovery = !isMeaningfulCanvasState(activeState) && !(Number(activeState?.intentionalResetAt) > 0);
+      const known = new Set(projects.map(project => project.id));
+      const entries = Array.isArray(result.projects) ? result.projects : [];
+      for (const entry of entries) {
+        if (!entry?.projectId || entry.projectId === selected) continue;
+        // Unknown entries require validated state for their real project names.
+        if (known.has(entry.projectId) && !needsRecovery) continue;
+        const states = await read(entry.projectId);
+        if (states.length) catalog.push({ projectId: entry.projectId, states });
+      }
+      return catalog;
     }
 
     function mergeDesktopProjectCatalog(catalog) {
@@ -9223,7 +9493,7 @@
       }
     }
 
-    function recoverDesktopProjectSelection(catalog) {
+    function recoverDesktopProjectSelection(catalog, selectedRecoveryState = null) {
       const stateFor = (projectId) => {
         const entry = catalog.find((item) => item.projectId === projectId);
         return chooseCanvasRecoveryState([
@@ -9231,7 +9501,7 @@
           ...(entry?.states || [])
         ]);
       };
-      const activeState = stateFor(activeProjectId);
+      const activeState = chooseCanvasRecoveryState([stateFor(activeProjectId), selectedRecoveryState]);
       if (isMeaningfulCanvasState(activeState) || Number(activeState?.intentionalResetAt) > 0) return false;
       const candidates = projects
         .map((project) => ({ project, state: stateFor(project.id) }))
@@ -9244,6 +9514,7 @@
     }
 
     async function loadProjects() {
+      loadProjects.recovery = null;
       try {
         projects = JSON.parse(canvasTestStorage.getItem(projectListStorageKey) || "[]");
       } catch (error) {
@@ -9263,9 +9534,25 @@
       });
       activeProjectId = canvasTestStorage.getItem(activeProjectStorageKey) || projects[0].id;
       if (!projects.some((project) => project.id === activeProjectId)) activeProjectId = projects[0].id;
-      migrateLegacyFolderCanvasState();
-      recoverStaleActiveProjectSelection();
-      recoverDesktopProjectSelection(desktopCatalog);
+      const selectedProjectId = activeProjectId;
+      const recovery = readDesktopProjectCatalog.selectedRecovery;
+      readDesktopProjectCatalog.selectedRecovery = null;
+      const selectedEntry = desktopCatalog.find(entry => entry.projectId === selectedProjectId);
+      const selectedState = chooseCanvasRecoveryState([...localProjectRecoveryStates(selectedProjectId), ...(selectedEntry?.states || [])]);
+      const selectedError = recovery?.projectId === selectedProjectId
+        ? recovery.browserError || recovery.desktopError || recovery.catalogError
+        : readDesktopProjectCatalog.catalogError;
+      if (!isMeaningfulCanvasState(selectedState) && !(Number(selectedState?.intentionalResetAt) > 0) && selectedError) {
+        readDesktopProjectCatalog.pending = null;
+        readDesktopProjectCatalog.catalogError = null;
+        throw selectedError;
+      }
+      migrateLegacyFolderCanvasState(selectedState);
+      recoverStaleActiveProjectSelection(activeProjectId === selectedProjectId ? selectedState : null);
+      recoverDesktopProjectSelection(desktopCatalog, activeProjectId === selectedProjectId ? selectedState : null);
+      // This one-use snapshot belongs only to the project that was actually read.
+      // Later switches/saves must perform fresh transactions for their own state.
+      loadProjects.recovery = recovery?.folderId === currentFolderId && recovery.projectId === activeProjectId ? recovery : null;
       try { saveProjects(); } catch (error) { warnCanvasStorageSkipped(error); }
       renderProjects();
     }
@@ -10165,6 +10452,7 @@
     }
 
     async function sendAssistantMessage(textValue = assistantInput?.value) {
+      if (!requireApiRequestReady()) return;
       if (canvasProjectTransition) return;
       const text = String(textValue || "").trim();
       if ((!text && !assistantAttachments.length) || assistantSending) return;
@@ -10690,7 +10978,11 @@
       nodes.forEach((node) => {
         const renderKey = nodeRenderKey(node);
         const current = mountedNodes.get(node.id);
-        if (current && current.dataset.renderKey === renderKey) {
+        const preserveInteraction = options.preserveInteraction && current && (
+          current.contains(document.activeElement) || dragState?.id === node.id
+          || dragState?.childPositions?.some(item => item.id === node.id) || resizeState?.id === node.id
+        );
+        if (current && (current.dataset.renderKey === renderKey || preserveInteraction)) {
           current.classList.toggle("selected", selectedNodeId === node.id);
           current.classList.toggle("box-selected", selectionFrameMode === "marquee" && boxSelectedIds.includes(node.id));
           const left = `${node.x}px`, top = `${node.y}px`;
@@ -11012,6 +11304,13 @@
           model: node.model,
           ratio: node.ratio,
           resolution: node.resolution,
+          customWidth: node.customWidth,
+          customHeight: node.customHeight,
+          count: node.count,
+          autoSplit: Boolean(node.autoSplit),
+          imageOutputFormat: node.imageOutputFormat || node.outputFormat || 'png',
+          outputFormat: node.imageOutputFormat || node.outputFormat || 'png',
+          ...capturedImageOptions(node),
           mediaUrl: node.mediaUrl,
           references: cloneReferences(node.references),
           mediaType: node.mediaType,
@@ -11092,6 +11391,7 @@
     }
 
     async function optimizeKeywordOutput(node) {
+      if (!requireApiRequestReady()) return;
       if (canvasProjectTransition || promptEditJobs.has(node.id)) return;
       const source = String(node.text || "").trim();
       if (!source) return;
@@ -11727,6 +12027,7 @@
     }
 
     async function confirmAutoSplitGeneration(node) {
+      if (!requireApiRequestReady()) return;
       stopAutoSplitCountdown(node);
       const plan = normalizeAutoSplitPlan(node.autoSplitPlan);
       if (!plan.length) {
@@ -11829,11 +12130,13 @@
     }
 
     function shouldStopPromptModelFallback(error) {
+      if (error?.code === "API_CONFIG_NOT_READY") return true;
       const message = String(error?.message || error || "").toLowerCase();
       return /http\s*(401|403)|invalid\s*token|unauthorized|forbidden|余额不足|insufficient[_\s-]*(quota|balance|credit)/i.test(message);
     }
 
     async function postPromptModelWithFallback(configuredUrl, headers, body, signal, candidates = null) {
+      assertApiRequestReady();
       let lastError = null;
       for (const model of candidates || promptModelCandidates(configuredUrl)) {
         if (signal?.aborted) throw signal.reason || new DOMException("请求已取消", "AbortError");
@@ -11937,6 +12240,7 @@
     }
 
     async function applySelectedSkillForGeneration(node) {
+      assertApiRequestReady();
       if (node.type !== "generator" || !node.skillId) return;
       const source = String(node.prompt || "").trim();
       if (!source || source === node.skillLastAppliedPrompt) return;
@@ -11972,6 +12276,7 @@
     }
 
     async function analyzeAutoSplitPlan(node, references, targetSize, signal) {
+      assertApiRequestReady();
       const configuredUrl = apiUrlInput.value.trim() || defaultApiBaseUrl();
       const headers = { "Content-Type": "application/json", Authorization: `Bearer ${apiKeyInput.value.trim()}` };
       const frameRule = node.autoSplitConsistency === "frame"
@@ -11994,6 +12299,7 @@
           seriesSpec: String(parsed?.seriesSpec || parsed?.styleGuide || "").trim()
         };
       } catch (error) {
+        if (error?.code === "API_CONFIG_NOT_READY") throw error;
         const fallback = localAutoSplitFallback(node.prompt);
         if (!fallback.length) throw error;
         node.status = `在线分析不可用，已使用本地规则拆分：${friendlyErrorMessage(error)}`;
@@ -13056,6 +13362,7 @@
         });
       });
       wrap.querySelector("[data-skill-preview]")?.addEventListener("click", async () => {
+        if (!requireApiRequestReady()) return;
         if (!apiKeyInput.value.trim()) {
           setSettingsOpen(true);
           apiKeyInput.focus();
@@ -14323,6 +14630,7 @@
     const psdVisionStageTimeoutMs = 590000;
 
     async function psdAnalyzeLayers(original, signal, onAttempt) {
+      assertApiRequestReady();
       const scale = Math.min(1, 2048 / Math.max(original.width, original.height));
       const preview = psdCanvas(Math.max(1, Math.round(original.width * scale)), Math.max(1, Math.round(original.height * scale)));
       const context = preview.getContext("2d");
@@ -14362,6 +14670,7 @@
           }, requestBody, attemptController.signal);
           return psdLayerPlan(vision.text || extractText(vision.data));
         } catch (error) {
+          if (error?.code === "API_CONFIG_NOT_READY") throw error;
           if (signal?.aborted) throw signal.reason || error;
           if (/超过当前 16 层上限/.test(String(error?.message || ""))) throw error;
           const detail = attemptController.signal.aborted
@@ -14515,6 +14824,7 @@
     }
 
     async function analyzePsdFromNode(id) {
+      if (!requireApiRequestReady()) return;
       if (canvasProjectTransition) return;
       const node = nodes.find((item) => item.id === id && item.type === "psd");
       if (!node || psdJobs.has(id)) return;
@@ -14581,6 +14891,7 @@
     }
 
     async function generatePsdFromNode(id) {
+      if (!requireApiRequestReady()) return;
       if (canvasProjectTransition) return;
       const node = nodes.find((item) => item.id === id && item.type === "psd");
       if (!node || psdJobs.has(id)) return;
@@ -15025,8 +15336,9 @@
       );
     }
 
-    function visibleResultStatus(text) {
+    function visibleResultStatus(text, node = null) {
       const status = publicNodeStatus(text);
+      if (node?.outputComparison?.hasRequest === true && node.outputComparison.message) return status;
       return /失败|错误|超时|中断|取消|未完成/.test(status) ? status : "";
     }
 
@@ -15069,11 +15381,17 @@
           ${node.type === "image" ? "" : `<button class="mini ghost" data-download type="button">下载</button>`}
         </div>`}
         ${node.type === "result"
-          ? (visibleResultStatus(publicStatus) ? `<div class="status">${escapeHtml(visibleResultStatus(publicStatus))}</div>` : "")
+          ? (visibleResultStatus(publicStatus, node) ? `<div class="status">${escapeHtml(visibleResultStatus(publicStatus, node))}</div>` : "")
           : (node.type === "image" ? "" : `<div class="status">${visibleMediaStatus || "可作为参考图输入，或保存生成结果。"}</div>`)}
       `;
 
-      if (node.type === "result") wrap.insertAdjacentHTML("beforeend", resultTaskActionsHtml(node));
+      if (node.type === "result") wrap.insertAdjacentHTML("beforeend", imageTaskNeedsAttention(node) ? imageTaskRecoveryActionsHtml(node) : resultTaskActionsHtml(node));
+      wrap.insertAdjacentHTML('beforeend', outputAdjustmentActionsHtml(node));
+      wrap.querySelector('[data-create-output-adjustment]')?.addEventListener('click', () => createOutputAdjustmentCopy(node.id));
+      wrap.querySelector('[data-cancel-output-adjustment]')?.addEventListener('click', () => cancelOutputAdjustmentForNode(node.id));
+      wrap.querySelector('[data-download-channel-original]')?.addEventListener('click', () => downloadOutputAdjustmentOriginal(node.id));
+      wrap.querySelector("[data-resume-image-task]")?.addEventListener("click", () => resumeTrackedImageTask(node.id));
+      wrap.querySelector("[data-stop-image-tracking]")?.addEventListener("click", () => stopTrackedImageTask(node.id));
       wrap.querySelector("[data-retry-result]")?.addEventListener("click", () => regenerateResultNode(node.id));
       wrap.querySelector("[data-retry-output]")?.addEventListener("click", () => retryResultResolution(node.id));
       wrap.querySelector("[data-stop-output]")?.addEventListener("click", () => cancelLocalResolutionForNode(node.id));
@@ -16164,7 +16482,7 @@
         return `<span class="result-size-meta">${escapeHtml(String(node.audioFormat || "audio").toUpperCase())}</span><span class="result-time-meta"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>${node.pending ? `${Number(node.elapsed) || 0}s` : seconds ? `${seconds}s` : "已完成"}</span>`;
       }
       const size = node.width && node.height
-        ? `${node.width}×${node.height}${node.resolutionProcessing === "local-upscale" ? " · 非原生" : ""}`
+        ? `${node.width}×${node.height}${node.resolutionProcessing === "local-upscale" || node.outputAdjustment?.nonNative ? " · 非原生" : ""}`
         : node.mediaUrl ? "识别中" : "--×--";
       const seconds = resultElapsedSeconds(node);
       const elapsed = node.pending
@@ -17373,6 +17691,7 @@
     }
 
     function canRegenerateResult(resultNode) {
+      if (imageTaskNeedsAttention(resultNode)) return false;
       if (!resultNode || resultNode.type !== "result" || resultNode.pending || resultNode.regenerating) return false;
       const failedAutoSplitResult = failedImageResult(resultNode);
       if (resultNode.mediaType !== "image" || (!favoriteMediaUrl(resultNode) && !failedAutoSplitResult)) return false;
@@ -17395,6 +17714,7 @@
     }
 
     async function regenerateResultNode(resultId) {
+      if (!requireApiRequestReady()) return;
       if (canvasProjectTransition) return;
       const original = nodes.find((item) => item.id === resultId);
       if (!canRegenerateResult(original)) {
@@ -17543,6 +17863,7 @@
     }
 
     async function generateAudioFromNode(id) {
+      if (!requireApiRequestReady()) return;
       if (canvasProjectTransition) return;
       const node = nodes.find((item) => item.id === id && item.type === "audio");
       if (!node || node.audioGenerating) return;
@@ -17634,6 +17955,7 @@
     }
 
     async function generateFromNode(id, options = {}) {
+      if (!requireApiRequestReady()) return;
       const node = nodes.find((item) => item.id === id);
       if (!node || canvasProjectTransition) return;
       if (imageGenerationJobs.has(id)) { showToast("此节点正在生成，请等待当前任务完成。"); return; }
@@ -18117,26 +18439,70 @@
       return true;
     }
 
+    function canvasFitViewport() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const padding = 24;
+      let left = Math.max(0, rect.left) + padding;
+      let top = Math.max(0, rect.top) + padding;
+      let right = Math.min(innerWidth, rect.right) - padding;
+      let bottom = Math.min(innerHeight, rect.bottom) - padding;
+      const panel = assistantPanel.getBoundingClientRect();
+      // Opening uses translateX. Reserve its final footprint even when the user
+      // immediately presses Fit during that transition, without changing motion.
+      const panelTransform = getComputedStyle(assistantPanel).transform;
+      const panelShift = panelTransform && panelTransform !== "none" ? new DOMMatrixReadOnly(panelTransform).m41 : 0;
+      const panelLeft = panel.left - panelShift;
+      const panelRight = panel.right - panelShift;
+      if (assistantPanel.closest(".app")?.classList.contains("assistant-open")
+        && panel.width > 0 && panel.bottom > top && panel.top < bottom && panelLeft < right && panelRight > left) {
+        right = Math.min(right, panelLeft - padding);
+      }
+      const topbar = document.querySelector(".topbar")?.getBoundingClientRect();
+      if (topbar?.height && topbar.right > left && topbar.left < right && topbar.bottom > top && topbar.top < bottom) {
+        top = Math.max(top, topbar.bottom + padding);
+      }
+      const toolbar = document.querySelector(".test-canvas-toolbar")?.getBoundingClientRect();
+      if (toolbar?.height && toolbar.right > left && toolbar.left < right && toolbar.bottom > top && toolbar.top < bottom) {
+        bottom = Math.min(bottom, toolbar.top - padding);
+      }
+      return { left: left - rect.left, top: top - rect.top, width: right - left, height: bottom - top };
+    }
+
     function fitCanvasToContent(onlyShrink = false) {
       const visibleNodes = nodes.filter((item) => item?.type !== "selection");
       if (!visibleNodes.length) return;
-      const rect = canvasWrap.getBoundingClientRect();
+      const viewport = canvasFitViewport();
+      if (viewport.width <= 0 || viewport.height <= 0) {
+        showToast("可用画布太小，请收起助手或放大窗口后再适应画布。");
+        return;
+      }
+      // Read current layouts in one pass. LOD placeholders already retain their
+      // measured/estimated bounds, so fitting never mounts hidden editors or
+      // decodes their originals just to measure them.
+      const measured = new Map([...canvas.querySelectorAll(".node")].map((element) => [
+        element.dataset.id, { width: element.offsetWidth, height: element.offsetHeight }
+      ]));
       const left = Math.min(...visibleNodes.map((item) => item.x));
       const top = Math.min(...visibleNodes.map((item) => item.y));
-      const right = Math.max(...visibleNodes.map((item) => item.x + estimatedNodeWidth(item)));
-      const bottom = Math.max(...visibleNodes.map((item) => item.y + estimatedNodeHeight(item)));
+      const right = Math.max(...visibleNodes.map((item) => item.x + (measured.get(item.id)?.width || estimatedNodeWidth(item))));
+      const bottom = Math.max(...visibleNodes.map((item) => item.y + (measured.get(item.id)?.height || estimatedNodeHeight(item))));
       const contentWidth = Math.max(1, right - left);
       const contentHeight = Math.max(1, bottom - top);
-      const fittedZoom = Math.max(0.12, Math.min(0.9, (rect.width - 120) / contentWidth, (rect.height - 120) / contentHeight));
+      const requestedZoom = Math.min(0.9, viewport.width / contentWidth, viewport.height / contentHeight);
+      const fittedZoom = Math.max(0.12, requestedZoom);
       if (onlyShrink && fittedZoom >= view.zoom) return;
       view.zoom = fittedZoom;
-      view.x = (rect.width - contentWidth * view.zoom) / 2 - left * view.zoom;
-      view.y = (rect.height - contentHeight * view.zoom) / 2 - top * view.zoom;
+      view.x = viewport.left + (viewport.width - contentWidth * view.zoom) / 2 - left * view.zoom;
+      view.y = viewport.top + (viewport.height - contentHeight * view.zoom) / 2 - top * view.zoom;
       applyCanvasTransform();
       scheduleCanvasSave();
+      if (requestedZoom < 0.12) {
+        showToast("已缩小到 12%，内容仍超出窗口；可拖动画布查看其余节点。", "info", 5000);
+      }
     }
 
     function isRetryableGenerationError(error) {
+      if (error?.code === "API_CONFIG_NOT_READY") return false;
       const message = String(error?.message || error || "");
       return !/HTTP 4(?:00|01|03|04)|额度不足|余额不足|预扣.*(?:失败|不足)|insufficient[_ ](?:quota|balance)|spending limit|credits|model.not.found|No available channel|invalid api|API 密钥/i.test(message);
     }
@@ -18169,6 +18535,7 @@
       const timeout = sourceNode.type === "video" ? 0 : setTimeout(() => controller.abort(), generationTimeoutMs);
       const totalStartedAt = Date.now();
       let apiReturnedThisAttempt = false;
+      const requestTrace = { dispatched: false, definiteRejection: false };
       try {
         if (sourceNode.type === "png" && sourceNode.transparentBackground !== false) {
           const reference = collectReferenceItems([sourceNode])[0];
@@ -18178,7 +18545,7 @@
           try {
             const apiStartedAt = Date.now();
             ensureCurrent();
-            const apiResult = await callApi({ ...sourceNode, count: 1 }, controller.signal);
+            const apiResult = await callApi({ ...sourceNode, count: 1, _requestTrace: requestTrace }, controller.signal);
             apiReturnedThisAttempt = true;
             ensureCurrent();
             apiSeconds = Math.max(1, Math.round((Date.now() - apiStartedAt) / 1000));
@@ -18188,6 +18555,7 @@
             setNodeStatus(pending.id, pending.status);
             maskUrl = apiResult.urls?.[0] || apiResult.url || "";
           } catch (maskError) {
+            if (maskError?.code === "API_CONFIG_NOT_READY") throw maskError;
             ensureCurrent();
             console.warn("PNG mask model fallback", maskError);
           }
@@ -18240,10 +18608,15 @@
           _apiTargetSize: targetSize,
           _forceBaseGeneration: false
         };
+        requestNode._requestTrace = requestTrace;
+        requestNode._taskPending = pending;
+        requestNode._taskProjectId = projectId;
         ensureCurrent();
         const apiResult = await callApi(requestNode, controller.signal);
         apiReturnedThisAttempt = true;
         ensureCurrent();
+        await verifyTrackedImageTaskLease(pending);
+        pending.outputRequest = requestNode._outputRequest || null;
         const apiSeconds = Math.max(1, Math.round((Date.now() - apiStartedAt) / 1000));
         const rawUrl = apiResult.urls?.[0] || apiResult.url || "";
         if (!rawUrl && apiResult.mediaType !== "text") throw new Error("接口没有返回可显示的图片地址。");
@@ -18324,6 +18697,7 @@
           ? await settleWithin(createPreviewImageUrl(url, 320, sourceNode.type === "png"), 12000, url, "预览图生成")
           : "";
         ensureCurrent();
+        await verifyTrackedImageTaskLease(pending);
         pending.mediaUrl = url;
         pending.previewUrl = previewUrl || url;
         pending.fullUrl = url;
@@ -18365,11 +18739,20 @@
         if (!sourceNode._deferCanvasSave) {
           await settleWithin(saveCanvasState(), 10000, null, "生成结果保存");
         }
+        await completeTrackedImageTask(pending);
       } catch (error) {
         if (!isCurrent()) return;
+        if (pending.imageTask && pending.imageTask.state !== 'completed') {
+          pending.pending = false;
+          pending.status = imageTaskStatus(trackedImageTask(pending)) + (controller.signal.aborted ? '' : ' ' + friendlyApiError(error));
+          setNodeStatus(pending.id, pending.status);
+          refreshRenderedNode(pending.id);
+          await saveCanvasState();
+          return;
+        }
         if (controller.signal.aborted) {
           pending.pending = false;
-          pending.status = "生成已停止：请求被取消或等待超时，请检查后重试。";
+          pending.status = requestTrace.dispatched ? "请求已停止等待，提交结果可能未知；未自动重发生图，请先在原渠道核对任务与用量。" : "生成已停止，尚未提交请求。";
           setNodeStatus(pending.id, pending.status);
           return;
         }
@@ -18385,13 +18768,13 @@
           if (!sourceNode._deferCanvasSave) await saveCanvasState();
           return;
         }
-        if (!apiReturnedThisAttempt && !specialImageRequested(sourceNode) && sourceNode.type === "generator" && !sourceNode._forceStandardApiSize && /size|dimension|resolution|尺寸|分辨率/i.test(String(error?.message || error))) {
+        if (!apiReturnedThisAttempt && requestTrace.definiteRejection && !specialImageRequested(sourceNode) && sourceNode.type === "generator" && !sourceNode._forceStandardApiSize && /size|dimension|resolution|尺寸|分辨率/i.test(String(error?.message || error))) {
           pending.pending = true;
           pending.status = `第 ${index + 1} 张的自定义尺寸不被当前接口接受，正在兼容生成并统一输出...`;
           setNodeStatus(pending.id, pending.status);
           return generateOneResult({ ...sourceNode, _forceStandardApiSize: true }, pending, index, targetSize, attempt);
         }
-        if (!apiReturnedThisAttempt && !specialImageRequested(sourceNode) && (sourceNode.type === "generator" || sourceNode.type === "outpaint") && attempt < 3 && isRetryableGenerationError(error)) {
+        if (!requestTrace.blockRetry && !requestTrace.dispatched && !apiReturnedThisAttempt && !specialImageRequested(sourceNode) && (sourceNode.type === "generator" || sourceNode.type === "outpaint") && attempt < 3 && isRetryableGenerationError(error)) {
           if (timeout) clearTimeout(timeout);
           pending.pending = true;
           pending.status = `第 ${index + 1} 张正在重试（${attempt}/2）...`;
@@ -18402,11 +18785,12 @@
         }
         pending.pending = false;
         pending.errorDetails = taskErrorDetails(error);
-        pending.status = `第 ${index + 1} 张生成失败：${friendlyApiError(error)}` + (specialImageRequested(sourceNode) ? "。未自动重复发送生成请求。" : "");
+        pending.status = `第 ${index + 1} 张生成失败：${friendlyApiError(error)}` + (specialImageRequested(sourceNode) || requestTrace.dispatched ? "。未自动重复发送生成请求；若提交结果未知，请先在原渠道核对任务与用量。" : "");
         setNodeStatus(pending.id, pending.status);
         if (!sourceNode._deferCanvasSave) await saveCanvasState();
       } finally {
         if (timeout) clearTimeout(timeout);
+        await releaseTrackedImageTaskLease(pending);
         job?.controllers.delete(controller);
         if (imageResultControllers.get(pending) === entry) imageResultControllers.delete(pending);
       }
@@ -18459,6 +18843,7 @@
     }
 
     async function refineNodePrompt(node) {
+      if (!requireApiRequestReady()) return;
       if (canvasProjectTransition || promptEditJobs.has(node.id)) return;
       const source = String(node.prompt || "").trim();
       if (!source) {
@@ -18677,6 +19062,7 @@
       try {
         response = await fetchMaybeProxied(url, { method:"POST", headers, body, signal });
       } catch (error) {
+        if (error?.code === "API_CONFIG_NOT_READY") throw error;
         if (signal?.aborted) throw signal.reason || error;
         throw new Error("音频接口无法访问，请检查当前渠道、网络和接口转发配置。");
       }
@@ -18722,6 +19108,7 @@
     }
 
     async function callApi(node, signal) {
+      if (node._resumeImageTask) return queryTrackedImageTask(node._resumeImageTask, node._taskPending, signal);
       if (node.type === "audio") return callAudioApi(node, signal);
       const apiProfile = apiProfileForModel(node.model);
       const configuredUrl = apiProfile.url;
@@ -18744,6 +19131,7 @@
       if (apiProfile.key) jsonHeaders.Authorization = `Bearer ${apiProfile.key}`;
       const hasLocalEditMask = references.some((item) => item?.maskUrl && item?.maskSelectionUrl);
       if (node.type !== "video" && node.type !== "keyword" && node.type !== "png" && !hasLocalEditMask && isNanoBananaModel(modelToApiModel(node.model))) {
+        if (node._requestTrace) node._requestTrace.dispatched = true;
         return callNanoBananaApi(node, references, configuredUrl, jsonHeaders, signal);
       }
       const request = await buildApiRequest(node, references, signal);
@@ -18765,8 +19153,15 @@
         url = url.replace(/\/v1\/images\/edits\/?$/i, "/v1/images/generations");
       }
 
+      if (useOfficialAsyncImageApi && node.type === 'generator') {
+        if (node._requestTrace) node._requestTrace.blockRetry = true;
+        await beginTrackedImageTask(node, apiProfile, requestBody);
+      }
       let response;
       try {
+        node._outputRequest = window.WandouImageOutputContract?.capture(requestBody) || (node._taskPending?.imageTask ? trackedImageOutputRequest(node._taskPending.imageTask) : null);
+        if (signal?.aborted) throw signal.reason || new DOMException('任务已停止。', 'AbortError');
+        if (node._requestTrace) node._requestTrace.dispatched = true;
         response = await fetchMaybeProxied(url, {
           method: "POST",
           headers,
@@ -18779,6 +19174,7 @@
             url = url.replace(/\/v1\/images\/edits\/?$/i, "/v1/images/generations");
           }
           requestBody = request.body;
+          node._outputRequest = window.WandouImageOutputContract?.capture(requestBody) || null;
           response = await fetchMaybeProxied(url, {
             method: "POST",
             headers,
@@ -18799,6 +19195,7 @@
           }
         }
       } catch (error) {
+        if (error?.code === "API_CONFIG_NOT_READY") throw error;
         if (signal?.aborted) throw signal.reason || error;
         if (window.wandouDesktopApi?.fetch && isDesktopApiEndpoint(url)) {
           const reason = String(error?.message || error || "未知网络错误").replace(/^Error invoking remote method 'desktop:api-fetch':\s*/i, "");
@@ -18809,6 +19206,7 @@
 
       const raw = await response.text();
       if (!response.ok) {
+        if (node._requestTrace) node._requestTrace.definiteRejection = response.status === 400 || response.status === 422;
         if (node.type === "keyword" && node.promptReverseMode === "image" && node.model !== "Gemini") {
           return callKeywordImageReverseWithVisionBridge(node, references, configuredUrl, jsonHeaders, signal);
         }
@@ -18862,6 +19260,10 @@
       if (useOfficialAsyncImageApi && /\/v1\/images\/generations\/async\/?$/i.test(new URL(url).pathname)) {
         const taskId = extractImageTaskId(data);
         if (taskId && !extractOutputMediaUrl(data)) {
+          if (node._taskPending?.imageTask) {
+            const record = await acknowledgeTrackedImageTask(node, taskId);
+            return queryTrackedImageTask(record, node._taskPending, signal);
+          }
           data = await pollImageResult(imagePollEndpoint(url, taskId), headers, signal, taskId);
         }
         const returnedMedia = extractOutputMediaUrl(data)
@@ -19028,9 +19430,10 @@ ${formatInstruction}`;
         || "";
     }
 
-    async function pollImageResult(url, headers, signal, taskId) {
+    async function pollImageResult(url, headers, signal, taskId, beforePoll = null) {
       const started = Date.now();
       while (Date.now() - started < generationTimeoutMs) {
+        if (beforePoll) await beforePoll();
         const response = await fetchMaybeProxied(url, { headers, signal });
         const raw = await response.text();
         if (!response.ok) {
@@ -19042,17 +19445,19 @@ ${formatInstruction}`;
         } catch (error) {
           throw new Error(`图片任务查询返回不是 JSON：${raw.slice(0, 180)}`);
         }
+        const status = imageStatusFromData(data);
+        if (["failed", "failure", "expired", "canceled", "cancelled", "error"].includes(status)) {
+          const reason = imageFailureReason(data) || JSON.stringify(data).slice(0, 180);
+          const taskFailure = new Error(`图片生成${status === "expired" ? "已过期" : "失败"}：${reason}`);
+          taskFailure.imageTaskTerminal = true;
+          throw taskFailure;
+        }
         const returnedError = extractApiErrorMessage(data);
         if (returnedError) throw new Error(`图片任务失败：${returnedError}`);
-        const status = imageStatusFromData(data);
         const media = extractOutputMediaUrl(data);
         if (["done", "completed", "succeeded", "success"].includes(status) || media) {
           if (media) return data;
           return { ...data, result_url: imageContentEndpoint(url, taskId) };
-        }
-        if (["failed", "failure", "expired", "canceled", "cancelled", "error"].includes(status)) {
-          const reason = imageFailureReason(data) || JSON.stringify(data).slice(0, 180);
-          throw new Error(`图片生成${status === "expired" ? "已过期" : "失败"}：${reason}`);
         }
         await wait(3000, signal);
       }
@@ -19957,6 +20362,8 @@ ${formatInstruction}`;
     }
 
     async function fetchMaybeProxied(url, options = {}) {
+      // Reject immediately; a click during hydration must never queue a paid request.
+      if (String(options.method || "GET").toUpperCase() === "POST") assertApiRequestReady();
       const targetUrl = proxiedUrl(url);
       const target = new URL(targetUrl, location.href);
       if (target.hostname.toLowerCase() === 'api.openai.com') {
@@ -21340,6 +21747,7 @@ ${formatInstruction}`;
         downloadSrc: options.downloadSrc || src,
         mode: options.mode || "image",
         nodeId: options.nodeId || null,
+        mediaNode: options.mediaNode || null,
         refIndex: options.refIndex ?? null
       };
       activePromptPreview = { zh: "", en: "", negative: "" };
@@ -21357,7 +21765,7 @@ ${formatInstruction}`;
       lightboxContextRegenerate.hidden = isVideo || !canRegenerateResult(nodes.find((item) => item.id === activeLightbox.nodeId));
       closeLightboxImageMenu();
       lightbox.classList.add("open");
-      configureGifLightbox(nodes.find(item => item.id === activeLightbox.nodeId));
+      configureGifLightbox(activeLightbox.mediaNode || nodes.find(item => item.id === activeLightbox.nodeId));
       updateLightboxFavoriteButton();
       if (activeLightbox.mode === "paint") {
         loadPaintCanvas(src).catch((error) => {
@@ -22077,6 +22485,10 @@ ${formatInstruction}`;
 
     async function sourceToBlob(src, fallbackType = "application/octet-stream", timeoutMs = 60000) {
       if (!src) return null;
+      if (String(src).startsWith(localMediaPrefix)) {
+        src = await getLocalMedia(src);
+        if (!src) throw new Error("原文件无法读取，请检查项目存储位置。");
+      }
       const controller = new AbortController();
       // Bound remote downloads through the response body, not local disk writes.
       const timer = /^https?:/i.test(src) ? setTimeout(() => controller.abort(), timeoutMs) : null;
@@ -22234,13 +22646,18 @@ ${formatInstruction}`;
     async function downloadNodeMedia(node) {
       let objectUrl = "";
       try {
+        if (node.deletedAt && !deletedResultOriginal(node)) {
+          showToast("这条旧删除记录只保留了预览，原文件不可用，无法下载原图。", "error", 5000);
+          return;
+        }
         if (node.mediaType === "text" && node.text) {
           const texts = favoritePromptTexts(node);
           downloadTextFile(promptBundleContent(texts.zh, texts.en), downloadFileName(node, "txt"));
           return;
         }
 
-        const downloadUrl = favoriteMediaUrl(node);
+        const downloadUrl = node.type === "result" && node.mediaType === "image"
+          ? await resultOriginalSource(node) : favoriteMediaUrl(node);
         if (!downloadUrl) {
           showToast("下载失败：这个节点还没有可下载内容", "error");
           return;
@@ -22801,24 +23218,42 @@ ${formatInstruction}`;
       });
     }
 
-    async function readCanvasStateBackup() {
+    async function readCanvasStateBackup(projectId = activeProjectId) {
       const db = await openLocalMediaDb();
-      if (!db) return null;
-      const projectPrefix = projectCanvasStorageKey();
+      if (!db) throw new Error("画布数据库暂时无法读取");
+      const projectPrefix = projectCanvasStorageKey(projectId);
       const folderPrefix = folderCanvasStorageKey();
-      const records = await new Promise((resolve) => {
+      const records = await new Promise((resolve, reject) => {
         const tx = db.transaction(canvasStateStoreName, "readonly");
-        const request = tx.objectStore(canvasStateStoreName).getAll();
-        request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
-        request.onerror = () => resolve([]);
+        const store = tx.objectStore(canvasStateStoreName);
+        const collected = new Map();
+        // Only this project's exact record and session history can belong here.
+        // Do not materialize every unrelated project's original-heavy snapshots.
+        const prefixes = [projectPrefix];
+        if (projectId === projects[0]?.id) prefixes.push(folderPrefix);
+        for (const prefix of new Set(prefixes)) {
+          const exact = store.get(prefix);
+          exact.onsuccess = () => { if (exact.result) collected.set(exact.result.id, exact.result); };
+          const start = prefix + ":session-";
+          const cursor = store.openCursor(IDBKeyRange.bound(start, start + "\uffff"));
+          cursor.onsuccess = () => {
+            const entry = cursor.result;
+            if (!entry) return;
+            collected.set(entry.value.id, entry.value);
+            entry.continue();
+          };
+        }
+        tx.oncomplete = () => resolve([...collected.values()]);
+        tx.onabort = () => reject(tx.error || new Error("画布数据库读取中断"));
+        tx.onerror = () => reject(tx.error || new Error("画布数据库读取失败"));
       });
       const projectRecords = records.filter((record) =>
         record?.state && (record.id === projectPrefix || record.id.startsWith(`${projectPrefix}:session-`))
       );
-      const legacyFolderRecords = activeProjectId === projects[0]?.id
+      const legacyFolderRecords = projectId === projects[0]?.id
         ? records.filter((record) =>
           record?.state
-          && legacyCanvasStateMatchesProject(record.state)
+          && legacyCanvasStateMatchesProject(record.state, projectId)
           && (record.id === folderPrefix || record.id.startsWith(`${folderPrefix}:session-`))
         )
         : [];
@@ -22882,12 +23317,17 @@ ${formatInstruction}`;
 
     async function saveCanvasStateNow(context, options = {}) {
       if (canvasRecoveryBlocked) return false;
+      saveCanvasStateNow.started = (saveCanvasStateNow.started || 0) + 1;
       try {
         clearTimeout(saveTimer);
         remoteMediaSaveDeadline = Date.now() + 8000;
         window.wandouSaveProgress = { phase: 'media', completed: 0, total: context.state.nodes.length, updatedAt: Date.now() };
         const originalNodes = context.state.nodes;
-        const storedNodes = await WandouSavePipeline.mapLimited(originalNodes, 2, serializeNodeForStorage, (completed, total) => {
+        // One save may reference the same original/preview thousands of times.
+        // Share only this snapshot's persistence promises; retries and later
+        // edits get a fresh map and must perform their own durable save.
+        const mediaPersistence = new Map();
+        const storedNodes = await WandouSavePipeline.mapLimited(originalNodes, 2, node => serializeNodeForStorage(node, mediaPersistence), (completed, total) => {
           Object.assign(window.wandouSaveProgress, { completed, total, updatedAt: Date.now() });
         });
         const activeProject = projects.find((project) => project.id === context.projectId);
@@ -22965,10 +23405,11 @@ ${formatInstruction}`;
       const liveById = new Map(nodes.map(node => [node.id, node]));
       const nodeFields = ['mediaUrl', 'previewUrl', 'fullUrl', 'sourceUrl', 'outpaintSourceUrl'];
       const referenceFields = ['url', 'maskUrl', 'maskSelectionUrl', 'doodleUrl', 'markupUrl'];
+      let refreshNeeded = false;
+      try {
       await WandouSavePipeline.mapLimited(originalNodes, 1, async (original, index) => {
         const live = liveById.get(original.id), saved = storedNodes[index];
         if (!isCurrent() || context.liveIdentities?.get(original.id) !== live || !live || saved?.id !== original.id) return;
-        let changed = false;
         const replace = async (target, previous, stored, fields) => {
           if (!target || !previous || !stored) return;
           for (const field of fields) {
@@ -22979,8 +23420,8 @@ ${formatInstruction}`;
             if (!url || !isCurrent() || context.liveIdentities.get(original.id) !== live || !nodes.includes(live)
               || target[field] !== source) continue;
             target[field] = url;
+            refreshNeeded = true;
             window.WandouCanvasPreview?.releaseSource?.(source);
-            changed = true;
           }
         };
         await replace(live, original, saved, nodeFields);
@@ -22989,8 +23430,14 @@ ${formatInstruction}`;
           if (live.references !== liveReferences) break;
           await replace(liveReferences?.[i], original.references[i], saved.references?.[i], referenceFields);
         }
-        if (changed && isCurrent() && nodes.includes(live)) refreshRenderedNode(live.id);
       });
+      } finally {
+        // Each node refresh schedules whole-canvas layout/link work. Compact
+        // the saved references first, then reconcile once, without replacing
+        // the input or pointer-captured node the user is currently operating.
+        // A partially completed release still reconciles its successful edits.
+        if (refreshNeeded && isCurrent()) render({ skipSave: true, preserveInteraction: true });
+      }
     }
 
     function verifyCanvasStateSaved(context) {
@@ -22998,7 +23445,11 @@ ${formatInstruction}`;
     }
 
     window.wandouSaveBeforeClose = async () => {
+      if (apiConfigBusy) return { success: false, supported: true, busy: true, error: "正在保存 API 设置，请完成后再关闭或更新。" };
       if (document.body.dataset.canvasReady !== "true" || !document.querySelector(".app")) {
+        if (typeof window.wandouCanCloseReadOnlyStartup === "function" && window.wandouCanCloseReadOnlyStartup() === true) {
+          return { success: true, supported: true, skipped: true, readOnly: true, reason: "startup-failed-before-editing", savedAt: 0 };
+        }
         return { success: false, supported: true, error: "画布尚未初始化完成，未写入任何项目数据。请等待加载完成后重试；若持续空白，请保留数据并联系修复。" };
       }
       clearTimeout(saveTimer);
@@ -23015,6 +23466,8 @@ ${formatInstruction}`;
       }
       // Desktop saves bypass IndexedDB and drain a bounded, coalescing queue.
       await canvasSaveQueue.catch(() => false);
+      if (deletedResultArchiveJobs.size) return { success: false, supported: true, busy: true,
+        error: "正在保存删除记录和原文件，请完成后再关闭或更新。" };
       const context = createCanvasSaveContext();
       saveCanvasStateImmediate(context);
       const durableSaved = await saveCanvasStateNow(context, { skipDesktopBackup: true });
@@ -23102,14 +23555,21 @@ ${formatInstruction}`;
       links = links.filter((link) => ids.has(link.from) && ids.has(link.to));
     }
 
-    async function serializeNodeForStorage(node) {
+    async function serializeNodeForStorage(node, mediaPersistence = null) {
       const copy = { ...node };
       const warnings = [];
       for (const warning of copy.mediaSaveWarnings || []) {
         if (warning.retryAfter > Date.now() && !remoteMediaSaveFailures.has(warning.url)) remoteMediaSaveFailures.set(warning.url, warning);
       }
       const persistField = async (value, field) => {
-        const stored = await persistMediaValue(value);
+        let pending;
+        if (mediaPersistence && typeof value === "string" && value) {
+          if (!mediaPersistence.has(value)) mediaPersistence.set(value, persistMediaValue(value));
+          pending = mediaPersistence.get(value);
+        } else {
+          pending = persistMediaValue(value);
+        }
+        const stored = await pending;
         if (/^https?:/i.test(stored || "")) {
           const failure = remoteMediaSaveFailures.get(stored);
           if (failure) warnings.push({...failure, field});
@@ -23175,8 +23635,9 @@ ${formatInstruction}`;
       }
       if (node.type === "result" && node.pending) {
         node.pending = false;
-        node.status = "上次生成已中断，可点击重新生成。";
+        node.status = "上次生成已中断，提交结果可能未知；请先在原渠道核对，软件不会自动重新生图。";
       }
+      await restoreTrackedImageTask(node);
       node.status = publicNodeStatus(node.status);
       if (node.type === "image" && node.status === "可上传参考图。") node.status = "";
       if (node.type === "result" && node.status === "生成结果会显示在这里。") node.status = "";
@@ -23187,7 +23648,7 @@ ${formatInstruction}`;
         node.references = [];
         node.status = node.type === "result" ? "" : "可上传参考图。";
       }
-      const storedMedia = {mediaUrl:node.mediaUrl, previewUrl:node.previewUrl, fullUrl:node.fullUrl};
+      const storedMedia = {mediaUrl:node.mediaUrl, previewUrl:node.previewUrl, fullUrl:node.fullUrl, sourceUrl:node.sourceUrl};
       const [mediaUrl, previewUrl, fullUrl, sourceUrl, outpaintSourceUrl] = await Promise.all([
         resolveLoadedMedia(node.mediaUrl, mediaCache),
         resolveLoadedMedia(node.previewUrl, mediaCache),
@@ -23202,9 +23663,13 @@ ${formatInstruction}`;
         }
       }
       node.mediaUrl = mediaUrl || node.mediaSourceUrl || "";
-      node.previewUrl = previewUrl || node.previewSourceUrl || node.mediaUrl || "";
-      node.fullUrl = fullUrl || node.fullSourceUrl || node.mediaUrl || "";
-      node.sourceUrl = sourceUrl || "";
+      node.previewUrl = previewUrl || node.previewSourceUrl
+        || (node.type === "result" && node.mediaType === "image" ? "" : node.mediaUrl || "");
+      // A missing original must not turn its thumbnail into the new original
+      // after reopening. Keep the reference for recovery and honest exports.
+      node.fullUrl = fullUrl || node.fullSourceUrl || (storedMedia.fullUrl?.startsWith(localMediaPrefix) ? storedMedia.fullUrl : "")
+        || (node.type === "result" && node.mediaType === "image" ? "" : node.mediaUrl || "");
+      node.sourceUrl = sourceUrl || (storedMedia.sourceUrl?.startsWith(localMediaPrefix) ? storedMedia.sourceUrl : "") || "";
       node.outpaintSourceUrl = outpaintSourceUrl || "";
       await Promise.all([
         mirrorLargeLoadedMedia(node.mediaUrl),
@@ -23240,7 +23705,9 @@ ${formatInstruction}`;
         }
       };
       const workerCount = Math.min(3, list.length);
-      await Promise.all(Array.from({ length: workerCount }, worker));
+      const workers = await Promise.allSettled(Array.from({ length: workerCount }, worker));
+      const failed = workers.find(result => result.status === "rejected");
+      if (failed) throw failed.reason;
       updateCanvasMediaSaveNotice(list);
     }
 
@@ -23289,14 +23756,21 @@ ${formatInstruction}`;
     async function readDesktopCanvasBackups(projectId = activeProjectId) {
       if (!window.wandouShell?.readCanvasBackups) return [];
       try {
-        const result = await window.wandouShell.readCanvasBackups({
-          folderId: currentFolderId,
-          projectId
-        });
-        return result?.success && Array.isArray(result.states) ? result.states : [];
+        const startupCache = typeof readDesktopProjectCatalog === "function" ? readDesktopProjectCatalog.pending : null;
+        const catalogError = typeof readDesktopProjectCatalog === "function" ? readDesktopProjectCatalog.catalogError : null;
+        if (typeof readDesktopProjectCatalog === "function") {
+          readDesktopProjectCatalog.pending = null;
+          readDesktopProjectCatalog.catalogError = null;
+        }
+        const result = startupCache?.has(projectId) ? startupCache.get(projectId)
+          : await window.wandouShell.readCanvasBackups({ folderId: currentFolderId, projectId });
+        if (result?.success === false) throw new Error(result.error || "磁盘项目备份读取失败");
+        const states = Array.isArray(result?.states) ? result.states : [];
+        if (!states.length && catalogError) throw catalogError;
+        return states;
       } catch (error) {
         console.warn("Desktop canvas backups could not be read", error);
-        return [];
+        throw error;
       }
     }
 
@@ -23387,6 +23861,7 @@ ${formatInstruction}`;
 
     async function loadCanvasState() {
       isRestoring = true;
+      canvasRecoveryBlocked = true;
       try {
         const compactState = parseStoredCanvasState(canvasTestStorage.getItem(projectCanvasStorageKey()), "Project");
         const legacyFolderState = activeProjectId === projects[0]?.id
@@ -23397,11 +23872,25 @@ ${formatInstruction}`;
           : null;
         const compatibleFolderState = legacyCanvasStateMatchesProject(legacyFolderState) ? legacyFolderState : null;
         const compatibleGlobalState = legacyCanvasStateMatchesProject(legacyGlobalState) ? legacyGlobalState : null;
-        // Browser database failures must not prevent reading independent disk backups.
-        let backupState = null;
-        try { backupState = await readCanvasStateBackup(); }
-        catch (error) { console.warn("Browser backup unavailable; trying desktop backup", error); }
-        const desktopStates = await readDesktopCanvasBackups();
+        // Consume only an identity-matching startup read. Subsequent restores
+        // always read new transactions; a different project cannot borrow it.
+        const startupRecovery = typeof loadProjects === "function" ? loadProjects.recovery : null;
+        if (typeof loadProjects === "function") loadProjects.recovery = null;
+        const cached = startupRecovery?.folderId === currentFolderId && startupRecovery.projectId === activeProjectId ? startupRecovery : null;
+        let backupState = null, backupReadError = null, desktopStates = [];
+        if (cached) {
+          backupState = cached.browserState;
+          desktopStates = cached.desktopStates;
+          backupReadError = cached.browserError || cached.desktopError || cached.catalogError;
+          readDesktopProjectCatalog.pending = null;
+          readDesktopProjectCatalog.catalogError = null;
+          readDesktopProjectCatalog.selectedRecovery = null;
+        } else {
+          try { backupState = await readCanvasStateBackup(); }
+          catch (error) { backupReadError = error; console.warn("Browser backup unavailable; trying desktop backup", error); }
+          try { desktopStates = await readDesktopCanvasBackups(); }
+          catch (error) { backupReadError = error; console.warn("Desktop backup unavailable; retaining independent local recovery", error); }
+        }
         const localState = mergeCanvasRecoveryState(compactState, backupState);
         const state = chooseCanvasRecoveryState([
           localState,
@@ -23411,8 +23900,11 @@ ${formatInstruction}`;
           backupState,
           ...desktopStates
         ]);
+        if (backupReadError && !isMeaningfulCanvasState(state) && !(Number(state?.intentionalResetAt) > 0)) throw backupReadError;
         if (!state || !Array.isArray(state.nodes) || (!state.nodes.length && !(Number(state.intentionalResetAt) > 0))) {
+          if (backupReadError) throw backupReadError;
           isRestoring = false;
+          canvasRecoveryBlocked = false;
           return false;
         }
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
@@ -23458,7 +23950,7 @@ ${formatInstruction}`;
       canvasRecoveryBlocked = false;
       const hadStoredCanvas = projectHasStoredCanvasEvidence();
       if (await loadCanvasState()) return true;
-      if (hadStoredCanvas) {
+      if (hadStoredCanvas || canvasRecoveryBlocked) {
         canvasRecoveryBlocked = true;
         nodes = [];
         links = [];
@@ -23502,7 +23994,7 @@ ${formatInstruction}`;
         canvasTestStorage.setItem(deletedResultStorageKey(), JSON.stringify(deletedResults.slice(0, 120)));
       } catch (error) {
         try {
-          deletedResults = deletedResults.slice(0, 40).map((item) => ({ ...item, fullUrl: "", references: [] }));
+          deletedResults = deletedResults.slice(0, 40).map((item) => ({ ...item, references: [] }));
           canvasTestStorage.setItem(deletedResultStorageKey(), JSON.stringify(deletedResults));
         } catch (retryError) {
           console.warn("Deleted result archive skipped", retryError);
@@ -23541,32 +24033,138 @@ ${formatInstruction}`;
       showToast("已永久删除");
     }
 
+    function resultHasLocalOutput(node) {
+      return Boolean(node?.outputAdjustment?.nonNative || /^local-|upscale|letterbox|retime/.test(node?.resolutionProcessing || ""));
+    }
+
+    function deletedResultOriginal(node) {
+      if (!node?.deletedAt) return "";
+      if (node.fullUrl) return node.fullUrl;
+      // Some older archives retained their channel original in
+      // sourceUrl. A local derivative's source is a different file, not a copy.
+      if (!resultHasLocalOutput(node)) return node.sourceUrl || "";
+      return "";
+    }
+
+    async function resultOriginalSource(node) {
+      const explicit = node.deletedAt ? deletedResultOriginal(node) : node.fullUrl || (!resultHasLocalOutput(node) ? node.sourceUrl : "");
+      if (explicit) return explicit;
+      if (node.deletedAt) throw new Error("此记录仅保留预览，原文件不可用");
+      const candidate = node.mediaUrl;
+      const identity = value => window.WandouMediaUrls?.storedReference(value) || value || "";
+      // A preview is never evidence of the original. Older results may contain
+      // only mediaUrl: accept that separate file only after checking its actual
+      // format and dimensions against the recorded result.
+      if (!candidate || identity(candidate) === identity(node.previewUrl)) throw new Error("此节点仅保留预览，原文件不可用");
+      const width = Number(node.width), height = Number(node.height);
+      if (!(width > 0 && height > 0)) throw new Error("旧图片缺少原尺寸记录，无法确认原文件");
+      const blob = await sourceToBlob(candidate);
+      if (!blob?.size) throw new Error("原文件无法读取");
+      let dimensions;
+      if (nativeGifRequested(node)) dimensions = await WandouAnimatedImage.prepare(blob);
+      else if (nativeSvgRequested(node)) dimensions = await WandouNativeSvg.prepare(blob);
+      else {
+        const bitmap = await createImageBitmap(blob);
+        dimensions = { width: bitmap.width, height: bitmap.height };
+        bitmap.close();
+      }
+      if (dimensions.width !== width || dimensions.height !== height) throw new Error("现有图片尺寸与原图记录不符，不能将预览当作原文件");
+      return candidate;
+    }
+
+    async function persistDeletedOriginal(value) {
+      const reference = await persistMediaValue(value);
+      if (!String(reference).startsWith(localMediaPrefix)) throw new Error("原文件尚未保存到本地，删除已停止");
+      const id = reference.slice(localMediaPrefix.length);
+      // An undo history cache or a stale indexed reference is not a durable
+      // original. Verify the actual desktop file / browser media store.
+      let readable = "";
+      if (window.wandouShell?.writeCanvasMedia) {
+        const location = await window.wandouShell.getCanvasMediaUrl?.({ id });
+        if (location?.success && window.WandouMediaUrls?.storedReference(location.url) === reference) readable = location.url;
+        else {
+          const stored = await window.wandouShell.readCanvasMedia?.({ id });
+          if (stored?.success) readable = stored.value || "";
+        }
+      } else {
+        const db = await openLocalMediaDb();
+        if (db) readable = await new Promise((resolve, reject) => {
+          try {
+            const request = db.transaction(localMediaStoreName, "readonly").objectStore(localMediaStoreName).get(id);
+            request.onsuccess = () => resolve(request.result?.value || "");
+            request.onerror = () => reject(request.error || new Error("本地原文件读取失败"));
+          } catch (error) { reject(error); }
+        });
+      }
+      if (!readable || /^https?:|^indexed-media:/i.test(readable)) throw new Error("本地原文件无法读取，删除已停止");
+      const blob = await sourceToBlob(readable);
+      if (!blob?.size) throw new Error("本地原文件为空，删除已停止");
+      return reference;
+    }
+
     async function archiveDeletedResult(node) {
       if (!node || node.type !== "result" || node.pending || node.mediaType !== "image" || !favoriteMediaUrl(node)) return;
-      loadDeletedResults();
-      const sourceUrl = favoriteMediaUrl(node);
-      let preview = node.previewUrl || node.mediaUrl || sourceUrl;
+      if (deletedResultArchiveJobs.has(node)) return;
+      const job = { node, key: deletedResultStorageKey(), projectId: activeProjectId, folderId: currentFolderId,
+        links: links.filter(link => link.from === node.id || link.to === node.id).map(link => ({ ...link })) };
+      deletedResultArchiveJobs.set(node, job); // Close/update/project gates include the first local read.
       try {
-        preview = await createPreviewImageUrl(sourceUrl, 420, Boolean(node.transparent));
+        const snapshot = { ...node, references: cloneReferences(node.references || []) };
+        const original = await resultOriginalSource(snapshot);
+        const fullUrl = await persistDeletedOriginal(original);
+        const sourceUrl = snapshot.sourceUrl ? await persistDeletedOriginal(snapshot.sourceUrl) : "";
+        let preview = await getLocalMedia(snapshot.previewUrl || original);
+        try { preview = await createPreviewImageUrl(await getLocalMedia(original), 420, Boolean(snapshot.transparent)); }
+        catch (_) { /* Keep the existing static preview; the original remains separate. */ }
+        if (window.WandouMediaUrls?.isRuntimeUrl(preview)) preview = await window.WandouMediaUrls.toDataUrl(preview);
+        const copy = { ...snapshot, archiveVersion: 2,
+          id: `deleted-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, originalId: node.id,
+          sourceUrl, outpaintSourceUrl: await persistMediaValue(snapshot.outpaintSourceUrl || ""),
+          mediaUrl: preview, previewUrl: preview, fullUrl, references: [], deletedAt: Date.now() };
+        // Read and merge under the captured project key after all awaits. Two
+        // local archive jobs cannot overwrite one another's completed record.
+        const previous = JSON.parse(canvasTestStorage.getItem(job.key) || "[]");
+        if (!Array.isArray(previous)) throw new Error("删除记录格式异常");
+        const next = [copy, ...previous.filter(item => item?.deletedAt && Date.now() - item.deletedAt <= 86400000 && item.originalId !== node.id)].slice(0, 120);
+        canvasTestStorage.setItem(job.key, JSON.stringify(next));
+        if (activeProjectId === job.projectId && currentFolderId === job.folderId) {
+          deletedResults = next;
+          if (galleryOverlay.classList.contains("open")) renderGallery();
+        }
       } catch (error) {
-        preview = node.previewUrl || node.mediaUrl || sourceUrl;
-      }
-      if (window.WandouMediaUrls?.isRuntimeUrl(preview)) preview = await window.WandouMediaUrls.toDataUrl(preview);
-      const media = preview;
-      const copy = {
-        ...node,
-        id: `deleted-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        originalId: node.id,
-        sourceUrl: window.WandouMediaUrls?.storedReference(node.sourceUrl) || node.sourceUrl || "",
-        outpaintSourceUrl: window.WandouMediaUrls?.storedReference(node.outpaintSourceUrl) || node.outpaintSourceUrl || "",
-        mediaUrl: media,
-        previewUrl: preview,
-        fullUrl: /^https?:\/\//i.test(node.fullUrl || "") ? node.fullUrl : "",
-        references: [],
-        deletedAt: Date.now()
-      };
-      deletedResults.unshift(copy);
-      saveDeletedResults();
+        // A failed archive must not silently remove the only accessible result.
+        const sameProject = activeProjectId === job.projectId && currentFolderId === job.folderId;
+        let restoredSaved = true;
+        if (sameProject && !nodes.some(item => item.id === node.id)) {
+          nodes.push(node);
+          for (const link of job.links) if (nodes.some(item => item.id === link.from) && nodes.some(item => item.id === link.to)
+            && !links.some(item => item.from === link.from && item.to === link.to)) links.push(link);
+          intentionalResetAt = 0;
+          render();
+          restoredSaved = await saveCanvasState();
+        }
+        showToast((sameProject ? "删除未完成，已保留画布节点：" : "原项目的删除记录保存失败：")
+          + (error?.message || "保存删除记录失败")
+          + (restoredSaved ? "" : "。恢复的节点尚未保存，请勿关闭软件，待存储恢复后再次保存。"), "error", 6000);
+      } finally { deletedResultArchiveJobs.delete(node); }
+    }
+
+    let galleryPreviewRequest = 0;
+    async function openGalleryNodePreview(node) {
+      const request = ++galleryPreviewRequest, projectId = activeProjectId, folderId = currentFolderId;
+      const snapshot = { ...node };
+      try {
+        let original = "";
+        try { original = node.type === "result" && node.mediaType === "image" ? await resultOriginalSource(snapshot) : favoriteMediaUrl(node); }
+        catch (_) { /* Show its preview, but keep the unavailable-original state. */ }
+        const [full, preview] = await Promise.all([getLocalMedia(original), getLocalMedia(node.previewUrl || node.mediaUrl)]);
+        if (request !== galleryPreviewRequest || projectId !== activeProjectId || folderId !== currentFolderId || !galleryOverlay.classList.contains("open")) return;
+        if (node.deletedAt && !deletedResults.some(item => item.id === node.id)) return;
+        snapshot.fullUrl = full; snapshot.mediaUrl = full || preview; snapshot.previewUrl = preview;
+        snapshot.archiveOriginalUnavailable = Boolean(node.mediaType === "image" && (!original || !full));
+        openLightbox(full || preview, { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id, mediaNode: snapshot });
+        if (snapshot.archiveOriginalUnavailable) showToast(node.deletedAt ? "此旧删除记录仅有预览，原文件不可用。" : "此节点仅有预览，原文件不可用。", "info", 5000);
+      } catch (error) { showToast("原图读取失败：" + (error?.message || "请重试"), "error", 5000); }
     }
 
     let galleryCardClickTimer = 0;
@@ -23587,6 +24185,7 @@ ${formatInstruction}`;
     }
 
     function closeGallery() {
+      galleryPreviewRequest += 1;
       clearTimeout(galleryCardClickTimer);
       galleryOverlay.classList.remove("open");
       galleryMenu.classList.remove("open");
@@ -23615,6 +24214,7 @@ ${formatInstruction}`;
             ${preview}
             <div class="meta-line">${resultMetaText(node)}</div>
             ${galleryTab === "deleted" ? `<div class="meta-line">删除时间：${new Date(node.deletedAt).toLocaleString()}</div>` : ""}
+            ${galleryTab === "deleted" && !deletedResultOriginal(node) ? '<div class="meta-line">仅预览 · 原文件不可用</div>' : ""}
           </article>
         `;
       }).join("") : `<div class="hint">${galleryTab === "deleted" ? "暂无已删除效果图。" : `还没有生成${galleryMode === "video" ? "视频" : "效果图"}。`}</div>`;
@@ -23787,10 +24387,12 @@ ${formatInstruction}`;
     });
 
     projectHomeButton.addEventListener("click", async () => {
+      if (deletedResultArchiveJobs.size && blockBusyCanvasAction()) return;
       await saveCanvasState();
       openNamedTab("project-hub.html", "项目文件夹");
     });
     currentFolderNameEl.addEventListener("click", async () => {
+      if (deletedResultArchiveJobs.size && blockBusyCanvasAction()) return;
       await saveCanvasState();
       openNamedTab("project-hub.html", "项目文件夹");
     });
@@ -23836,32 +24438,8 @@ ${formatInstruction}`;
       input.focus({ preventScroll: true });
       try { input.setSelectionRange(input.value.length, input.value.length); } catch (_error) {}
     }, true);
-    document.getElementById("clearApiKeyButton").addEventListener("click", async () => {
-      apiKeyInput.value = "";
-      const channelTwoKey = apiKey2Input.value.trim();
-      try {
-        await persistApiConfig("", channelTwoKey);
-        canvasTestStorage.removeItem("aiCanvasAllModels");
-        canvasTestStorage.removeItem("aiCanvasImageModels");
-      } catch (error) {
-        console.error("Channel 1 API key clear failed", error);
-      }
-      apiKeyInput.focus();
-      showToast("渠道 1 API 密钥已清除");
-    });
-    document.getElementById("clearApiKey2Button").addEventListener("click", async () => {
-      apiKey2Input.value = "";
-      const channelOneKey = apiKeyInput.value.trim();
-      try {
-        canvasTestStorage.removeItem("aiCanvasAllModelsChannel2");
-        canvasTestStorage.removeItem("aiCanvasImageModelsChannel2");
-        await persistApiConfig(channelOneKey, "");
-      } catch (error) {
-        console.error("Channel 2 API key clear failed", error);
-      }
-      apiKey2Input.focus();
-      showToast("渠道 2 API 密钥已清除");
-    });
+    document.getElementById("clearApiKeyButton").addEventListener("click", () => clearApiChannel(1));
+    document.getElementById("clearApiKey2Button").addEventListener("click", () => clearApiChannel(2));
     document.getElementById("settingsButton").addEventListener("click", (event) => {
       event.stopPropagation();
       setSettingsOpen(!settingsPopover.classList.contains("open"));
@@ -24085,7 +24663,7 @@ ${formatInstruction}`;
       clearTimeout(galleryCardClickTimer);
       galleryCardClickTimer = setTimeout(() => {
         const node = findGalleryNode(card.dataset.galleryNode);
-        if (node) openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id });
+        if (node) openGalleryNodePreview(node);
       }, 300);
     });
     const openGalleryCardMenu = (event) => {
@@ -24131,7 +24709,8 @@ ${formatInstruction}`;
             const texts = favoritePromptTexts(node);
             openPromptPreview(texts.zh, texts.en);
           } else {
-            openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id });
+            if (activeGalleryMenuMode === "gallery") openGalleryNodePreview(node);
+            else openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id });
           }
         }
         if (action === "reference") createReferenceNodeFromFavorite(node);
@@ -24266,14 +24845,18 @@ ${formatInstruction}`;
       if (!activeLightbox.src) return;
       setActionButtonBusy(lightboxDownload, true, "下载中…");
       showToast("正在准备下载…", "loading");
-      const node = nodes.find((item) => item.id === activeLightbox.nodeId) || { mediaType: activeLightbox.mode === "video" ? "video" : "image" };
+      const node = activeLightbox.mediaNode || nodes.find((item) => item.id === activeLightbox.nodeId) || { mediaType: activeLightbox.mode === "video" ? "video" : "image" };
       const extension = activeLightbox.mode === "video" ? "mp4" : "png";
       let sizedDownloadUrl = "";
       try {
+        if (node.archiveOriginalUnavailable || (node.deletedAt && !deletedResultOriginal(node))) {
+          showToast("这条旧删除记录只保留了预览，原文件不可用，无法下载原图。", "error", 5000);
+          return;
+        }
         if (specialImageRequested(node) && activeLightbox.mode !== 'paint') { await downloadNodeMedia(node); return; }
         const src = activeLightbox.mode === "paint"
           ? paintCanvas.toDataURL("image/png")
-          : activeLightbox.downloadSrc || activeLightbox.src;
+          : (node.type === "result" && node.mediaType === "image" ? await resultOriginalSource(node) : "") || activeLightbox.downloadSrc || activeLightbox.src;
         if (activeLightbox.mode !== "video") {
           sizedDownloadUrl = await sourceToLosslessPngUrl(src, node.width, node.height);
         }
@@ -24580,21 +25163,62 @@ ${formatInstruction}`;
         return;
       }
       if (!canvasStoragePrefix) document.title = '豌豆 AI · 节点画布';
-      await loadApiConfig();
-      await syncImageModelsFromApi({ render: false });
+      const appRoot = document.querySelector(".app");
+      const previousFocus = document.activeElement;
+      const startupStatus = document.createElement("div");
+      startupStatus.id = "canvasStartupStatus";
+      startupStatus.setAttribute("role", "status");
+      startupStatus.tabIndex = -1;
+      const dark = readGlobalTheme() === "dark";
+      startupStatus.style.cssText = "position:fixed;inset:0;z-index:100;display:grid;place-content:center;gap:16px;padding:24px;text-align:center;background:" + (dark ? "#161616;color:#f5f5f5" : "#f5f5f5;color:#202020");
+      startupStatus.textContent = "正在读取项目…";
+      document.body.appendChild(startupStatus);
+      appRoot.inert = true;
+      const writesBeforeStartup = saveCanvasStateNow.started || 0;
+      let openedForEditing = false;
+      const startupInputEvents = ["paste", "drop", "keydown", "pointerdown", "click"];
+      const protectStartupInput = event => {
+        if (!startupStatus.isConnected || startupStatus.contains(event.target)) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+      };
+      startupInputEvents.forEach(type => window.addEventListener(type, protectStartupInput, true));
+      window.wandouCanCloseReadOnlyStartup = () => !openedForEditing && appRoot.inert
+        && document.body.dataset.canvasReady === "error" && startupStatus.isConnected
+        && canvasRecoveryBlocked && (saveCanvasStateNow.started || 0) === writesBeforeStartup
+        && !canvasHasActiveTasks() && pendingLocalMediaWrites.size === 0;
+      document.body.dataset.canvasReady = "loading";
+      isRestoring = true;
+      canvasRecoveryBlocked = true;
+      // Local credentials/model caches are applied synchronously, while disk
+      // configuration and provider availability may settle independently.
+      const startupApi = loadApiConfig().catch(error => console.warn("API startup read failed", error));
+      try {
       await loadProjects();
-      await refreshInstalledDrawingSkills({ render: false });
       projectHubPinned = false;
       updateProjectHubPinState();
       updateCurrentFolderName();
       applyGlobalTheme(readGlobalTheme());
       await restoreOrSeedCanvas();
+      if (canvasRecoveryBlocked) throw new Error("历史记录暂时无法读取，未覆盖项目数据。");
       renderProjects();
       loadAssistantConversation();
       renderAssistantCreativeSkillOptions();
       restoreAssistantPanelGeometry();
       setAssistantOpen(canvasTestStorage.getItem("aiCanvasAssistantOpenV1") !== "0", false);
       document.body.dataset.canvasReady = "true";
+      openedForEditing = true;
+      appRoot.inert = false;
+      startupInputEvents.forEach(type => window.removeEventListener(type, protectStartupInput, true));
+      startupStatus.remove();
+      if (previousFocus && previousFocus !== document.body && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+      void startupApi.then(async () => {
+        if (apiInitialConfigReady && !apiConfigBusy && apiConfigRevision === 0 && apiDraftRevision === apiCommittedDraftRevision) {
+          await syncImageModelsFromApi({ render: false });
+          render({ skipSave: true, preserveInteraction: true });
+        }
+      }).catch(error => console.warn("Optional model refresh failed", error));
+      void refreshInstalledDrawingSkills({ render: false }).then(() => render({ skipSave: true, preserveInteraction: true }))
+        .catch(error => console.warn("Optional skill refresh failed", error));
       // Upgrade legacy full canvasTestStorage snapshots in the background. The old
       // value is only replaced after IndexedDB or the desktop backup confirms
       // that the restored canvas has been saved durably.
@@ -24606,6 +25230,23 @@ ${formatInstruction}`;
       }, 800);
       if (startupRecoveredProjectName) {
         showToast(`已恢复到 ${startupRecoveredProjectName}`);
+      }
+      } catch (error) {
+        isRestoring = false;
+        canvasRecoveryBlocked = true;
+        document.body.dataset.canvasReady = "error";
+        startupStatus.setAttribute("role", "alert");
+        startupStatus.replaceChildren();
+        const message = document.createElement("p");
+        message.textContent = "项目读取未完成，未覆盖原数据。请检查存储位置后重新读取。";
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.textContent = "重新读取项目";
+        retry.style.cssText = "padding:10px 18px;border:1px solid currentColor;border-radius:8px;color:inherit;background:transparent;font:inherit;cursor:pointer";
+        retry.addEventListener("click", () => location.reload());
+        startupStatus.append(message, retry);
+        retry.focus();
+        console.warn("Canvas startup failed; existing data was not overwritten", error);
       }
 
     })();

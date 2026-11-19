@@ -46,6 +46,7 @@ async function completeNativeSvgResult({sourceNode, pending, rawUrl, signal, ens
   ensureCurrent();
   const vector = await window.WandouNativeSvg.prepare(input, {signal, previewMaxEdge:640});
   ensureCurrent();
+  const comparison = window.WandouImageOutputContract.compare(pending.outputRequest, {format:'svg',width:vector.width,height:vector.height});
   const totalSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
   Object.assign(pending, {
     pending:false, apiReturned:true, apiSeconds, totalSeconds, mediaType:'image',
@@ -54,9 +55,9 @@ async function completeNativeSvgResult({sourceNode, pending, rawUrl, signal, ens
     previewUrl:vector.previewUrl || vector.dataUrl,
     width:vector.width, height:vector.height, originalWidth:vector.width, originalHeight:vector.height,
     resolutionProcessing:'native-vector', outputResolutionReady:false, outputLongEdgeTarget:0,
-    outputRatioMismatch:false, resolutionError:'', errorDetails:'',
+    outputComparison:comparison, outputRatioMismatch:comparison.ratioMismatch, resolutionError:'', errorDetails:'',
     transparent:vector.hasTransparency ?? Boolean(sourceNode.transparentBackground),
-    status:'原生 SVG 已生成，保留可编辑矢量原文件；下载可选择保存位置。' + (vector.previewFallback ? '缩略图暂不可用，正在显示矢量预览。' : '')
+    status:'原生 SVG 已生成。' + (comparison.message || '保留可编辑矢量原文件；下载可选择保存位置。') + (vector.previewFallback ? '缩略图暂不可用，正在显示矢量预览。' : '')
   });
   pending.references = [{url:vector.dataUrl, mediaType:'image', width:vector.width, height:vector.height, name:pending.title || 'SVG 矢量图'}];
   setNodeStatus(pending.id, pending.status);

@@ -1,6 +1,13 @@
 const apiStorageKey = "ai-tools-api-config";
 const durableApiConfigKey = "api-config-v1";
 let memoryApiConfig = null;
+let apiConfigRevision = 0;
+let apiConfigBusy = false;
+let apiFormDirty = false;
+let apiModalRevision = 0;
+let apiReturnFocus = null;
+let apiFormBaseline = { key: "", key2: "" };
+const apiEditedKeys = new Set();
 const savedTheme = localStorage.getItem("ai-tools-theme");
 const initialTheme = window.WandouTheme?.get() || window.WandouLocalCache?.readTheme(savedTheme || "light") || savedTheme || "light";
 let currentImageDataUrl = "";
@@ -13,59 +20,151 @@ let previewZoom = 1;
 
 document.documentElement.dataset.theme = initialTheme;
 
-function readApiConfig() {
-  try {
-    const config = JSON.parse(localStorage.getItem(apiStorageKey) || "{}");
-    const localConfig = {
-      url: defaultApiBaseUrl(),
-      key: config.key || "",
-      key2: config.key2 || "",
-      savedAt: config.savedAt || ""
-    };
-    if ((config.key || config.key2) && (!memoryApiConfig || String(localConfig.savedAt) >= String(memoryApiConfig.savedAt || ""))) {
-      memoryApiConfig = localConfig;
-    }
-    return memoryApiConfig || { url: defaultApiBaseUrl(), key: "", key2: "" };
-  } catch {
-    return memoryApiConfig || { url: defaultApiBaseUrl(), key: "", key2: "" };
+function sharedApiConfig(value = {}) {
+  const gatewayKey = (id, legacy) => {
+    const channel = value.channels?.[id];
+    return channel && typeof channel === "object" && !Array.isArray(channel) ? channel.gateway?.key || "" : value[legacy] || "";
+  };
+  const config = {
+    url: defaultApiBaseUrl(), key: String(gatewayKey("channel1", "key")).trim(), key2: String(gatewayKey("channel2", "key2")).trim(), savedAt: String(value.savedAt || "")
+  };
+  // Homepage inputs edit gateway credentials. Preserve the canvas's separate
+  // official credentials and selected providers without exposing them here.
+  if (value.channels && typeof value.channels === "object" && !Array.isArray(value.channels)) {
+    config.channels = JSON.parse(JSON.stringify(value.channels));
   }
+  return config;
+}
+
+async function readApiMetadataStrict() {
+  let stored;
+  if (typeof window.wandouShell?.readLocalData === "function") {
+    const result = await window.wandouShell.readLocalData({ path: "json/api-config-v1.json" });
+    if (result?.success !== true) throw new Error("Configuration disk read failed", { cause: result });
+    if (result.missing === true && result.value == null) return null;
+    if (typeof result.value !== "string") throw new Error("Invalid configuration disk response");
+    stored = JSON.parse(result.value);
+  } else {
+    if (typeof window.WandouLocalCache?.readJson !== "function") throw new Error("Configuration reader is unavailable");
+    stored = await window.WandouLocalCache.readJson(durableApiConfigKey);
+  }
+  if (stored !== null && stored !== undefined && (typeof stored !== "object" || Array.isArray(stored))) throw new Error("Invalid stored configuration");
+  return stored;
+}
+
+function readApiConfig() {
+  // Both aliases are consumed by the canvas. A partially cleared or written
+  // alias must remain visible here too, instead of looking like a full clear.
+  const candidates = [];
+  for (const storageKey of ["aiCanvasApi", apiStorageKey]) {
+    try {
+      const config = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      if (!config || (!config.key && !config.key2 && !config.channels && !config.savedAt)) continue;
+      candidates.push(sharedApiConfig(config));
+    } catch (_error) {}
+  }
+  const latest = candidates.sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)))[0];
+  if (latest && (!memoryApiConfig || String(latest.savedAt) >= String(memoryApiConfig.savedAt || ""))) memoryApiConfig = latest;
+  return memoryApiConfig || { url: defaultApiBaseUrl(), key: "", key2: "" };
 }
 
 async function hydrateDurableApiConfig() {
+  const revision = apiConfigRevision;
   try {
     const config = await window.WandouLocalCache?.readJson?.(durableApiConfigKey);
-    if (config && (config.key || config.key2)) {
-      memoryApiConfig = {
-        url: defaultApiBaseUrl(),
-        key: String(config.key || "").trim(),
-        key2: String(config.key2 || "").trim(),
-        savedAt: String(config.savedAt || "")
-      };
+    if (revision === apiConfigRevision && config && (config.key || config.key2 || config.channels || config.savedAt)
+      && (!memoryApiConfig || String(config.savedAt || "") > String(memoryApiConfig.savedAt || ""))) {
+      memoryApiConfig = sharedApiConfig(config);
     }
   } catch (_error) {}
   return readApiConfig();
 }
 
-async function persistSharedApiConfig(key, key2) {
-  const savedAt = new Date().toISOString();
-  memoryApiConfig = { url: defaultApiBaseUrl(), key, key2, savedAt };
-  let localSaved = true;
+async function persistSharedApiConfig(key, key2, options = {}) {
+  apiConfigRevision++;
+  let durableBase;
   try {
-    localStorage.setItem(apiStorageKey, JSON.stringify({ key, key2, savedAt }));
-    localStorage.setItem("aiCanvasApi", JSON.stringify(memoryApiConfig));
+    const stored = await readApiMetadataStrict();
+    durableBase = sharedApiConfig(stored || {});
+  } catch (cause) {
+    throw new Error("读取现有 API 配置失败，尚未保存，请重试", { cause });
+  }
+  const localBase = readApiConfig();
+  const base = !memoryApiConfig || String(durableBase.savedAt) > String(localBase.savedAt || "") ? durableBase : localBase;
+  const savedAt = new Date().toISOString();
+  const nextConfig = { ...sharedApiConfig(base), savedAt };
+  const editedKeys = options.editedKeys || ["key", "key2"];
+  if (editedKeys.includes("key")) nextConfig.key = key;
+  if (editedKeys.includes("key2")) nextConfig.key2 = key2;
+  if (nextConfig.channels) {
+    for (const [id, gatewayKey] of [["channel1", nextConfig.key], ["channel2", nextConfig.key2]]) {
+      const prior = nextConfig.channels[id];
+      const channel = prior && typeof prior === "object" && !Array.isArray(prior) ? prior : {};
+      nextConfig.channels[id] = { ...channel, gateway: { ...channel.gateway, key: gatewayKey } };
+    }
+  }
+  let localSaved = true;
+  let localError = null, durableError = null;
+  try {
+    localStorage.setItem(apiStorageKey, JSON.stringify(nextConfig));
+    localStorage.setItem("aiCanvasApi", JSON.stringify(nextConfig));
   } catch (error) {
     localSaved = false;
-    console.warn("API config localStorage write failed; using durable cache", error);
+    localError = error;
+    console.warn("API config localStorage write failed; using durable cache");
   }
   let durableSaved = false;
   try {
-    const result = await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, memoryApiConfig);
+    const result = await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, nextConfig);
     durableSaved = result?.ok === true;
+    if (durableSaved) await verifyDurableApiConfig(nextConfig);
+    else durableError = new Error("Persistent configuration write was not committed", { cause: result });
   } catch (error) {
-    console.warn("API config durable cache write failed", error);
+    durableSaved = false;
+    durableError = error;
+    console.warn("API config durable cache write failed");
   }
-  if (!localSaved && !durableSaved) throw new Error("本机存储空间不足，API 配置未能保存");
+  if (!localSaved && !durableSaved) throw new Error("API 设置未能完整保存，请重试", { cause: new AggregateError([localError, durableError].filter(Boolean)) });
+  memoryApiConfig = nextConfig;
   return { localSaved, durableSaved };
+}
+
+async function verifyDurableApiConfig(expected) {
+  // A failed disk write may fall back to IndexedDB while later reads still
+  // prefer the old disk file. Verify the same source that a reopened page reads.
+  const stored = await readApiMetadataStrict();
+  if (!stored || String(stored.key || "") !== expected.key || String(stored.key2 || "") !== expected.key2 || stored.savedAt !== expected.savedAt
+    || JSON.stringify(stored.channels || null) !== JSON.stringify(expected.channels || null)) {
+    throw new Error("Persistent configuration readback did not match the committed values");
+  }
+}
+
+async function clearSharedApiConfig() {
+  apiConfigRevision++;
+  const empty = { url: defaultApiBaseUrl(), key: "", key2: "", savedAt: new Date().toISOString() };
+  let result;
+  try {
+    if (typeof window.WandouLocalCache?.writeJson !== "function") throw new Error("Persistent configuration writer is unavailable");
+    result = await window.WandouLocalCache.writeJson(durableApiConfigKey, empty);
+    if (result?.ok !== true) throw new Error("Persistent configuration write was not committed", { cause: result });
+    await verifyDurableApiConfig(empty);
+  } catch (cause) {
+    throw new Error("未能确认配置数据库已清除，本页原设置已保留，请重试", { cause });
+  }
+  // A versioned empty value tells already-open tools to discard imported keys.
+  // Removing the keys looks like "no shared settings" to those tools instead.
+  // Try both aliases even if one fails, and never report a partial clear as complete.
+  let localError = null;
+  for (const storageKey of [apiStorageKey, "aiCanvasApi"]) {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(empty));
+      const stored = JSON.parse(localStorage.getItem(storageKey) || "null");
+      if (!stored || stored.key !== "" || stored.key2 !== "" || stored.savedAt !== empty.savedAt || stored.channels) throw new Error("Browser configuration clear readback did not match");
+    }
+    catch (error) { localError ||= error; }
+  }
+  if (localError) throw new Error("配置数据库已清除，但浏览器副本未能完全清除，请重试", { cause: localError });
+  memoryApiConfig = empty;
 }
 
 function defaultApiBaseUrl() {
@@ -326,23 +425,96 @@ const apiForm = document.querySelector("[data-api-form]");
 const apiKeyInput = document.querySelector("[data-api-key]");
 const apiKey2Input = document.querySelector("[data-api-key-2]");
 
+if (apiForm) {
+  const previousSaveBeforeClose = window.wandouSaveBeforeClose;
+  window.wandouSaveBeforeClose = async (...args) => {
+    if (apiConfigBusy) return { success: false, busy: true, error: "API 设置正在写入，请完成后再关闭或更新" };
+    if (typeof previousSaveBeforeClose === "function") return previousSaveBeforeClose(...args);
+    return { success: true, busy: false };
+  };
+}
+
+function setApiFeedback(message = "") {
+  if (!apiForm) return;
+  let feedback = apiForm.querySelector("[data-api-feedback]");
+  if (!feedback) {
+    feedback = document.createElement("p");
+    feedback.dataset.apiFeedback = "";
+    feedback.className = "api-feedback";
+    feedback.setAttribute("role", "alert");
+    feedback.setAttribute("aria-live", "polite");
+    feedback.style.cssText = "margin:0;font-size:13px;line-height:1.6;overflow-wrap:anywhere;";
+    apiForm.appendChild(feedback);
+  }
+  feedback.textContent = message;
+  feedback.hidden = !message;
+}
+
 function fillApiForm() {
   const config = readApiConfig();
   if (apiKeyInput) apiKeyInput.value = config.key || "";
   if (apiKey2Input) apiKey2Input.value = config.key2 || "";
+  apiFormBaseline = { key: config.key || "", key2: config.key2 || "" };
+  apiEditedKeys.clear();
 }
 
 function openApiModal() {
   if (!apiModal) return;
+  if (!apiModal.hidden) {
+    (apiConfigBusy ? document.querySelector("[data-api-close]") : apiKeyInput)?.focus({ preventScroll: true });
+    return;
+  }
+  apiModalRevision++;
+  apiReturnFocus = document.activeElement;
   fillApiForm();
+  apiFormDirty = false;
   resetApiKeyVisibility();
   apiModal.hidden = false;
+  apiForm?.setAttribute("role", "dialog");
+  apiForm?.setAttribute("aria-modal", "true");
+  apiForm?.setAttribute("aria-label", "API 设置");
+  (apiConfigBusy ? document.querySelector("[data-api-close]") : apiKeyInput)?.focus({ preventScroll: true });
 }
 
 function closeApiModal() {
+  apiModalRevision++;
   if (apiModal) apiModal.hidden = true;
   resetApiKeyVisibility();
+  if (apiReturnFocus?.isConnected) apiReturnFocus.focus({ preventScroll: true });
+  apiReturnFocus = null;
 }
+
+function setApiConfigBusy(value) {
+  apiConfigBusy = value;
+  apiForm?.setAttribute("aria-busy", String(value));
+  for (const control of [apiKeyInput, apiKey2Input, apiForm?.querySelector('[type="submit"]'), document.querySelector("[data-api-clear]")]) {
+    if (control) control.disabled = value;
+  }
+}
+
+apiForm?.addEventListener("input", (event) => {
+  if (event.target === apiKeyInput || event.target === apiKey2Input) {
+    apiFormDirty = true;
+    apiEditedKeys.add(event.target === apiKeyInput ? "key" : "key2");
+  }
+});
+document.addEventListener("keydown", (event) => {
+  // A native storage/settings dialog owns its own keyboard interaction.
+  if (!apiModal || apiModal.hidden || document.querySelector("dialog[open]")) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeApiModal();
+  } else if (event.key === "Tab") {
+    const controls = [...apiModal.querySelectorAll('button, input, select, textarea, a[href], [tabindex]')]
+      .filter(control => !control.disabled && control.tabIndex >= 0 && control.getClientRects().length > 0);
+    if (!controls.length) return;
+    const first = controls[0], last = controls[controls.length - 1], active = document.activeElement;
+    if (!apiModal.contains(active) || (event.shiftKey ? active === first : active === last)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus({ preventScroll: true });
+    }
+  }
+});
 
 function setApiKeyVisibility(input, button, visible) {
   if (!input || !button) return;
@@ -383,49 +555,59 @@ document.querySelector("[data-api-open]")?.addEventListener("click", openApiModa
 document.querySelector("[data-api-close]")?.addEventListener("click", closeApiModal);
 apiForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (apiConfigBusy) return;
   const key = apiKeyInput?.value.trim() || "";
   const key2 = apiKey2Input?.value.trim() || "";
   if (!key) {
     apiKeyInput?.focus();
+    setApiFeedback("请先填写渠道 1 API 密钥");
     showToast("请先填写渠道 1 API 密钥");
     return;
   }
-  const submitButton = apiForm.querySelector('[type="submit"]');
-  if (submitButton) {
-    submitButton.disabled = true;
-    submitButton.setAttribute("aria-busy", "true");
-  }
+  const modalRevision = apiModalRevision;
+  const editedKeys = ["key", "key2"].filter(name => apiEditedKeys.has(name) || (name === "key" ? key : key2) !== apiFormBaseline[name]);
+  setApiConfigBusy(true);
   showToast("正在保存 API 设置…");
   try {
-    const result = await persistSharedApiConfig(key, key2);
-    closeApiModal();
+    const result = await persistSharedApiConfig(key, key2, { editedKeys });
+    apiFormDirty = false;
+    setApiFeedback();
+    if (modalRevision === apiModalRevision) closeApiModal();
+    else if (!apiModal.hidden) fillApiForm();
     showToast(result.localSaved ? "API 设置已保存" : "API 设置已保存到本地数据库");
   } catch (error) {
-    showToast(`保存失败：${error?.message || "请稍后重试"}`);
+    const message = `保存失败：${error?.message || "请稍后重试"}`;
+    setApiFeedback(message);
+    showToast(message);
   } finally {
-    if (submitButton) {
-      submitButton.disabled = false;
-      submitButton.removeAttribute("aria-busy");
-    }
+    setApiConfigBusy(false);
   }
 });
 document.querySelector("[data-api-clear]")?.addEventListener("click", async () => {
-  memoryApiConfig = { url: defaultApiBaseUrl(), key: "", key2: "", savedAt: new Date().toISOString() };
+  if (apiConfigBusy) return;
+  setApiConfigBusy(true);
   try {
-    localStorage.removeItem(apiStorageKey);
-    localStorage.removeItem("aiCanvasApi");
-  } catch (_error) {}
-  try {
-    await window.WandouLocalCache?.writeJson?.(durableApiConfigKey, memoryApiConfig);
-  } catch (_error) {}
-  fillApiForm();
-  showToast("API 设置已清除");
+    await clearSharedApiConfig();
+    apiFormDirty = false;
+    setApiFeedback();
+    fillApiForm();
+    resetApiKeyVisibility();
+    showToast("API 设置已清除");
+  } catch (error) {
+    const message = `清除未完成：${error?.message || "请重试"}`;
+    setApiFeedback(message);
+    showToast(message);
+  } finally {
+    setApiConfigBusy(false);
+  }
 });
 apiModal?.addEventListener("click", (event) => {
   if (event.target === apiModal) closeApiModal();
 });
 
-hydrateDurableApiConfig().then(() => fillApiForm());
+hydrateDurableApiConfig().then(() => {
+  if (!apiConfigBusy && !apiFormDirty) fillApiForm();
+});
 
 function setStatus(text) {
   document.querySelectorAll(".status-pill").forEach((item) => {

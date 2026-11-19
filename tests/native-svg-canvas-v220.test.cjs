@@ -17,7 +17,7 @@ async function fixture(fn,{width=1440,theme='dark',respond}={}){
    external.push(route.request().url());return route.abort();
   });
   await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);
-  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
   await page.evaluate(({theme})=>{
    document.body.classList.toggle('dark-theme',theme==='dark');document.documentElement.dataset.theme=theme;
    apiKeyInput.value='synthetic-never-paid';nodes=[];links=[];nodeId=1;
@@ -43,7 +43,7 @@ for(const theme of ['light','dark']) test(`SVG format controls and native reques
 
 test('SVG save/reopen and download cancellation preserve original UTF8 bytes and no extra API calls',()=>fixture(async(page,calls)=>{
  await page.evaluate(async()=>{generator.imageOutputFormat='svg';await generateFromNode(generator.id);await saveCanvasState();});
- await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+ await page.reload();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady);
  const output=await page.evaluate(async()=>{
   const n=nodes.find(n=>n.type==='result');window.exported=[];
   window.wandouShell={saveFileAs:async(name,bytes,mime)=>{exported.push({name,mime,bytes:Array.from(bytes)});return{success:false,canceled:true}}};

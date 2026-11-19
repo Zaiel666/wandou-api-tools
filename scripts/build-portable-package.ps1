@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
     [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot),
@@ -44,7 +44,7 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $launcher)) { throw 'Po
 # Compile the updater from the reviewed source for every package; never ship a
 # stale binary that can move or remove a program-adjacent project-data folder.
 $updater = Join-Path $runtimeRoot 'resources\portable-updater.exe'
-& $compiler /nologo /target:winexe /optimize+ /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/out:$updater" (Join-Path $desktopRoot 'portable-updater.cs')
+& $compiler /nologo /target:winexe /optimize+ /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/out:$updater" (Join-Path $desktopRoot 'portable-updater.cs') (Join-Path $desktopRoot 'managed-update-core.cs')
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $updater)) { throw 'Portable updater compilation failed.' }
 
 Copy-Item -LiteralPath (Join-Path $desktopRoot 'web-launcher.html') -Destination $webLauncher
@@ -60,13 +60,15 @@ Set-Content -LiteralPath (Join-Path $compatibilityApp 'VERSION.txt') -Value "v$V
 
 “程序文件”和“resources”是隐藏的运行目录，请勿移动或删除。
 便携 ZIP 解压后可直接运行。另有“wandou-ai-tools-setup-$Version.exe”可选择安装目录，并自动创建桌面和开始菜单快捷方式；无需管理员权限。
-检测到新版本时，先保存画布，再点击更新即可自动覆盖并重新启动。
+v2.0.22 及更早版本请先使用本安装包覆盖原目录，完成一次安全更新过渡；不要通过旧版本的在线更新器升级。
+本版使用独立安全更新通道。通道尚未开放或不可用时，可从官方发布页手动下载安装包；不会回退到旧 latest 通道。
+后续安全更新先保存画布，再校验完整程序清单，仅替换已识别程序文件。自建文件保留；冲突时停止。旧程序事务备份保留，不自动清理。
 节点画布项目与原图默认保存在软件文件夹内的“豌豆AI数据”，也可以在存储设置中选择独立目录。
-已有自定义目录继续使用原位置；旧目录迁移成功后仍保留备份。API 配置和工作台浏览器存储仍保留在 Windows 用户配置目录（通常为 %APPDATA%\豌豆AI），存储设置中可查看实际路径与分类占用。
+已有自定义目录继续使用原位置；旧目录迁移成功后仍保留备份。API 设置的磁盘副本（local-data）和工作台浏览器存储（browser-session）跟随所选数据目录保存；少量程序主配置、GPU 缓存及旧版兼容副本仍可能保留在 Windows 用户配置目录（通常为 %APPDATA%\豌豆AI）。存储设置中可查看实际路径与分类占用。
 网页版使用所选浏览器自己的存储，不会读取“豌豆AI数据”或桌面工作台项目；更换浏览器、清除网站数据或移动网页版文件可能导致旧项目不可见，请先导出备份。
 下载图片时自行选择保存位置，透明图片保持 PNG 透明通道。
 手动升级前请保存并退出，只替换程序文件，完整保留“豌豆AI数据”。移动软件时请移动整个文件夹，包含其中的数据目录。
-安装器覆盖同一目录时保留项目与原图，并将旧程序保留在同级 .wandou-install-backup-* 隐藏目录中。失败会回退；请勿直接删除“豌豆AI数据”或工作台配置目录。
+安装器覆盖同一目录时保留项目与原图，并将旧程序保留在同级 .wandou-program-backup-* 目录中。失败会回退；请勿直接删除事务备份、“豌豆AI数据”或工作台配置目录。
 支持中文及常用目录。安装时根据包内最长路径和更新临时目录、回退目录所需余量检查目标深度；过深目录在写入前明确提示，请选择更靠近磁盘根目录的位置。
 "@ | Set-Content -LiteralPath $guide -Encoding UTF8
 
@@ -89,6 +91,9 @@ if ((Get-Content -LiteralPath (Join-Path $runtimeRoot 'resources\app\VERSION.txt
 }
 
 New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
+& node (Join-Path $PSScriptRoot 'write-program-manifest.cjs') $packageRoot $Version (Join-Path $desktopRoot 'update-baselines.json')
+if ($LASTEXITCODE -ne 0) { throw 'Managed program manifest generation failed.' }
+[IO.File]::SetAttributes((Join-Path $packageRoot '.wandou-program-manifest.json'), [IO.FileAttributes]::Hidden)
 if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::CreateFromDirectory($packageRoot, $zip, [IO.Compression.CompressionLevel]::Optimal, $false)
@@ -98,6 +103,7 @@ try {
     $names = @($archive.Entries | Select-Object -ExpandProperty FullName)
     foreach ($required in @(
         '豌豆AI工具.exe',
+        '.wandou-program-manifest.json',
         '网页版.html',
         '使用说明.txt',
         'resources/app/VERSION.txt',

@@ -6,7 +6,7 @@ async function fixture(fn){
  try{
   const page=await browser.newPage();await page.route(/^https?:/,r=>r.abort());
   await page.goto(pathToFileURL(path.resolve(__dirname,'../app/ai-node-canvas-test.html')).href);
-  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&!!window.WandouImageOutput);
+  await page.waitForFunction(()=>document.body.dataset.canvasReady==='true'&&apiInitialConfigReady&&!!window.WandouImageOutput);
   await page.evaluate(()=>{const c=document.createElement('canvas');c.width=128;c.height=64;const ctx=c.getContext('2d');ctx.fillStyle='#ff0000';ctx.fillRect(32,16,64,32);window.outputReviewPng=c.toDataURL('image/png')});
   await fn(page);
  }finally{await browser.close()}

@@ -23,6 +23,7 @@ function fixture() {
     return target[key].bind(target);
   } });
   const env = { fs: { ...fs, promises }, path, crypto, Date: { now: () => clock },
+    require: name => require(path.resolve(desktop, name)),
     safeCanvasBackupId: (value, fallback) => String(value || fallback).replace(/[^a-z0-9_-]/gi, '_'),
     canvasBackupDirectory: (folder, project) => path.join(root, folder, project),
     canvasBackupRootDirectory: () => root,

@@ -435,7 +435,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 @media (max-width: 1120px) {
   .desktop-bar { gap: 5px; }
-  .version-text { display: none; }
+  .version-text { display: inline-flex; flex: none; }
   .brand { padding: 0 9px; }
   .tab-list { max-width: 54vw; }
   .tab { min-width: 102px; max-width: 160px; }

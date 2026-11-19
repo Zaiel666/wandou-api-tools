@@ -177,7 +177,8 @@
       infoBlob=blob;infoFacts=facts;asset.fileFacts={...facts,animation:undefined};
       const provenance=asset.resolutionProcessing==='native-vector'?' · 模型原生 SVG，可编辑矢量路径':asset.resolutionProcessing==='local-upscale'?' · 本地放大，非原生生成':'';
       const animationFacts=facts.animated?' · '+facts.animation.frameCount+' 帧 · '+(facts.animation.durationMs/1000).toFixed(2)+' 秒'+(facts.animation.loopCount===0?' · 循环播放':facts.animation.loopCount===null?' · 单次播放':' · 重复 '+facts.animation.loopCount+' 次'):'';
-      document.getElementById('assetFileFacts').textContent=facts.format+' · '+facts.width+' × '+facts.height+(facts.vector?' 画布':' 像素')+' · '+formatBytes(facts.bytes)+animationFacts+provenance;
+      const comparison=(facts.vector||facts.animated)?window.WandouImageOutputContract.compare(asset.outputRequest,{format:facts.vector?'svg':'gif',width:facts.width,height:facts.height,frameCount:facts.animation?.frameCount,frameDurationsMs:facts.animation?.frameDurationsMs}):null;
+      document.getElementById('assetFileFacts').textContent=facts.format+' · '+facts.width+' × '+facts.height+(facts.vector?' 画布':' 像素')+' · '+formatBytes(facts.bytes)+animationFacts+provenance+(comparison?.message?' · '+comparison.message:'');
       if(facts.animated){animationMedia=facts.animation;animationPreview.hidden=false;pauseAnimation();document.getElementById('assetAnimationNote').textContent=facts.animation.previewFallback?'静态预览暂不可用；原始动图仍可播放和下载。':motionPreference.matches?'已遵循减少动态效果设置，默认静止；可手动播放，暂停后回到首帧。':'默认显示静态首帧；暂停后回到首帧，原文件不变。';}
       updateFormatNote();
       const meta=content.querySelector('[data-file-meta="'+assets.indexOf(asset)+'"]');if(meta)meta.textContent=document.getElementById('assetFileFacts').textContent;
@@ -341,8 +342,8 @@
       locationPath.title = result.path;
       locationDetails.hidden = false;
       locationStatus.textContent = result.storageFormat === "data-url"
-        ? "这是由软件管理的项目原图存储文件（.data），资源管理器不能直接预览。点击“另存为图片”，选择位置后即可保存为可查看的图片；无需修改或移动这个存储文件。"
-        : "这是由软件管理的项目原图存储文件。";
+        ? `当前仍使用兼容原件（.data），资源管理器不能直接预览。${result.standardization?.error ? result.standardization.error + '。' : ''}可点击“另存为图片”选择位置导出；请保留此文件。`
+        : "这是可直接查看的标准原图，像素、动画和文件字节保持原样。旧 .data 兼容副本仍保留用于回退，会额外占用空间；请勿移动或删除软件管理的文件。";
       locationOpenButton.disabled = !window.wandouShell?.showCanvasMediaInFolder;
     } catch (_error) {
       if (revision === locationRevision && locationDialog.open) locationStatus.textContent = "暂时无法读取原文件位置，请稍后重试。";
@@ -444,6 +445,7 @@
           imageOutputFormat: node.imageOutputFormat || node.outputFormat || "",
           animated,
           animationFrameCount: node.animationFrameCount,
+          outputRequest: window.WandouImageOutputContract.requestSnapshot(node.outputRequest),
           width: node.width,
           height: node.height,
           ...project

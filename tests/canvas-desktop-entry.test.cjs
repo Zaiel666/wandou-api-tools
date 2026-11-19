@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '../app/ai-node-canvas-test.html'), 'utf8');
 const start = html.indexOf('(async function initApp() {');
-const guard = html.slice(start + '(async function initApp() {'.length, html.indexOf('      await loadApiConfig();', start));
+const guard = html.slice(start + '(async function initApp() {'.length, html.indexOf('      const appRoot =', start));
 for (const bridge of ['wandouShell', 'webview']) {
   for (const production of [true, false]) {
     test(`${bridge}: ${production ? 'production initializes' : 'desktop test URL redirects without clearing UI'}`, () => {

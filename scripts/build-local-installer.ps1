@@ -41,7 +41,7 @@ internal static class InstallBuild { public const string Version="$Version"; pub
 </assembly>
 '@ | Set-Content -LiteralPath $manifest -Encoding UTF8
 $compiler='C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-& $compiler /nologo /target:winexe /optimize+ /platform:x64 /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/win32manifest:$manifest" "/win32icon:$repo\app\logo.ico" "/resource:$package,wandou.package.zip" "/out:$installer" "$repo\desktop-client\local-installer.cs" $metadata
+& $compiler /nologo /target:winexe /optimize+ /platform:x64 /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/win32manifest:$manifest" "/win32icon:$repo\app\logo.ico" "/resource:$package,wandou.package.zip" "/out:$installer" "$repo\desktop-client\local-installer.cs" "$repo\desktop-client\managed-update-core.cs" $metadata
 if($LASTEXITCODE -ne 0 -or -not(Test-Path -LiteralPath $installer)){throw 'Installer compilation failed'}
 Write-Output ('Installer SHA256: '+(Get-Sha256 $installer))
 Write-Output "Unsigned local installer created: $installer"

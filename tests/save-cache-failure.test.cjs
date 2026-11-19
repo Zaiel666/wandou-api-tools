@@ -1,7 +1,8 @@
 const assert = require('node:assert/strict');
+const test = require('node:test');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const source = fs.readFileSync(require('node:path').join(__dirname, '../app/ai-node-canvas.html'), 'utf8');
+const source = fs.readFileSync(require('node:path').join(process.env.WANDOU_TEST_APP_ROOT||require('node:path').join(__dirname,'../app'),'ai-node-canvas.html'), 'utf8');
 const save = source.slice(source.indexOf('async function saveCanvasStateNow('), source.indexOf('function saveCanvasState()'));
 const close = source.slice(source.indexOf('window.wandouSaveBeforeClose ='), source.indexOf('document.addEventListener("visibilitychange"'));
 async function run({desktop = true, backup = true, serializeFailure = false, empty = false, queueHang = false, browserHang = false} = {}) {
@@ -9,7 +10,7 @@ async function run({desktop = true, backup = true, serializeFailure = false, emp
   const quota = () => { throw new Error('QuotaExceededError'); };
   const sandbox = {
     window: {wandouShell: desktop ? {writeCanvasBackup: true} : {}},
-    canvasRecoveryBlocked: false, saveTimer: null, canvasSaveQueue: Promise.resolve(),
+    apiConfigBusy: false, canvasRecoveryBlocked: false, saveTimer: null, canvasSaveQueue: Promise.resolve(),
     clearTimeout() {}, setTimeout: callback => { callback(); return 1; }, projects: [{id: 'test'}], activeProjectId: 'test',
     console: {warn() {}}, warnCanvasStorageSkipped() {},
     createCanvasSaveContext: () => context, saveCanvasStateImmediate: () => false,
@@ -23,7 +24,7 @@ async function run({desktop = true, backup = true, serializeFailure = false, emp
   vm.runInContext(save + '\n' + close, sandbox);
   return sandbox.window.wandouSaveBeforeClose();
 }
-(async () => {
+test('legacy canvas cache failures preserve verified desktop saves and refuse disk or media failures', async () => {
   assert.equal((await run()).success, true);
   assert.equal((await run({empty: true})).success, true);
   assert.equal((await run({backup: false})).success, false);
@@ -34,4 +35,4 @@ async function run({desktop = true, backup = true, serializeFailure = false, emp
   assert.equal(failed.success, false);
   assert.match(failed.error, /media failure/);
   console.log('PASS: cache failure does not block verified desktop saves; disk/media failures still block close');
-})().catch(error => { console.error(error); process.exitCode = 1; });
+});

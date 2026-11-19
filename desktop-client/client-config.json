@@ -3,5 +3,8 @@
   "githubRepository": "wandou-api-tools",
   "assetName": "wandou-ai-tools-windows-x64.zip",
   "checksumAssetName": "wandou-ai-tools-windows-x64.zip.sha256",
-  "announcementVersion": "2026-08-31-1"
+  "announcementVersion": "2026-08-31-1",
+  "updateChannelTag": "desktop-safe-v1",
+  "updateManifestAsset": "update-manifest.json",
+  "updaterProtocol": 2
 }

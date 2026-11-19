@@ -36,8 +36,8 @@ body.home-test-page .home-test-lower-title{margin-top:36px}
 body.home-test-page .home-cover-card:focus-visible{outline:2px solid var(--test-ink);outline-offset:4px}
 .home-cover-card:focus-visible .cover-reveal{transform:rotateX(0)}
 /* Wide center banner with quieter neighboring slides and staggered copy. */
-body.home-test-page .home-carousel{height:clamp(215px,20vw,290px);margin-bottom:32px}
-.home-carousel .home-slide{inset:8px auto 24px 12%;width:76%;border-radius:18px;transition:transform .7s cubic-bezier(.22,.8,.24,1),opacity .7s,filter .7s}
+body.home-test-page .home-carousel{--home-slide-bottom:24px;height:clamp(215px,20vw,290px);margin-bottom:32px}
+.home-carousel .home-slide{inset:var(--home-slide-top) auto var(--home-slide-bottom) 12%;width:76%;border-radius:18px;transition:transform .7s cubic-bezier(.22,.8,.24,1),opacity .7s,filter .7s}
 .home-slide[data-position=previous]{transform:translateX(-25%) scale(.92);filter:brightness(.75)}
 .home-slide[data-position=next]{transform:translateX(25%) scale(.92);filter:brightness(.75)}
 .home-carousel .home-slide-copy{transition:opacity .45s,translate .65s;translate:0 12px;opacity:0}

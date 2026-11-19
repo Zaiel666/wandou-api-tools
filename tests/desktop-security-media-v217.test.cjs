@@ -28,7 +28,7 @@ test('all desktop IPC is gated; remote, subframe and fake shell cannot invoke pr
     for(const denied of [remote,subframe,fake,event('file:///C:/private/secret.html')]){
       assert.equal((await registry.get(channel)(denied)).success,false,channel);
     }
-    if(['desktop:shell-ready','desktop:cancel-close','desktop:confirm-close','desktop:start-update'].includes(channel)) assert.equal((await registry.get(channel)(local)).success,false);
+    if(['desktop:shell-ready','desktop:cancel-close','desktop:confirm-close','desktop:start-update','desktop:open-update-downloads'].includes(channel)) assert.equal((await registry.get(channel)(local)).success,false);
     else assert.equal((await registry.get(channel)(local)).success,true);
     assert.equal((await registry.get(channel)(shellEvent)).success,true);
     policy.on(ipc,channel,()=>calls++);const before=calls;events.get(channel)(remote);assert.equal(calls,before);
@@ -52,12 +52,12 @@ test('main updater ignores forged URLs/save flags and refuses incomplete workflo
   const config={githubOwner:'Zaiel666',githubRepository:'wandou-api-tools',assetName:'app.zip'};
   const base='https://github.com/Zaiel666/wandou-api-tools/releases/download/v2.0.17/';
   let checked=0,saved=0,downloads=0;
-  const env={app:{isPackaged:true},updateInProgress:false,require:p=>p==='./update-policy.cjs'?updatePolicy:require(p),
-    checkForUpdates:async()=>{checked++;return{available:true,latestVersion:'2.0.17',downloadUrl:base+'app.zip',checksumUrl:base+'app.zip.sha256'}},
+  const env={app:{isPackaged:true},updateInProgress:false,require:p=>p.startsWith('./')?require(path.join(desktop,p)):require(p),
+    checkForUpdates:async()=>{checked++;return{available:true,updaterProtocol:2,latestVersion:'2.0.17',downloadUrl:base+'app.zip',checksumUrl:base+'app.zip.sha256'}},
     readClientConfig:()=>config,verifyWorkflowsForUpdate:async()=>{saved++;throw Error('仍在生成')},sendUpdateStatus:()=>{},
     downloadFileWithFallback:async()=>downloads++,fs,path,os,crypto};
   vm.runInNewContext(slice('async function startPortableUpdate(', 'async function verifyWorkflowsForUpdate('),env);
-  const result=await env.startPortableUpdate({available:true,latestVersion:'2.0.17',saveVerified:true,saveVerifiedAt:Date.now(),downloadUrl:'https://evil.test/a',checksumUrl:'https://evil.test/b'});
+  const result=await env.startPortableUpdate({available:true,updaterProtocol:2,latestVersion:'2.0.17',saveVerified:true,saveVerifiedAt:Date.now(),downloadUrl:'https://evil.test/a',checksumUrl:'https://evil.test/b'});
   assert.equal(result.started,false);assert.equal(checked,1);assert.equal(saved,1);assert.equal(downloads,0);assert.equal(env.updateInProgress,false);
 });
 
@@ -70,45 +70,52 @@ test('update busy gate obtains save result from shell itself, not caller payload
 });
 
 test('official updater verifies checksum, rechecks work after download, and only then hands off', async()=>{
-  for(const scenario of ['success','checksum-mismatch','late-generation']){
+  for(const scenario of ['success','checksum-mismatch','late-generation','handoff-save-failure']){
     const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wandou-update-v217-'));
     const config={githubOwner:'Zaiel666',githubRepository:'wandou-api-tools',assetName:'app.zip'};
     const base='https://github.com/Zaiel666/wandou-api-tools/releases/download/v2.0.17/';
     const archive=Buffer.from('synthetic ZIP, never executed'),sources=[],statuses=[];
     let saves=0,spawned=0,quitScheduled=false;
     const env={app:{isPackaged:true,quit:()=>{}},updateInProgress:false,allowWindowClose:false,
-      require:p=>p==='./update-policy.cjs'?updatePolicy:require(p),path,os,crypto,Buffer,process:{pid:12345,resourcesPath:dir},
+      require:p=>p.startsWith('./')?require(path.join(desktop,p)):require(p),path,os,crypto,Buffer,process:{pid:12345,resourcesPath:dir},
       fs:{existsSync:fs.existsSync,promises:{...fs.promises,mkdtemp:async()=>dir,copyFile:async(_from,to)=>fs.promises.writeFile(to,'stub updater')}},
-      readClientConfig:()=>config,checkForUpdates:async()=>({available:true,latestVersion:'2.0.17',downloadUrl:base+'app.zip',checksumUrl:base+'app.zip.sha256'}),
-      verifyWorkflowsForUpdate:async()=>{saves++;if(scenario==='late-generation'&&saves===2)throw Error('仍在生成')},
+      readClientConfig:()=>config,checkForUpdates:async()=>({available:true,updaterProtocol:2,latestVersion:'2.0.17',downloadUrl:base+'app.zip',checksumUrl:base+'app.zip.sha256'}),
+      verifyWorkflowsForUpdate:async()=>{saves++;if((scenario==='late-generation'&&saves===2)||(scenario==='handoff-save-failure'&&saves===3))throw Error('仍在生成')},
       sendUpdateStatus:(...args)=>statuses.push(args),portableInstallContext:()=>({installDirectory:dir,executable:'fake.exe'}),
       downloadFileWithFallback:async(url,destination)=>{sources.push(url);await fs.promises.writeFile(destination,url.endsWith('.sha256')?(scenario==='checksum-mismatch'?'0'.repeat(64):crypto.createHash('sha256').update(archive).digest('hex')):archive)},
       spawn:(_exe,args)=>{spawned++;fs.writeFileSync(args[args.indexOf('--ready')+1],'ready');const child=new(require('node:events').EventEmitter)();child.unref=()=>{};return child},
       setInterval,clearInterval,setTimeout:()=>{quitScheduled=true}};
     try{
       vm.runInNewContext(slice('async function startPortableUpdate(', 'async function verifyWorkflowsForUpdate('),env);
-      const result=await env.startPortableUpdate({available:true,latestVersion:'2.0.17',downloadUrl:'https://evil.test/a',checksumUrl:'https://evil.test/b'});
+      const result=await env.startPortableUpdate({available:true,updaterProtocol:2,latestVersion:'2.0.17',downloadUrl:'https://evil.test/a',checksumUrl:'https://evil.test/b'});
       assert.deepEqual(sources,[base+'app.zip',base+'app.zip.sha256']);
-      assert.equal(result.started,scenario==='success');assert.equal(spawned,scenario==='success'?1:0);assert.equal(quitScheduled,scenario==='success');
-      assert.equal(saves,scenario==='checksum-mismatch'?1:2);
+      assert.equal(result.started,scenario==='success');assert.equal(spawned,['success','handoff-save-failure'].includes(scenario)?1:0);assert.equal(quitScheduled,scenario==='success');
+      assert.equal(saves,scenario==='checksum-mismatch'?1:scenario==='late-generation'?2:3);
       if(scenario!=='success'){assert.equal(env.updateInProgress,false);assert.equal(env.allowWindowClose,false)}
+      if(scenario==='handoff-save-failure'){assert.equal(fs.existsSync(path.join(dir,'updater-ready.txt.commit')),false);assert.equal(fs.readFileSync(path.join(dir,'updater-ready.txt.cancel'),'utf8'),'cancel');}
+      if(scenario==='success')assert.equal(fs.readFileSync(path.join(dir,'updater-ready.txt.commit'),'utf8'),'commit');
     }finally{fs.rmSync(dir,{recursive:true,force:true})}
   }
 });
 
 test('network redirects are validated before following, including malicious redirects from official URLs',async()=>{
   const config={githubOwner:'Zaiel666',githubRepository:'wandou-api-tools',assetName:'app.zip'},seen=[];
-  const env={AbortController,setTimeout,clearTimeout,URL,readClientConfig:()=>config,require:p=>p==='./update-policy.cjs'?updatePolicy:require(p),
-    net:{fetch:async url=>{seen.push(url);return{status:302,headers:{get:()=> 'https://evil.test/payload'}}}}};
+  const selectedSession={fetch:async function(url,request){assert.equal(this,selectedSession);seen.push({url,method:request.method||'GET',redirect:request.redirect});return{status:302,headers:{get:()=> 'https://evil.test/payload'}}}};
+  const env={AbortController,setTimeout,clearTimeout,URL,readClientConfig:()=>config,require:p=>p.startsWith('./')?require(path.join(desktop,p)):require(p),
+    getApplicationSession:()=>selectedSession,net:{fetch:()=>{throw Error('Legacy/default transport must not be used');}}};
   vm.runInNewContext(slice('async function fetchWithTimeout(', 'function normalizeUpdateInfo('),env);
   await assert.rejects(env.fetchWithTimeout('https://github.com/Zaiel666/wandou-api-tools/releases/latest'),/官方仓库/);
-  assert.equal(seen.length,1);assert.ok(seen.every(url=>url.startsWith('https://github.com/')));
+  assert.equal(seen.length,1);assert.deepEqual(seen,[{url:'https://github.com/Zaiel666/wandou-api-tools/releases/latest',method:'GET',redirect:'manual'}]);
+  seen.length=0;selectedSession.fetch=async function(url,request){assert.equal(this,selectedSession);seen.push({url,method:request.method||'GET',redirect:request.redirect});return seen.length===1?{status:302,headers:{get:()=> 'https://release-assets.githubusercontent.com/synthetic/app.zip'}}:{status:200};};
+  assert.equal((await env.fetchWithTimeout('https://github.com/Zaiel666/wandou-api-tools/releases/download/v2.0.28/app.zip',{method:'GET'})).status,200);
+  assert.deepEqual(seen.map(x=>x.url),['https://github.com/Zaiel666/wandou-api-tools/releases/download/v2.0.28/app.zip','https://release-assets.githubusercontent.com/synthetic/app.zip']);assert.ok(seen.every(x=>x.method==='GET'&&x.redirect==='manual'));
 });
 
 test('hashed media validates direct writes, detects corrupt existing content, and repairs from verified original', async()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wandou-media-v217-'));
   try{
-    const env={fs,path,crypto,process,safeCanvasBackupId:v=>v,canvasMediaPath:id=>path.join(dir,id+'.data'),canvasMediaRootDirectory:()=>dir};
+    const canvasMediaFiles=require(path.join(desktop,'canvas-media-files.cjs'));
+    const env={fs,path,crypto,process,canvasMediaFiles,canvasStandardMedia:{read:id=>canvasMediaFiles.readValue(dir,id),ensure:id=>canvasMediaFiles.ensureStandard(dir,id)},safeCanvasBackupId:v=>v,canvasMediaPath:id=>path.join(dir,id+'.data'),canvasMediaRootDirectory:()=>dir};
     vm.runInNewContext(slice('async function hasCanvasMedia(', 'function canvasBackupDirectory(')+'\n'+slice('function canvasMediaStorageId(', 'async function compactEmbeddedCanvasMedia('),env);
     const value='data:image/png;base64,aGVsbG8=',id=idFor(value);
     assert.equal((await env.writeCanvasMedia({id,value})).success,true);
