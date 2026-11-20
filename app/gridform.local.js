@@ -3,6 +3,43 @@
 
   const $ = (selector) => document.querySelector(selector);
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  let localExportInProgress = false;
+  let closeSaveJob = null;
+
+  async function saveBeforeClose() {
+    const gridform = window.Gridform;
+    if (!gridform?.ready || typeof gridform.saveDraft !== "function" || typeof gridform.serialize !== "function") {
+      return { success: false, busy: true, error: "网格海报正在初始化，请稍后关闭。" };
+    }
+    if (localExportInProgress) {
+      return { success: false, busy: true, error: "海报正在导出，请等待导出完成后关闭。" };
+    }
+    try {
+      // Inline editing also updates layout on blur; commit that state before taking the snapshot.
+      document.activeElement?.blur?.();
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const snapshot = gridform.serialize();
+        // The bundled API resolves true only after the IndexedDB transaction completes
+        // (or the existing localStorage fallback succeeds), and returns false on write errors.
+        if (await gridform.saveDraft(false) !== true) {
+          return { success: false, error: "海报草稿保存失败，请检查存储空间后重试。" };
+        }
+        if (localExportInProgress) {
+          return { success: false, busy: true, error: "海报正在导出，请等待导出完成后关闭。" };
+        }
+        if (gridform.serialize() === snapshot) return { success: true };
+      }
+      return { success: false, busy: true, error: "海报仍有新的编辑，请稍后再次关闭。" };
+    } catch (error) {
+      return { success: false, error: `海报草稿保存失败：${error?.message || "存储不可用"}` };
+    }
+  }
+
+  // Register before engine startup so a slow/failed initialization cannot be mistaken for no draft.
+  window.wandouSaveBeforeClose = () => {
+    if (!closeSaveJob) closeSaveJob = saveBeforeClose().finally(() => { closeSaveJob = null; });
+    return closeSaveJob;
+  };
 
   function toast(message) {
     const target = $("#toast");
@@ -12,15 +49,15 @@
     toast.timer = setTimeout(() => target.classList.remove("visible"), 3000);
   }
 
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  async function downloadBlob(blob, filename) {
+    if (!window.WandouImageExport?.save) throw new Error("文件保存组件未就绪，请重新打开海报后重试");
+    const result = await window.WandouImageExport.save({ blob, filename, mimeType: blob.type });
+    if (result?.canceled) {
+      toast("已取消导出");
+      return null;
+    }
+    if (result?.success !== true) throw new Error(result?.error || "文件保存失败");
+    return result;
   }
 
   async function waitForGridform() {
@@ -33,8 +70,10 @@
   }
 
   async function exportLocal(format) {
+    if (localExportInProgress) return;
     const button = $("#export");
     const initial = button.innerHTML;
+    localExportInProgress = true;
     button.disabled = true;
     try {
       await document.fonts.ready;
@@ -47,8 +86,8 @@
             button.textContent = `生成 PSD ${done}/${total}`;
           }
         });
-        downloadBlob(result.blob, `GRIDFORM-${state.layout}-${state.config.ratio.replace(":", "x")}-layers-2x.psd`);
-        toast(`PSD 已导出 · ${result.layers.length} 个独立图层`);
+        const saved = await downloadBlob(result.blob, `GRIDFORM-${state.layout}-${state.config.ratio.replace(":", "x")}-layers-2x.psd`);
+        if (saved) toast(`PSD ${saved.started ? "已开始下载" : "已导出"} · ${result.layers.length} 个独立图层`);
         return;
       }
 
@@ -57,13 +96,14 @@
       await PosterEngine.renderPoster(canvas.getContext("2d"), state, { scale: 2 });
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
       if (!blob) throw new Error("PNG 编码失败");
-      downloadBlob(blob, `GRIDFORM-${state.layout}-${state.config.ratio.replace(":", "x")}-2x.png`);
       canvas.width = canvas.height = 1;
-      toast("高清 PNG 已导出");
+      const saved = await downloadBlob(blob, `GRIDFORM-${state.layout}-${state.config.ratio.replace(":", "x")}-2x.png`);
+      if (saved) toast(saved.started ? "高清 PNG 已开始下载" : "高清 PNG 已导出");
     } catch (error) {
       console.error(error);
       toast(`导出失败：${error && error.message ? error.message : "未知错误"}`);
     } finally {
+      localExportInProgress = false;
       button.disabled = false;
       button.innerHTML = initial;
       updateExportLabel();

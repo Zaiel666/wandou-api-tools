@@ -88,7 +88,7 @@ test('workbench boots themed menus, local subject controls, resize handles and 1
  assert.ok(imageCalls>0);assert.match(document.querySelector('#subjectInfo').textContent,/已添加产品/);
  assert.equal(document.querySelector('#poster').width,540);assert.equal(document.querySelector('#poster').height,720);
  const savedWithSubject=JSON.parse(store.get('wandou-type-motion-v1'));assert.equal(savedWithSubject.subject,undefined);assert.equal(savedWithSubject.subjectRef,true);assert.equal(store.get('wandou-type-motion-v1:subject'),'data:image/png;base64,YQ==');
- let exportSize;window.HTMLCanvasElement.prototype.toBlob=function(){exportSize=[this.width,this.height];};document.querySelector('#png').onclick();assert.deepEqual(exportSize,[900,1200]);
+ let exportSize;window.HTMLCanvasElement.prototype.toBlob=function(resolve){exportSize=[this.width,this.height];resolve(null);};await document.querySelector('#png').onclick();assert.deepEqual(exportSize,[900,1200]);assert.match(document.querySelector('#status').textContent,/PNG 编码失败/);
  await window.WandouTypeMotion.update({subject:null});assert.equal(window.WandouTypeMotion.getState().subject,undefined);
  assert.equal(document.querySelector('#removeSubject').disabled,true);
  const backup=JSON.parse(store.get('wandou-type-motion-v1'));assert.equal(backup.subjectImage,undefined);assert.equal(backup.textTexture,undefined);

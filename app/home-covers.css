@@ -1,6 +1,5 @@
 /* Original tool-cover collection; typography and gallery rhythm inspired by aixc4d.com. */
-body.home-test-page .common-tool-grid,
-body.home-test-page .home-test-tool-groups{gap:22px!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+body.home-test-page .common-tool-grid{gap:22px!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
 body.home-test-page #home-tools .home-cover-card,
 body.home-test-page .home-test-tool-groups .home-cover-card{
  display:flex!important;flex-direction:column;gap:0;min-width:0;min-height:0!important;height:auto!important;padding:8px!important;
@@ -44,9 +43,14 @@ body.home-test-page .home-carousel{--home-slide-bottom:24px;height:clamp(215px,2
 .home-carousel [data-position=current] .home-slide-copy{translate:0 0;opacity:1;transition-delay:.12s}
 .home-carousel .poster-landscape{background-image:url('./assets/home-covers/canvas.webp');background-position:right center;background-size:auto 135%;background-repeat:no-repeat;background-color:#d4d8dd}
 .home-carousel .poster-0 .home-slide-art:after{background:linear-gradient(90deg,#e9ebee 0%,#e9ebeee8 33%,#e9ebee00 77%)}
-@media(max-width:1100px){body.home-test-page .home-test-tool-groups{grid-template-columns:repeat(2,minmax(0,1fr))!important}.cover-reveal{padding:12px}.cover-reveal>span{display:none}}
+/* Wide windows use compact image-and-copy entries instead of taller cover posters. */
+@media(min-width:1600px){
+ body.home-test-page #home-tools .home-cover-card{display:grid!important;grid-template-columns:54% minmax(0,1fr);align-items:center;gap:12px}
+ body.home-test-page #home-tools .home-cover-card .module-copy{width:auto;padding:12px 12px 12px 0!important}
+}
+@media(max-width:1100px){.cover-reveal{padding:12px}.cover-reveal>span{display:none}}
 @media(max-width:760px){
- body.home-test-page .common-tool-grid,body.home-test-page .home-test-tool-groups{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+ body.home-test-page .common-tool-grid,body.home-test-page .home-test-tool-groups .tool-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
  body.home-test-page #home-tools .home-cover-card,body.home-test-page .home-test-tool-groups .home-cover-card{padding:5px!important;border-radius:13px!important}
  .home-cover-card .tool-cover{border-radius:9px}
  body.home-test-page #home-tools .home-cover-card .module-copy,body.home-test-page .home-test-tool-groups .home-cover-card .module-copy{padding:11px 5px 8px!important;min-height:91px}

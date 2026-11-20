@@ -396,6 +396,7 @@ button { font: inherit; }
 .dialog-actions {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 9px;
   margin-top: 22px;

@@ -35,7 +35,31 @@ for(const theme of ['light','dark'])for(const width of [1024,1440])test(`update 
   await page.locator('#dialogCancel').click();assert.equal(await page.locator('#dialogOverlay').isVisible(),false);
   await page.evaluate(()=>{window.__fixture={available:true,configured:true,currentVersion:'2.0.23',latestVersion:'2.0.24',updaterProtocol:2,notes:'合成安全更新'};});
   await page.locator('#versionText').click();assert.equal(await page.locator('#dialogDownload').innerText(),'立即更新');
+  // In Edge these are ordinary elements, not Electron guests. Verify the real
+  // readiness gate before installing explicit, isolated guest API fixtures.
+  await page.locator('#dialogDownload').click();
+  await page.waitForFunction(()=>!updateStarted&&document.querySelector('#dialogNotes').textContent.includes('页面仍在加载，尚未确认保存状态'));
+  assert.equal(await page.evaluate(()=>window.__counts.update),0,'Unready tool tabs must not authorize an update');
+  assert.equal(await page.locator('#dialogDownload').innerText(),'重新保存并更新');
+  assert.equal(await page.locator('#dialogDownload').isEnabled(),true);
+  assert.equal(await page.evaluate(()=>document.body.classList.contains('update-in-progress')),false);
+  const guestCount=await page.evaluate(()=>{
+   window.__savedTabIds=[];
+   for(const tab of tabs.values()){
+    const guest={};
+    tab.view.isLoading=()=>false;
+    tab.view.executeJavaScript=async script=>{
+     if(script.includes('typeof window.wandouSaveBeforeClose')){window.__counts.save++;window.__savedTabIds.push(tab.id);}
+     return Function('window','return '+script)(guest);
+    };
+    tab.view.dispatchEvent(new Event('dom-ready'));
+   }
+   return tabs.size;
+  });
+  assert.equal(guestCount,6,'The original fixture opens six tools and supplies no home URL');
   await page.locator('#dialogDownload').click();await page.waitForFunction(()=>window.__counts.update===1);
+  assert.equal(await page.evaluate(()=>window.__counts.save),guestCount,'Every ready tab executes the actual shell save probe');
+  assert.equal(await page.evaluate(()=>new Set(window.__savedTabIds).size),guestCount);
   assert.match(await page.locator('#dialogNotes').innerText(),/合成更新校验失败/);assert.equal(await page.locator('#dialogDownload').isEnabled(),true);
   assert.equal(await page.evaluate(()=>document.body.classList.contains('update-in-progress')),false);
   assert.deepEqual(errors,[]);

@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld("wandouShell", {
     return () => ipcRenderer.removeListener("shell:open-tab", handler);
   },
   onCloseRequested: (callback) => {
-    const handler = () => callback();
+    const handler = (_event, payload) => callback(payload);
     ipcRenderer.on("desktop:request-close", handler);
     return () => ipcRenderer.removeListener("desktop:request-close", handler);
   },
@@ -45,6 +45,8 @@ contextBridge.exposeInMainWorld("wandouShell", {
     return () => ipcRenderer.removeListener("desktop:guest-renderer-gone", handler);
   },
   confirmClose: (verification) => ipcRenderer.invoke("desktop:confirm-close", verification),
+  closeState: (payload) => ipcRenderer.send('desktop:close-state', payload),
+  forceClose: () => ipcRenderer.invoke('desktop:force-close'),
   cancelClose: () => ipcRenderer.send("desktop:cancel-close"),
   markReady: () => ipcRenderer.send("desktop:shell-ready"),
   setTheme: (theme) => ipcRenderer.send("desktop:set-theme", theme),

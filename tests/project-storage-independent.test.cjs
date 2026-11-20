@@ -10,7 +10,7 @@ test('migration preflight rejects each actual canvas job type even between API c
   const guest={nodes:busy==='pending'?[{pending:true}]:[],psdJobs:new Set(busy==='psd'?['job']:[]),vectorJobs:new Set(busy==='vector'?['job']:[]),audioJobs:new Map(busy==='audio'?[['job',{}]]:[]),assistantSending:busy==='assistant'};
   const tab={url:'file:///app/ai-node-canvas-test.html',title:'Synthetic canvas',domReady:true,view:{executeJavaScript:code=>vm.runInNewContext(code,guest)}};
   const shell={URL,tabs:new Map([['one',tab]]),isNodeCanvasTab:()=>true,safeWebviewCall:()=>false};
-  const env={shellReady:true,activeCanvasApiCount:0,mainWindow:{isDestroyed:()=>false,webContents:{executeJavaScript:code=>vm.runInNewContext(code,shell)}}};
+  const env={activeDesktopExports:new Set(),withCloseTimeout:require(path.join(desktop,'close-coordinator.cjs')).withTimeout,shellReady:true,activeCanvasApiCount:0,mainWindow:{isDestroyed:()=>false,webContents:{executeJavaScript:code=>vm.runInNewContext(code,shell)}}};
   vm.runInNewContext(source.slice(start,end),env);
   if(busy==='none')await env.inspectStorageMigrationTabs();else await assert.rejects(env.inspectStorageMigrationTabs(),/生成|处理|任务/,busy);
  }

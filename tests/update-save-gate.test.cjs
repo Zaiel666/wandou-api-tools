@@ -6,6 +6,10 @@ const vm = require('node:vm');
 const desktop = process.env.WANDOU_TEST_DESKTOP_ROOT || path.resolve(__dirname, '../desktop-client');
 const source = fs.readFileSync(path.join(desktop, 'shell.js'), 'utf8');
 const helpers = source.slice(source.indexOf('function isNodeCanvasTab('), source.indexOf('function activeView('));
+const timeoutStart = source.indexOf('function withShellCloseTimeout(');
+const timeoutEnd = source.indexOf('function showCloseDialog(', timeoutStart);
+assert.ok(timeoutStart >= 0 && timeoutEnd > timeoutStart, 'Use the complete actual shell timeout helper');
+const timeoutHelper = source.slice(timeoutStart, timeoutEnd);
 const action = source.slice(source.indexOf('dialogDownload.addEventListener("click",'), source.indexOf('dialogOverlay.addEventListener("click",'));
 assert.ok(helpers && action);
 
@@ -17,7 +21,7 @@ function setup({ filename = 'ai-node-canvas-test.html', hook, nativeResult = { s
     button: { remove: () => removed.push('button') } };
   const context = vm.createContext({ URL, tabs: new Map([[tab.id, tab]]), activeId: tab.id,
     canvasBackupDirectory: 'synthetic-backup', updateStarted: false, closeInProgress: false,
-    setInterval: () => 1, clearInterval: () => {},
+    setInterval: () => 1, clearInterval: () => {}, setTimeout, clearTimeout,
     safeWebviewCall: (view, method, fallback = false) => { try { return view[method](); } catch (_) { return fallback; } },
     clearTabSuspendTimer: () => {}, activateTab: () => {},
     showToast: (...args) => messages.push(args),
@@ -26,7 +30,7 @@ function setup({ filename = 'ai-node-canvas-test.html', hook, nativeResult = { s
     updateInfo: { available: true, latestVersion: '2.0.16' },
     window: { wandouShell: { startUpdate: async data => { calls.push(data); return nativeResult; } } }
   });
-  vm.runInContext(helpers + '\n' + action, context);
+  vm.runInContext(timeoutHelper + '\n' + helpers + '\n' + action, context);
   return { context, tab, calls, messages, classes, removed };
 }
 
@@ -66,11 +70,14 @@ test('a successfully verified canvas provides fresh update authorization only af
 });
 
 test('failed, throwing, or unsupported canvas save hooks cannot dispatch native update', async () => {
-  for (const hook of [async () => ({ success: false, error: '写入失败' }), async () => { throw Error('保存调用失败'); }, async () => ({ supported: false, success: true })]) {
+  for (const [hook, reason] of [[async () => ({ success: false, error: '写入失败' }), '写入失败'], [async () => { throw Error('保存调用失败'); }, '保存调用失败'], [async () => ({ supported: false, success: true }), '画布尚未准备好保存，请等待页面加载完成后重试']]) {
     const f = setup({ hook }); await f.context.clickUpdate();
     assert.equal(f.calls.length, 0); assert.equal(f.context.updateStarted, false);
     assert.equal(f.context.dialogCancel.disabled, false); assert.equal(f.context.dialogDownload.disabled, false);
     assert.match(f.context.dialogNotes.textContent, /保存校验失败/);
+    assert.ok(f.context.dialogNotes.textContent.includes(reason), 'Failure must report the actual save error');
+    const result = await f.context.saveTabBeforeClose(f.tab);
+    assert.equal(result.supported, true); assert.equal(result.success, false); assert.equal(result.error, reason);
   }
 });
 

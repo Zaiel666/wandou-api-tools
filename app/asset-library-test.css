@@ -169,7 +169,7 @@ body.asset-test-page .button.primary { border-color: var(--line-strong); color: 
 body.asset-test-page [hidden] { display: none !important; }
 
 body.asset-test-page .asset-main {
-  width: min(1220px, calc(100% - 60px));
+  width: calc(100% - 2 * clamp(24px, 2vw, 48px));
   min-height: calc(100dvh - 106px);
   margin: 30px auto 42px;
   padding: 0;

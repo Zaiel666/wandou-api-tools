@@ -19,14 +19,25 @@
 
 /* Cover artwork stays separate from the persistent, accessible tool labels. */
 (() => {
- const covers=[
-  ['canvas','WORKFLOW','连接灵感，自由创作'],['gridform','LAYOUT DESIGN','把每个想法排成作品'],['audio','AUDIO TO TEXT','让声音成为文字'],
-  ['image','IMAGE STUDIO','让想象清晰可见'],['motion','TYPE IN MOTION','赋予文字新的节奏'],['cutout','BACKGROUND REMOVAL','只留下你想要的主角'],
-  ['watermark','IMAGE CLEANUP','让画面回归纯净'],['keyword','IMAGE TO PROMPT','读懂一张图的灵感'],['copywriter','WRITING STUDIO','让表达更准确有力'],
-  ['video-prompt','STORYBOARD','把灵感写成镜头'],['video','VIDEO TO TEXT','捕捉每一句精彩'],['mindmap','MIND MAPPING','让思路自然展开']
- ];
+ const covers=new Map([
+  ['./project-hub.html',['canvas','WORKFLOW','连接灵感，自由创作']],
+  ['./gridform.html',['gridform','LAYOUT DESIGN','把每个想法排成作品']],
+  ['./image-workbench/index.html',['image','IMAGE STUDIO','让想象清晰可见']],
+  ['./type-motion.html',['motion','TYPE IN MOTION','赋予文字新的节奏']],
+  ['./png-workflow.html',['cutout','BACKGROUND REMOVAL','只留下你想要的主角']],
+  ['./watermark-remove.html',['watermark','IMAGE CLEANUP','让画面回归纯净']],
+  ['./keyword-reverse.html',['keyword','IMAGE TO PROMPT','读懂一张图的灵感']],
+  ['./plain-to-pro.html',['copywriter','WRITING STUDIO','让表达更准确有力']],
+  ['./video-prompt-pro.html',['video-prompt','STORYBOARD','把灵感写成镜头']],
+  ['./prompt-mind-map.html',['mindmap','MIND MAPPING','让思路自然展开']]
+ ]);
  document.querySelectorAll('.home-test-page .module-card').forEach((card,index)=>{
-  const [name,category,tagline]=covers[index];
+  const href=card.getAttribute('href');
+  const artwork=href==='https://wandou-video-workbench.netlify.app/'
+   ?(card.closest('#home-tools')?['audio','AUDIO TO TEXT','让声音成为文字']:['video','VIDEO TO TEXT','捕捉每一句精彩'])
+   :covers.get(href);
+  if(!artwork)return;
+  const [name,category,tagline]=artwork;
   card.classList.add('home-cover-card');
   card.dataset.cover=name;
   card.querySelectorAll('.tool-label br').forEach(br=>br.replaceWith(' · '));

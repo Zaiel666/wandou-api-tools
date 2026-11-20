@@ -26,6 +26,7 @@ const closeDialogStatus = $("closeDialogStatus");
 const closeDialogLocation = $("closeDialogLocation");
 const closeDialogCancel = $("closeDialogCancel");
 const closeDialogConfirm = $("closeDialogConfirm");
+const closeDialogForce = $("closeDialogForce");
 const desktopToast = $("desktopToast");
 
 versionText.textContent = version ? `v${version}` : "";
@@ -38,6 +39,7 @@ let clientConfig = {};
 let toastTimer = 0;
 let closeInProgress = false;
 let closeAttempt = 0;
+let closeRequestId = 0;
 let updateStarted = false;
 let canvasBackupDirectory = "";
 let desktopThemeRevision = -1;
@@ -321,12 +323,10 @@ async function saveTabBeforeClose(tab) {
   }
   if (!tab?.view) return { ...base, success: true, supported: false };
   if (!tab.domReady || safeWebviewCall(tab.view, "isLoading", true)) {
-    return isNodeCanvasTab(tab)
-      ? { ...base, success: false, supported: true, error: "页面仍在加载，尚未保存" }
-      : { ...base, success: true, supported: false };
+    return { ...base, success: false, supported: true, error: "页面仍在加载，尚未确认保存状态" };
   }
   try {
-    const saveTask = tab.view.executeJavaScript(`(async () => {
+    const saveTask = tab.pendingCloseSave || (tab.pendingCloseSave = tab.view.executeJavaScript(`(async () => {
       if (typeof window.wandouSaveBeforeClose === "function") {
         const result = await window.wandouSaveBeforeClose();
         if (result && typeof result === "object") return { supported: true, ...result };
@@ -334,10 +334,10 @@ async function saveTabBeforeClose(tab) {
       }
       return { supported: false, success: true };
     })()`, true).catch((error) => ({
-      supported: isNodeCanvasTab(tab),
-      success: !isNodeCanvasTab(tab),
+      supported: true,
+      success: false,
       error: error?.message || "保存调用失败"
-    }));
+    })).finally(() => { tab.pendingCloseSave = null; }));
     let polling = false;
     const progressTimer = setInterval(async () => {
       if (polling || !tab.domReady) return;
@@ -354,7 +354,10 @@ async function saveTabBeforeClose(tab) {
       } catch (_error) {} finally { polling = false; }
     }, 750);
     try {
-      const result = await saveTask;
+      const result = await withShellCloseTimeout(saveTask, 120000, '保存暂未完成，可继续等待、重试或选择仍然退出');
+      if (/^https?:/i.test(tab.url || '') && !result?.supported) {
+        return { ...base, supported: true, success: false, error: '外部页面不能由软件确认保存，请完成页面保存后选择仍然退出' };
+      }
       if (isNodeCanvasTab(tab) && !result?.supported) {
         return { ...base, supported: true, success: false, error: "画布尚未准备好保存，请等待页面加载完成后重试" };
       }
@@ -364,8 +367,8 @@ async function saveTabBeforeClose(tab) {
   } catch (error) {
     return {
       ...base,
-      supported: isNodeCanvasTab(tab),
-      success: !isNodeCanvasTab(tab),
+      supported: true,
+      success: false,
       error: error?.message || "保存调用失败"
     };
   }
@@ -529,7 +532,14 @@ async function initializeClientState() {
   if (updateInfo?.available) showUpdateDialog();
 }
 
-function showCloseDialog() {
+function withShellCloseTimeout(task, timeoutMs, message) {
+  let timer;
+  return Promise.race([Promise.resolve(task), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), timeoutMs); })]).finally(() => clearTimeout(timer));
+}
+
+function showCloseDialog(payload = {}) {
+  if (closeInProgress) return;
+  closeRequestId = payload.requestId || closeRequestId;
   closeInProgress = false;
   closeDialogStatus.textContent = "关闭前会完整保存并校验所有节点工作流；文件多时会显示进度，写入完成后再关闭。";
   closeDialogLocation.textContent = canvasBackupDirectory
@@ -538,7 +548,10 @@ function showCloseDialog() {
   closeDialogCancel.disabled = false;
   closeDialogConfirm.disabled = false;
   closeDialogConfirm.textContent = "保存并关闭";
+  closeDialogForce.disabled = false;
   closeDialogOverlay.hidden = false;
+  closeDialogCancel.focus?.();
+  void saveAllAndClose();
 }
 
 async function saveAllAndClose() {
@@ -549,6 +562,8 @@ async function saveAllAndClose() {
   closeDialogConfirm.disabled = true;
   closeDialogConfirm.textContent = "正在保存…";
   closeDialogStatus.textContent = "正在逐个保存并核对节点工作流；您可以取消关闭，让保存继续完成。";
+  window.wandouShell?.closeState?.({ requestId: closeRequestId, phase: 'saving' });
+  try {
   const saveReport = await saveAllOpenWorkflows();
   if (attempt !== closeAttempt) return;
   if (!saveReport.success) {
@@ -559,23 +574,39 @@ async function saveAllAndClose() {
     closeDialogConfirm.textContent = "重新保存";
     closeDialogStatus.textContent = `保存校验失败：${failedNames}。软件没有关闭，请检查页面后重试。`;
     showToast("工作流没有保存成功，已停止关闭", true);
+    window.wandouShell?.closeState?.({ requestId: closeRequestId, phase: 'failed' });
     return;
   }
   closeDialogStatus.textContent = `已验证保存 ${saveReport.saved.length} 个工作流，正在关闭软件…`;
   closeDialogCancel.disabled = true;
   if (saveReport.backupPath) closeDialogLocation.textContent = `本次备份：\n${saveReport.backupPath}`;
   closeDialogConfirm.textContent = "正在关闭…";
-  const closed = await window.wandouShell?.confirmClose({
+  const closed = await withShellCloseTimeout(window.wandouShell?.confirmClose({
+    requestId: closeRequestId,
     saveVerified: true,
     verifiedAt: Date.now(),
     savedWorkflowCount: saveReport.saved.length
-  });
-  if (!closed) {
+  }), 10000, '关闭请求暂未响应，请重新关闭或选择仍然退出');
+  if (attempt !== closeAttempt) return;
+  if (closed !== true) {
     closeInProgress = false;
     closeDialogCancel.disabled = false;
     closeDialogConfirm.disabled = false;
     closeDialogConfirm.textContent = "重新保存";
-    closeDialogStatus.textContent = "关闭前保存凭证已失效，请重新保存。";
+    closeDialogStatus.textContent = typeof closed?.error === 'string' ? closed.error : "关闭前保存凭证已失效，请重新保存。";
+    window.wandouShell?.closeState?.({ requestId: closeRequestId, phase: 'failed' });
+  }
+  } catch (error) {
+    if (attempt !== closeAttempt) return;
+    closeDialogStatus.textContent = `未能完成关闭：${error?.message || '保存或关闭调用失败'}。可重新保存或选择仍然退出。`;
+    window.wandouShell?.closeState?.({ requestId: closeRequestId, phase: 'failed' });
+  } finally {
+    if (attempt === closeAttempt) {
+      closeInProgress = false;
+      closeDialogCancel.disabled = false;
+      closeDialogConfirm.disabled = false;
+      closeDialogConfirm.textContent = '重新保存并关闭';
+    }
   }
 }
 
@@ -654,6 +685,32 @@ closeDialogCancel.addEventListener("click", () => {
   window.wandouShell?.cancelClose();
 });
 closeDialogConfirm.addEventListener("click", saveAllAndClose);
+closeDialogOverlay.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !closeDialogCancel.disabled) { event.preventDefault(); closeDialogCancel.click(); return; }
+  if (event.key !== 'Tab') return;
+  const buttons = [closeDialogCancel, closeDialogForce, closeDialogConfirm].filter(button => !button.disabled);
+  if (!buttons.length) return;
+  const index = buttons.indexOf(document.activeElement);
+  const next = event.shiftKey ? (index <= 0 ? buttons.length - 1 : index - 1) : (index + 1) % buttons.length;
+  event.preventDefault(); buttons[next].focus();
+});
+closeDialogForce.addEventListener('click', async () => {
+  if (closeDialogForce.disabled) return;
+  closeAttempt += 1;
+  closeInProgress = false;
+  closeDialogForce.disabled = true;
+  try {
+    const closed = await window.wandouShell?.forceClose?.();
+    if (!closed) closeDialogStatus.textContent = '尚未退出。可继续保存，或等待当前更新、迁移结束后再次关闭。';
+  } catch (error) {
+    closeDialogStatus.textContent = `退出请求未完成：${error?.message || '请再次点击窗口关闭按钮'}`;
+  } finally {
+    closeDialogForce.disabled = false;
+    closeDialogConfirm.disabled = false;
+    closeDialogCancel.disabled = false;
+    window.wandouShell?.closeState?.({ requestId: closeRequestId, phase: 'failed' });
+  }
+});
 
 window.wandouShell?.onOpenTab((payload) => openTab(payload));
 window.wandouShell?.onCloseRequested(showCloseDialog);

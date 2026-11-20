@@ -1,6 +1,6 @@
 {
   "name": "wandou-ai-desktop",
-  "version": "2.0.30",
+  "version": "2.0.31",
   "description": "豌豆AI Windows 客户端",
   "main": "main.js",
   "author": "PeaFour",
@@ -26,6 +26,7 @@
     },
     "files": [
       "main.js",
+      "close-coordinator.cjs",
       "preload.js",
       "save-file-as.cjs",
       "canvas-media-writer.cjs",

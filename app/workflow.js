@@ -15,6 +15,13 @@ let sourceImageDataUrl = "";
 let sourceImageFile = null;
 let uploadObjectUrl = "";
 let currentImageBlob = null;
+let workflowExportPending = 0;
+let workflowGenerationPending = 0;
+async function trackWorkflowExport(task) {
+  workflowExportPending += 1;
+  try { return await task(); }
+  finally { workflowExportPending -= 1; }
+}
 let hasGeneratedImage = false;
 let previewZoom = 1;
 
@@ -398,10 +405,13 @@ modal?.addEventListener("click", (event) => {
 
 document.querySelectorAll("[data-download-image]").forEach((button) => {
   button.addEventListener("click", async () => {
+    if (workflowExportPending) return;
     if (!currentImageDataUrl || (isImageWorkflowPage() && !hasGeneratedImage)) {
       showToast(isImageWorkflowPage() ? "请先点击生成，生成完成后再下载。" : "请先上传或生成图片");
       return;
     }
+    button.disabled = true;
+    try { await trackWorkflowExport(async () => {
     const filename = document.body.classList.contains("png-page") ? "wandou-cutout-4k.png" : document.body.classList.contains("watermark-page") ? "wandou-watermark-remove.png" : "wandou-upscale-4k.png";
     if (window.WandouSaveDirectory) {
       const blob = currentImageBlob || await fetch(currentImageDataUrl).then((response) => response.blob());
@@ -412,6 +422,8 @@ document.querySelectorAll("[data-download-image]").forEach((button) => {
     link.href = currentImageDataUrl;
     link.download = filename;
     link.click();
+    }); } catch (error) { showToast(error?.message || '图片保存失败，请重试'); }
+    finally { button.disabled = false; }
   });
 });
 
@@ -425,9 +437,11 @@ const apiForm = document.querySelector("[data-api-form]");
 const apiKeyInput = document.querySelector("[data-api-key]");
 const apiKey2Input = document.querySelector("[data-api-key-2]");
 
-if (apiForm) {
+{
   const previousSaveBeforeClose = window.wandouSaveBeforeClose;
   window.wandouSaveBeforeClose = async (...args) => {
+    if (workflowGenerationPending) return { success: false, busy: true, error: '生成或图片处理尚未完成，请完成后再关闭，或者选择仍然退出。' };
+    if (workflowExportPending) return { success: false, busy: true, error: '图片正在读取或另存为，请完成或取消保存后再关闭。' };
     if (apiConfigBusy) return { success: false, busy: true, error: "API 设置正在写入，请完成后再关闭或更新" };
     if (typeof previousSaveBeforeClose === "function") return previousSaveBeforeClose(...args);
     return { success: true, busy: false };
@@ -979,6 +993,10 @@ async function callImageWorkflowApi(kind) {
 
 document.querySelectorAll(".generate-button").forEach((button) => {
   button.addEventListener("click", async () => {
+    if (workflowGenerationPending) return;
+    workflowGenerationPending += 1;
+    button.disabled = true;
+    try {
     const boxes = resultBoxes();
     if (boxes.length) {
       button.disabled = true;
@@ -1034,7 +1052,7 @@ document.querySelectorAll(".generate-button").forEach((button) => {
         showPreviewImage(currentImageDataUrl);
         if (window.WandouSaveDirectory) {
           const autoName = workflowKind === "png" ? "wandou-cutout.png" : workflowKind === "watermark" ? "wandou-watermark-remove.png" : "wandou-upscale.png";
-          await window.WandouSaveDirectory.writeBlob(result.imageBlob, autoName);
+          await trackWorkflowExport(() => window.WandouSaveDirectory.writeBlob(result.imageBlob, autoName));
         }
         setStatus(result.targetSize || "已生成");
         showToast(workflowKind === "png" ? "透明 PNG 已生成，可下载。" : workflowKind === "watermark" ? "水印已消除，可下载。" : "4K 图片已生成，可下载。");
@@ -1050,6 +1068,13 @@ document.querySelectorAll(".generate-button").forEach((button) => {
     }
 
     showToast("请先上传图片或填写内容");
+    } catch (error) {
+      setStatus('生成失败');
+      showToast(error?.message || '生成未能开始，请稍后重试');
+    } finally {
+      workflowGenerationPending -= 1;
+      button.disabled = false;
+    }
   });
 });
 

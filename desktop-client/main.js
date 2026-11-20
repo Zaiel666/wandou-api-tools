@@ -28,7 +28,20 @@ let mainWindow = null;
 let allowWindowClose = false;
 let closePromptPending = false;
 let shellReady = false;
+let closeCoordinator = null;
+let shutdownFinishing = false;
+const { createCloseCoordinator, withTimeout: withCloseTimeout } = require('./close-coordinator.cjs');
 let downloadListenerReady = false;
+const activeDesktopExports = new Set();
+async function trackDesktopExport(task) {
+  if (updateInProgress || storageMigrationPreparing || storageOutageHandling) {
+    return { success: false, error: '正在更新、迁移或恢复数据，请完成后再导出文件' };
+  }
+  const token = {};
+  activeDesktopExports.add(token);
+  try { return await task(); }
+  finally { activeDesktopExports.delete(token); }
+}
 let updateInProgress = false;
 let applicationSession = null;
 let browserSessionInfo = null;
@@ -1081,9 +1094,9 @@ async function startPortableUpdate(updateInfo) {
 }
 
 async function verifyWorkflowsForUpdate() {
-  if (!mainWindow || mainWindow.isDestroyed() || activeCanvasApiCount || storageMigrationPreparing) throw Error('仍有生成或数据迁移任务，请完成后再更新');
-  const report = await mainWindow.webContents.executeJavaScript('saveAllOpenWorkflows()', true);
-  if (!report?.success || activeCanvasApiCount) throw Error('工作流尚未安全保存或仍在生成，已停止更新');
+  if (!mainWindow || mainWindow.isDestroyed() || activeCanvasApiCount || activeDesktopExports.size || storageMigrationPreparing) throw Error('仍有生成、导出或数据迁移任务，请完成后再更新');
+  const report = await withCloseTimeout(mainWindow.webContents.executeJavaScript('saveAllOpenWorkflows()', true), 120000, '更新前保存暂未完成，已停止本次更新。可等待保存完成后重试');
+  if (!report?.success || activeCanvasApiCount || activeDesktopExports.size) throw Error('工作流尚未安全保存或仍在生成、导出，已停止更新');
 }
 
 function getAppRoot() {
@@ -1173,12 +1186,21 @@ function configureDownloads() {
   if (downloadListenerReady) return;
   downloadListenerReady = true;
   getApplicationSession().on("will-download", (_event, item) => {
+    let filename = '文件';
+    try { filename = item.getFilename(); } catch (_) {}
+    const notifyDownload = success => {
+      try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('desktop:download-result', { success, filename }); }
+      catch (_) { /* A closed renderer cannot prevent download cleanup. */ }
+    };
+    if (updateInProgress || storageMigrationPreparing || storageOutageHandling) {
+      _event.preventDefault();
+      notifyDownload(false);
+      return;
+    }
+    activeDesktopExports.add(item);
     item.once("done", (_doneEvent, state) => {
-      if (!mainWindow || mainWindow.isDestroyed()) return;
-      mainWindow.webContents.send("desktop:download-result", {
-        success: state === "completed",
-        filename: item.getFilename()
-      });
+      activeDesktopExports.delete(item);
+      notifyDownload(state === 'completed');
     });
   });
 }
@@ -1188,6 +1210,7 @@ function createWindow() {
   allowWindowClose = false;
   closePromptPending = false;
   shellReady = false;
+  shutdownFinishing = false;
   const initialDarkTheme = readDesktopTheme().theme === "dark";
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -1227,52 +1250,66 @@ function createWindow() {
   });
   mainWindow.webContents.on("did-attach-webview", (_event, contents) => configureWebContents(contents));
 
+  closeCoordinator?.dispose();
+  closeCoordinator = createCloseCoordinator({
+    isCritical: () => updateInProgress || storageMigrationPreparing || storageOutageHandling,
+    requestSave: payload => mainWindow.webContents.send('desktop:request-close', payload),
+    recover: async ({ blocked }) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return false;
+      const choice = await dialog.showMessageBox(mainWindow, {
+        type: 'warning', title: APP_NAME,
+        message: blocked ? '正在保护数据，请等待当前操作结束' : '尚未完成保存，是否仍然退出？',
+        detail: blocked ? '正在执行更新、数据迁移或数据盘恢复。不能在此阶段强制退出；操作结束后请再次关闭。'
+          : '保存可能较慢、失败或页面没有响应。继续等待会保留当前编辑；仍然退出可能丢失最近未保存的修改，并中断生成、下载或导出任务。已保存的原文件不会被主动删除。',
+        buttons: blocked ? ['继续等待'] : ['继续等待', '仍然退出'], defaultId: 0, cancelId: 0, noLink: true
+      });
+      return !blocked && choice.response === 1;
+    },
+    finish: finishConfirmedClose
+  });
   mainWindow.on("close", (event) => {
-    if (allowWindowClose) return;
-    if (!shellReady) return;
     event.preventDefault();
-    if (updateInProgress || storageMigrationPreparing || storageOutageHandling) {
-      mainWindow.focus();
-      return;
-    }
-    if (!closePromptPending) {
-      closePromptPending = true;
-      mainWindow.webContents.send("desktop:request-close");
-    }
+    if (allowWindowClose) { finishConfirmedClose(); return; }
+    closePromptPending = true;
+    closeCoordinator.request();
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   });
   mainWindow.on("closed", () => {
+    closeCoordinator?.dispose();
     mainWindow = null;
     allowWindowClose = false;
     closePromptPending = false;
     shellReady = false;
   });
-  mainWindow.on("unresponsive", async () => {
+  mainWindow.on("unresponsive", () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    const choice = await dialog.showMessageBox(mainWindow, {
-      type: "warning",
-      title: APP_NAME,
-      message: "页面暂时没有响应",
-      detail: "通常由大量图片同时加载或保存引起。可等待恢复；若持续无响应，可重新载入当前软件页面。",
-      buttons: ["继续等待", "重新载入", "立即关闭"],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true
-    });
-    if (choice.response === 1 && mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.reloadIgnoringCache();
-    }
-    if (choice.response === 2 && mainWindow && !mainWindow.isDestroyed()) {
-      allowWindowClose = true;
-      mainWindow.destroy();
-    }
+    closePromptPending = true;
+    closeCoordinator.request();
+    void closeCoordinator.emergency();
   });
 
   mainWindow.loadFile(path.join(__dirname, "shell.html"), {
     query: { home: getAppEntryUrl(), version: app.getVersion(), theme: initialDarkTheme ? "dark" : "light" }
   });
   mainWindow.once("ready-to-show", () => mainWindow.show());
+}
+
+function finishConfirmedClose() {
+  if (shutdownFinishing) return;
+  shutdownFinishing = true;
+  allowWindowClose = true;
+  closePromptPending = false;
+  closeCoordinator?.dispose();
+  // Only reached after verified save, explicit native discard confirmation,
+  // or an already-authorized update/migration handoff. Guest beforeunload must
+  // not veto that decision or leave invisible renderer processes behind.
+  try { applicationSession?.flushStorageData(); } catch (_) {}
+  const exitTimer = setTimeout(() => app.exit(0), 5000);
+  exitTimer.unref?.();
+  try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy(); }
+  catch (_) { /* The process exit deadline remains armed if a window has failed. */ }
+  finally { try { app.quit(); } catch (_) { /* app.exit remains the fallback. */ } }
 }
 
 onDesktop("desktop:open-tab", (_event, payload = {}) => {
@@ -1336,14 +1373,13 @@ onDesktop("desktop:set-theme", (event, theme) => {
   setDesktopTheme(theme);
 });
 onDesktop("desktop:shell-ready", () => { shellReady = true; });
-onDesktop("desktop:cancel-close", () => { closePromptPending = false; });
+onDesktop("desktop:cancel-close", () => { closePromptPending = false; closeCoordinator?.cancel(); });
+onDesktop('desktop:close-state', (_event, payload) => closeCoordinator?.state(payload));
+handleDesktop('desktop:force-close', () => closeCoordinator?.emergency() || false);
 handleDesktop("desktop:confirm-close", (_event, verification = {}) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;
-  if (!verification.saveVerified || Date.now() - Number(verification.verifiedAt || 0) > 30000) return false;
-  allowWindowClose = true;
-  closePromptPending = false;
-  mainWindow.close();
-  return true;
+  if (activeDesktopExports.size) return { closed: false, error: '下载或另存为尚未完成，请完成或取消保存后重新关闭；也可以选择仍然退出。' };
+  return closeCoordinator?.confirm(verification) || false;
 });
 handleDesktop("desktop:get-client-config", () => ({ ...readClientConfig(), version: app.getVersion(), name: APP_NAME }));
 handleDesktop("desktop:check-for-updates", () => checkForUpdates());
@@ -1387,6 +1423,7 @@ handleDesktop("desktop:create-save-directory", async (_event, payload = {}) => {
   }
 });
 handleDesktop("desktop:write-save-file", async (_event, payload = {}) => {
+  return trackDesktopExport(async () => {
   const rootDirectory = readSavedDirectory();
   if (!rootDirectory) return { success: false, missingDirectory: true, error: "保存文件夹不存在，请重新选择保存位置" };
   try {
@@ -1401,6 +1438,7 @@ handleDesktop("desktop:write-save-file", async (_event, payload = {}) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+  });
 });
 const saveFileAs = require('./save-file-as.cjs')({
   showSaveDialog: options => dialog.showSaveDialog(mainWindow, options),
@@ -1410,7 +1448,7 @@ handleDesktop('desktop:save-file-as', (event, payload = {}) => {
   if (event.senderFrame !== event.sender.mainFrame || !isLocalAppPage(event.senderFrame?.url || '')) {
     return { success: false, error: '仅本地工具页面可以另存文件' };
   }
-  return saveFileAs(payload);
+  return trackDesktopExport(() => saveFileAs(payload));
 });
 handleDesktop("desktop:copy-image", (event, payload = {}) => {
   if (!isLocalAppPage(event.senderFrame?.url || "")) {
@@ -1563,8 +1601,8 @@ function isProjectStorageSettingsCaller(event) {
 }
 async function inspectStorageMigrationTabs() {
   if (!mainWindow || mainWindow.isDestroyed() || !shellReady) throw Error('页面尚未准备好，请稍后再试');
-  if (activeCanvasApiCount) throw Error('仍有生成或识别请求正在运行，请完成后再迁移');
-  const result = await mainWindow.webContents.executeJavaScript(`(async()=>{
+  if (activeCanvasApiCount || activeDesktopExports.size) throw Error('仍有生成、导出或识别请求正在运行，请完成后再迁移');
+  const result = await withCloseTimeout(mainWindow.webContents.executeJavaScript(`(async()=>{
     for (const tab of tabs.values()) {
       if (tab.suspended) continue;
       let name='';try{name=new URL(tab.url).pathname.split('/').pop().toLowerCase()}catch{}
@@ -1577,7 +1615,7 @@ async function inspectStorageMigrationTabs() {
       if (state.pending) return {success:false,error:'画布仍在生成或处理图片，请完成后再迁移：'+tab.title};
     }
     return {success:true};
-  })()`);
+  })()`), 60000, '页面状态检查暂未完成，已停止本次迁移。请等待页面恢复后重试');
   if (!result?.success) throw Error(result?.error || '无法确认所有画布状态，已停止迁移');
 }
 async function requestProjectStorageMigration(payload) {
@@ -1588,13 +1626,13 @@ async function requestProjectStorageMigration(payload) {
     mainWindow.setEnabled(false);
     await inspectStorageMigrationTabs();
     reportProjectStorageProgress({phase:'saving',message:'正在保存并核对所有打开的画布…'});
-    const report=await mainWindow.webContents.executeJavaScript('saveAllOpenWorkflows()');
+    const report=await withCloseTimeout(mainWindow.webContents.executeJavaScript('saveAllOpenWorkflows()'), 120000, '迁移前保存暂未完成，已停止本次迁移。原数据目录未变');
     if (!report?.success) throw Error('画布保存未通过：'+(report?.failures||[]).map(item=>item.tabTitle+' '+(item.error||'')).join('；'));
     await inspectStorageMigrationTabs();
     if (storageMediaTokens.size) throw Error('原图仍在写入，请等待保存完成后再迁移');
     canvasStandardMedia.pause();
     await projectStorage.freeze();
-    if (activeCanvasApiCount || storageMediaTokens.size) throw Error('仍有后台任务，请完成后重试');
+    if (activeCanvasApiCount || storageMediaTokens.size || activeDesktopExports.size) throw Error('仍有后台任务或导出文件，请完成后重试');
     await projectStorage.prepare(payload);
     getApplicationSession().flushStorageData();
     reportProjectStorageProgress({phase:'restarting',message:'已保存，软件将重启并迁移。旧目录会完整保留。'});

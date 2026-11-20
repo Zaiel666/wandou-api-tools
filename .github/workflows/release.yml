@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Published version tag, for example v2.0.30
+        description: Published version tag, for example v2.0.31
         required: true
-        default: v2.0.30
+        default: v2.0.31
 
 permissions:
   contents: read

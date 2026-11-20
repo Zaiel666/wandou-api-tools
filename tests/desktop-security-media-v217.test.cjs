@@ -28,7 +28,7 @@ test('all desktop IPC is gated; remote, subframe and fake shell cannot invoke pr
     for(const denied of [remote,subframe,fake,event('file:///C:/private/secret.html')]){
       assert.equal((await registry.get(channel)(denied)).success,false,channel);
     }
-    if(['desktop:shell-ready','desktop:cancel-close','desktop:confirm-close','desktop:start-update','desktop:open-update-downloads'].includes(channel)) assert.equal((await registry.get(channel)(local)).success,false);
+    if(['desktop:shell-ready','desktop:cancel-close','desktop:close-state','desktop:force-close','desktop:confirm-close','desktop:start-update','desktop:open-update-downloads'].includes(channel)) assert.equal((await registry.get(channel)(local)).success,false);
     else assert.equal((await registry.get(channel)(local)).success,true);
     assert.equal((await registry.get(channel)(shellEvent)).success,true);
     policy.on(ipc,channel,()=>calls++);const before=calls;events.get(channel)(remote);assert.equal(calls,before);
@@ -62,7 +62,7 @@ test('main updater ignores forged URLs/save flags and refuses incomplete workflo
 });
 
 test('update busy gate obtains save result from shell itself, not caller payload', async()=>{
-  let saves=0;const env={activeCanvasApiCount:1,storageMigrationPreparing:false,mainWindow:{isDestroyed:()=>false,webContents:{executeJavaScript:async()=>{saves++;return{success:true}}}}};
+  let saves=0;const env={activeDesktopExports:new Set(),withCloseTimeout:require(path.join(desktop,'close-coordinator.cjs')).withTimeout,activeCanvasApiCount:1,storageMigrationPreparing:false,mainWindow:{isDestroyed:()=>false,webContents:{executeJavaScript:async()=>{saves++;return{success:true}}}}};
   vm.runInNewContext(slice('async function verifyWorkflowsForUpdate(', 'function getAppRoot('),env);
   await assert.rejects(env.verifyWorkflowsForUpdate(),/仍有生成/);assert.equal(saves,0);
   env.activeCanvasApiCount=0;await env.verifyWorkflowsForUpdate();assert.equal(saves,1);
