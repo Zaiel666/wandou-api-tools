@@ -28,9 +28,10 @@ module.exports = function createUpdatePolicy(config) {
     for (const [value, name] of [[info.downloadUrl, asset], [info.checksumUrl, checksum]]) {
       initial(value);
       const url = parsed(value);
-      const tag = url.pathname.split('/').at(-2);
-      if (url.hostname !== 'github.com' || !url.pathname.startsWith(`${prefix}download/`) ||
-          decodeURIComponent(url.pathname.split('/').at(-1)) !== name || decodeURIComponent(tag).replace(/^v/, '') !== info.latestVersion) throw Error('更新文件与官方版本不匹配');
+      // Release metadata uses canonical paths. Signed CDN query parameters are
+      // allowed separately by redirect(), never on the initial package URL.
+      const expected = `${prefix}download/v${info.latestVersion}/${encodeURIComponent(name)}`;
+      if (url.hostname !== 'github.com' || url.pathname !== expected || url.search || url.hash) throw Error('更新文件与官方版本不匹配');
     }
     for (const value of [info.packageApiUrl, info.checksumApiUrl].filter(Boolean)) {
       initial(value);

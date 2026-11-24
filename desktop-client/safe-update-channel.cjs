@@ -34,19 +34,25 @@ async function check({config,currentVersion,fetchJson}) {
   try {links=urls(config);} catch(error) {return {available:false,configured:false,currentVersion,manualRequired:false,retryable:false,error:error.message};}
   let manifest;
   const errors=[];
+  let fallbackStage='release';
   try {manifest=await fetchJson(links.manifest);} catch(error) {errors.push(error);}
   // The fallback can only locate the same channel asset in the same repository.
   // A corrupt manifest is never replaced by an older /latest response.
   if(manifest===undefined) {
     try {
       const release=await fetchJson(links.release);
+      fallbackStage='metadata';
       if(release.tag_name!==CHANNEL||release.draft||release.prerelease) throw Error('安全更新通道发布状态无效');
       const matches=(release.assets||[]).filter(a=>a.name==='update-manifest.json');
       if(matches.length!==1) throw Error('安全更新通道缺少唯一的版本清单');
       const asset=matches[0],prefix=links.release.slice(0,links.release.indexOf('/tags/'));
       if(asset.browser_download_url!==links.manifest||!Number.isSafeInteger(asset.id)||asset.id<=0||asset.url!==`${prefix}/assets/${asset.id}`||asset.state!=='uploaded') throw Error('安全更新清单来源无效');
+      fallbackStage='asset';
       manifest=await fetchJson(asset.url,{asset:true});
-    } catch(error) {errors.push(error);}
+    } catch(error) {
+      if(fallbackStage==='metadata')return {available:false,configured:true,currentVersion,manualRequired:true,retryable:false,manualUrl:links.manual,manualReason:error.message,error:error.message};
+      errors.push(error);
+    }
   }
   if(manifest!==undefined) {
     try {return validate(manifest,config,currentVersion);} catch(error) {
@@ -54,7 +60,9 @@ async function check({config,currentVersion,fetchJson}) {
         manualReason:error.message,error:error.message};
     }
   }
-  const missing=errors.some(e=>e.status===404);
+  // A CDN 404 is not proof that the channel is absent when the API is offline
+  // or rate-limited. Only two confirmed missing endpoints disable retry.
+  const missing=fallbackStage==='release'&&errors.length===2&&errors.every(e=>e.status===404);
   const message=missing?'安全更新通道尚未开放，可前往官方发布页下载安装包。':'安全更新通道暂时无法连接，请稍后重试或前往官方发布页。';
   return {available:false,configured:true,currentVersion,manualRequired:true,retryable:!missing,manualUrl:links.manual,manualReason:message,error:message};
 }

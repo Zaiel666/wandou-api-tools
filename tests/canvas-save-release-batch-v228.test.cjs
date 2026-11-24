@@ -4,7 +4,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const {pathToFileURL}=require('node:url');
 const workspace=path.resolve(__dirname,'../../../..'),{chromium}=require(path.join(workspace,'desktop-client/node_modules/playwright'));
 const app=path.resolve(__dirname,'../app'),qa=path.resolve(__dirname,'../../qa'),sha=b=>crypto.createHash('sha256').update(b).digest('hex');
-const scope=['ai-node-canvas-test.html','ai-node-canvas-test.js','canvas-save-pipeline.js','canvas-media-urls.js'];
+const scope=['ai-node-canvas-test.html','ai-node-canvas-test.js','director-test.js','canvas-save-pipeline.js','canvas-media-urls.js'];
 const hashes=()=>Object.fromEntries(scope.map(n=>[n,sha(fs.readFileSync(path.join(app,n)))]));
 const report={version:wandouQaVersion,success:false,scopeHashes:hashes(),testSha256:sha(fs.readFileSync(__filename)),checks:[],paidRequests:0,productionDataAccessed:false};let browser;
 test.before(async()=>{browser=await chromium.launch({headless:true,chromiumSandbox:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});});
@@ -21,11 +21,22 @@ async function fixture(t,{count=3,generator=false}={}){
   ['.catch(error => console.warn("Optional skill refresh failed", error));','.catch(error => console.warn("Optional skill refresh failed", error)).finally(() => { window.qaStartupSkillsSettled = true; });']
  ]){assert.equal(observedHtml.split(before).length,2,'Exact real startup chain observed');observedHtml=observedHtml.replace(before,after);}
  await page.route('**/ai-node-canvas-test.html',route=>route.fulfill({contentType:'text/html',body:observedHtml}));
+ // The director extension has its own testReady startup barrier and renders
+ // once during boot. Hold that actual boot, prove it is pending, then observe
+ // its completion before counting release renders; never discard a render.
+ const directorSource=fs.readFileSync(path.join(app,'director-test.js'),'utf8');
+ const directorEnd=/  boot\(\);\r?\n\}\)\(\);/g;
+ assert.equal([...directorSource.matchAll(directorEnd)].length,1,'Exact director startup call observed');
+ const observedDirector=directorSource.replace(directorEnd,"  window.qaReleaseDirectorBoot = () => { if(document.body.dataset.testReady !== 'true') throw Error('Director prerequisites pending'); boot(); window.qaStartupDirectorSettled = true; };\n})();");
+ await page.route('**/director-test.js',route=>route.fulfill({contentType:'application/javascript',body:observedDirector}));
  await page.addInitScript(()=>{let actual,hold=true;Object.defineProperty(window,'WandouSkills',{configurable:true,get:()=>actual,set:v=>{actual={...v,list:(...args)=>{if(!hold)return v.list(...args);return new Promise((resolve,reject)=>{window.qaReleaseStartupSkills=()=>{hold=false;return Promise.resolve().then(()=>v.list(...args)).then(resolve,reject);};});}};}});});
  await page.goto(pathToFileURL(path.join(app,'ai-node-canvas-test.html')).href);await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
  assert.equal(await page.evaluate(()=>window.qaStartupSkillsSettled===true),false,'Held actual startup Skill chain has not completed at local readiness');
  await page.evaluate(()=>qaReleaseStartupSkills());await page.waitForFunction(()=>window.qaStartupApiSettled===true&&window.qaStartupSkillsSettled===true);
- const completed=await page.evaluate(()=>({api:qaStartupApiSettled,skills:qaStartupSkillsSettled,ready:document.body.dataset.canvasReady}));assert.deepEqual(completed,{api:true,skills:true,ready:'true'});(report.startupCompletionChecks??=[]).push(completed);
+ await page.waitForFunction(()=>document.body.dataset.testReady==='true'&&typeof window.qaReleaseDirectorBoot==='function');
+ assert.deepEqual(await page.evaluate(()=>({settled:window.qaStartupDirectorSettled===true,buttons:document.querySelectorAll('.sidebar .button-grid button img[src="./assets/canvas-ui-icons/director-cube.svg"]').length})),{settled:false,buttons:0},'Director startup remains held after other startup chains');
+ await page.evaluate(()=>qaReleaseDirectorBoot());
+ const completed=await page.evaluate(()=>({api:qaStartupApiSettled,skills:qaStartupSkillsSettled,director:qaStartupDirectorSettled,directorButtons:document.querySelectorAll('.sidebar .button-grid button img[src="./assets/canvas-ui-icons/director-cube.svg"]').length,ready:document.body.dataset.canvasReady,testReady:document.body.dataset.testReady}));assert.deepEqual(completed,{api:true,skills:true,director:true,directorButtons:1,ready:'true',testReady:'true'});(report.startupCompletionChecks??=[]).push(completed);
  await page.evaluate(async({count,generator})=>{
   clearTimeout(saveTimer);saveTimer=null;nodes=[];links=[];view={x:30,y:80,zoom:1};selectedNodeId=null;boxSelectedIds=[];
   const c=document.createElement('canvas');c.width=32;c.height=16;const g=c.getContext('2d');g.fillStyle='#5f8';g.fillRect(4,4,20,8);window.qaOriginal=c.toDataURL();window.qaBlobUrl=URL.createObjectURL(await(await fetch(qaOriginal)).blob());
