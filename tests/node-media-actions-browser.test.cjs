@@ -24,11 +24,13 @@ const { chromium } = require("playwright");
       return {
         models: [...document.querySelectorAll(`[data-id="${node.id}"] [data-node-model]`)].map((item) => item.dataset.nodeModel),
         resolutions: imageResolutionOptionsForModel("grok-imagine-image-2.0"),
+        nativeResolutions: WandouImageCapabilities.resolve("grok-imagine-image-2.0").nativeTiers,
         apiModel: modelToApiModel("grok-imagine-image-2.0"),
       };
     });
     assert.ok(modelState.models.includes("grok-imagine-image-2.0"), JSON.stringify(modelState));
-    assert.deepEqual(modelState.resolutions, ["1K", "2K"]);
+    assert.deepEqual(modelState.resolutions, ["1K", "2K", "4K"]);
+    assert.deepEqual(modelState.nativeResolutions, ["1K", "2K"]);
     assert.equal(modelState.apiModel, "grok-imagine-image-2.0");
 
     const grokRequest = await page.evaluate(async () => {
@@ -67,7 +69,8 @@ const { chromium } = require("playwright");
           },
         },
       });
-      openLightbox(sample.toDataURL("image/png"), { mode: "image" });
+      window.expectedImageBase64 = sample.toDataURL("image/png").split(",")[1];
+      openLightbox(`data:image/png;base64,${window.expectedImageBase64}`, { mode: "image" });
       await copyActiveLightboxImage(lightboxCopy);
       return {
         copiedBytes,
@@ -107,27 +110,36 @@ const { chromium } = require("playwright");
     assert.equal(saveSuccess.text, "已保存到：test.png");
     assert.equal(saveSuccess.tone, "success");
 
-    const downloadPromise = page.waitForEvent("download");
+    await page.evaluate(() => {
+      window.savedImageAs = null;
+      window.wandouShell.saveFileAs = async (filename, bytes, mimeType) => {
+        window.savedImageAs = { filename, bytes: Array.from(bytes), mimeType };
+        return { success: true, filename };
+      };
+    });
     await page.locator("#lightboxDownload").click();
-    const download = await downloadPromise;
-    assert.equal(await download.failure(), null);
-    const downloadedBytes = fs.readFileSync(await download.path());
+    await page.waitForFunction(() => window.savedImageAs && !lightboxDownload.disabled);
+    const savedImage = await page.evaluate(() => ({ ...window.savedImageAs, expected: window.expectedImageBase64 }));
+    const downloadedBytes = Buffer.from(savedImage.bytes);
     assert.equal(downloadedBytes.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
-    assert.match(download.suggestedFilename(), /\.png$/);
-    await page.waitForFunction(() => !lightboxDownload.disabled);
+    assert.deepEqual(downloadedBytes, Buffer.from(savedImage.expected, "base64"));
+    assert.equal(savedImage.mimeType, "image/png");
+    assert.match(savedImage.filename, /\.png$/);
     const downloadResult = await page.evaluate(() => ({ text: toast.textContent, tone: toast.dataset.tone }));
-    assert.match(downloadResult.text, /^下载已开始：/);
+    assert.match(downloadResult.text, /^已保存：/);
     assert.equal(downloadResult.tone, "success");
 
     const filePreviewSave = await page.evaluate(async () => {
       delete window.wandouShell;
-      window.showDirectoryPicker = async () => ({ name: "我的图片", queryPermission: async () => "granted" });
+      let pickerCalled = false;
+      window.showDirectoryPicker = async () => { pickerCalled = true; return { name: "我的图片", queryPermission: async () => "granted" }; };
       storeAutoSaveDirectoryHandle = async () => {};
       await chooseAutoSaveDirectory();
-      return { name: autoSaveDirectoryHandle?.name, text: toast.textContent };
+      return { name: autoSaveDirectoryHandle?.name, text: toast.textContent, pickerCalled };
     });
     assert.equal(filePreviewSave.name, undefined);
-    assert.match(filePreviewSave.text, /Codex 预览无法设置自动保存目录/);
+    assert.equal(filePreviewSave.pickerCalled, false);
+    assert.match(filePreviewSave.text, /项目自动保留在软件内；需要导出文件时请使用下载按钮/);
 
     console.log("PASS: node model selection, copy, local save, download, and overlay feedback work in Chromium");
   } finally {

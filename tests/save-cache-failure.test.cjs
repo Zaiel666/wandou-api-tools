@@ -5,12 +5,12 @@ const vm = require('node:vm');
 const source = fs.readFileSync(require('node:path').join(process.env.WANDOU_TEST_APP_ROOT||require('node:path').join(__dirname,'../app'),'ai-node-canvas.html'), 'utf8');
 const save = source.slice(source.indexOf('async function saveCanvasStateNow('), source.indexOf('function saveCanvasState()'));
 const close = source.slice(source.indexOf('window.wandouSaveBeforeClose ='), source.indexOf('document.addEventListener("visibilitychange"'));
-async function run({desktop = true, backup = true, serializeFailure = false, empty = false, queueHang = false, browserHang = false} = {}) {
+async function run({desktop = true, backup = true, serializeFailure = false, empty = false, queueHang = false, browserHang = false, applying = false} = {}) {
   const context = {projectId: 'test', state: {nodes: empty ? [] : [{id: 1}], savedAt: 1}};
   const quota = () => { throw new Error('QuotaExceededError'); };
   const sandbox = {
     window: {wandouShell: desktop ? {writeCanvasBackup: true} : {}},
-    apiConfigBusy: false, canvasRecoveryBlocked: false, saveTimer: null, canvasSaveQueue: Promise.resolve(),
+    apiConfigBusy: false, isApplyingHistory: applying, canvasRecoveryBlocked: false, saveTimer: null, canvasSaveQueue: Promise.resolve(),
     clearTimeout() {}, setTimeout: callback => { callback(); return 1; }, projects: [{id: 'test'}], activeProjectId: 'test',
     console: {warn() {}}, warnCanvasStorageSkipped() {},
     createCanvasSaveContext: () => context, saveCanvasStateImmediate: () => false,
@@ -34,5 +34,8 @@ test('legacy canvas cache failures preserve verified desktop saves and refuse di
   const failed = await run({serializeFailure: true});
   assert.equal(failed.success, false);
   assert.match(failed.error, /media failure/);
+  const restoring = await run({applying: true});
+  assert.equal(restoring.success, false);
+  assert.equal(restoring.busy, true);
   console.log('PASS: cache failure does not block verified desktop saves; disk/media failures still block close');
 });

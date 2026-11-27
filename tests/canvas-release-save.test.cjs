@@ -2,12 +2,13 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const page=fs.readFileSync(require('node:path').join(process.env.WANDOU_TEST_APP_ROOT||require('node:path').join(__dirname,'../app'),'ai-node-canvas-test.html'),'utf8');
 const start=page.indexOf('    window.wandouSaveBeforeClose = async () => {');
 const code=page.slice(start,page.indexOf('    document.addEventListener("visibilitychange"',start));
-function fixture({ready=true,present=true,durable=true,backup=true,recovery=false,archiving=false,busy=false,apiBusy=false}={}){
+function fixture({ready=true,present=true,durable=true,backup=true,recovery=false,archiving=false,busy=false,apiBusy=false,applying=false}={}){
  const writes=[];
  const state={nodes:[{id:'existing-node'}],savedAt:123};
  const context={projectId:'existing',state,browserBackupSaved:true};
  const env={apiConfigBusy:apiBusy,window:{wandouShell:{writeCanvasBackup:()=>{}}},document:{body:{dataset:{canvasReady:String(ready)}},querySelector:()=>present?{}:null},clearTimeout:()=>{},setTimeout:()=>{},saveTimer:null,projects:[{id:'existing',name:'原项目'}],activeProjectId:'existing',canvasRecoveryBlocked:recovery,canvasSaveQueue:Promise.resolve(),createCanvasSaveContext:()=>context,saveCanvasStateImmediate:()=>writes.push('local'),saveCanvasStateNow:async()=>{writes.push('durable');return durable},writeDesktopCanvasBackup:async()=>{writes.push('desktop');return {success:backup,path:'backup'}},verifyCanvasStateSaved:()=>true};
  env.deletedResultArchiveJobs=new Map(archiving?[['synthetic-archive',{}]]:[]);
+ env.isApplyingHistory=applying;
  env.canvasHasActiveTasks=()=>busy;
  vm.runInNewContext(code,env);return {save:env.window.wandouSaveBeforeClose,writes};
 }
@@ -19,3 +20,4 @@ test('active deleted-original archive refuses close before starting another snap
 test('other active work still refuses close after a successful progress snapshot',async()=>{const f=fixture({busy:true});const result=await f.save();assert.equal(result.success,false);assert.equal(result.busy,true);assert.deepEqual(f.writes,['local','durable','desktop'])});
 
 test('pending API settings refuse close before any project write',async()=>{const f=fixture({apiBusy:true});const result=await f.save();assert.equal(result.success,false);assert.equal(result.busy,true);assert.match(result.error,/API/);assert.deepEqual(f.writes,[])});
+test('history restoration refuses close before any project write',async()=>{const f=fixture({applying:true});const result=await f.save();assert.equal(result.success,false);assert.equal(result.busy,true);assert.match(result.error,/恢复撤销/);assert.deepEqual(f.writes,[])});

@@ -57,7 +57,22 @@
     value=String(value);
     if (cache.has(value)) return cache.get(value);
     if (!root.crypto?.subtle) return id(value);
-    const digest = await root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
+    let encoded;
+    // Base64 media is ASCII; chunking the conversion gives the UI a chance to
+    // run between portions. Non-ASCII or malformed input retains the exact
+    // established TextEncoder path.
+    if (value.length >= 1024 * 1024 && /^data:[^,]*;base64,/i.test(value)) {
+      encoded = new Uint8Array(value.length);
+      const encoder = new TextEncoder(), chunkSize = 512 * 1024;
+      if (typeof encoder.encodeInto !== 'function') encoded = null;
+      for (let offset = 0; encoded && offset < value.length; offset += chunkSize) {
+        const part = value.slice(offset, Math.min(value.length, offset + chunkSize));
+        const converted = encoder.encodeInto(part, encoded.subarray(offset, offset + part.length));
+        if (converted.read !== part.length || converted.written !== part.length) { encoded = null; break; }
+        if (offset + chunkSize < value.length) await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+    const digest = await root.crypto.subtle.digest('SHA-256',encoded || new TextEncoder().encode(value));
     // Another request may have populated the cache while the native digest ran.
     if (cache.has(value)) return cache.get(value);
     return remember(value,'sha256-'+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join(''));

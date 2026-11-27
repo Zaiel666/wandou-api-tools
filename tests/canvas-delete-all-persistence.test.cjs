@@ -16,6 +16,7 @@ for(const filename of ['ai-node-canvas-test.html','ai-node-canvas.html']){
   const page=await open(t,filename),before=await addSyntheticResult(page);assert.equal(before.saved,true);assert.equal(before.intentionalResetAt,0);
   const result=await page.evaluate(async()=>{
    boxSelectedIds=nodes.map(n=>n.id);deleteSelectionNodes();const deleted={count:nodes.length,reset:intentionalResetAt,valid:isUsableCanvasSnapshot(getCanvasSnapshot())};
+   const deadline=Date.now()+20000;while(typeof deletedResultArchiveJobs!=='undefined'&&deletedResultArchiveJobs.size){if(Date.now()>deadline)throw Error('delete archive did not complete');await new Promise(r=>setTimeout(r,10));}
    await undoCanvas();const undo={ids:nodes.map(n=>n.id),reset:intentionalResetAt};
    await redoCanvas();const redo={count:nodes.length,reset:intentionalResetAt};return{deleted,undo,redo,saved:await saveCanvasState()};
   });
@@ -29,6 +30,7 @@ for(const filename of ['ai-node-canvas-test.html','ai-node-canvas.html']){
   const result=await page.evaluate(async()=>{
    const ids=nodes.map(n=>n.id);for(const id of ids.slice(0,-1))deleteNode(id);
    const partial={count:nodes.length,reset:intentionalResetAt};deleteNode(ids.at(-1));const deleted={count:nodes.length,reset:intentionalResetAt};
+   const deadline=Date.now()+20000;while(typeof deletedResultArchiveJobs!=='undefined'&&deletedResultArchiveJobs.size){if(Date.now()>deadline)throw Error('delete archive did not complete');await new Promise(r=>setTimeout(r,10));}
    await undoCanvas();const undo={count:nodes.length,reset:intentionalResetAt};await redoCanvas();
    createNode('generator',20,20);await undoCanvas();const undoneAddition={count:nodes.length,reset:intentionalResetAt};
    return{partial,deleted,undo,undoneAddition,saved:await saveCanvasState()};

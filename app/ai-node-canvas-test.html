@@ -7979,7 +7979,7 @@
     const deletedResultArchiveJobs = new Map();
     let canvasProjectTransition = false;
     function canvasHasActiveTasks() {
-      return apiConfigBusy || deletedResultArchiveJobs.size > 0 || localOutputAdjustmentJobs.size > 0 || imageRecoveryJobs.size > 0 || imageTaskRecordWrites.size > 0 || localResolutionJobs.size > 0 || imageGenerationJobs.size > 0 || imageRegenerationJobs.size > 0 || imageResultControllers.size > 0 || promptEditJobs.size > 0
+      return isApplyingHistory || apiConfigBusy || deletedResultArchiveJobs.size > 0 || localOutputAdjustmentJobs.size > 0 || imageRecoveryJobs.size > 0 || imageTaskRecordWrites.size > 0 || localResolutionJobs.size > 0 || imageGenerationJobs.size > 0 || imageRegenerationJobs.size > 0 || imageResultControllers.size > 0 || promptEditJobs.size > 0
         || audioJobs.size > 0 || psdJobs.size > 0 || vectorJobs.size > 0
         || assistantSending || nodes.some((node) => node.pending || node.regenerating || node.audioGenerating || Number(node.autoSplitProgress) > 0);
     }
@@ -10565,11 +10565,14 @@
         const stored = window.WandouMediaUrls?.storedReference(value);
         if (stored) return stored;
         if (!/^data:image\//i.test(value) && !isLargeDataUrl(value, largeMediaDataUrlLimit)) return value;
+        if (mediaReferences.has(value)) return mediaReferences.get(value);
         const id = mediaStorageId(value);
         if (!mediaReferences.has(id)) {
           mediaReferences.set(id, queueLargeMediaPersist(value, id));
         }
-        return mediaReferences.get(id);
+        const reference = mediaReferences.get(id);
+        mediaReferences.set(value, reference);
+        return reference;
       }
       if (Array.isArray(value)) return value.map((item) => cloneCompactHistoryValue(item, mediaReferences));
       if (!value || typeof value !== "object") return value;
@@ -10622,8 +10625,47 @@
       return copy;
     }
 
+    function getDeleteHistorySnapshot() {
+      const cleanNodes = nodesWithoutRemovedTypes();
+      const cleanIds = new Set(cleanNodes.map((node) => node.id));
+      const originals = [], retained = new Set();
+      // This cap applies to all distinct data strings held by these history
+      // objects, including values still present in the live canvas. Count the
+      // conservative UTF-16 size; overflow uses the established safe path.
+      const byteLimit = 256 * 1024 * 1024;
+      let retainedBytes = 0, overflow = false;
+      for (const item of [...historyStack, ...redoStack]) {
+        if (item?.deleteMemoryHistory !== true) continue;
+        for (const value of item.originals) if (!retained.has(value)) { retained.add(value); retainedBytes += value.length * 2; }
+      }
+      const tag = '__wandou_memory_history_' + crypto.randomUUID();
+      const json = JSON.stringify({ nodes: cleanNodes, links: links.filter((link) => cleanIds.has(link.from) && cleanIds.has(link.to)), nodeId, view, intentionalResetAt }, (_key, value) => {
+        const stored = typeof value === 'string' && window.WandouMediaUrls?.storedReference(value);
+        if (stored) return stored;
+        if (typeof value === 'string' && value.startsWith('data:') && value.length > 8192) {
+          if (!retained.has(value)) {
+            if (retainedBytes + value.length * 2 > byteLimit) { overflow = true; return null; }
+            retained.add(value); retainedBytes += value.length * 2;
+          }
+          const index = originals.push(value) - 1;
+          return { [tag]: index };
+        }
+        return value;
+      });
+      return overflow ? null : { deleteMemoryHistory: true, json, tag, originals };
+    }
+
     function parseCanvasSnapshot(snapshot) {
-      const state = JSON.parse(snapshot);
+      const state = snapshot && snapshot.deleteMemoryHistory === true
+        ? JSON.parse(snapshot.json, (_key, value) => {
+          if (value && typeof value === 'object' && Object.keys(value).length === 1 && Number.isInteger(value[snapshot.tag])) {
+            const index = value[snapshot.tag];
+            if (index < 0 || index >= snapshot.originals.length) throw new Error('Invalid history media reference');
+            return snapshot.originals[index];
+          }
+          return value;
+        })
+        : JSON.parse(snapshot);
       if (!Array.isArray(state.nodes)) throw new Error("Invalid canvas snapshot");
       const hadNodes = state.nodes.length > 0;
       state.nodes = state.nodes.filter((node) => node && node.id && node.type);
@@ -10643,9 +10685,19 @@
       }
     }
 
+    for (const type of ['paste', 'drop']) document.addEventListener(type, (event) => {
+      if (isApplyingHistory) { event.preventDefault(); event.stopImmediatePropagation(); }
+    }, true);
+
     async function applyCanvasSnapshot(snapshot) {
       const state = parseCanvasSnapshot(snapshot);
+      const previous = { nodes, links, nodeId, view, intentionalResetAt, selectedNodeId, boxSelectedIds };
+      const appRoot = document.querySelector('.app');
+      const priorInert = Boolean(appRoot?.inert), priorBusy = appRoot?.getAttribute('aria-busy');
+      let completed = false, announced = false, syncWarning = false;
       isApplyingHistory = true;
+      if (appRoot) { appRoot.inert = true; appRoot.setAttribute('aria-busy', 'true'); }
+      const busyTimer = setTimeout(() => { if (isApplyingHistory) { announced = true; showToast('正在恢复画布，请稍候', 'loading', 30000); } }, 400);
       try {
         nodes = Array.isArray(state.nodes) ? state.nodes : [];
         removeDeprecatedSelectionNodes();
@@ -10661,9 +10713,22 @@
         intentionalResetAt = state.intentionalResetAt;
         selectedNodeId = null;
         render();
-        syncDeletedResultsWithCanvas();
+        try { syncDeletedResultsWithCanvas(); }
+        catch (error) { syncWarning = true; console.warn('Deleted result sync failed after history restore', error); showToast('画布已恢复，删除记录暂未同步', 'error', 5000); }
+        completed = true;
+      } catch (error) {
+        ({ nodes, links, nodeId, view, intentionalResetAt, selectedNodeId, boxSelectedIds } = previous);
+        try { render({ skipSave: true }); } catch (_) { /* Preserve restored state even if display fails. */ }
+        scheduleCanvasSave();
+        throw error;
       } finally {
+        clearTimeout(busyTimer);
         isApplyingHistory = false;
+        if (appRoot) {
+          appRoot.inert = priorInert;
+          if (priorBusy === null) appRoot.removeAttribute('aria-busy'); else appRoot.setAttribute('aria-busy', priorBusy);
+        }
+        if (announced && completed && !syncWarning) showToast('画布已恢复', 'success', 1500);
       }
       scheduleCanvasSave();
     }
@@ -10688,7 +10753,8 @@
         const snapshot = historyStack.pop();
         if (!isUsableCanvasSnapshot(snapshot)) continue;
         redoStack.push(current);
-        await applyCanvasSnapshot(snapshot);
+        try { await applyCanvasSnapshot(snapshot); }
+        catch (error) { redoStack.pop(); historyStack.push(snapshot); showToast('撤销未完成，原画布已保留：' + (error?.message || '请重试'), 'error', 5000); }
         return;
       }
     }
@@ -10700,7 +10766,8 @@
         const snapshot = redoStack.pop();
         if (!isUsableCanvasSnapshot(snapshot)) continue;
         historyStack.push(current);
-        await applyCanvasSnapshot(snapshot);
+        try { await applyCanvasSnapshot(snapshot); }
+        catch (error) { historyStack.pop(); redoStack.push(snapshot); showToast('重做未完成，原画布已保留：' + (error?.message || '请重试'), 'error', 5000); }
         return;
       }
     }
@@ -15480,12 +15547,12 @@
         });
         transferZone.addEventListener("click", (event) => {
           event.stopPropagation();
-          if (!node.pending) openLightbox(favoriteMediaUrl(node), { mode: "image", nodeId: node.id });
+          if (!node.pending) openLightbox(favoriteMediaUrl(node), { mode: "image", nodeId: node.id, previewSrc: wrap.querySelector("[data-preview] img")?.currentSrc || "" });
         });
       }
       wrap.querySelector("[data-preview]").addEventListener("click", (event) => {
         const media = event.target.closest("img, video");
-        if (node.type === "result" && media && !node.pending) openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id });
+        if (node.type === "result" && media && !node.pending) openLightbox(favoriteMediaUrl(node), { mode: node.mediaType === "video" ? "video" : "image", nodeId: node.id, previewSrc: media.tagName === "IMG" && !/^(gif|apng|webp)$/i.test(String(node.imageOutputFormat || node.outputFormat || "")) ? media.currentSrc : "" });
       });
       const previewImg = wrap.querySelector("[data-preview] img");
       if (node.type === "result" && previewImg) {
@@ -17370,10 +17437,11 @@
     }
 
     function deleteSelectionNodes() {
+      if (isApplyingHistory) { showToast('正在恢复撤销记录，请稍候', 'error'); return; }
       if (!boxSelectedIds.length) return;
       if (!window.confirm(`确认删除选中的 ${boxSelectedIds.length} 个节点吗？`)) return;
       boxSelectedIds.forEach((id) => canvas.querySelector(`[data-id="${id}"]`)?.classList.add("deleting-confirm"));
-      pushHistory();
+      pushHistorySnapshot(getDeleteHistorySnapshot() || getCanvasSnapshot());
       const selected = new Set(boxSelectedIds);
       selected.forEach(cancelImageJobsForNode);
       const previousNodeCount = nodes.length;
@@ -17545,11 +17613,12 @@
     }
 
     function deleteNode(id) {
+      if (isApplyingHistory) { showToast('正在恢复撤销记录，请稍候', 'error'); return; }
       cancelImageJobsForNode(id);
       audioJobs.forEach((job) => {
         if (job.node.id === id || job.pending.id === id) job.controller.abort(new Error("音频节点或结果节点已删除，生成已取消。"));
       });
-      pushHistory();
+      pushHistorySnapshot(getDeleteHistorySnapshot() || getCanvasSnapshot());
       psdJobControllers.get(id)?.abort();
       psdJobControllers.delete(id);
       psdJobs.delete(id);
@@ -21757,8 +21826,19 @@ ${formatInstruction}`;
       const isVideo = activeLightbox.mode === "video";
       lightboxImage.hidden = isVideo;
       lightboxVideo.hidden = !isVideo;
-      lightboxImage.src = isVideo ? "" : src;
+      const previewNode = options.mediaNode || nodes.find(item => item.id === options.nodeId);
+      const animated = /^(gif|apng|webp)$/i.test(String(previewNode?.imageOutputFormat || previewNode?.outputFormat || "")) || /^image\/(gif|webp|apng)$/i.test(String(previewNode?.mimeType || "")) || /^data:image\/(gif|webp|apng)[;,]/i.test(String(src || ""));
+      const previewSrc = activeLightbox.mode === "image" && !animated && options.previewSrc && options.previewSrc !== src ? options.previewSrc : "";
+      const lightboxSession = activeLightbox;
+      lightboxImage.src = isVideo ? "" : (previewSrc || src);
       lightboxVideo.src = isVideo ? src : "";
+      if (previewSrc) requestAnimationFrame(() => {
+        if (activeLightbox !== lightboxSession || !lightbox.classList.contains("open")) return;
+        const original = new Image();
+        original.onload = () => { if (activeLightbox === lightboxSession && lightbox.classList.contains("open")) lightboxImage.src = src; };
+        original.onerror = () => { if (activeLightbox === lightboxSession) showToast("原图加载失败，当前显示预览图", "error"); };
+        original.src = src;
+      });
       lightboxCopy.hidden = isVideo;
       lightboxPrompt.hidden = isVideo || !activeLightboxPromptText();
       lightboxContextPrompt.hidden = isVideo || !activeLightboxPromptText();
@@ -23401,6 +23481,7 @@ ${formatInstruction}`;
     }
 
     function saveCanvasState() {
+      if (isApplyingHistory) return Promise.resolve(false);
       if (canvasRecoveryBlocked) return Promise.resolve(false);
       clearTimeout(saveTimer);
       saveTimer = null;
@@ -23457,6 +23538,7 @@ ${formatInstruction}`;
     }
 
     window.wandouSaveBeforeClose = async () => {
+      if (isApplyingHistory) return { success: false, supported: true, busy: true, error: '正在恢复撤销记录，请完成后再关闭或更新。' };
       if (apiConfigBusy) return { success: false, supported: true, busy: true, error: "正在保存 API 设置，请完成后再关闭或更新。" };
       if (document.body.dataset.canvasReady !== "true" || !document.querySelector(".app")) {
         if (typeof window.wandouCanCloseReadOnlyStartup === "function" && window.wandouCanCloseReadOnlyStartup() === true) {
@@ -23480,6 +23562,7 @@ ${formatInstruction}`;
       await canvasSaveQueue.catch(() => false);
       if (deletedResultArchiveJobs.size) return { success: false, supported: true, busy: true,
         error: "正在保存删除记录和原文件，请完成后再关闭或更新。" };
+      if (isApplyingHistory) return { success: false, supported: true, busy: true, error: '正在恢复撤销记录，请完成后再关闭或更新。' };
       const context = createCanvasSaveContext();
       saveCanvasStateImmediate(context);
       const durableSaved = await saveCanvasStateNow(context, { skipDesktopBackup: true });
@@ -23534,6 +23617,7 @@ ${formatInstruction}`;
     });
 
     window.addEventListener("pagehide", () => {
+      if (isApplyingHistory) return;
       nodes.forEach((node) => {
         if (node.type === "psd" && psdJobs.has(node.id)) {
           setPsdJobMarker(node.id, getPsdJobMarker(node.id)?.stage || "准备中", true);
@@ -24085,6 +24169,22 @@ ${formatInstruction}`;
       return candidate;
     }
 
+    async function verifiedDeletedMediaBlob(readable) {
+      const match = /^data:([^,]*);base64,/i.exec(readable);
+      if (!match || readable.length < 1024 * 1024) return sourceToBlob(readable);
+      const parts = [], start = match[0].length, chunkSize = 1024 * 1024;
+      for (let offset = start; offset < readable.length; offset += chunkSize) {
+        const chunk = readable.slice(offset, Math.min(readable.length, offset + chunkSize));
+        if (/[^A-Za-z0-9+/=]/.test(chunk)) return sourceToBlob(readable);
+        const raw = atob(chunk);
+        const bytes = new Uint8Array(raw.length);
+        for (let index = 0; index < raw.length; index++) bytes[index] = raw.charCodeAt(index);
+        parts.push(bytes);
+        if (offset + chunkSize < readable.length) await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      return new Blob(parts, {type: match[1].split(';')[0] || 'application/octet-stream'});
+    }
+
     async function persistDeletedOriginal(value) {
       const reference = await persistMediaValue(value);
       if (!String(reference).startsWith(localMediaPrefix)) throw new Error("原文件尚未保存到本地，删除已停止");
@@ -24110,7 +24210,7 @@ ${formatInstruction}`;
         });
       }
       if (!readable || /^https?:|^indexed-media:/i.test(readable)) throw new Error("本地原文件无法读取，删除已停止");
-      const blob = await sourceToBlob(readable);
+      const blob = await verifiedDeletedMediaBlob(readable);
       if (!blob?.size) throw new Error("本地原文件为空，删除已停止");
       return reference;
     }
@@ -24125,7 +24225,10 @@ ${formatInstruction}`;
         const snapshot = { ...node, references: cloneReferences(node.references || []) };
         const original = await resultOriginalSource(snapshot);
         const fullUrl = await persistDeletedOriginal(original);
-        const sourceUrl = snapshot.sourceUrl ? await persistDeletedOriginal(snapshot.sourceUrl) : "";
+        // The source and result can be the same original. Reuse the verified
+        // durable reference instead of reading and validating that file twice.
+        const sourceUrl = !snapshot.sourceUrl ? "" : snapshot.sourceUrl === original
+          ? fullUrl : await persistDeletedOriginal(snapshot.sourceUrl);
         let preview = await getLocalMedia(snapshot.previewUrl || original);
         try { preview = await createPreviewImageUrl(await getLocalMedia(original), 420, Boolean(snapshot.transparent)); }
         catch (_) { /* Keep the existing static preview; the original remains separate. */ }
@@ -25084,6 +25187,7 @@ ${formatInstruction}`;
       savePaintToReference();
     });
     window.addEventListener("keydown", (event) => {
+      if (isApplyingHistory) { event.preventDefault(); return; }
       if (event.key === "Escape" && promptManagerBackdrop.classList.contains("open")) {
         event.preventDefault();
         closePromptManager();
