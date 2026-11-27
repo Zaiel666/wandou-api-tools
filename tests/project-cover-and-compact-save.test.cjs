@@ -47,9 +47,11 @@ const { chromium } = require(path.join(__dirname, "..", "desktop-client", "node_
         } : { success: true, states: [] }
       };
     });
-    const projectHubUrl = pathToFileURL(path.resolve(__dirname, "../app/project-hub.html")).href;
-    await page.goto(projectHubUrl);
-    await page.evaluate(() => {
+    // Seed before the page's asynchronous project-state initializer starts.
+    // Writing into a running page races its queued default-project save.
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem("project-cover-fixture-ready")) return;
+      sessionStorage.setItem("project-cover-fixture-ready", "1");
       const now = Date.now();
       localStorage.setItem("aiCanvasProjectsV1", JSON.stringify([
         { id: "cover-test", name: "封面测试", color: "#76b900", createdAt: now, updatedAt: now, favorite: false },
@@ -71,6 +73,8 @@ const { chromium } = require(path.join(__dirname, "..", "desktop-client", "node_
         links: [],
       }));
     });
+    const projectHubUrl = pathToFileURL(path.resolve(__dirname, "../app/project-hub.html")).href;
+    await page.goto(projectHubUrl);
     await page.reload();
     const coverImage = page.locator('[data-cover="cover-test"] .cover-media-cell img');
     await coverImage.waitFor({ state: "visible" });

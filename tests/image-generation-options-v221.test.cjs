@@ -1,4 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http');
+const listenSafe=require('./safe-loopback-v233.cjs');
 const {chromium}=require('../desktop-client/node_modules/playwright');
 const app=path.resolve(__dirname,'../app'),qa=path.resolve(__dirname,'../../qa');
 global.WandouImageCapabilities=require(path.join(app,'image-model-capabilities.js'));
@@ -8,7 +9,7 @@ let browser,server,origin;
 test.before(async()=>{
  fs.mkdirSync(qa,{recursive:true});
  server=http.createServer((req,res)=>{try{const file=path.resolve(app,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!file.startsWith(app+path.sep))throw Error('outside');res.setHeader('content-type',({'.html':'text/html','.js':'application/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404);res.end();}});
- await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));origin='http://127.0.0.1:'+server.address().port;
+ await listenSafe(server);origin='http://127.0.0.1:'+server.address().port;
  browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
 });
 test.after(async()=>{await browser?.close();await new Promise(resolve=>server.close(resolve));});

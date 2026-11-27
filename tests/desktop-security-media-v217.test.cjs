@@ -100,14 +100,25 @@ test('official updater verifies checksum, rechecks work after download, and only
 
 test('network redirects are validated before following, including malicious redirects from official URLs',async()=>{
   const config={githubOwner:'Zaiel666',githubRepository:'wandou-api-tools',assetName:'app.zip'},seen=[];
-  const selectedSession={fetch:async function(url,request){assert.equal(this,selectedSession);seen.push({url,method:request.method||'GET',redirect:request.redirect});return{status:302,headers:{get:()=> 'https://evil.test/payload'}}}};
+  const selectedSession={};let target='https://evil.test/payload',followed=0,aborted=0;
+  const net={request(options){
+    assert.equal(options.session,selectedSession);assert.equal(options.credentials,'omit');assert.equal(options.useSessionCookies,false);
+    seen.push({url:options.url,method:options.method,redirect:options.redirect});
+    const request=new(require('node:events').EventEmitter)();
+    request.abort=()=>{aborted++};
+    request.end=()=>queueMicrotask(()=>request.emit('redirect',302,'GET',target));
+    request.followRedirect=()=>{followed++;seen.push({url:target,method:options.method,redirect:options.redirect});const body=require('node:stream').Readable.from([Buffer.from('verified-body')]);body.statusCode=200;body.headers={};request.emit('response',body)};
+    return request;
+  }};
   const env={AbortController,setTimeout,clearTimeout,URL,readClientConfig:()=>config,require:p=>p.startsWith('./')?require(path.join(desktop,p)):require(p),
-    getApplicationSession:()=>selectedSession,net:{fetch:()=>{throw Error('Legacy/default transport must not be used');}}};
+    getApplicationSession:()=>selectedSession,net};
   vm.runInNewContext(slice('async function fetchWithTimeout(', 'function normalizeUpdateInfo('),env);
   await assert.rejects(env.fetchWithTimeout('https://github.com/Zaiel666/wandou-api-tools/releases/latest'),/官方仓库/);
   assert.equal(seen.length,1);assert.deepEqual(seen,[{url:'https://github.com/Zaiel666/wandou-api-tools/releases/latest',method:'GET',redirect:'manual'}]);
-  seen.length=0;selectedSession.fetch=async function(url,request){assert.equal(this,selectedSession);seen.push({url,method:request.method||'GET',redirect:request.redirect});return seen.length===1?{status:302,headers:{get:()=> 'https://release-assets.githubusercontent.com/synthetic/app.zip'}}:{status:200};};
-  assert.equal((await env.fetchWithTimeout('https://github.com/Zaiel666/wandou-api-tools/releases/download/v2.0.28/app.zip',{method:'GET'})).status,200);
+  assert.equal(followed,0);assert.equal(aborted,1);
+  seen.length=0;target='https://release-assets.githubusercontent.com/synthetic/app.zip';
+  const response=await env.fetchWithTimeout('https://github.com/Zaiel666/wandou-api-tools/releases/download/v2.0.28/app.zip',{method:'GET'});assert.equal(response.status,200);
+  assert.equal(await new Response(response.body).text(),'verified-body');assert.equal(followed,1);assert.equal(aborted,1);
   assert.deepEqual(seen.map(x=>x.url),['https://github.com/Zaiel666/wandou-api-tools/releases/download/v2.0.28/app.zip','https://release-assets.githubusercontent.com/synthetic/app.zip']);assert.ok(seen.every(x=>x.method==='GET'&&x.redirect==='manual'));
 });
 

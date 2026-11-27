@@ -243,9 +243,9 @@ internal sealed class InstallerWindow : Form
         var layout = new TableLayoutPanel { Dock=DockStyle.Fill,Padding=new Padding(24),RowCount=7,ColumnCount=1 };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute,45)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute,72)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute,45)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute,72)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute,25)); layout.RowStyles.Add(new RowStyle(SizeType.Percent,100)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute,45));
         layout.Controls.Add(new Label {Text="将豌豆 AI 安装到你选择的位置",Font=new Font(Font.FontFamily,16,FontStyle.Bold),Dock=DockStyle.Fill},0,0);
-        layout.Controls.Add(new Label {Text="默认画布项目和原图保存在安装目录的“豌豆AI数据”。\n可选其他磁盘，安装后自动创建桌面和开始菜单快捷方式。",Dock=DockStyle.Fill},0,1);
+        layout.Controls.Add(new Label {Text="安装位置可自行选择；项目和原图默认保存在其中的“豌豆AI数据”。\n安装后也可在“存储设置”选择独立的数据目录。",Dock=DockStyle.Fill},0,1);
         var row = new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=2}; row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,100)); location.Dock=DockStyle.Fill; location.Text=DefaultDirectory(); browse.Text="选择目录…"; browse.Dock=DockStyle.Fill; row.Controls.Add(location,0,0); row.Controls.Add(browse,1,0); layout.Controls.Add(row,0,2);
-        layout.Controls.Add(new Label {Text="覆盖同一安装目录会保留“豌豆AI数据”；旧程序备份会保留用于回退。\nAPI 配置和工作台项目仍在 Windows 用户配置目录。网页版使用独立浏览器存储，不共享桌面项目。",Dock=DockStyle.Fill},0,3);
+        layout.Controls.Add(new Label {Text="升级会保留已选择的数据目录；工作台作品和浏览器内 API 设置随项目目录保存。\n主题、目录选择等主配置单独保留。更换数据位置请使用“存储设置”；旧目录副本会保留，回退前需核对最新数据。",Dock=DockStyle.Fill},0,3);
         progress.Dock=DockStyle.Fill;layout.Controls.Add(progress,0,4);status.Dock=DockStyle.Fill;status.Text="选择专用文件夹。安装前请正常保存并关闭已打开的软件。";layout.Controls.Add(status,0,5);install.Text="安装";install.Dock=DockStyle.Right;install.Width=120;layout.Controls.Add(install,0,6);Controls.Add(layout);
         browse.Click += delegate { using(var chooser=new FolderBrowserDialog {Description="选择安装父目录；会在其中使用“豌豆AI工具”文件夹",ShowNewFolderButton=true}) if(chooser.ShowDialog(this)==DialogResult.OK) location.Text=Path.Combine(chooser.SelectedPath,"豌豆AI工具"); };
         install.Click += async delegate { if(install.Tag==null)await RunInstall(); };

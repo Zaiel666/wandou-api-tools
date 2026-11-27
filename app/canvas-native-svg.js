@@ -1,6 +1,7 @@
 /* Native vectors keep their original XML; previews and raster output remain separate. */
 function nativeSvgRequested(node) {
-  return node?.imageOutputFormat === 'svg' || node?.outputFormat === 'svg';
+  return node?.imageOutputFormat === 'svg' || node?.outputFormat === 'svg'
+    || (node?.type === 'result' && String(node?.mimeType || '').split(';')[0].trim().toLowerCase() === 'image/svg+xml');
 }
 
 function nativeSvgModelSupported(model) {

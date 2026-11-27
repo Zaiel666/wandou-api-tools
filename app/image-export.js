@@ -92,5 +92,5 @@
       return { success: false, error: error?.message || '无法保存文件，请稍后重试' };
     }
   }
-  window.WandouImageExport = Object.freeze({ save });
+  window.WandouImageExport = Object.freeze({ save, detectFileType: fileType });
 })();

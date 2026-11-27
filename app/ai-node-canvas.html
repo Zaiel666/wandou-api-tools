@@ -7786,6 +7786,9 @@
   <script src="./local-cache.js"></script>
   <script src="./image-export.js"></script>
   <script src="./export-artifact-store.js"></script>
+  <script src="./native-svg-output.js"></script>
+  <script src="./animated-image-output.js"></script>
+  <script src="./image-generation-options.js"></script>
   <script src="./prompt-library-data.js"></script>
   <script src="./prompt-library-sources.js"></script>
   <script src="./skill-catalog.js"></script>
@@ -18284,6 +18287,9 @@
     }
 
     async function callApi(node, signal) {
+      if (!["audio", "video", "keyword"].includes(node.type) && (nativeGifRequested(node) || nativeSvgRequested(node))) {
+        throw new Error("旧画布暂不支持生成 SVG 或 GIF，请从软件首页打开新版节点画布；当前未发送生成请求。");
+      }
       if (node.type === "audio") return callAudioApi(node, signal);
       const apiProfile = apiProfileForModel(node.model);
       const configuredUrl = apiProfile.url;
@@ -18300,6 +18306,13 @@
           node
       ];
       const references = collectReferenceItems(referenceSources);
+      if (references.some(item => item?.markupUrl)) {
+        throw new Error("旧画布暂不支持圈画标注生成，请从软件首页打开新版节点画布；当前未发送生成请求。");
+      }
+      if (!["audio", "video", "keyword"].includes(node.type)) {
+        const optionsError = window.WandouImageOptions.validate({ ...node, model:imageGenerationApiModel(node.model) }, references);
+        if (optionsError) throw new Error(optionsError);
+      }
       const editModelError = imageEditModelError(node, references);
       if (editModelError) throw new Error(editModelError);
       const jsonHeaders = { "Content-Type": "application/json" };
@@ -19012,7 +19025,7 @@ ${formatInstruction}`;
       let targetSize = node._apiTargetSize || node._targetSize || (node.type === "png" ? transparentTargetSize(references, node.resolution) : sizeFromRatio(node.ratio, node.resolution, references));
       if (!["keyword", "video"].includes(node.type)) {
         const capability = window.WandouImageCapabilities.resolve(imageGenerationApiModel(node.model));
-        if (["openai-flex", "gateway-1k"].includes(capability.kind)) targetSize = ratioKey(node.ratio) === "自定义尺寸" && capability.kind === "openai-flex"
+        if (["openai-flex", "openai-standard", "gateway-1k"].includes(capability.kind)) targetSize = ratioKey(node.ratio) === "自定义尺寸" && capability.kind === "openai-flex"
           ? window.WandouImageCapabilities.gptSize(targetSize)
           : window.WandouImageCapabilities.nativeSize(imageGenerationApiModel(node.model), imageNativeResolutionForModel(node.model,node.resolution), targetSize);
       }
@@ -19184,6 +19197,12 @@ ${formatInstruction}`;
         delete imagePayload.quality;
         delete imagePayload.output_format;
         imagePayload.size = /^dall-e-[23]$/i.test(imageModel) ? "1024x1024" : apiSizeFromTarget(targetSize);
+      }
+
+      // PNG quality and complexity selections use the same capability rules
+      // as the current canvas. SVG and GIF generation are blocked above.
+      if (!node._forceBaseGeneration) {
+        Object.assign(imagePayload, window.WandouImageOptions.requestFields({ ...node, model:imageModel }));
       }
 
       if (node.type === "outpaint" && references[0]?.url) {
@@ -21667,6 +21686,17 @@ ${formatInstruction}`;
           showToast("下载失败：没有可下载的文件地址");
           return false;
         }
+        if (/^image\//i.test(fallbackType)) {
+          try {
+            const blob = await sourceToBlob(objectUrl || src, fallbackType);
+            const result = await window.WandouImageExport.save({ blob, filename, mimeType: fallbackType });
+            if (!result?.success) throw new Error(result?.error || "无法保存文件");
+            showToast(`下载已开始：${result.filename || filename}`, "success");
+            return true;
+          } finally {
+            if (objectUrl && objectUrl !== src) URL.revokeObjectURL(objectUrl);
+          }
+        }
         const a = document.createElement("a");
         a.href = objectUrl || src;
         a.download = filename;
@@ -21684,21 +21714,77 @@ ${formatInstruction}`;
       }
     }
 
+    // A compatibility canvas can still open older saved projects directly.
+    // Keep the same original/preview distinction used by the current canvas.
+    function nativeGifRequested(node) {
+      return node?.imageOutputFormat === 'gif' || node?.outputFormat === 'gif' || node?.mimeType === 'image/gif';
+    }
+    function nativeSvgRequested(node) {
+      return node?.imageOutputFormat === 'svg' || node?.outputFormat === 'svg'
+        || (node?.type === 'result' && String(node?.mimeType || '').split(';')[0].trim().toLowerCase() === 'image/svg+xml');
+    }
+    function resultHasLocalOutput(node) {
+      return Boolean(node?.outputAdjustment?.nonNative || /^local-|upscale|letterbox|retime/.test(node?.resolutionProcessing || ""));
+    }
+    function deletedResultOriginal(node) {
+      if (!node?.deletedAt) return "";
+      if (node.fullUrl) return node.fullUrl;
+      if (!resultHasLocalOutput(node)) return node.sourceUrl || "";
+      return "";
+    }
+    async function resultOriginalSource(node) {
+      const explicit = node.deletedAt ? deletedResultOriginal(node) : node.fullUrl || (!resultHasLocalOutput(node) ? node.sourceUrl : "");
+      if (explicit) return explicit;
+      if (node.deletedAt) throw new Error("此记录仅保留预览，原文件不可用");
+      const candidate = node.mediaUrl;
+      const identity = value => window.WandouMediaUrls?.storedReference(value) || value || "";
+      if (!candidate || identity(candidate) === identity(node.previewUrl)) throw new Error("此节点仅保留预览，原文件不可用");
+      const width = Number(node.width), height = Number(node.height);
+      if (!(width > 0 && height > 0)) throw new Error("旧图片缺少原尺寸记录，无法确认原文件");
+      const blob = await sourceToBlob(candidate);
+      if (!blob?.size) throw new Error("原文件无法读取");
+      const actualType = await window.WandouImageExport.detectFileType(blob);
+      let dimensions;
+      if (actualType === 'image/gif') dimensions = await WandouAnimatedImage.prepare(blob);
+      else if (actualType === 'image/svg+xml') dimensions = await WandouNativeSvg.prepare(blob);
+      else {
+        const bitmap = await createImageBitmap(blob);
+        dimensions = { width: bitmap.width, height: bitmap.height };
+        bitmap.close();
+      }
+      if (dimensions.width !== width || dimensions.height !== height) throw new Error("现有图片尺寸与原图记录不符，不能将预览当作原文件");
+      return candidate;
+    }
     async function downloadNodeMedia(node) {
       let objectUrl = "";
       try {
+        if (node.deletedAt && !deletedResultOriginal(node)) {
+          showToast("这条旧删除记录只保留了预览，原文件不可用，无法下载原图。", "error", 5000);
+          return;
+        }
         if (node.mediaType === "text" && node.text) {
           const texts = favoritePromptTexts(node);
           downloadTextFile(promptBundleContent(texts.zh, texts.en), downloadFileName(node, "txt"));
           return;
         }
 
-        const downloadUrl = favoriteMediaUrl(node);
+        const downloadUrl = node.type === "result" && node.mediaType === "image"
+          ? await resultOriginalSource(node) : favoriteMediaUrl(node);
         if (!downloadUrl) {
           showToast("下载失败：这个节点还没有可下载内容", "error");
           return;
         }
         showToast("正在准备下载…", "loading");
+        if (nativeGifRequested(node)) {
+          const source = node.type === "result" && node.mediaType === "image" ? downloadUrl : node.fullUrl || node.sourceUrl || downloadUrl;
+          await triggerDownload(source, downloadFileName(node, 'gif'), 'image/gif');
+          return;
+        }
+        if (nativeSvgRequested(node)) {
+          const source = node.type === "result" && node.mediaType === "image" ? downloadUrl : node.fullUrl || node.sourceUrl || downloadUrl;
+          await triggerDownload(source, downloadFileName(node, 'svg'), 'image/svg+xml');
+          return;
+        }
         if (node.mediaType === "image") {
           objectUrl = await sourceToLosslessPngUrl(downloadUrl, node.width, node.height);
         }

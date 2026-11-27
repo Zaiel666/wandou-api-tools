@@ -29,7 +29,7 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
       .filter((item) => item.matches("#zoomValue, .folder-home-control, #themeToggleButton, #autoSaveDirectoryButton, #settingsButton"))
       .map((item) => {
         const rect = item.getBoundingClientRect();
-        return { left: rect.left, right: rect.right, height: rect.height, background: getComputedStyle(item).backgroundColor };
+        return { id: item.id || (item.classList.contains('folder-home-control') ? 'folder-home-control' : ''), left: rect.left, right: rect.right, height: rect.height, background: getComputedStyle(item).backgroundColor };
       });
     const buttons = [...toolbar.querySelectorAll("button")].map((button) => {
       const rect = button.getBoundingClientRect();
@@ -64,13 +64,13 @@ test("节点连接、紧凑工具栏、项目合集和右侧对话面板保持�
   assert.equal(shell.panelVisible, "1");
   assert.ok(Math.abs(shell.sidebarHandleCenter - 480) < 1, JSON.stringify(shell));
   assert.ok(shell.toolbarRightGap >= 7 && shell.toolbarRightGap <= 9, JSON.stringify(shell));
-  assert.ok(shell.toolbarWidth >= 340 && shell.toolbarWidth <= 480, JSON.stringify(shell));
+  assert.ok(shell.toolbarWidth >= 300 && shell.toolbarWidth <= 330, JSON.stringify(shell));
   assert.ok(Math.abs(shell.toolbarHeight - 52) < 1, JSON.stringify(shell));
   assert.ok(shell.buttonHeights.every((height) => height >= 38 && height <= 44.1), JSON.stringify(shell.buttonHeights));
-  assert.equal(shell.toolbarItems.length, 5);
+  assert.deepEqual(shell.toolbarItems.map(item=>item.id), ['zoomValue','folder-home-control','themeToggleButton','settingsButton']);
+  assert.equal(await page.locator('#autoSaveDirectoryButton').count(),0,'the retired local-cache control must not reappear');
   assert.ok(shell.toolbarItems.every((item) => item.height >= 40 && item.height <= 44), JSON.stringify(shell.toolbarItems));
-  assert.ok(shell.toolbarItems.filter((_, index) => index !== 3).every((item) => item.background === "rgb(249, 250, 249)"), JSON.stringify(shell.toolbarItems));
-  assert.equal(shell.toolbarItems[3].background, "rgb(249, 250, 249)");
+  assert.ok(shell.toolbarItems.every((item) => item.background === "rgb(249, 250, 249)"), JSON.stringify(shell.toolbarItems));
   assert.ok(shell.toolbarItems.slice(1).every((item, index) => Math.abs(item.left - shell.toolbarItems[index].right - 8) < 1), JSON.stringify(shell.toolbarItems));
   assert.deepEqual(shell.buttonOrder, [...shell.buttonOrder].sort((a, b) => a - b));
   await page.setViewportSize({ width: 900, height: 700 });

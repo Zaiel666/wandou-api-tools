@@ -74,7 +74,11 @@ test('mascot launcher retains button semantics and composer has no reserved foot
 function setup(markup) {
   const {document, window} = parseHTML('<html><body>' + markup + '</body></html>');
   const context = vm.createContext({document, window, canvasStoragePrefix:'wandou:canvas-ui-test:v1:', renderNode:()=>document.querySelector('.node'), setTimeout:()=>{}, console});
-  vm.runInContext(script, context);
+  // This fixture exercises the UI decorators only; the later viewport module
+  // depends on the full canvas runtime and is covered by real-browser tests.
+  const viewportStart=script.indexOf('/* Window heavy node contents,');
+  assert.ok(viewportStart>0,'viewport module boundary must remain explicit');
+  vm.runInContext(script.slice(0,viewportStart), context);
   return {document, window, ui:window.WandouCanvasTestUI, node:document.querySelector('.node')};
 }
 const generatorFixture = (count=1, locked=false) => `<section class="node generator" data-id="g">
@@ -229,6 +233,8 @@ test('full-page boot wires the bottom toolbar, sidebar icons and single-row assi
     document.getElementById(id).addEventListener('click',()=>imageMenuActions.push(id));
   }
   const context=vm.createContext({document,window,console,canvasStoragePrefix:'',
+    fetch:async()=>({ok:true,text:async()=> 'v2.0.32'}),
+    ResizeObserver:class {observe(){} disconnect(){}},assistantPanel:document.getElementById('assistantPanel'),innerWidth:1440,innerHeight:900,
     renderNode:()=>document.createElement('section'),render:()=>calls.push('render'),
     setTimeout:()=>{},requestAnimationFrame:fn=>fn(),MutationObserver:window.MutationObserver,
     projectHub:document.getElementById('projectHub'),projectHubButton:document.getElementById('projectHubButton'),
@@ -238,7 +244,8 @@ test('full-page boot wires the bottom toolbar, sidebar icons and single-row assi
     undoCanvas:()=>calls.push('undo'),redoCanvas:()=>calls.push('redo'),
     applyCanvasTransform:()=>calls.push('zoom'),scheduleCanvasSave:()=>calls.push('save')
   });
-  vm.runInContext(script,context);
+  const viewportStart=script.indexOf('/* Window heavy node contents,');assert.ok(viewportStart>0);
+  vm.runInContext(script.slice(0,viewportStart),context);
   assert.equal(document.body.dataset.testReady,'true');
   for (const id of ['lightboxContextCopy','lightboxContextPrompt','lightboxContextRegenerate']) {
     const button=document.getElementById(id);
@@ -251,8 +258,10 @@ test('full-page boot wires the bottom toolbar, sidebar icons and single-row assi
   assert.deepEqual(imageMenuActions,['lightboxContextCopy','lightboxContextPrompt','lightboxContextRegenerate']);
   assert.ok(fs.readFileSync(path.join(app,'action-motion.js'),'utf8').includes("const excluded='.test-frame-button,"));
   assert.equal(document.querySelector('.topbar').parentElement,document.body);
-  assert.equal(document.querySelectorAll('[data-add-node] .ui-icon').length,12);
-  assert.equal(document.querySelectorAll('[data-menu-node].test-create-menu-item .ui-icon').length,12);
+  const expectedTypes=['image','sketch','generator','video','batch','keyword','png','outpaint','style','psd','svg','gif','vector','audio'].sort();
+  assert.deepEqual([...document.querySelectorAll('[data-add-node]')].map(button=>button.dataset.addNode).sort(),expectedTypes);
+  assert.equal(document.querySelectorAll('[data-add-node] .ui-icon').length,expectedTypes.length);
+  assert.equal(document.querySelectorAll('[data-menu-node].test-create-menu-item .ui-icon').length,expectedTypes.length);
   for (const button of document.querySelectorAll('[data-menu-node]')) {
     assert.equal(button.children.length,2);
     assert.equal(button.lastElementChild.tagName,'SPAN');
@@ -277,20 +286,28 @@ test('full-page boot wires the bottom toolbar, sidebar icons and single-row assi
   document.querySelectorAll('img.ui-icon').forEach(img=>assert.ok(fs.existsSync(path.join(app,img.getAttribute('src')))));
 });
 
-test('API request, annotation, reference ordering and export handlers are unchanged from production', () => {
+test('shared canvas handlers remain consistent and legacy-only generation limits are explicit', () => {
   const production=fs.readFileSync(path.join(app,'ai-node-canvas.html'),'utf8');
-  for (const name of ['buildApiRequest','generatorPromptWithAnnotations','generatorAnnotationItems','reorderReference','downloadNodeMedia','exportCurrentProject']) {
-    const extract=source=>{
-      const regex=new RegExp('    (?:async )?function '+name+'\\(');
-      const index=source.search(regex);
-      assert.ok(index>=0,'missing '+name);
-      const end=source.indexOf('\n    function ',index+10);
-      const asyncEnd=source.indexOf('\n    async function ',index+10);
-      const stop=Math.min(...[end,asyncEnd].filter(n=>n>index));
-      return source.slice(index,stop).replaceAll('canvasTestStorage','localStorage').replaceAll('canvasTestSessionStorage','sessionStorage').replace(/\r\n/g,'\n').trimEnd();
-    };
-    assert.equal(extract(page),extract(production),name+' must retain the original implementation');
+  const extract=(source,name)=>{
+    const regex=new RegExp('    (?:async )?function '+name+'\\(');
+    const index=source.search(regex);
+    assert.ok(index>=0,'missing '+name);
+    const end=source.indexOf('\n    function ',index+10);
+    const asyncEnd=source.indexOf('\n    async function ',index+10);
+    const stop=Math.min(...[end,asyncEnd].filter(n=>n>index));
+    return source.slice(index,stop).replaceAll('canvasTestStorage','localStorage').replaceAll('canvasTestSessionStorage','sessionStorage').replace(/\r\n/g,'\n').trimEnd();
+  };
+  for (const name of ['generatorPromptWithAnnotations','generatorAnnotationItems','reorderReference','downloadNodeMedia','exportCurrentProject']) {
+    assert.equal(extract(page,name),extract(production,name),name+' must retain the shared implementation');
   }
+  // The current canvas has supported generation options and markup preparation;
+  // the compatibility canvas instead rejects those features before a request.
+  assert.notEqual(extract(page,'buildApiRequest'),extract(production,'buildApiRequest'));
+  assert.match(extract(page,'buildApiRequest'),/WandouImageOptions\.requestFields/);
+  assert.match(extract(page,'buildApiRequest'),/WandouImageMarkup\.prepare/);
+  assert.match(extract(production,'callApi'),/旧画布暂不支持生成 SVG 或 GIF/);
+  assert.match(extract(production,'callApi'),/旧画布暂不支持圈画标注生成/);
+  for(const file of ['legacy-image-safety-v233.test.cjs','legacy-canvas-originals-v233.test.cjs'])assert.ok(fs.existsSync(path.join(__dirname,file)),`missing behavioral test ${file}`);
 });
 
 test('bottom-right launcher and existing rail toggle the same panel and stay synchronized', () => {

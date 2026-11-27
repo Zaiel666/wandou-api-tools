@@ -103,7 +103,7 @@ for(const file of files){
   await page.evaluate(()=>audioJobs.set('synthetic-pending',{}));assert.equal((await page.evaluate(()=>wandouSaveBeforeClose())).success,false);await page.evaluate(()=>audioJobs.clear());
   await page.evaluate(()=>saveCanvasStateNow.started=1);assert.equal((await page.evaluate(()=>wandouSaveBeforeClose())).success,false);await page.evaluate(()=>saveCanvasStateNow.started=0);
   assert.equal(await page.evaluate(()=>qaStartup.writes.length),0);assert.equal(await page.evaluate(prefix=>localStorage.getItem(prefix),prefix),null);
-  await page.evaluate(()=>sessionStorage.setItem('qa-retry-ready','1'));if(theme==='dark')await retry.press('Enter');else await retry.click();await page.waitForFunction(()=>document.body.dataset.canvasReady==='true');
+  await page.evaluate(()=>sessionStorage.setItem('qa-retry-ready','1'));if(theme==='dark')await retry.press('Enter');else await retry.click();await page.waitForFunction(()=>document.body?.dataset.canvasReady==='true');
   assert.deepEqual(await page.evaluate(()=>nodes.map(n=>n.id)),['saved-node']);assert.equal(await page.evaluate(()=>wandouCanCloseReadOnlyStartup()),false);assert.equal((await page.evaluate(()=>wandouSaveBeforeClose())).success,true);
  },{theme,width:theme==='dark'?1440:1024}));
  test(file+': catalog reads active once, skips 50 known inactive histories, recovers unknown project name',()=>fixture(file,'catalog',async page=>{

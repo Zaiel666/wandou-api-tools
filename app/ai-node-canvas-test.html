@@ -7618,11 +7618,11 @@
       <span class="assistant-panel-resizer" data-assistant-resize="w" aria-hidden="true"></span>
     </aside>
     <button id="assistantRailButton" class="assistant-rail" type="button" aria-label="展开对话模式"><span class="assistant-rail-arrow" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m3 5 5 5-5 5M9 5l5 5-5 5"/></svg></span><span class="assistant-rail-label" data-assistant-rail-copy>对话模式</span></button>
+    <button id="assistantToggleButton" class="assistant-launcher" type="button" aria-controls="assistantPanel" aria-expanded="true" aria-label="收起对话助手" title="收起对话助手">
+      <span class="assistant-mascot-window" aria-hidden="true"><img class="assistant-mascot" src="./assets/pea-assistant-sprite-v2.png" alt="" draggable="false"><canvas class="assistant-mascot-motion"></canvas></span>
+      <span class="assistant-mascot-label">对话助手</span>
+    </button>
   </div>
-  <button id="assistantToggleButton" class="assistant-launcher" type="button" aria-controls="assistantPanel" aria-expanded="true" aria-label="收起对话助手" title="收起对话助手">
-    <span class="assistant-mascot-window" aria-hidden="true"><img class="assistant-mascot" src="./assets/pea-assistant-sprite-v2.png" alt="" draggable="false"><canvas class="assistant-mascot-motion"></canvas></span>
-    <span class="assistant-mascot-label">对话助手</span>
-  </button>
   <script src="./assistant-mascot.js" defer></script>
   <script src="./assistant-task-state.js" defer></script>
 <script src="./assets/pea-assistant-portrait.js" defer></script>
@@ -22626,6 +22626,17 @@ ${formatInstruction}`;
           showToast("下载失败：没有可下载的文件地址");
           return false;
         }
+        if (/^image\//i.test(fallbackType)) {
+          try {
+            const blob = await sourceToBlob(objectUrl || src, fallbackType);
+            const result = await window.WandouImageExport.save({ blob, filename, mimeType: fallbackType });
+            if (!result?.success) throw new Error(result?.error || "无法保存文件");
+            showToast(`下载已开始：${result.filename || filename}`, "success");
+            return true;
+          } finally {
+            if (objectUrl && objectUrl !== src) URL.revokeObjectURL(objectUrl);
+          }
+        }
         const a = document.createElement("a");
         a.href = objectUrl || src;
         a.download = filename;
@@ -22664,11 +22675,12 @@ ${formatInstruction}`;
         }
         showToast("正在准备下载…", "loading");
         if (nativeGifRequested(node)) {
-          await triggerDownload(node.fullUrl || node.sourceUrl || downloadUrl, downloadFileName(node, 'gif'), 'image/gif');
+          const source = node.type === "result" && node.mediaType === "image" ? downloadUrl : node.fullUrl || node.sourceUrl || downloadUrl;
+          await triggerDownload(source, downloadFileName(node, 'gif'), 'image/gif');
           return;
         }
         if (nativeSvgRequested(node)) {
-          const source = node.fullUrl || node.sourceUrl || downloadUrl;
+          const source = node.type === "result" && node.mediaType === "image" ? downloadUrl : node.fullUrl || node.sourceUrl || downloadUrl;
           await triggerDownload(source, downloadFileName(node, 'svg'), 'image/svg+xml');
           return;
         }
@@ -24060,9 +24072,10 @@ ${formatInstruction}`;
       if (!(width > 0 && height > 0)) throw new Error("旧图片缺少原尺寸记录，无法确认原文件");
       const blob = await sourceToBlob(candidate);
       if (!blob?.size) throw new Error("原文件无法读取");
+      const actualType = await window.WandouImageExport.detectFileType(blob);
       let dimensions;
-      if (nativeGifRequested(node)) dimensions = await WandouAnimatedImage.prepare(blob);
-      else if (nativeSvgRequested(node)) dimensions = await WandouNativeSvg.prepare(blob);
+      if (actualType === 'image/gif') dimensions = await WandouAnimatedImage.prepare(blob);
+      else if (actualType === 'image/svg+xml') dimensions = await WandouNativeSvg.prepare(blob);
       else {
         const bitmap = await createImageBitmap(blob);
         dimensions = { width: bitmap.width, height: bitmap.height };

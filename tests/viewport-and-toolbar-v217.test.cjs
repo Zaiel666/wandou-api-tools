@@ -14,17 +14,22 @@ test('offscreen contents retain geometry/data and restore on pan/selection; tool
   const toolbar = await page.evaluate(()=>{
    const t=document.querySelector('.test-canvas-toolbar'), model=document.querySelector('#assistantPanel .assistant-select-field.model .assistant-picker-trigger');
    const b=model.getBoundingClientRect(), hit=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);
-   const tr=t.getBoundingClientRect(); return {modelUncovered:model.contains(hit),toolbarRight:tr.right,modelLeft:b.left,scrollable:t.scrollWidth>t.clientWidth};
+   const tr=t.getBoundingClientRect(),panel=document.querySelector('#assistantPanel'),pr=panel.getBoundingClientRect(); return {modelUncovered:model.contains(hit),toolbarRight:tr.right,modelLeft:b.left,scrollable:t.scrollWidth>t.clientWidth,hit:hit?.outerHTML.slice(0,1000)||null,modelRect:b.toJSON(),toolbarRect:tr.toJSON(),panelRect:pr.toJSON(),toolbarStyle:t.getAttribute('style'),panelStyle:panel.getAttribute('style'),appClass:document.querySelector('.app').className,animations:document.getAnimations().filter(a=>a.effect?.target?.closest?.('#assistantPanel,.app,.test-canvas-toolbar')).map(a=>({target:a.effect.target.id||String(a.effect.target.className),playState:a.playState,currentTime:a.currentTime}))};
   });
+  if(!toolbar.modelUncovered && process.env.WANDOU_VIEWPORT_DIAG_DIR){const dir=process.env.WANDOU_VIEWPORT_DIAG_DIR;fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'failure.json'),JSON.stringify({stage:'initial',toolbar},null,2),{flag:'wx'});await page.screenshot({path:path.join(dir,'failure.png')});}
   assert.equal(toolbar.modelUncovered,true,JSON.stringify(toolbar));
   assert.equal(toolbar.scrollable,true,'narrow toolbar scrolls instead of overlapping model button');
   await page.locator('.test-canvas-toolbar [data-tool="redo"]').scrollIntoViewIfNeeded();
   assert.equal(await page.locator('.test-canvas-toolbar [data-tool="redo"]').isVisible(),true);
+  const viewportReachability=[];
   for (const width of [1024,1280,1440]) for (const dark of [false,true]) {
    await page.setViewportSize({width,height:800});
    await page.evaluate(dark=>document.body.classList.toggle('dark-theme',dark),dark);
    await page.waitForTimeout(100);
-   assert.equal(await page.evaluate(()=>{const e=document.querySelector('#assistantPanel .assistant-select-field.model .assistant-picker-trigger'),r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true,`model covered at${width} dark=${dark}`);
+   const model=await page.evaluate(()=>{const e=document.querySelector('#assistantPanel .assistant-select-field.model .assistant-picker-trigger'),r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return {reachable:e.contains(hit),hit:hit?.outerHTML.slice(0,1000)||null,rect:r.toJSON(),point:{x,y},stack:document.elementsFromPoint(x,y).slice(0,8).map(n=>({tag:n.tagName,id:n.id,className:String(n.className),zIndex:getComputedStyle(n).zIndex,pointerEvents:getComputedStyle(n).pointerEvents})),animations:document.getAnimations().filter(a=>a.effect?.target?.closest?.('#assistantPanel,.app,.test-canvas-toolbar')).map(a=>({target:a.effect.target.id||String(a.effect.target.className),playState:a.playState,currentTime:a.currentTime}))};});
+   viewportReachability.push({width,dark,...model});
+   if(!model.reachable && process.env.WANDOU_VIEWPORT_DIAG_DIR){const dir=process.env.WANDOU_VIEWPORT_DIAG_DIR;fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'failure.json'),JSON.stringify({width,dark,model,viewportReachability},null,2),{flag:'wx'});await page.screenshot({path:path.join(dir,'failure.png')});await page.waitForTimeout(200);const later=await page.evaluate(()=>{const e=document.querySelector('#assistantPanel .assistant-select-field.model .assistant-picker-trigger'),r=e.getBoundingClientRect(),launcher=document.querySelector('#assistantToggleButton'),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{reachable:e.contains(hit),hit:hit?.outerHTML.slice(0,1000),modelRect:r.toJSON(),launcherRect:launcher.getBoundingClientRect().toJSON(),panelRect:document.querySelector('#assistantPanel').getBoundingClientRect().toJSON(),appStyle:{transform:getComputedStyle(document.querySelector('.app')).transform,opacity:getComputedStyle(document.querySelector('.app')).opacity,zIndex:getComputedStyle(document.querySelector('.app')).zIndex}}});fs.writeFileSync(path.join(dir,'after-200ms.json'),JSON.stringify(later,null,2),{flag:'wx'});}
+   assert.equal(model.reachable,true,`model covered at${width} dark=${dark}: ${JSON.stringify(model)}`);
   }
   await page.setViewportSize({width:1024,height:800});
   await page.evaluate(()=>{
@@ -59,6 +64,6 @@ test('offscreen contents retain geometry/data and restore on pan/selection; tool
   assert.ok(await page.evaluate(()=>WandouCanvasViewport.stats().skipped)>0,'select-all preserves lightweight offscreen shells');
   assert.equal(await page.evaluate(()=>selectionFrame.classList.contains('open')),true);
   assert.deepEqual(errors,[]);
-  fs.writeFileSync(path.resolve(__dirname,'../../qa/viewport-behavior.json'),JSON.stringify({toolbar,before,after,errors},null,2));
+  fs.writeFileSync(path.resolve(__dirname,'../../qa/viewport-behavior.json'),JSON.stringify({toolbar,viewportReachability,before,after,errors},null,2));
  } finally {await browser.close();}
 });

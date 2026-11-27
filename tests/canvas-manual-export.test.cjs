@@ -44,20 +44,21 @@ for (const filename of ['ai-node-canvas-test.html', 'ai-node-canvas.html']) {
         render({ skipSave: true }); await generateFromNode(node.id);
         const generated = nodes.find(item => item.type === 'result' && item.fullUrl);
         const saved = await saveCanvasState();
-        return { saved, calls: exportCalls, id: generated?.id, width: generated?.width, projectId: activeProjectId };
+        return { saved, calls: exportCalls, id: generated?.id, width: generated?.width, originalWidth: generated?.originalWidth, processing: generated?.resolutionProcessing, projectId: activeProjectId };
       });
       assert.equal(result.calls.api, 1); assert.equal(result.calls.choose, 0);
       assert.deepEqual(result.calls.saveAs, []);
       assert.deepEqual(result.calls.writes, []); assert.equal(result.calls.folders, 0);
-      assert.equal(result.saved, true); assert.equal(result.width, 32); assert.ok(result.id);
+      assert.equal(result.saved, true); assert.equal(result.width, 1024); assert.equal(result.originalWidth, 32); assert.equal(result.processing, 'local-upscale'); assert.ok(result.id);
       assert.equal(await page.locator('#autoSaveDirectoryButton').count(), 0, 'The canvas does not show a download directory control');
       await page.reload(); await page.waitForFunction(() => document.body.dataset.canvasReady === 'true');
       const restored = await page.evaluate(id => { const node = nodes.find(item => item.id === id); return { projectId: activeProjectId, type: node?.mediaType, width: node?.width, hasMedia: Boolean(node?.fullUrl || node?.mediaUrl) }; }, result.id);
-      assert.deepEqual(restored, { projectId: result.projectId, type: 'image', width: 32, hasMedia: true });
+      assert.deepEqual(restored, { projectId: result.projectId, type: 'image', width: 1024, hasMedia: true });
       await page.evaluate(() => {
         window.restoredExports = [];
         window.wandouShell = { saveFileAs: async (filename, bytes, mimeType) => {
-          restoredExports.push({ filename, signature: Array.from(bytes.slice(0, 8)), mimeType });
+          const bitmap = await createImageBitmap(new Blob([bytes],{type:mimeType}));
+          restoredExports.push({ filename, signature: Array.from(bytes.slice(0, 8)), mimeType, width: bitmap.width, height: bitmap.height }); bitmap.close();
           return { success: true, filename };
         } };
       });
@@ -66,6 +67,7 @@ for (const filename of ['ai-node-canvas-test.html', 'ai-node-canvas.html']) {
       assert.equal(downloads.length, 1); assert.match(downloads[0].filename, /\.png$/);
       assert.deepEqual(downloads[0].signature, [137, 80, 78, 71, 13, 10, 26, 10]);
       assert.equal(downloads[0].mimeType, 'image/png');
+      assert.equal(downloads[0].width,1024);assert.equal(downloads[0].height,1024);
     } finally { await browser.close(); }
   });
 }

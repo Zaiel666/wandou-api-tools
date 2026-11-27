@@ -903,24 +903,9 @@ async function latestCanvasBackupForGuard(payload) {
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const policy = require('./update-policy.cjs')(readClientConfig());
-    policy.initial(url);
-    let target = url;
-    for (let count = 0; count < 6; count += 1) {
-      const response = await getApplicationSession().fetch(target, { ...options, redirect: 'manual', signal: controller.signal });
-      if (![301, 302, 303, 307, 308].includes(response.status)) return response;
-      const location = response.headers.get('location');
-      if (!location) throw Error('更新服务器重定向无目标');
-      target = new URL(location, target).href;
-      policy.redirect(target);
-    }
-    throw Error('更新服务器重定向次数过多');
-  } finally {
-    clearTimeout(timer);
-  }
+  return require('./update-transport.cjs')({
+    net, session: getApplicationSession(), policy: require('./update-policy.cjs')(readClientConfig())
+  })(url, options, timeoutMs);
 }
 
 function normalizeUpdateInfo(release, currentVersion, assetName, checksumAssetName) {
