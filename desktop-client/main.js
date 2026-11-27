@@ -43,6 +43,7 @@ async function trackDesktopExport(task) {
   finally { activeDesktopExports.delete(token); }
 }
 let updateInProgress = false;
+let updateDownloadController = null;
 let applicationSession = null;
 let browserSessionInfo = null;
 let applicationStorageReady = false;
@@ -951,15 +952,29 @@ async function downloadFile(url, destination) {
   await fs.promises.writeFile(destination, buffer);
 }
 
-async function downloadFileWithFallback(url, destination, fallbackUrl = '') {
+async function downloadFileWithFallback(url, destination, fallbackUrl = '', expectedSha256 = '', signal = null) {
   const sources = [...new Set([url,fallbackUrl].filter(isSafeHttpsUrl))];
   let lastError = Error('更新下载地址无效');
   for(const source of sources) {
     try {
+      if (expectedSha256) {
+        let lastProgressAt=0,lastAttempt=0;
+        return await require('./update-resume.cjs').download({url:source,destination,expectedSha256,signal,
+          maxBytes:1024*1024*1024,
+          onProgress:progress=>{
+            const now=Date.now();
+            if (now-lastProgressAt<1200 && progress.attempt===lastAttempt && progress.bytes!==progress.total) return;
+            lastProgressAt=now;lastAttempt=progress.attempt;
+            const received=(progress.bytes/1048576).toFixed(1),total=progress.total?` / ${(progress.total/1048576).toFixed(1)}`:'';
+            try { sendUpdateStatus(`正在下载新版本：${received}${total} MB${progress.attempt>1?'（断线后继续）':''}…`); } catch { /* Status display must not cancel a valid download. */ }
+          },
+          fetchResponse:(target,request)=>fetchWithTimeout(target,{cache:'no-store',headers:{Accept:'application/octet-stream','User-Agent':'WandouAI-Desktop-Updater'},signal:request.signal,
+            ...(request.start === null ? {} : {rangeStart:request.start,ifRange:request.etag})},120000)});
+      }
       return await require('./update-download.cjs').download({url:source,destination,
         maxBytes:destination.endsWith('.sha256')?65536:1024*1024*1024,
         fetchResponse:target=>fetchWithTimeout(target,{cache:'no-store',headers:{Accept:'application/octet-stream','User-Agent':'WandouAI-Desktop-Updater'}},120000)});
-    } catch(error) {lastError=error;}
+    } catch(error) {if(signal?.aborted) throw Error('更新下载已取消，原程序未被替换');lastError=error;}
   }
   throw lastError;
 }
@@ -985,13 +1000,18 @@ async function startPortableUpdate(updateInfo) {
     const workDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "wandou-ai-update-"));
     const packagePath = path.join(workDir, updateInfo.assetName || "wandou-ai-tools-windows-x64.zip");
     const checksumPath = `${packagePath}.sha256`;
-    sendUpdateStatus("正在下载新版本…");
-    await downloadFileWithFallback(updateInfo.downloadUrl, packagePath, updateInfo.packageApiUrl);
-    sendUpdateStatus("正在校验更新文件…");
+    sendUpdateStatus("正在获取更新校验文件…");
     await downloadFileWithFallback(updateInfo.checksumUrl, checksumPath, updateInfo.checksumApiUrl);
 
     const checksumText = await fs.promises.readFile(checksumPath, "utf8");
     const expected = require('./update-download.cjs').checksum(checksumText,updateInfo.assetName);
+    updateDownloadController = new AbortController();
+    const downloadSignal = updateDownloadController.signal;
+    sendUpdateStatus("正在下载新版本，可随时取消下载。", "downloading");
+    await downloadFileWithFallback(updateInfo.downloadUrl, packagePath, updateInfo.packageApiUrl, expected, downloadSignal);
+    if (downloadSignal.aborted) throw Error('更新下载已取消，原程序未被替换');
+    updateDownloadController = null;
+    sendUpdateStatus("正在校验更新文件…", "checking");
     const actual = await require('./update-download.cjs').sha256(packagePath);
     if (!expected || actual !== expected) throw new Error("更新文件校验失败，已停止安装");
     // Downloads can take minutes; a new job may have started meanwhile.
@@ -1071,6 +1091,7 @@ async function startPortableUpdate(updateInfo) {
     setTimeout(() => app.quit(), 0);
     return { started: true };
   } catch (error) {
+    updateDownloadController = null;
     if (handoffReadyPath) await fs.promises.writeFile(handoffReadyPath+'.cancel','cancel',{flag:'wx'}).catch(()=>{});
     updateInProgress = false;
     sendUpdateStatus(error.message || "更新失败", "error");
@@ -1369,6 +1390,11 @@ handleDesktop("desktop:confirm-close", (_event, verification = {}) => {
 handleDesktop("desktop:get-client-config", () => ({ ...readClientConfig(), version: app.getVersion(), name: APP_NAME }));
 handleDesktop("desktop:check-for-updates", () => checkForUpdates());
 handleDesktop("desktop:start-update", (_event, updateInfo) => startPortableUpdate(updateInfo));
+handleDesktop("desktop:cancel-update-download", () => {
+  if (!updateDownloadController) return false;
+  updateDownloadController.abort();
+  return true;
+});
 handleDesktop("desktop:open-update-downloads", async () => {
   const url=require('./safe-update-channel.cjs').urls(readClientConfig()).manual;
   await shell.openExternal(url);return {success:true};

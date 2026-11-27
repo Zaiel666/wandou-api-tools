@@ -10,7 +10,16 @@ module.exports = function createUpdateTransport({ net, session, policy }) {
     if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) throw Error('更新请求超时设置无效');
     if (options.method && options.method !== 'GET') throw Error('更新仅允许读取官方资源');
     const headers = { ...options.headers };
-    if (Object.keys(headers).some(name => /^(authorization|proxy-authorization|cookie|range|host)$/i.test(name))) throw Error('更新请求不能携带凭据或部分下载请求');
+    if (Object.keys(headers).some(name => /^(authorization|proxy-authorization|cookie|range|if-range|accept-encoding|host)$/i.test(name))) throw Error('更新请求不能携带凭据或自行指定部分下载请求');
+    // Only the trusted main-process downloader supplies these structured
+    // values; callers cannot inject raw range or conditional headers.
+    if (options.rangeStart != null || options.ifRange != null) {
+      const etag=options.ifRange;
+      if (!Number.isSafeInteger(options.rangeStart) || options.rangeStart < 1 || options.rangeStart > 1024*1024*1024 || typeof etag !== 'string' || etag.length>512 || !/^"[\x21\x23-\x7e\x80-\xff]*"$/.test(etag)) throw Error('更新续传参数无效');
+      headers.Range=`bytes=${options.rangeStart}-`;
+      headers['If-Range']=etag;
+    }
+    headers['Accept-Encoding']='identity';
     if (options.signal?.aborted) throw options.signal.reason || Error('更新请求已取消');
     return new Promise((resolve, reject) => {
       let request, response, timer, settled = false, ended = false, failed = false, redirects = 0;

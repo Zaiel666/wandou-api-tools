@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld("wandouShell", {
   getClientConfig: () => ipcRenderer.invoke("desktop:get-client-config"),
   checkForUpdates: () => ipcRenderer.invoke("desktop:check-for-updates"),
   startUpdate: (updateInfo) => ipcRenderer.invoke("desktop:start-update", updateInfo),
+  cancelUpdateDownload: () => ipcRenderer.invoke("desktop:cancel-update-download"),
   openUpdateDownloads: () => ipcRenderer.invoke("desktop:open-update-downloads"),
   openExternal: (url) => ipcRenderer.invoke("desktop:open-external", url),
   getSaveDirectory: () => ipcRenderer.invoke("desktop:get-save-directory"),

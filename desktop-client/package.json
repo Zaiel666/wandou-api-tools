@@ -1,6 +1,6 @@
 {
   "name": "wandou-ai-desktop",
-  "version": "2.0.33",
+  "version": "2.0.34",
   "description": "豌豆AI Windows 客户端",
   "main": "main.js",
   "author": "PeaFour",
@@ -50,6 +50,7 @@
       "update-policy.cjs",
       "safe-update-channel.cjs",
       "update-download.cjs",
+      "update-resume.cjs",
       "update-transport.cjs"
     ],
     "extraResources": [

@@ -625,7 +625,14 @@ forwardButton.addEventListener("click", () => {
 noticeButton.addEventListener("click", openAnnouncement);
 updateBadge.addEventListener("click", openFreshUpdateDialog);
 versionText.addEventListener("click", checkForUpdatesManually);
-dialogCancel.addEventListener("click", () => { dialogOverlay.hidden = true; });
+dialogCancel.addEventListener("click", async () => {
+  if (!updateStarted) { dialogOverlay.hidden = true; return; }
+  dialogCancel.disabled = true;
+  try {
+    const cancelled = await window.wandouShell?.cancelUpdateDownload();
+    if (updateStarted) dialogNotes.textContent = cancelled ? '正在取消下载，请稍候…' : '已进入校验或安装准备，请稍候。';
+  } catch { if (updateStarted) dialogNotes.textContent = '取消请求未完成，请等待当前操作结束。'; }
+});
 dialogDownload.addEventListener("click", async () => {
   if (updateStarted) return;
   if (updateInfo?.manualRequired) {
@@ -669,6 +676,7 @@ dialogDownload.addEventListener("click", async () => {
     updateStarted = false;
     document.body.classList.remove("update-in-progress");
     dialogCancel.disabled = false;
+    dialogCancel.textContent = "稍后再说";
     dialogDownload.disabled = false;
     dialogDownload.textContent = "重新更新";
     dialogNotes.textContent = result?.error || "更新失败，请稍后重试。";
@@ -721,11 +729,14 @@ window.wandouShell?.onDownloadResult((payload) => {
 });
 window.wandouShell?.onUpdateStatus((payload) => {
   dialogNotes.textContent = payload?.message || "正在更新…";
+  if (payload?.state === "downloading") { dialogCancel.disabled = false; dialogCancel.textContent = "取消下载"; }
+  if (payload?.state === "checking") { dialogCancel.disabled = true; dialogCancel.textContent = "稍后再说"; }
   if (payload?.state === "ready") dialogDownload.textContent = "准备安装…";
   if (payload?.state === "error") {
     updateStarted = false;
     document.body.classList.remove("update-in-progress");
     dialogCancel.disabled = false;
+    dialogCancel.textContent = "稍后再说";
     dialogDownload.disabled = false;
     dialogDownload.textContent = "重新更新";
   }

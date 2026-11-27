@@ -13,7 +13,7 @@ for(const theme of ['light','dark'])for(const width of [1024,1440])test(`update 
     getTheme:async()=>({theme,revision:1}),getClientConfig:async()=>({version:'2.0.23'}),getCanvasBackupDirectory:async()=>({directory:'synthetic-only'}),
     checkForUpdates:async()=>{window.__counts.check++;return window.__fixture;},
     openUpdateDownloads:async()=>{window.__counts.open++;if(window.__openFails)throw Error('synthetic open failure');return {success:true};},
-    startUpdate:async()=>{window.__counts.update++;return{started:false,error:'合成更新校验失败'};},confirmClose:()=>window.__counts.quit++
+    startUpdate:async()=>{window.__counts.update++;return{started:false,error:'合成更新校验失败'};},onUpdateStatus:callback=>{window.__updateStatus=callback;},confirmClose:()=>window.__counts.quit++
    },{get:(object,key)=>key in object?object[key]:()=>{}});
   },{theme});
   await page.goto(pathToFileURL(file).href+`?version=2.0.23&theme=${theme}`);
@@ -62,6 +62,19 @@ for(const theme of ['light','dark'])for(const width of [1024,1440])test(`update 
   assert.equal(await page.evaluate(()=>new Set(window.__savedTabIds).size),guestCount);
   assert.match(await page.locator('#dialogNotes').innerText(),/合成更新校验失败/);assert.equal(await page.locator('#dialogDownload').isEnabled(),true);
   assert.equal(await page.evaluate(()=>document.body.classList.contains('update-in-progress')),false);
+  await page.evaluate(()=>{
+   window.wandouShell.startUpdate=()=>new Promise(resolve=>{window.__finishCancelled=resolve;window.__updateStatus({state:'downloading',message:'合成下载中'});});
+   window.wandouShell.cancelUpdateDownload=async()=>{window.__finishCancelled({started:false,error:'更新下载已取消，原程序未被替换'});return true;};
+  });
+  await page.locator('#dialogDownload').click();
+  await page.waitForFunction(()=>document.querySelector('#dialogCancel').textContent==='取消下载');
+  assert.equal(await page.locator('#dialogCancel').isEnabled(),true);
+  await page.locator('#dialogCancel').click();
+  await page.waitForFunction(()=>!updateStarted);
+  assert.equal(await page.locator('#dialogCancel').innerText(),'稍后再说');
+  assert.match(await page.locator('#dialogNotes').innerText(),/更新下载已取消/);
+  assert.equal(await page.evaluate(()=>document.body.classList.contains('update-in-progress')),false);
+  assert.equal(await page.evaluate(()=>window.__counts.quit),0);
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });

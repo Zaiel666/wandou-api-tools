@@ -342,6 +342,7 @@ button { font: inherit; }
 }
 .update-in-progress .dialog-overlay { cursor: wait; }
 .update-in-progress .update-dialog { pointer-events: none; }
+.update-in-progress #dialogCancel:not(:disabled) { pointer-events: auto; cursor: pointer; }
 .update-dialog {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);

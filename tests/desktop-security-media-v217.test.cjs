@@ -28,7 +28,7 @@ test('all desktop IPC is gated; remote, subframe and fake shell cannot invoke pr
     for(const denied of [remote,subframe,fake,event('file:///C:/private/secret.html')]){
       assert.equal((await registry.get(channel)(denied)).success,false,channel);
     }
-    if(['desktop:shell-ready','desktop:cancel-close','desktop:close-state','desktop:force-close','desktop:confirm-close','desktop:start-update','desktop:open-update-downloads'].includes(channel)) assert.equal((await registry.get(channel)(local)).success,false);
+    if(['desktop:shell-ready','desktop:cancel-close','desktop:close-state','desktop:force-close','desktop:confirm-close','desktop:start-update','desktop:cancel-update-download','desktop:open-update-downloads'].includes(channel)) assert.equal((await registry.get(channel)(local)).success,false);
     else assert.equal((await registry.get(channel)(local)).success,true);
     assert.equal((await registry.get(channel)(shellEvent)).success,true);
     policy.on(ipc,channel,()=>calls++);const before=calls;events.get(channel)(remote);assert.equal(calls,before);
@@ -74,21 +74,23 @@ test('official updater verifies checksum, rechecks work after download, and only
     const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wandou-update-v217-'));
     const config={githubOwner:'Zaiel666',githubRepository:'wandou-api-tools',assetName:'app.zip'};
     const base='https://github.com/Zaiel666/wandou-api-tools/releases/download/v2.0.17/';
-    const archive=Buffer.from('synthetic ZIP, never executed'),sources=[],statuses=[];
+    const archive=Buffer.from('synthetic ZIP, never executed'),sources=[],downloadParameters=[],statuses=[];
     let saves=0,spawned=0,quitScheduled=false;
-    const env={app:{isPackaged:true,quit:()=>{}},updateInProgress:false,allowWindowClose:false,
+    const env={app:{isPackaged:true,quit:()=>{}},updateInProgress:false,allowWindowClose:false,AbortController,
       require:p=>p.startsWith('./')?require(path.join(desktop,p)):require(p),path,os,crypto,Buffer,process:{pid:12345,resourcesPath:dir},
       fs:{existsSync:fs.existsSync,promises:{...fs.promises,mkdtemp:async()=>dir,copyFile:async(_from,to)=>fs.promises.writeFile(to,'stub updater')}},
       readClientConfig:()=>config,checkForUpdates:async()=>({available:true,updaterProtocol:2,latestVersion:'2.0.17',downloadUrl:base+'app.zip',checksumUrl:base+'app.zip.sha256'}),
       verifyWorkflowsForUpdate:async()=>{saves++;if((scenario==='late-generation'&&saves===2)||(scenario==='handoff-save-failure'&&saves===3))throw Error('仍在生成')},
       sendUpdateStatus:(...args)=>statuses.push(args),portableInstallContext:()=>({installDirectory:dir,executable:'fake.exe'}),
-      downloadFileWithFallback:async(url,destination)=>{sources.push(url);await fs.promises.writeFile(destination,url.endsWith('.sha256')?(scenario==='checksum-mismatch'?'0'.repeat(64):crypto.createHash('sha256').update(archive).digest('hex')):archive)},
+      downloadFileWithFallback:async(url,destination,fallback,expected)=>{sources.push(url);downloadParameters.push({url,expected});await fs.promises.writeFile(destination,url.endsWith('.sha256')?(scenario==='checksum-mismatch'?'0'.repeat(64):crypto.createHash('sha256').update(archive).digest('hex')):archive)},
       spawn:(_exe,args)=>{spawned++;fs.writeFileSync(args[args.indexOf('--ready')+1],'ready');const child=new(require('node:events').EventEmitter)();child.unref=()=>{};return child},
       setInterval,clearInterval,setTimeout:()=>{quitScheduled=true}};
     try{
       vm.runInNewContext(slice('async function startPortableUpdate(', 'async function verifyWorkflowsForUpdate('),env);
       const result=await env.startPortableUpdate({available:true,updaterProtocol:2,latestVersion:'2.0.17',downloadUrl:'https://evil.test/a',checksumUrl:'https://evil.test/b'});
-      assert.deepEqual(sources,[base+'app.zip',base+'app.zip.sha256']);
+      assert.deepEqual(sources,[base+'app.zip.sha256',base+'app.zip']);
+      assert.equal(downloadParameters[0].expected,undefined);
+      assert.equal(downloadParameters[1].expected,scenario==='checksum-mismatch'?'0'.repeat(64):crypto.createHash('sha256').update(archive).digest('hex'));
       assert.equal(result.started,scenario==='success');assert.equal(spawned,['success','handoff-save-failure'].includes(scenario)?1:0);assert.equal(quitScheduled,scenario==='success');
       assert.equal(saves,scenario==='checksum-mismatch'?1:scenario==='late-generation'?2:3);
       if(scenario!=='success'){assert.equal(env.updateInProgress,false);assert.equal(env.allowWindowClose,false)}
